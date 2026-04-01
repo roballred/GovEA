@@ -8,7 +8,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  // "sqlite" for local dev and Docker container default
+  // Change to "postgresql" for production SaaS deployment
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -354,7 +356,7 @@ model AuditLog {
   action    String   // created | updated | deleted | status_changed | published | archived
   entityType String  // organization | persona | capability | application | adr | tech_lifecycle
   entityId   String
-  changes    Json?   // { before, after, diff }
+  changes    String? // JSON string: { before, after, diff } — use Json type with PostgreSQL
 
   user User @relation(fields: [userId], references: [id])
 
