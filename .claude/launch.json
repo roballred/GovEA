@@ -3,9 +3,8 @@
   "configurations": [
     {
       "name": "govea-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "cwd": "apps/govea",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["/opt/homebrew/lib/node_modules/pnpm/bin/pnpm.cjs", "--filter", "govea", "dev"],
       "port": 3000
     }
   ]
