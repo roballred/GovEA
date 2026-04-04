@@ -1,0 +1,32 @@
+# Capability: Relationship Navigation
+
+## What It Does
+The system must allow users to traverse the connections between content items — moving from an Application to its Capabilities, from a Capability to its Personas, and back — so that the full EA picture is navigable without a separate diagram tool.
+
+## Personas
+- **Content Viewer** — follows relationships to answer questions like "what systems support permitting?" or "who does this capability serve?"
+
+## Behaviors
+- Display all related content items on a content detail page with links to navigate to each
+- Show reverse relationships — e.g. on a Capability page, show all Applications that link to it
+- Display the relationship type clearly so the viewer understands the connection
+- Allow navigation in both directions across any relationship
+- Show a summary count of related items when the full list is long (e.g. "12 Applications")
+
+## Core Navigable Relationships
+
+| From | To | Direction |
+|---|---|---|
+| Application | Capability | Forward and reverse |
+| Capability | Persona | Forward and reverse |
+| ADR | Capability | Forward and reverse |
+| ADR | Application | Forward and reverse |
+
+## Rules
+- Only published related items are shown to Viewers — unpublished related items are hidden without error
+- Relationship navigation must work without JavaScript — links are standard anchor elements
+- Broken relationships (linked item deleted or unpublished) must not surface as errors to the Viewer — they are silently excluded
+
+## Links
+- Depends on: Content Display, Content Management — Content Relationships
+- Related: Portfolio Views, Navigation
