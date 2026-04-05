@@ -2,6 +2,12 @@ import { signIn } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 
+async function devSignIn(formData: FormData) {
+  'use server'
+  const email = formData.get('email') as string
+  await signIn('credentials', { email, password: 'dev-password', redirectTo: '/dashboard' })
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -77,10 +83,8 @@ export default async function LoginPage({
                 { label: 'Sign in as Contributor', email: 'carol@govea.dev', cls: 'bg-green-100 text-green-800 hover:bg-green-200' },
                 { label: 'Sign in as Viewer', email: 'victor@govea.dev', cls: 'bg-gray-100 text-gray-700 hover:bg-gray-200' },
               ] as const).map(({ label, email, cls }) => (
-                <form key={email} action={async () => {
-                  'use server'
-                  await signIn('credentials', { email, password: 'dev-password', redirectTo: '/dashboard' })
-                }}>
+                <form key={email} action={devSignIn}>
+                  <input type="hidden" name="email" value={email} />
                   <button type="submit" className={`w-full rounded px-3 py-1.5 text-xs font-medium ${cls}`}>
                     {label}
                   </button>
