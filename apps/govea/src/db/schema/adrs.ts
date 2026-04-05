@@ -1,5 +1,5 @@
 import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { organizations } from './organizations'
+import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 
 export const adrStatusEnum = pgEnum('adr_status', ['proposed', 'accepted', 'deprecated', 'superseded'])
@@ -13,6 +13,7 @@ export const adrs = pgTable('adrs', {
   decision: text('decision'),
   consequences: text('consequences'),
   status: adrStatusEnum('status').notNull().default('proposed'),
+  visibility: visibilityEnum('visibility').notNull().default('org'),
   supersededBy: uuid('superseded_by'),
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),

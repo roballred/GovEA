@@ -1,5 +1,5 @@
 import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { organizations } from './organizations'
+import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
 import { capabilities } from './capabilities'
@@ -21,6 +21,7 @@ export const applications = pgTable('applications', {
   hostingModel: text('hosting_model'), // on-prem, saas, hybrid
   lifecycleStatus: lifecycleStatusEnum('lifecycle_status').notNull().default('active'),
   status: workflowStatusEnum('status').notNull().default('draft'),
+  visibility: visibilityEnum('visibility').notNull().default('org'),
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),

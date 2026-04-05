@@ -22,6 +22,13 @@
       "when": 1775409107456,
       "tag": "0002_wet_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775426858345,
+      "tag": "0003_tiny_junta",
+      "breakpoints": true
     }
   ]
 }
