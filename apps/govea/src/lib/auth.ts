@@ -6,6 +6,7 @@ import { db } from '@/db/client'
 import { users, accounts, sessions, verificationTokens } from '@/db/schema'
 import bcrypt from 'bcryptjs'
 import { eq } from 'drizzle-orm'
+import { writeAuditLog } from '@/lib/audit'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -30,13 +31,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
+        const email = credentials.email as string
         const user = await db.query.users.findFirst({
-          where: eq(users.email, credentials.email as string),
+          where: eq(users.email, email),
         })
-        if (!user || !user.passwordHash) return null
-        if (user.isActive !== 'true') return null
+        if (!user || !user.passwordHash || user.isActive !== 'true') {
+          await writeAuditLog({
+            action: 'auth.login_failed',
+            entityType: 'user',
+            organizationId: user?.organizationId,
+            metadata: { email },
+          })
+          return null
+        }
         const valid = await bcrypt.compare(credentials.password as string, user.passwordHash)
-        if (!valid) return null
+        if (!valid) {
+          await writeAuditLog({
+            action: 'auth.login_failed',
+            entityType: 'user',
+            organizationId: user.organizationId,
+            metadata: { email },
+          })
+          return null
+        }
         return {
           id: user.id,
           email: user.email,
@@ -61,6 +78,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = token.role as any
       session.user.organizationId = token.organizationId as string | null
       return session
+    },
+  },
+  events: {
+    async signIn({ user }) {
+      await writeAuditLog({
+        action: 'auth.login',
+        entityType: 'user',
+        entityId: user.id,
+        userId: user.id,
+        organizationId: (user as any).organizationId,
+      })
+    },
+    async signOut(message) {
+      const token = 'token' in message ? message.token : null
+      await writeAuditLog({
+        action: 'auth.logout',
+        entityType: 'user',
+        entityId: token?.id as string | undefined,
+        userId: token?.id as string | undefined,
+        organizationId: token?.organizationId as string | undefined,
+      })
     },
   },
   pages: {
