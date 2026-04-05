@@ -3,6 +3,10 @@ import { auth } from '@/lib/auth'
 import { signOut } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { db } from '@/db/client'
+import { organizations } from '@/db/schema'
+import { eq } from 'drizzle-orm'
+import { getTheme, themeToStyleString } from '@/lib/themes'
 import type { Role } from '@/lib/rbac'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -10,6 +14,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session?.user) redirect('/login')
 
   const role = (session.user as any).role as Role
+
+  // Load org theme
+  let themeStyle = ''
+  if ((session.user as any).organizationId) {
+    const org = await db.query.organizations.findFirst({
+      where: eq(organizations.id, (session.user as any).organizationId),
+    })
+    if (org) {
+      const theme = getTheme(org.theme)
+      themeStyle = themeToStyleString(theme)
+    }
+  }
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard', roles: ['admin', 'contributor', 'viewer'] as Role[] },
@@ -31,9 +47,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-white">
+      {themeStyle && <style dangerouslySetInnerHTML={{ __html: themeStyle }} />}
+      <header
+        className="border-b"
+        style={{
+          backgroundColor: 'hsl(var(--header-bg))',
+          borderColor: 'hsl(var(--header-border))',
+          color: 'hsl(var(--header-fg))',
+        }}
+      >
         <div className="flex h-14 items-center gap-6 px-6">
-          <span className="font-bold text-foreground tracking-tight">GovEA</span>
+          <span className="font-bold tracking-tight" style={{ color: 'hsl(var(--header-fg))' }}>GovEA</span>
           <nav className="flex items-center gap-1">
             {navLinks
               .filter(l => l.roles.includes(role))
@@ -41,14 +65,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <a
                   key={l.href}
                   href={l.href}
-                  className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                  className="rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-white/10"
+                  style={{ color: 'hsl(var(--header-fg) / 0.8)' }}
                 >
                   {l.label}
                 </a>
               ))}
           </nav>
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{session.user.email}</span>
+            <span className="text-sm" style={{ color: 'hsl(var(--header-fg) / 0.7)' }}>
+              {session.user.email}
+            </span>
             <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', roleBadgeClass[role])}>
               {role}
             </span>
@@ -56,7 +83,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               'use server'
               await signOut({ redirectTo: '/login' })
             }}>
-              <Button variant="ghost" size="sm" type="submit">Sign out</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="submit"
+                className="hover:bg-white/10"
+                style={{ color: 'hsl(var(--header-fg))' }}
+              >
+                Sign out
+              </Button>
             </form>
           </div>
         </div>
