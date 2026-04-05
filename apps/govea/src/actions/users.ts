@@ -117,3 +117,65 @@ export async function deleteUser(userId: string) {
     before: { name: target?.name, email: target?.email },
   })
 }
+
+export async function reactivateUser(userId: string) {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
+  await db.update(users).set({ isActive: 'true', updatedAt: new Date() }).where(
+    and(eq(users.id, userId), eq(users.organizationId, orgId))
+  )
+
+  await writeAuditLog({
+    action: 'user.reactivate',
+    entityType: 'user',
+    entityId: userId,
+    userId: session.user.id,
+    organizationId: orgId,
+  })
+}
+
+export async function editUser(userId: string, formData: FormData) {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
+  const name = formData.get('name') as string
+  const email = formData.get('email') as string
+  const role = formData.get('role') as 'admin' | 'contributor' | 'viewer'
+  const newPassword = formData.get('password') as string | null
+
+  const before = await db.query.users.findFirst({ where: eq(users.id, userId) })
+
+  // Last-admin guard for role demotion
+  if (before?.role === 'admin' && role !== 'admin') {
+    const [adminCount] = await db.select({ count: count() }).from(users).where(
+      and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, 'true'))
+    )
+    if (adminCount.count <= 1) throw new Error('Cannot demote the last admin')
+  }
+
+  const updates: Partial<typeof users.$inferInsert> = {
+    name,
+    email,
+    role,
+    updatedAt: new Date(),
+  }
+
+  if (newPassword && newPassword.length >= 8) {
+    updates.passwordHash = await bcrypt.hash(newPassword, 12)
+  }
+
+  await db.update(users).set(updates).where(
+    and(eq(users.id, userId), eq(users.organizationId, orgId))
+  )
+
+  await writeAuditLog({
+    action: 'user.edit',
+    entityType: 'user',
+    entityId: userId,
+    userId: session.user.id,
+    organizationId: orgId,
+    before: { name: before?.name, email: before?.email, role: before?.role },
+    after: { name, email, role },
+  })
+}
