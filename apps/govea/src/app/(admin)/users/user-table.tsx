@@ -4,6 +4,16 @@ import { useState, useTransition } from 'react'
 import type { User } from '@/db/schema'
 import { createUser, editUser, deactivateUser, reactivateUser, deleteUser } from '@/actions/users'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 
 type UserRow = Pick<User, 'id' | 'name' | 'email' | 'role' | 'isActive'>
 
@@ -13,21 +23,18 @@ interface Props {
 }
 
 const ROLE_STYLES: Record<string, string> = {
-  admin: 'bg-purple-100 text-purple-800',
-  contributor: 'bg-green-100 text-green-800',
-  viewer: 'bg-gray-100 text-gray-600',
+  admin: 'bg-violet-100 text-violet-800 border-violet-200',
+  contributor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  viewer: 'bg-slate-100 text-slate-700 border-slate-200',
 }
 
 export function UserTable({ users, currentUserId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  // Search / filter
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-
-  // Modal state
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<UserRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
@@ -92,17 +99,17 @@ export function UserTable({ users, currentUserId }: Props) {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
-        <input
+        <Input
           type="search"
           placeholder="Search by name or email…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm w-64 focus:border-blue-500 focus:outline-none"
+          className="w-64"
         />
         <select
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="all">All roles</option>
           <option value="admin">Admin</option>
@@ -112,196 +119,184 @@ export function UserTable({ users, currentUserId }: Props) {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="all">All statuses</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="ml-auto rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-        >
+        <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
           + Add user
-        </button>
+        </Button>
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Name', 'Email', 'Role', 'Status', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filtered.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">No users match the current filters.</td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  No users match the current filters.
+                </TableCell>
+              </TableRow>
             )}
             {filtered.map(u => {
               const inactive = u.isActive !== 'true'
               const isSelf = u.id === currentUserId
               const lastAdmin = isLastAdmin(u)
               return (
-                <tr key={u.id} className={inactive ? 'opacity-50' : ''}>
-                  <td className="px-4 py-3 text-sm text-gray-900">{u.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${ROLE_STYLES[u.role]}`}>{u.role}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${inactive ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+                <TableRow key={u.id} className={inactive ? 'opacity-50' : ''}>
+                  <TableCell className="font-medium">{u.name ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                  <TableCell>
+                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', ROLE_STYLES[u.role])}>
+                      {u.role}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+                      inactive
+                        ? 'bg-red-50 text-red-700 border-red-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    )}>
                       {inactive ? 'Inactive' : 'Active'}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setEditTarget(u)}
-                        className="text-xs text-blue-600 hover:underline"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setEditTarget(u)} className="h-7 px-2 text-xs">
                         Edit
-                      </button>
+                      </Button>
                       {!isSelf && (
                         <>
                           {inactive ? (
-                            <button
+                            <Button
+                              variant="ghost" size="sm"
                               onClick={() => handleReactivate(u)}
                               disabled={isPending}
-                              className="text-xs text-green-600 hover:underline disabled:opacity-40"
+                              className="h-7 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                             >
                               Reactivate
-                            </button>
+                            </Button>
                           ) : (
-                            <button
+                            <Button
+                              variant="ghost" size="sm"
                               onClick={() => handleDeactivate(u)}
                               disabled={isPending || lastAdmin}
                               title={lastAdmin ? 'Cannot deactivate the last admin' : undefined}
-                              className="text-xs text-yellow-600 hover:underline disabled:opacity-40"
+                              className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                             >
                               Deactivate
-                            </button>
+                            </Button>
                           )}
-                          <button
+                          <Button
+                            variant="ghost" size="sm"
                             onClick={() => setDeleteTarget(u)}
                             disabled={isPending || lastAdmin}
                             title={lastAdmin ? 'Cannot delete the last admin' : undefined}
-                            className="text-xs text-red-600 hover:underline disabled:opacity-40"
+                            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             Delete
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Create modal */}
-      {createOpen && (
-        <Modal title="Add user" onClose={() => setCreateOpen(false)}>
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add user</DialogTitle>
+          </DialogHeader>
           <form action={handleCreate} className="space-y-3">
-            <Field label="Name" name="name" type="text" required />
-            <Field label="Email" name="email" type="email" required />
-            <Field label="Password" name="password" type="password" required minLength={8} />
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Role</label>
-              <select name="role" defaultValue="viewer" className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+            <FormField label="Name" name="name" type="text" required />
+            <FormField label="Email" name="email" type="email" required />
+            <FormField label="Password" name="password" type="password" required minLength={8} />
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <select name="role" defaultValue="viewer" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="viewer">Viewer</option>
                 <option value="contributor">Contributor</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <ModalActions onCancel={() => setCreateOpen(false)} submitLabel="Create user" isPending={isPending} />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create user'}</Button>
+            </DialogFooter>
           </form>
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {/* Edit modal */}
-      {editTarget && (
-        <Modal title="Edit user" onClose={() => setEditTarget(null)}>
+      {/* Edit Dialog */}
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit user</DialogTitle>
+          </DialogHeader>
           <form action={handleEdit} className="space-y-3">
-            <Field label="Name" name="name" type="text" required defaultValue={editTarget.name ?? ''} />
-            <Field label="Email" name="email" type="email" required defaultValue={editTarget.email} />
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Role</label>
-              <select name="role" defaultValue={editTarget.role} className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+            <FormField label="Name" name="name" type="text" required defaultValue={editTarget?.name ?? ''} />
+            <FormField label="Email" name="email" type="email" required defaultValue={editTarget?.email} />
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <select name="role" defaultValue={editTarget?.role} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="viewer">Viewer</option>
                 <option value="contributor">Contributor</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <Field label="New password (leave blank to keep current)" name="password" type="password" minLength={8} />
-            <ModalActions onCancel={() => setEditTarget(null)} submitLabel="Save changes" isPending={isPending} />
+            <FormField label="New password (leave blank to keep current)" name="password" type="password" minLength={8} />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
+            </DialogFooter>
           </form>
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {/* Delete confirmation modal */}
-      {deleteTarget && (
-        <Modal title="Delete user" onClose={() => setDeleteTarget(null)}>
-          <p className="text-sm text-gray-600">
-            Are you sure you want to permanently delete <strong>{deleteTarget.name ?? deleteTarget.email}</strong>? This cannot be undone.
+      {/* Delete Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete user</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to permanently delete <strong>{deleteTarget?.name ?? deleteTarget?.email}</strong>? This cannot be undone.
           </p>
-          <div className="mt-4 flex justify-end gap-2">
-            <button onClick={() => setDeleteTarget(null)} className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-              Cancel
-            </button>
-            <button onClick={handleDelete} disabled={isPending} className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-40">
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
               {isPending ? 'Deleting…' : 'Delete'}
-            </button>
-          </div>
-        </Modal>
-      )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// --- Shared sub-components ---
-
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function FormField({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
-      <input
-        {...props}
-        className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-      />
-    </div>
-  )
-}
-
-function ModalActions({ onCancel, submitLabel, isPending }: { onCancel: () => void; submitLabel: string; isPending: boolean }) {
-  return (
-    <div className="flex justify-end gap-2 pt-2">
-      <button type="button" onClick={onCancel} className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-        Cancel
-      </button>
-      <button type="submit" disabled={isPending} className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40">
-        {isPending ? 'Saving…' : submitLabel}
-      </button>
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Input {...props} />
     </div>
   )
 }
