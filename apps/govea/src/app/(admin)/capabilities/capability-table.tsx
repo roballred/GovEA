@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Persona } from '@/db/schema'
-import { createPersona, editPersona, deletePersona } from '@/actions/personas'
+import type { Capability, Persona } from '@/db/schema'
+import { createCapability, editCapability, deleteCapability } from '@/actions/capabilities'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,14 +16,15 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
-type PersonaRow = Pick<Persona, 'id' | 'name' | 'description' | 'type' | 'status' | 'visibility' | 'createdAt'>
-
-interface Props {
-  personas: PersonaRow[]
-  role: Role
+type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'status' | 'visibility' | 'createdAt'> & {
+  capabilityPersonas: { persona: Pick<Persona, 'id' | 'name'> }[]
 }
 
-const PERSONA_TYPES = ['citizen', 'staff', 'elected official', 'external partner']
+interface Props {
+  capabilities: CapabilityRow[]
+  personas: Pick<Persona, 'id' | 'name'>[]
+  role: Role
+}
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -43,32 +44,30 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function PersonaTable({ personas, role }: Props) {
+export function CapabilityTable({ capabilities, personas, role }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<PersonaRow | null>(null)
+  const [editTarget, setEditTarget] = useState<CapabilityRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<CapabilityRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
 
   const refresh = () => router.refresh()
 
-  const filtered = personas.filter(p => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
-    const matchType = typeFilter === 'all' || p.type === typeFilter
-    const matchStatus = statusFilter === 'all' || p.status === statusFilter
-    return matchSearch && matchType && matchStatus
+  const filtered = capabilities.filter(c => {
+    const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = statusFilter === 'all' || c.status === statusFilter
+    return matchSearch && matchStatus
   })
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createPersona(formData)
+      await createCapability(formData)
       setCreateOpen(false)
       refresh()
     })
@@ -77,7 +76,7 @@ export function PersonaTable({ personas, role }: Props) {
   async function handleEdit(formData: FormData) {
     if (!editTarget) return
     startTransition(async () => {
-      await editPersona(editTarget.id, formData)
+      await editCapability(editTarget.id, formData)
       setEditTarget(null)
       refresh()
     })
@@ -86,7 +85,7 @@ export function PersonaTable({ personas, role }: Props) {
   async function handleDelete() {
     if (!deleteTarget) return
     startTransition(async () => {
-      await deletePersona(deleteTarget.id)
+      await deleteCapability(deleteTarget.id)
       setDeleteTarget(null)
       refresh()
     })
@@ -98,21 +97,11 @@ export function PersonaTable({ personas, role }: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <Input
           type="search"
-          placeholder="Search personas…"
+          placeholder="Search capabilities…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-56"
         />
-        <select
-          value={typeFilter}
-          onChange={e => setTypeFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="all">All types</option>
-          {PERSONA_TYPES.map(t => (
-            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-          ))}
-        </select>
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
@@ -125,7 +114,7 @@ export function PersonaTable({ personas, role }: Props) {
         </select>
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
-            + New persona
+            + New capability
           </Button>
         )}
       </div>
@@ -136,10 +125,10 @@ export function PersonaTable({ personas, role }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead>Domain</TableHead>
+              <TableHead>Personas</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Visibility</TableHead>
-              <TableHead>Created</TableHead>
               {canEdit && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
@@ -147,39 +136,48 @@ export function PersonaTable({ personas, role }: Props) {
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground py-8">
-                  {personas.length === 0
-                    ? 'No personas yet. Add one to get started.'
-                    : 'No personas match the current filters.'}
+                  {capabilities.length === 0
+                    ? 'No capabilities yet. Add one to get started.'
+                    : 'No capabilities match the current filters.'}
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map(p => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell className="text-muted-foreground capitalize">{p.type ?? '—'}</TableCell>
+            {filtered.map(c => (
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">{c.name}</TableCell>
+                <TableCell className="text-muted-foreground">{c.domain ?? '—'}</TableCell>
                 <TableCell>
-                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[p.status])}>
-                    {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                  <div className="flex flex-wrap gap-1">
+                    {c.capabilityPersonas.length === 0
+                      ? <span className="text-muted-foreground text-sm">—</span>
+                      : c.capabilityPersonas.map(cp => (
+                        <span key={cp.persona.id} className="inline-flex items-center rounded-md border bg-slate-50 px-2 py-0.5 text-xs text-slate-700 border-slate-200">
+                          {cp.persona.name}
+                        </span>
+                      ))
+                    }
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[c.status])}>
+                    {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', VISIBILITY_STYLES[p.visibility])}>
-                    {VISIBILITY_LABELS[p.visibility]}
+                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', VISIBILITY_STYLES[c.visibility])}>
+                    {VISIBILITY_LABELS[c.visibility]}
                   </span>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {new Date(p.createdAt).toLocaleDateString()}
                 </TableCell>
                 {canEdit && (
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditTarget(p)} className="h-7 px-2 text-xs">
+                      <Button variant="ghost" size="sm" onClick={() => setEditTarget(c)} className="h-7 px-2 text-xs">
                         Edit
                       </Button>
                       {canDelete && (
                         <Button
                           variant="ghost" size="sm"
-                          onClick={() => setDeleteTarget(p)}
+                          onClick={() => setDeleteTarget(c)}
                           disabled={isPending}
                           className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
@@ -197,28 +195,30 @@ export function PersonaTable({ personas, role }: Props) {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>New persona</DialogTitle>
+            <DialogTitle>New capability</DialogTitle>
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea
-                name="description"
-                rows={3}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              />
+              <textarea name="description" rows={3} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
+            <FormField label="Domain (optional)" name="domain" />
             <div className="space-y-1.5">
-              <Label>Type</Label>
-              <select name="type" defaultValue="" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="">— None —</option>
-                {PERSONA_TYPES.map(t => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                ))}
-              </select>
+              <Label>Personas</Label>
+              <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">
+                {personas.length === 0
+                  ? <p className="text-sm text-muted-foreground">No personas yet.</p>
+                  : personas.map(p => (
+                    <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" name="personaIds" value={p.id} className="rounded" />
+                      {p.name}
+                    </label>
+                  ))
+                }
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -238,7 +238,7 @@ export function PersonaTable({ personas, role }: Props) {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create persona'}</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create capability'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -246,29 +246,36 @@ export function PersonaTable({ personas, role }: Props) {
 
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit persona</DialogTitle>
+            <DialogTitle>Edit capability</DialogTitle>
           </DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea
-                name="description"
-                rows={3}
-                defaultValue={editTarget?.description ?? ''}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              />
+              <textarea name="description" rows={3} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
+            <FormField label="Domain (optional)" name="domain" defaultValue={editTarget?.domain ?? ''} />
             <div className="space-y-1.5">
-              <Label>Type</Label>
-              <select name="type" defaultValue={editTarget?.type ?? ''} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="">— None —</option>
-                {PERSONA_TYPES.map(t => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                ))}
-              </select>
+              <Label>Personas</Label>
+              <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">
+                {personas.length === 0
+                  ? <p className="text-sm text-muted-foreground">No personas yet.</p>
+                  : personas.map(p => (
+                    <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="personaIds"
+                        value={p.id}
+                        defaultChecked={editTarget?.capabilityPersonas.some(cp => cp.persona.id === p.id)}
+                        className="rounded"
+                      />
+                      {p.name}
+                    </label>
+                  ))
+                }
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -297,9 +304,7 @@ export function PersonaTable({ personas, role }: Props) {
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete persona</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Delete capability</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
           </p>

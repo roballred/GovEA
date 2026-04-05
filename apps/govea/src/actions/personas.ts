@@ -37,12 +37,14 @@ export async function createPersona(formData: FormData) {
   const description = (formData.get('description') as string) || null
   const type = (formData.get('type') as string) || null
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
+  const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
 
   const [persona] = await db.insert(personas).values({
     name,
     description,
     type,
     status,
+    visibility,
     organizationId: orgId,
     createdBy: session.user.id,
     updatedBy: session.user.id,
@@ -66,6 +68,7 @@ export async function editPersona(personaId: string, formData: FormData) {
   const description = (formData.get('description') as string) || null
   const type = (formData.get('type') as string) || null
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
+  const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
 
   const before = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
 
@@ -74,6 +77,7 @@ export async function editPersona(personaId: string, formData: FormData) {
     description,
     type,
     status,
+    visibility,
     updatedBy: session.user.id,
     updatedAt: new Date(),
   }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
