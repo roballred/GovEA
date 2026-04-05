@@ -1,16 +1,41 @@
-// Entry point for seeding. Run via: pnpm db:seed
-// Set DEV=true to also load dev fixtures.
-
 import { GOV_TAXONOMY } from './gov-taxonomy'
+import { DEV_USERS } from './dev-fixtures'
+import { db } from '../client'
+import { users, organizations } from '../schema'
+import bcrypt from 'bcryptjs'
 
 async function seed() {
   console.log('Seeding government taxonomy...')
-  // Taxonomy insertion logic goes here once db client is wired in
   console.log(`Loaded ${GOV_TAXONOMY.length} top-level domains`)
 
   if (process.env.DEV === 'true') {
     console.log('Loading dev fixtures...')
-    // Dev fixture insertion goes here
+
+    let existing = await db.query.organizations.findFirst()
+    let orgId: string
+
+    if (existing) {
+      orgId = existing.id
+    } else {
+      const [org] = await db.insert(organizations).values({
+        name: 'Dev Organization',
+        slug: 'dev-org',
+      }).returning()
+      orgId = org.id
+    }
+
+    const passwordHash = await bcrypt.hash('dev-password', 12)
+
+    for (const u of DEV_USERS) {
+      await db.insert(users).values({
+        ...u,
+        passwordHash,
+        organizationId: orgId,
+        isActive: 'true',
+      }).onConflictDoNothing()
+    }
+
+    console.log(`Seeded ${DEV_USERS.length} dev users (password: dev-password)`)
   }
 
   console.log('Seed complete.')

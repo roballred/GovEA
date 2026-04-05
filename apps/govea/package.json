@@ -26,10 +26,12 @@
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.5.0",
     "lucide-react": "^0.462.0",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

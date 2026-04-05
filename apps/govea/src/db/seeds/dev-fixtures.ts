@@ -1,5 +1,6 @@
 // Synthetic data for development and testing.
-// Provides three pre-built users (one per role) and a minimal EA portfolio.
+// All dev users use the password 'dev-password' (hashed at seed time).
+// Dev login shortcuts on the login page bypass password entry in development.
 
 export const DEV_USERS = [
   { name: 'Alice Admin', email: 'alice@govea.dev', role: 'admin' as const },

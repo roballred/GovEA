@@ -10,12 +10,13 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   emailVerified: timestamp('email_verified'),
   image: text('image'),
+  passwordHash: text('password_hash'),
   role: userRoleEnum('role').notNull().default('viewer'),
+  isActive: text('is_active').notNull().default('true'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
-// Auth.js adapter tables
 export const accounts = pgTable('accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
