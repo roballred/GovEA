@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { organizations } from './organizations'
+import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
 import { personas } from './personas'
@@ -11,6 +11,7 @@ export const capabilities = pgTable('capabilities', {
   description: text('description'),
   domain: text('domain'), // top-level taxonomy domain
   status: workflowStatusEnum('status').notNull().default('draft'),
+  visibility: visibilityEnum('visibility').notNull().default('org'),
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
