@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { signOut } from '@/lib/auth'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -21,34 +23,44 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/settings', label: 'Settings', roles: ['admin'] as Role[] },
   ]
 
+  const roleBadgeClass: Record<Role, string> = {
+    admin: 'bg-violet-100 text-violet-800 border-violet-200',
+    contributor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    viewer: 'bg-slate-100 text-slate-700 border-slate-200',
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <span className="font-bold text-gray-900">GovEA</span>
-          <div className="flex gap-4 text-sm">
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-white">
+        <div className="flex h-14 items-center gap-6 px-6">
+          <span className="font-bold text-foreground tracking-tight">GovEA</span>
+          <nav className="flex items-center gap-1">
             {navLinks
               .filter(l => l.roles.includes(role))
               .map(l => (
-                <a key={l.href} href={l.href} className="text-gray-600 hover:text-gray-900">{l.label}</a>
+                <a
+                  key={l.href}
+                  href={l.href}
+                  className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                >
+                  {l.label}
+                </a>
               ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{session.user.email}</span>
+            <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', roleBadgeClass[role])}>
+              {role}
+            </span>
+            <form action={async () => {
+              'use server'
+              await signOut({ redirectTo: '/login' })
+            }}>
+              <Button variant="ghost" size="sm" type="submit">Sign out</Button>
+            </form>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-gray-500">{session.user.email}</span>
-          <span className={`rounded px-2 py-0.5 text-xs font-medium ${
-            role === 'admin' ? 'bg-purple-100 text-purple-800' :
-            role === 'contributor' ? 'bg-green-100 text-green-800' :
-            'bg-gray-100 text-gray-600'
-          }`}>{role}</span>
-          <form action={async () => {
-            'use server'
-            await signOut({ redirectTo: '/login' })
-          }}>
-            <button type="submit" className="text-gray-500 hover:text-gray-900">Sign out</button>
-          </form>
-        </div>
-      </nav>
+      </header>
       <main className="p-6">{children}</main>
     </div>
   )
