@@ -1,0 +1,291 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import type { Persona } from '@/db/schema'
+import { createPersona, editPersona, deletePersona } from '@/actions/personas'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
+import type { Role } from '@/lib/rbac'
+
+type PersonaRow = Pick<Persona, 'id' | 'name' | 'description' | 'type' | 'status' | 'createdAt'>
+
+interface Props {
+  personas: PersonaRow[]
+  role: Role
+}
+
+const PERSONA_TYPES = ['citizen', 'staff', 'elected official', 'external partner']
+
+const STATUS_STYLES: Record<string, string> = {
+  draft: 'bg-slate-100 text-slate-700 border-slate-200',
+  published: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  archived: 'bg-amber-100 text-amber-800 border-amber-200',
+}
+
+export function PersonaTable({ personas, role }: Props) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<PersonaRow | null>(null)
+
+  const canEdit = role === 'admin' || role === 'contributor'
+  const canDelete = role === 'admin'
+
+  const refresh = () => router.refresh()
+
+  const filtered = personas.filter(p => {
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
+    const matchType = typeFilter === 'all' || p.type === typeFilter
+    const matchStatus = statusFilter === 'all' || p.status === statusFilter
+    return matchSearch && matchType && matchStatus
+  })
+
+  async function handleCreate(formData: FormData) {
+    startTransition(async () => {
+      await createPersona(formData)
+      setCreateOpen(false)
+      refresh()
+    })
+  }
+
+  async function handleEdit(formData: FormData) {
+    if (!editTarget) return
+    startTransition(async () => {
+      await editPersona(editTarget.id, formData)
+      setEditTarget(null)
+      refresh()
+    })
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    startTransition(async () => {
+      await deletePersona(deleteTarget.id)
+      setDeleteTarget(null)
+      refresh()
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          type="search"
+          placeholder="Search personas…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-56"
+        />
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="all">All types</option>
+          {PERSONA_TYPES.map(t => (
+            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="all">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+          <option value="archived">Archived</option>
+        </select>
+        {canEdit && (
+          <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
+            + New persona
+          </Button>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created</TableHead>
+              {canEdit && <TableHead>Actions</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={canEdit ? 5 : 4} className="text-center text-muted-foreground py-8">
+                  {personas.length === 0
+                    ? 'No personas yet. Add one to get started.'
+                    : 'No personas match the current filters.'}
+                </TableCell>
+              </TableRow>
+            )}
+            {filtered.map(p => (
+              <TableRow key={p.id}>
+                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell className="text-muted-foreground capitalize">{p.type ?? '—'}</TableCell>
+                <TableCell>
+                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[p.status])}>
+                    {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                  </span>
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  {new Date(p.createdAt).toLocaleDateString()}
+                </TableCell>
+                {canEdit && (
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setEditTarget(p)} className="h-7 px-2 text-xs">
+                        Edit
+                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => setDeleteTarget(p)}
+                          disabled={isPending}
+                          className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New persona</DialogTitle>
+          </DialogHeader>
+          <form action={handleCreate} className="space-y-3">
+            <FormField label="Name" name="name" required />
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <textarea
+                name="description"
+                rows={3}
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <select name="type" defaultValue="" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="">— None —</option>
+                {PERSONA_TYPES.map(t => (
+                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <select name="status" defaultValue="draft" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create persona'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit persona</DialogTitle>
+          </DialogHeader>
+          <form action={handleEdit} className="space-y-3">
+            <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <textarea
+                name="description"
+                rows={3}
+                defaultValue={editTarget?.description ?? ''}
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <select name="type" defaultValue={editTarget?.type ?? ''} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="">— None —</option>
+                {PERSONA_TYPES.map(t => (
+                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <select name="status" defaultValue={editTarget?.status} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete persona</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+              {isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function FormField({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Input {...props} />
+    </div>
+  )
+}
