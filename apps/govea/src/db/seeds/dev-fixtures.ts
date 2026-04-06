@@ -15,6 +15,14 @@ export const DEFAULT_PERSONA_TYPES = [
   'External Partner',
 ]
 
+export const DEFAULT_TAGS = [
+  'mobile-first',
+  'accessibility',
+  'high-volume',
+  'low-digital-literacy',
+  'multilingual',
+]
+
 export const DEV_PERSONAS = [
   { name: 'Resident', description: 'A member of the public interacting with city services', type: 'Citizen' },
   { name: 'IT Staff', description: 'Internal technology team member', type: 'Staff' },

@@ -36,6 +36,13 @@
       "when": 1775442261128,
       "tag": "0004_cute_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775446330953,
+      "tag": "0005_brave_retro_girl",
+      "breakpoints": true
     }
   ]
 }

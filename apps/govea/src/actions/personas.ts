@@ -1,8 +1,8 @@
 'use server'
 
 import { db } from '@/db/client'
-import { personas, personaTypes } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { personas, personaTypes, personaTags, tags } from '@/db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -77,12 +77,70 @@ export async function deletePersonaType(typeId: string) {
   })
 }
 
+// ── Tags ──────────────────────────────────────────────────────────────────────
+
+export async function getTags(organizationId: string) {
+  return db.query.tags.findMany({
+    where: (t, { eq }) => eq(t.organizationId, organizationId),
+    orderBy: (t, { asc }) => [asc(t.name)],
+  })
+}
+
+export async function createTag(name: string) {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
+  const trimmed = name.trim()
+  if (!trimmed) throw new Error('Name is required')
+
+  const [tag] = await db.insert(tags).values({
+    name: trimmed,
+    organizationId: orgId,
+  }).onConflictDoNothing().returning()
+
+  if (tag) {
+    await writeAuditLog({
+      action: 'tag.create',
+      entityType: 'tag',
+      entityId: tag.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name: trimmed },
+    })
+  }
+}
+
+export async function deleteTag(tagId: string) {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
+  const before = await db.query.tags.findFirst({ where: eq(tags.id, tagId) })
+
+  await db.delete(tags).where(
+    and(eq(tags.id, tagId), eq(tags.organizationId, orgId))
+  )
+
+  await writeAuditLog({
+    action: 'tag.delete',
+    entityType: 'tag',
+    entityId: tagId,
+    userId: session.user.id,
+    organizationId: orgId,
+    before: { name: before?.name },
+  })
+}
+
 // ── Personas ──────────────────────────────────────────────────────────────────
 
 export async function getPersonas(organizationId: string) {
   return db.query.personas.findMany({
     where: (p, { eq }) => eq(p.organizationId, organizationId),
     orderBy: (p, { asc }) => [asc(p.name)],
+    with: {
+      personaTags: {
+        with: { tag: true },
+      },
+    },
   })
 }
 
@@ -95,6 +153,7 @@ export async function createPersona(formData: FormData) {
   const type = (formData.get('type') as string) || null
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
+  const tagIds = formData.getAll('tagIds') as string[]
 
   const [persona] = await db.insert(personas).values({
     name,
@@ -107,13 +166,19 @@ export async function createPersona(formData: FormData) {
     updatedBy: session.user.id,
   }).returning()
 
+  if (tagIds.length > 0) {
+    await db.insert(personaTags).values(
+      tagIds.map(tagId => ({ personaId: persona.id, tagId }))
+    )
+  }
+
   await writeAuditLog({
     action: 'persona.create',
     entityType: 'persona',
     entityId: persona.id,
     userId: session.user.id,
     organizationId: orgId,
-    after: { name, description, type, status },
+    after: { name, description, type, status, tagIds },
   })
 }
 
@@ -126,6 +191,7 @@ export async function editPersona(personaId: string, formData: FormData) {
   const type = (formData.get('type') as string) || null
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
+  const tagIds = formData.getAll('tagIds') as string[]
 
   const before = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
 
@@ -139,6 +205,14 @@ export async function editPersona(personaId: string, formData: FormData) {
     updatedAt: new Date(),
   }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
 
+  // Replace junction rows
+  await db.delete(personaTags).where(eq(personaTags.personaId, personaId))
+  if (tagIds.length > 0) {
+    await db.insert(personaTags).values(
+      tagIds.map(tagId => ({ personaId, tagId }))
+    )
+  }
+
   await writeAuditLog({
     action: 'persona.edit',
     entityType: 'persona',
@@ -146,7 +220,7 @@ export async function editPersona(personaId: string, formData: FormData) {
     userId: session.user.id,
     organizationId: orgId,
     before: { name: before?.name, description: before?.description, type: before?.type, status: before?.status },
-    after: { name, description, type, status },
+    after: { name, description, type, status, tagIds },
   })
 }
 

@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm'
 import { capabilities, capabilityPersonas } from './capabilities'
 import { applications, applicationCapabilities } from './applications'
-import { personas, personaTypes } from './personas'
+import { personas, personaTags, personaTypes, tags } from './personas'
 import { organizations } from './organizations'
 
 export const capabilitiesRelations = relations(capabilities, ({ many }) => ({
@@ -21,6 +21,26 @@ export const capabilityPersonasRelations = relations(capabilityPersonas, ({ one 
 
 export const personasRelations = relations(personas, ({ many }) => ({
   capabilityPersonas: many(capabilityPersonas),
+  personaTags: many(personaTags),
+}))
+
+export const tagsRelations = relations(tags, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [tags.organizationId],
+    references: [organizations.id],
+  }),
+  personaTags: many(personaTags),
+}))
+
+export const personaTagsRelations = relations(personaTags, ({ one }) => ({
+  persona: one(personas, {
+    fields: [personaTags.personaId],
+    references: [personas.id],
+  }),
+  tag: one(tags, {
+    fields: [personaTags.tagId],
+    references: [tags.id],
+  }),
 }))
 
 export const personaTypesRelations = relations(personaTypes, ({ one }) => ({
