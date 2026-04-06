@@ -44,6 +44,31 @@ export type DatasetValueStream = {
   stages: DatasetValueStreamStage[]
 }
 
+export type DatasetObjective = {
+  name: string
+  description: string
+  successMetric: string
+  timeHorizon: string
+  status: 'draft' | 'published' | 'archived'
+  capabilities: string[]    // capability names
+  valueStreams: string[]     // value stream names
+}
+
+export type DatasetInitiativeCapability = {
+  name: string              // capability name
+  impact?: 'build' | 'improve' | 'retire'
+}
+
+export type DatasetInitiative = {
+  name: string
+  description: string
+  status: 'proposed' | 'active' | 'on-hold' | 'complete' | 'cancelled'
+  startDate?: string
+  endDate?: string
+  capabilities: DatasetInitiativeCapability[]
+  objectives: string[]      // objective names
+}
+
 export type Dataset = {
   label: string
   description: string
@@ -53,6 +78,8 @@ export type Dataset = {
   capabilities: DatasetCapability[]
   applications: DatasetApplication[]
   valueStreams: DatasetValueStream[]
+  objectives: DatasetObjective[]
+  initiatives: DatasetInitiative[]
 }
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
@@ -68,6 +95,8 @@ export const DATASET_BLANK: Dataset = {
   capabilities: [],
   applications: [],
   valueStreams: [],
+  objectives: [],
+  initiatives: [],
 }
 
 // ── Dataset 2: Starter ────────────────────────────────────────────────────────
@@ -165,6 +194,28 @@ export const DATASET_STARTER: Dataset = {
         { name: 'Submit application', description: 'Applicant completes and submits permit application online.', capabilities: ['Online Permitting'] },
         { name: 'Review and decision', description: 'Staff review application and issue approval or request corrections.', capabilities: ['Online Permitting'] },
       ],
+    },
+  ],
+  objectives: [
+    {
+      name: 'Reduce permit processing time by 40%',
+      description: 'Streamline the end-to-end permitting process to reduce burden on residents and businesses.',
+      successMetric: 'Average calendar days from submission to decision < 10',
+      timeHorizon: 'FY2026',
+      status: 'published',
+      capabilities: ['Online Permitting'],
+      valueStreams: ['Obtain a Building Permit'],
+    },
+  ],
+  initiatives: [
+    {
+      name: 'Accela Online Portal Upgrade',
+      description: 'Upgrade Accela to the latest SaaS version to unlock self-service permit tracking and mobile submission.',
+      status: 'active',
+      startDate: 'Q1 FY2026',
+      endDate: 'Q3 FY2026',
+      capabilities: [{ name: 'Online Permitting', impact: 'improve' }],
+      objectives: ['Reduce permit processing time by 40%'],
     },
   ],
 }
@@ -364,6 +415,69 @@ export const DATASET_CITY_DEMO: Dataset = {
         { name: 'System access provisioning', description: 'IT provisions accounts, email, and role-based system access.', capabilities: ['Cybersecurity Monitoring'] },
         { name: 'Records creation', description: 'Employee file created in records management system.', capabilities: ['Records Management'] },
       ],
+    },
+  ],
+  objectives: [
+    {
+      name: 'Reduce permit processing time by 40%',
+      description: 'Streamline the end-to-end permitting process to reduce burden on residents and businesses.',
+      successMetric: 'Average calendar days from submission to decision < 10',
+      timeHorizon: 'FY2026',
+      status: 'published',
+      capabilities: ['Online Permitting', 'Business License Management'],
+      valueStreams: ['Obtain a Building Permit'],
+    },
+    {
+      name: 'Improve resident service request resolution rate',
+      description: 'Increase the percentage of 311 service requests resolved within SLA targets.',
+      successMetric: '90% of requests resolved within 5 business days',
+      timeHorizon: 'FY2025',
+      status: 'published',
+      capabilities: ['311 Resident Services'],
+      valueStreams: ['Report a Non-Emergency Issue'],
+    },
+    {
+      name: 'Modernize records infrastructure',
+      description: 'Replace the legacy on-premise records system with a cloud-native platform to reduce risk and improve access.',
+      successMetric: 'OpenText Livelink decommissioned and all records migrated by Q4 FY2026',
+      timeHorizon: '18 months',
+      status: 'draft',
+      capabilities: ['Records Management'],
+      valueStreams: [],
+    },
+  ],
+  initiatives: [
+    {
+      name: 'Accela Online Portal Upgrade',
+      description: 'Upgrade Accela to the latest cloud release to enable self-service permit tracking, mobile submission, and automated status notifications.',
+      status: 'active',
+      startDate: 'Q1 FY2026',
+      endDate: 'Q3 FY2026',
+      capabilities: [
+        { name: 'Online Permitting', impact: 'improve' },
+        { name: 'Business License Management', impact: 'improve' },
+      ],
+      objectives: ['Reduce permit processing time by 40%'],
+    },
+    {
+      name: 'Deploy 311 Mobile App',
+      description: 'Launch a native mobile application for residents to submit and track service requests, with real-time status updates and push notifications.',
+      status: 'proposed',
+      startDate: 'Q2 FY2026',
+      endDate: 'Q4 FY2026',
+      capabilities: [{ name: '311 Resident Services', impact: 'improve' }],
+      objectives: ['Improve resident service request resolution rate'],
+    },
+    {
+      name: 'Migrate Records to Cloud Platform',
+      description: 'Decommission OpenText Livelink and migrate all official city records to a cloud-native document management system.',
+      status: 'proposed',
+      startDate: 'Q1 FY2026',
+      endDate: 'Q4 FY2026',
+      capabilities: [
+        { name: 'Records Management', impact: 'build' },
+      ],
+      objectives: ['Modernize records infrastructure'],
     },
   ],
 }

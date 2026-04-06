@@ -3,9 +3,9 @@ import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
 import Credentials from 'next-auth/providers/credentials'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
 import { db } from '@/db/client'
-import { users, accounts, sessions, verificationTokens } from '@/db/schema'
+import { users, accounts, sessions, verificationTokens, organizations } from '@/db/schema'
 import bcrypt from 'bcryptjs'
-import { eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { writeAuditLog } from '@/lib/audit'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -81,6 +81,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   events: {
+    async createUser({ user }) {
+      const [firstOrg] = await db
+        .select()
+        .from(organizations)
+        .orderBy(asc(organizations.createdAt))
+        .limit(1)
+      if (firstOrg) {
+        await db.update(users).set({ organizationId: firstOrg.id }).where(eq(users.id, user.id!))
+      }
+    },
     async signIn({ user }) {
       await writeAuditLog({
         action: 'auth.login',
