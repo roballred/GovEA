@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Persona } from '@/db/schema'
-import { createPersona, editPersona, deletePersona } from '@/actions/personas'
+import type { Persona, PersonaType } from '@/db/schema'
+import { createPersona, editPersona, deletePersona, createPersonaType, deletePersonaType } from '@/actions/personas'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,10 +20,9 @@ type PersonaRow = Pick<Persona, 'id' | 'name' | 'description' | 'type' | 'status
 
 interface Props {
   personas: PersonaRow[]
+  personaTypes: PersonaType[]
   role: Role
 }
-
-const PERSONA_TYPES = ['citizen', 'staff', 'elected official', 'external partner']
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -43,7 +42,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function PersonaTable({ personas, role }: Props) {
+export function PersonaTable({ personas, personaTypes, role }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -53,6 +52,8 @@ export function PersonaTable({ personas, role }: Props) {
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<PersonaRow | null>(null)
+  const [manageTypesOpen, setManageTypesOpen] = useState(false)
+  const [newTypeName, setNewTypeName] = useState('')
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
@@ -92,6 +93,22 @@ export function PersonaTable({ personas, role }: Props) {
     })
   }
 
+  async function handleAddType() {
+    if (!newTypeName.trim()) return
+    startTransition(async () => {
+      await createPersonaType(newTypeName.trim())
+      setNewTypeName('')
+      refresh()
+    })
+  }
+
+  async function handleDeleteType(typeId: string) {
+    startTransition(async () => {
+      await deletePersonaType(typeId)
+      refresh()
+    })
+  }
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -109,8 +126,8 @@ export function PersonaTable({ personas, role }: Props) {
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="all">All types</option>
-          {PERSONA_TYPES.map(t => (
-            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+          {personaTypes.map(t => (
+            <option key={t.id} value={t.name}>{t.name}</option>
           ))}
         </select>
         <select
@@ -123,11 +140,18 @@ export function PersonaTable({ personas, role }: Props) {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        {canEdit && (
-          <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
-            + New persona
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {canDelete && (
+            <Button variant="outline" size="sm" onClick={() => setManageTypesOpen(true)}>
+              Manage types
+            </Button>
+          )}
+          {canEdit && (
+            <Button onClick={() => setCreateOpen(true)} size="sm">
+              + New persona
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -156,7 +180,7 @@ export function PersonaTable({ personas, role }: Props) {
             {filtered.map(p => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell className="text-muted-foreground capitalize">{p.type ?? '—'}</TableCell>
+                <TableCell className="text-muted-foreground">{p.type ?? '—'}</TableCell>
                 <TableCell>
                   <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[p.status])}>
                     {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
@@ -195,6 +219,52 @@ export function PersonaTable({ personas, role }: Props) {
         </Table>
       </div>
 
+      {/* Manage Types Dialog */}
+      <Dialog open={manageTypesOpen} onOpenChange={setManageTypesOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage persona types</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Types help categorize personas. Changes apply to your organization only.
+          </p>
+          <div className="space-y-2">
+            {personaTypes.length === 0 && (
+              <p className="text-sm text-muted-foreground py-2">No types defined yet.</p>
+            )}
+            {personaTypes.map(t => (
+              <div key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                <span className="text-sm">{t.name}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => handleDeleteType(t.id)}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Input
+              placeholder="New type name…"
+              value={newTypeName}
+              onChange={e => setNewTypeName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddType() } }}
+              disabled={isPending}
+            />
+            <Button onClick={handleAddType} disabled={isPending || !newTypeName.trim()} size="sm">
+              Add
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageTypesOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
@@ -215,8 +285,8 @@ export function PersonaTable({ personas, role }: Props) {
               <Label>Type</Label>
               <select name="type" defaultValue="" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="">— None —</option>
-                {PERSONA_TYPES.map(t => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                {personaTypes.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
                 ))}
               </select>
             </div>
@@ -265,8 +335,8 @@ export function PersonaTable({ personas, role }: Props) {
               <Label>Type</Label>
               <select name="type" defaultValue={editTarget?.type ?? ''} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="">— None —</option>
-                {PERSONA_TYPES.map(t => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                {personaTypes.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
                 ))}
               </select>
             </div>

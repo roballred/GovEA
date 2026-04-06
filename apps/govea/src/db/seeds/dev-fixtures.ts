@@ -8,10 +8,17 @@ export const DEV_USERS = [
   { name: 'Victor Viewer', email: 'victor@govea.dev', role: 'viewer' as const },
 ]
 
+export const DEFAULT_PERSONA_TYPES = [
+  'Citizen',
+  'Staff',
+  'Elected Official',
+  'External Partner',
+]
+
 export const DEV_PERSONAS = [
-  { name: 'Resident', description: 'A member of the public interacting with city services', type: 'citizen' },
-  { name: 'IT Staff', description: 'Internal technology team member', type: 'staff' },
-  { name: 'Department Director', description: 'Senior agency leader responsible for a service area', type: 'staff' },
+  { name: 'Resident', description: 'A member of the public interacting with city services', type: 'Citizen' },
+  { name: 'IT Staff', description: 'Internal technology team member', type: 'Staff' },
+  { name: 'Department Director', description: 'Senior agency leader responsible for a service area', type: 'Staff' },
 ]
 
 export const DEV_CAPABILITIES = [

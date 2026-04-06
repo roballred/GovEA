@@ -29,6 +29,13 @@
       "when": 1775426858345,
       "tag": "0003_tiny_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775442261128,
+      "tag": "0004_cute_hairball",
+      "breakpoints": true
     }
   ]
 }
