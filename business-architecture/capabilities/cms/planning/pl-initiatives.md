@@ -1,0 +1,31 @@
+# Capability: Initiatives
+
+## What It Does
+The system must allow organizations to document change programmes (initiatives, projects, programmes), link them to the capabilities they affect and the objectives they advance, and track their status and timeline. This makes the connection between investment decisions and the architecture they change explicit and visible.
+
+## Personas
+- **Enterprise Architect (Central IT)** — tracks enterprise-level programmes and their impact on the enterprise capability portfolio
+- **Agency EA Coordinator** — maintains the agency's initiative register and links each initiative to the capabilities it builds, changes, or retires
+- **Department Director** — views the initiative portfolio to understand what is underway, what capabilities are being built, and how initiatives connect to strategic objectives
+
+## Behaviors
+- Create an initiative with name, description, status, start date, end date, and organization
+- Link an initiative to one or more capabilities with an impact label (builds, enhances, retires, depends-on)
+- Link an initiative to one or more strategic objectives
+- View which capabilities an initiative affects and in what way
+- View which initiatives are advancing a given objective
+- View which initiatives affect a given capability
+- Track initiative status through its lifecycle (proposed, active, on-hold, complete, cancelled)
+- Publish initiatives so they are visible to Viewer-role users
+
+## Rules
+- An initiative must belong to an organization
+- Initiatives follow the standard content workflow: draft → published → archived
+- Only published initiatives are visible to Viewer-role users
+- An initiative with no linked capabilities is architecturally incomplete — this should surface as a completeness signal in the admin dashboard
+- Impact labels on capability links are optional but recommended; they communicate whether the initiative is building new capability or changing existing capability
+
+## Links
+- Depends on: Content Management — Content Workflow, Content Relationships
+- Related: Strategic Objectives, Capabilities, Roadmap
+- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director

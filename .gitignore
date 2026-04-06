@@ -31,3 +31,6 @@ npm-debug.log*
 .vscode
 .idea
 *.swp
+
+# Temporary research and working files
+ea-research/
