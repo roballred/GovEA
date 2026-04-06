@@ -64,6 +64,13 @@
       "when": 1775450277361,
       "tag": "0008_living_dark_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775492778752,
+      "tag": "0009_silly_wonder_man",
+      "breakpoints": true
     }
   ]
 }

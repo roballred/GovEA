@@ -1,13 +1,13 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { organizations } from './organizations'
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'contributor', 'viewer'])
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text('name'),
-  email: text('email').notNull().unique(),
+  email: text('email').notNull(),
   emailVerified: timestamp('email_verified'),
   image: text('image'),
   passwordHash: text('password_hash'),
@@ -15,7 +15,9 @@ export const users = pgTable('users', {
   isActive: text('is_active').notNull().default('true'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+}, (table) => [
+  uniqueIndex('users_org_email_unique').on(table.organizationId, table.email),
+])
 
 export const accounts = pgTable('accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
