@@ -21,6 +21,13 @@ The system must allow users to sign in using their agency's identity provider vi
 - If an SSO user is deactivated in the identity provider, their next login attempt must fail
 - Only one SSO provider is supported in v1
 
+## Session Invalidation
+
+- Sessions are validated on every request — a deactivated GovEA user is blocked immediately on their next request, regardless of session age
+- Sessions expire after 24 hours and require re-authentication
+- **Important:** Deactivating a user in the identity provider (e.g. Entra ID) alone does not immediately revoke their active GovEA session. Admins must also deactivate the user in GovEA for immediate effect. IdP-only deactivation is caught at the next login attempt (within 24h at latest due to session expiry)
+- SCIM-based real-time provisioning sync is out of scope for v1
+
 ## Links
 - Depends on: User Management, Role-Based Access Control
 - Related: Local Authentication, IAM Audit Trail

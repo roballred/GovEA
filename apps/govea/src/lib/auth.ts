@@ -15,7 +15,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions as any,
     verificationTokensTable: verificationTokens as any,
   }),
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: 60 * 60 * 24 }, // 24h
   providers: [
     ...(process.env.AUTH_MICROSOFT_ENTRA_ID_ID
       ? [MicrosoftEntraID({
@@ -67,9 +67,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // Fresh sign-in — populate token from user object
         token.id = user.id
         token.role = (user as any).role
         token.organizationId = (user as any).organizationId
+        return token
+      }
+      // Subsequent requests — verify user is still active
+      if (token.id) {
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, token.id as string),
+        })
+        if (!dbUser || dbUser.isActive !== 'true') return null
       }
       return token
     },
