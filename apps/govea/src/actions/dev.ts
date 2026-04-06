@@ -4,6 +4,7 @@ import { db } from '@/db/client'
 import {
   personas, capabilities, applications, tags, personaTypes,
   personaTags, capabilityPersonas, applicationCapabilities,
+  valueStreams, valueStreamStages, valueStreamStageCapabilities,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -25,13 +26,14 @@ export async function resetToDataset(datasetKey: string) {
   if (!dataset) throw new Error(`Unknown dataset: ${datasetKey}`)
 
   // ── Wipe org content (junction tables cascade automatically) ──────────────
+  await db.delete(valueStreams).where(eq(valueStreams.organizationId, orgId))
   await db.delete(applications).where(eq(applications.organizationId, orgId))
   await db.delete(capabilities).where(eq(capabilities.organizationId, orgId))
   await db.delete(personas).where(eq(personas.organizationId, orgId))
   await db.delete(tags).where(eq(tags.organizationId, orgId))
   await db.delete(personaTypes).where(eq(personaTypes.organizationId, orgId))
 
-  // ── Insert persona types ──────────────────────────────────────────────────
+  // ── Insert persona types ─────────────────────────────────────────────────
   const typeRows = dataset.personaTypes.length > 0
     ? await db.insert(personaTypes)
         .values(dataset.personaTypes.map(name => ({ name, organizationId: orgId })))
@@ -99,30 +101,64 @@ export async function resetToDataset(datasetKey: string) {
     await db.insert(capabilityPersonas).values(capPersonaRows)
   }
 
-  if (dataset.applications.length === 0) return
+  if (dataset.applications.length > 0) {
+    // ── Insert applications ─────────────────────────────────────────────────
+    const applicationRows = await db.insert(applications)
+      .values(dataset.applications.map(a => ({
+        name: a.name,
+        description: a.description,
+        vendor: a.vendor,
+        hostingModel: a.hostingModel,
+        lifecycleStatus: a.lifecycleStatus,
+        status: a.status,
+        organizationId: orgId,
+      })))
+      .returning()
 
-  // ── Insert applications ───────────────────────────────────────────────────
-  const applicationRows = await db.insert(applications)
-    .values(dataset.applications.map(a => ({
-      name: a.name,
-      description: a.description,
-      vendor: a.vendor,
-      hostingModel: a.hostingModel,
-      lifecycleStatus: a.lifecycleStatus,
-      status: a.status,
+    const applicationByName = Object.fromEntries(applicationRows.map(a => [a.name, a.id]))
+
+    // Insert application → capability junctions
+    const appCapRows = dataset.applications.flatMap(a =>
+      a.capabilities
+        .filter(c => capabilityByName[c])
+        .map(c => ({ applicationId: applicationByName[a.name], capabilityId: capabilityByName[c] }))
+    )
+    if (appCapRows.length > 0) {
+      await db.insert(applicationCapabilities).values(appCapRows)
+    }
+  }
+
+  if (!dataset.valueStreams || dataset.valueStreams.length === 0) return
+
+  // ── Insert value streams ──────────────────────────────────────────────────
+  for (const vs of dataset.valueStreams) {
+    const stakeholderPersonaId = personaByName[vs.stakeholderPersona] ?? null
+
+    const [vsRow] = await db.insert(valueStreams).values({
+      name: vs.name,
+      description: vs.description,
+      stakeholderPersonaId,
+      valueItem: vs.valueItem,
+      status: vs.status,
       organizationId: orgId,
-    })))
-    .returning()
+    }).returning()
 
-  const applicationByName = Object.fromEntries(applicationRows.map(a => [a.name, a.id]))
+    for (let i = 0; i < vs.stages.length; i++) {
+      const stageDef = vs.stages[i]
+      const [stageRow] = await db.insert(valueStreamStages).values({
+        valueStreamId: vsRow.id,
+        name: stageDef.name,
+        description: stageDef.description ?? null,
+        order: i,
+      }).returning()
 
-  // Insert application → capability junctions
-  const appCapRows = dataset.applications.flatMap(a =>
-    a.capabilities
-      .filter(c => capabilityByName[c])
-      .map(c => ({ applicationId: applicationByName[a.name], capabilityId: capabilityByName[c] }))
-  )
-  if (appCapRows.length > 0) {
-    await db.insert(applicationCapabilities).values(appCapRows)
+      const stageCaps = (stageDef.capabilities ?? [])
+        .filter(c => capabilityByName[c])
+        .map(c => ({ stageId: stageRow.id, capabilityId: capabilityByName[c] }))
+
+      if (stageCaps.length > 0) {
+        await db.insert(valueStreamStageCapabilities).values(stageCaps).onConflictDoNothing()
+      }
+    }
   }
 }

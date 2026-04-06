@@ -29,6 +29,21 @@ export type DatasetApplication = {
   capabilities: string[] // capability names
 }
 
+export type DatasetValueStreamStage = {
+  name: string
+  description?: string
+  capabilities: string[] // capability names
+}
+
+export type DatasetValueStream = {
+  name: string
+  description: string
+  stakeholderPersona: string // persona name
+  valueItem: string
+  status: 'draft' | 'published' | 'archived'
+  stages: DatasetValueStreamStage[]
+}
+
 export type Dataset = {
   label: string
   description: string
@@ -37,6 +52,7 @@ export type Dataset = {
   personas: DatasetPersona[]
   capabilities: DatasetCapability[]
   applications: DatasetApplication[]
+  valueStreams: DatasetValueStream[]
 }
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
@@ -51,6 +67,7 @@ export const DATASET_BLANK: Dataset = {
   personas: [],
   capabilities: [],
   applications: [],
+  valueStreams: [],
 }
 
 // ── Dataset 2: Starter ────────────────────────────────────────────────────────
@@ -135,6 +152,19 @@ export const DATASET_STARTER: Dataset = {
       lifecycleStatus: 'active',
       status: 'published',
       capabilities: ['GIS Mapping'],
+    },
+  ],
+  valueStreams: [
+    {
+      name: 'Obtain a Building Permit',
+      description: 'A resident or business owner applies for and receives an approved building permit.',
+      stakeholderPersona: 'Resident',
+      valueItem: 'Approved permit enabling legal construction or renovation',
+      status: 'published',
+      stages: [
+        { name: 'Submit application', description: 'Applicant completes and submits permit application online.', capabilities: ['Online Permitting'] },
+        { name: 'Review and decision', description: 'Staff review application and issue approval or request corrections.', capabilities: ['Online Permitting'] },
+      ],
     },
   ],
 }
@@ -295,6 +325,45 @@ export const DATASET_CITY_DEMO: Dataset = {
       lifecycleStatus: 'sunset',
       status: 'published',
       capabilities: ['Records Management'],
+    },
+  ],
+  valueStreams: [
+    {
+      name: 'Obtain a Building Permit',
+      description: 'A resident or business owner applies for and receives an approved building permit to begin construction or renovation.',
+      stakeholderPersona: 'Business Owner',
+      valueItem: 'Approved permit enabling legal construction or renovation',
+      status: 'published',
+      stages: [
+        { name: 'Submit application', description: 'Applicant completes permit application online, uploads supporting documents, and pays the filing fee.', capabilities: ['Online Permitting'] },
+        { name: 'Staff review', description: 'Plan reviewers assess the application for code compliance and completeness.', capabilities: ['Online Permitting'] },
+        { name: 'Inspection scheduling', description: 'Upon approval, applicant schedules required site inspections.', capabilities: ['Online Permitting'] },
+        { name: 'Permit issuance', description: 'Final approved permit is issued and stored in the records system.', capabilities: ['Online Permitting', 'Records Management'] },
+      ],
+    },
+    {
+      name: 'Report a Non-Emergency Issue',
+      description: 'A resident reports a non-emergency service issue (pothole, graffiti, broken streetlight) and tracks its resolution.',
+      stakeholderPersona: 'Resident',
+      valueItem: 'Confirmed service request with status tracking',
+      status: 'published',
+      stages: [
+        { name: 'Submit service request', description: 'Resident submits issue via web, mobile app, or phone.', capabilities: ['311 Resident Services'] },
+        { name: 'Route to department', description: 'Request is categorized and routed to the responsible department.', capabilities: ['311 Resident Services'] },
+        { name: 'Resolution and closure', description: 'Department resolves the issue and closes the request; resident notified.', capabilities: ['311 Resident Services'] },
+      ],
+    },
+    {
+      name: 'Onboard a New City Employee',
+      description: 'A new employee is provisioned with system access, HR enrollment, and payroll setup.',
+      stakeholderPersona: 'IT Administrator',
+      valueItem: 'Fully provisioned employee ready for first day',
+      status: 'draft',
+      stages: [
+        { name: 'HR enrollment', description: 'New hire completes benefits elections and direct deposit setup.', capabilities: ['HR Self-Service'] },
+        { name: 'System access provisioning', description: 'IT provisions accounts, email, and role-based system access.', capabilities: ['Cybersecurity Monitoring'] },
+        { name: 'Records creation', description: 'Employee file created in records management system.', capabilities: ['Records Management'] },
+      ],
     },
   ],
 }

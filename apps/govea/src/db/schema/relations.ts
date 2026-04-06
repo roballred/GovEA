@@ -3,6 +3,7 @@ import { capabilities, capabilityPersonas } from './capabilities'
 import { applications, applicationCapabilities } from './applications'
 import { personas, personaTags, personaTypes, tags } from './personas'
 import { organizations } from './organizations'
+import { valueStreams, valueStreamStages, valueStreamStageCapabilities } from './value-streams'
 
 export const capabilitiesRelations = relations(capabilities, ({ many }) => ({
   capabilityPersonas: many(capabilityPersonas),
@@ -47,6 +48,37 @@ export const personaTypesRelations = relations(personaTypes, ({ one }) => ({
   organization: one(organizations, {
     fields: [personaTypes.organizationId],
     references: [organizations.id],
+  }),
+}))
+
+export const valueStreamsRelations = relations(valueStreams, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [valueStreams.organizationId],
+    references: [organizations.id],
+  }),
+  stakeholderPersona: one(personas, {
+    fields: [valueStreams.stakeholderPersonaId],
+    references: [personas.id],
+  }),
+  stages: many(valueStreamStages),
+}))
+
+export const valueStreamStagesRelations = relations(valueStreamStages, ({ one, many }) => ({
+  valueStream: one(valueStreams, {
+    fields: [valueStreamStages.valueStreamId],
+    references: [valueStreams.id],
+  }),
+  stageCapabilities: many(valueStreamStageCapabilities),
+}))
+
+export const valueStreamStageCapabilitiesRelations = relations(valueStreamStageCapabilities, ({ one }) => ({
+  stage: one(valueStreamStages, {
+    fields: [valueStreamStageCapabilities.stageId],
+    references: [valueStreamStages.id],
+  }),
+  capability: one(capabilities, {
+    fields: [valueStreamStageCapabilities.capabilityId],
+    references: [capabilities.id],
   }),
 }))
 
