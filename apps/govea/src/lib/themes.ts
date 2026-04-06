@@ -18,7 +18,7 @@ export const themes: ThemeDefinition[] = [
     name: 'GovEA',
     description: 'Clean, professional blue. WCAG AA compliant.',
     previewColors: {
-      header: '#ffffff',
+      header: '#152c5c',
       primary: '#1a4fba',
       background: '#f8f9fb',
     },
@@ -43,9 +43,9 @@ export const themes: ThemeDefinition[] = [
       '--input': '214 32% 91%',
       '--ring': '221 83% 40%',
       '--radius': '0.375rem',
-      '--header-bg': '0 0% 100%',
-      '--header-fg': '222 47% 11%',
-      '--header-border': '214 32% 91%',
+      '--header-bg': '221 56% 22%',
+      '--header-fg': '214 40% 93%',
+      '--header-border': '221 56% 30%',
     },
   },
   {
