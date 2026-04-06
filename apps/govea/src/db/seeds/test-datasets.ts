@@ -54,6 +54,21 @@ export type DatasetObjective = {
   valueStreams: string[]     // value stream names
 }
 
+export type DatasetInitiativeCapability = {
+  name: string              // capability name
+  impact?: 'build' | 'improve' | 'retire'
+}
+
+export type DatasetInitiative = {
+  name: string
+  description: string
+  status: 'proposed' | 'active' | 'on-hold' | 'complete' | 'cancelled'
+  startDate?: string
+  endDate?: string
+  capabilities: DatasetInitiativeCapability[]
+  objectives: string[]      // objective names
+}
+
 export type Dataset = {
   label: string
   description: string
@@ -64,6 +79,7 @@ export type Dataset = {
   applications: DatasetApplication[]
   valueStreams: DatasetValueStream[]
   objectives: DatasetObjective[]
+  initiatives: DatasetInitiative[]
 }
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
@@ -80,6 +96,7 @@ export const DATASET_BLANK: Dataset = {
   applications: [],
   valueStreams: [],
   objectives: [],
+  initiatives: [],
 }
 
 // ── Dataset 2: Starter ────────────────────────────────────────────────────────
@@ -188,6 +205,17 @@ export const DATASET_STARTER: Dataset = {
       status: 'published',
       capabilities: ['Online Permitting'],
       valueStreams: ['Obtain a Building Permit'],
+    },
+  ],
+  initiatives: [
+    {
+      name: 'Accela Online Portal Upgrade',
+      description: 'Upgrade Accela to the latest SaaS version to unlock self-service permit tracking and mobile submission.',
+      status: 'active',
+      startDate: 'Q1 FY2026',
+      endDate: 'Q3 FY2026',
+      capabilities: [{ name: 'Online Permitting', impact: 'improve' }],
+      objectives: ['Reduce permit processing time by 40%'],
     },
   ],
 }
@@ -416,6 +444,40 @@ export const DATASET_CITY_DEMO: Dataset = {
       status: 'draft',
       capabilities: ['Records Management'],
       valueStreams: [],
+    },
+  ],
+  initiatives: [
+    {
+      name: 'Accela Online Portal Upgrade',
+      description: 'Upgrade Accela to the latest cloud release to enable self-service permit tracking, mobile submission, and automated status notifications.',
+      status: 'active',
+      startDate: 'Q1 FY2026',
+      endDate: 'Q3 FY2026',
+      capabilities: [
+        { name: 'Online Permitting', impact: 'improve' },
+        { name: 'Business License Management', impact: 'improve' },
+      ],
+      objectives: ['Reduce permit processing time by 40%'],
+    },
+    {
+      name: 'Deploy 311 Mobile App',
+      description: 'Launch a native mobile application for residents to submit and track service requests, with real-time status updates and push notifications.',
+      status: 'proposed',
+      startDate: 'Q2 FY2026',
+      endDate: 'Q4 FY2026',
+      capabilities: [{ name: '311 Resident Services', impact: 'improve' }],
+      objectives: ['Improve resident service request resolution rate'],
+    },
+    {
+      name: 'Migrate Records to Cloud Platform',
+      description: 'Decommission OpenText Livelink and migrate all official city records to a cloud-native document management system.',
+      status: 'proposed',
+      startDate: 'Q1 FY2026',
+      endDate: 'Q4 FY2026',
+      capabilities: [
+        { name: 'Records Management', impact: 'build' },
+      ],
+      objectives: ['Modernize records infrastructure'],
     },
   ],
 }

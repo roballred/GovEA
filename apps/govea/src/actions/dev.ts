@@ -6,6 +6,7 @@ import {
   personaTags, capabilityPersonas, applicationCapabilities,
   valueStreams, valueStreamStages, valueStreamStageCapabilities,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
+  initiatives, initiativeCapabilities, initiativeObjectives,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -27,6 +28,7 @@ export async function resetToDataset(datasetKey: string) {
   if (!dataset) throw new Error(`Unknown dataset: ${datasetKey}`)
 
   // ── Wipe org content (junction tables cascade automatically) ──────────────
+  await db.delete(initiatives).where(eq(initiatives.organizationId, orgId))
   await db.delete(strategicObjectives).where(eq(strategicObjectives.organizationId, orgId))
   await db.delete(valueStreams).where(eq(valueStreams.organizationId, orgId))
   await db.delete(applications).where(eq(applications.organizationId, orgId))
@@ -197,6 +199,46 @@ export async function resetToDataset(datasetKey: string) {
       .map(vs => ({ objectiveId: objRow.id, valueStreamId: valueStreamByName[vs] }))
     if (objVsRows.length > 0) {
       await db.insert(objectiveValueStreams).values(objVsRows).onConflictDoNothing()
+    }
+  }
+
+  if (!dataset.initiatives || dataset.initiatives.length === 0) return
+
+  // ── Insert initiatives ────────────────────────────────────────────────────
+  // Build objective name → id map from what we just inserted
+  const objRows = await db.select({ id: strategicObjectives.id, name: strategicObjectives.name })
+    .from(strategicObjectives)
+    .where(eq(strategicObjectives.organizationId, orgId))
+  const objectiveByName = Object.fromEntries(objRows.map(o => [o.name, o.id]))
+
+  for (const init of dataset.initiatives) {
+    const [initRow] = await db.insert(initiatives).values({
+      name: init.name,
+      description: init.description,
+      status: init.status,
+      startDate: init.startDate ?? null,
+      endDate: init.endDate ?? null,
+      organizationId: orgId,
+    }).returning()
+
+    // Link capabilities with impact
+    const initCapRows = (init.capabilities ?? [])
+      .filter(ic => capabilityByName[ic.name])
+      .map(ic => ({
+        initiativeId: initRow.id,
+        capabilityId: capabilityByName[ic.name],
+        impact: ic.impact ?? null,
+      }))
+    if (initCapRows.length > 0) {
+      await db.insert(initiativeCapabilities).values(initCapRows).onConflictDoNothing()
+    }
+
+    // Link objectives
+    const initObjRows = (init.objectives ?? [])
+      .filter(o => objectiveByName[o])
+      .map(o => ({ initiativeId: initRow.id, objectiveId: objectiveByName[o] }))
+    if (initObjRows.length > 0) {
+      await db.insert(initiativeObjectives).values(initObjRows).onConflictDoNothing()
     }
   }
 }
