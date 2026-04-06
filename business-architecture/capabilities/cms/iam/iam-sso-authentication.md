@@ -23,9 +23,10 @@ The system must allow users to sign in using their agency's identity provider vi
 
 ## Session Invalidation
 
-- Sessions are validated on every request — a deactivated GovEA user is blocked immediately on their next request, regardless of session age
 - Sessions expire after 24 hours and require re-authentication
-- **Important:** Deactivating a user in the identity provider (e.g. Entra ID) alone does not immediately revoke their active GovEA session. Admins must also deactivate the user in GovEA for immediate effect. IdP-only deactivation is caught at the next login attempt (within 24h at latest due to session expiry)
+- Deactivating a user in GovEA blocks new sign-ins immediately (checked in the authentication flow). Existing active sessions continue until they expire (within 24h)
+- **Important:** Deactivating a user in the identity provider (e.g. Entra ID) alone does not revoke their active GovEA session. The next login attempt will fail (within 24h at latest due to session expiry), but the current session persists until it expires
+- This 24h residual access window is an accepted v1 trade-off
 - SCIM-based real-time provisioning sync is out of scope for v1
 
 ## Links
