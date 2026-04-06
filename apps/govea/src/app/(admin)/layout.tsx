@@ -8,6 +8,7 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { getTheme, themeToStyleString } from '@/lib/themes'
 import type { Role } from '@/lib/rbac'
+import { DevToolbar } from '@/components/dev-toolbar'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -97,7 +98,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </div>
       </header>
-      <main className="p-6">{children}</main>
+      <main className={cn('p-6', process.env.NODE_ENV === 'development' && 'pb-16')}>{children}</main>
+      {process.env.NODE_ENV === 'development' && <DevToolbar />}
     </div>
   )
 }
