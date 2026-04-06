@@ -21,6 +21,10 @@ The system must allow administrators to control whether content requires a login
 - Authentication state must persist across page navigation without re-prompting
 - SSO sign-in on the front-end uses the same provider configured in IAM — no separate configuration
 
+## Implementation Status
+- **v1:** Public access is not yet implemented. The middleware enforces authentication for all routes. This is the correct default behavior until the org-level public access toggle is built.
+- **v1 scope:** The opt-in public access toggle, front-end SSO sign-in link, and post-login redirect are deferred to a future issue.
+
 ## Links
 - Depends on: IAM — Local Authentication, IAM — SSO Authentication, IAM — Role-Based Access Control
 - Related: Navigation, Content Display, Portfolio Views
