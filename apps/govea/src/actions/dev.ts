@@ -5,6 +5,7 @@ import {
   personas, capabilities, applications, tags, personaTypes,
   personaTags, capabilityPersonas, applicationCapabilities,
   valueStreams, valueStreamStages, valueStreamStageCapabilities,
+  strategicObjectives, objectiveCapabilities, objectiveValueStreams,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -26,6 +27,7 @@ export async function resetToDataset(datasetKey: string) {
   if (!dataset) throw new Error(`Unknown dataset: ${datasetKey}`)
 
   // ── Wipe org content (junction tables cascade automatically) ──────────────
+  await db.delete(strategicObjectives).where(eq(strategicObjectives.organizationId, orgId))
   await db.delete(valueStreams).where(eq(valueStreams.organizationId, orgId))
   await db.delete(applications).where(eq(applications.organizationId, orgId))
   await db.delete(capabilities).where(eq(capabilities.organizationId, orgId))
@@ -159,6 +161,42 @@ export async function resetToDataset(datasetKey: string) {
       if (stageCaps.length > 0) {
         await db.insert(valueStreamStageCapabilities).values(stageCaps).onConflictDoNothing()
       }
+    }
+  }
+
+  if (!dataset.objectives || dataset.objectives.length === 0) return
+
+  // ── Insert strategic objectives ───────────────────────────────────────────
+  // Build a value stream name → id map from what we just inserted
+  const vsRows = await db.select({ id: valueStreams.id, name: valueStreams.name })
+    .from(valueStreams)
+    .where(eq(valueStreams.organizationId, orgId))
+  const valueStreamByName = Object.fromEntries(vsRows.map(vs => [vs.name, vs.id]))
+
+  for (const obj of dataset.objectives) {
+    const [objRow] = await db.insert(strategicObjectives).values({
+      name: obj.name,
+      description: obj.description,
+      successMetric: obj.successMetric,
+      timeHorizon: obj.timeHorizon,
+      status: obj.status,
+      organizationId: orgId,
+    }).returning()
+
+    // Link capabilities
+    const objCapRows = (obj.capabilities ?? [])
+      .filter(c => capabilityByName[c])
+      .map(c => ({ objectiveId: objRow.id, capabilityId: capabilityByName[c] }))
+    if (objCapRows.length > 0) {
+      await db.insert(objectiveCapabilities).values(objCapRows).onConflictDoNothing()
+    }
+
+    // Link value streams
+    const objVsRows = (obj.valueStreams ?? [])
+      .filter(vs => valueStreamByName[vs])
+      .map(vs => ({ objectiveId: objRow.id, valueStreamId: valueStreamByName[vs] }))
+    if (objVsRows.length > 0) {
+      await db.insert(objectiveValueStreams).values(objVsRows).onConflictDoNothing()
     }
   }
 }

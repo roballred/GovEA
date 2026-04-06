@@ -44,6 +44,16 @@ export type DatasetValueStream = {
   stages: DatasetValueStreamStage[]
 }
 
+export type DatasetObjective = {
+  name: string
+  description: string
+  successMetric: string
+  timeHorizon: string
+  status: 'draft' | 'published' | 'archived'
+  capabilities: string[]    // capability names
+  valueStreams: string[]     // value stream names
+}
+
 export type Dataset = {
   label: string
   description: string
@@ -53,6 +63,7 @@ export type Dataset = {
   capabilities: DatasetCapability[]
   applications: DatasetApplication[]
   valueStreams: DatasetValueStream[]
+  objectives: DatasetObjective[]
 }
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
@@ -68,6 +79,7 @@ export const DATASET_BLANK: Dataset = {
   capabilities: [],
   applications: [],
   valueStreams: [],
+  objectives: [],
 }
 
 // ── Dataset 2: Starter ────────────────────────────────────────────────────────
@@ -165,6 +177,17 @@ export const DATASET_STARTER: Dataset = {
         { name: 'Submit application', description: 'Applicant completes and submits permit application online.', capabilities: ['Online Permitting'] },
         { name: 'Review and decision', description: 'Staff review application and issue approval or request corrections.', capabilities: ['Online Permitting'] },
       ],
+    },
+  ],
+  objectives: [
+    {
+      name: 'Reduce permit processing time by 40%',
+      description: 'Streamline the end-to-end permitting process to reduce burden on residents and businesses.',
+      successMetric: 'Average calendar days from submission to decision < 10',
+      timeHorizon: 'FY2026',
+      status: 'published',
+      capabilities: ['Online Permitting'],
+      valueStreams: ['Obtain a Building Permit'],
     },
   ],
 }
@@ -364,6 +387,35 @@ export const DATASET_CITY_DEMO: Dataset = {
         { name: 'System access provisioning', description: 'IT provisions accounts, email, and role-based system access.', capabilities: ['Cybersecurity Monitoring'] },
         { name: 'Records creation', description: 'Employee file created in records management system.', capabilities: ['Records Management'] },
       ],
+    },
+  ],
+  objectives: [
+    {
+      name: 'Reduce permit processing time by 40%',
+      description: 'Streamline the end-to-end permitting process to reduce burden on residents and businesses.',
+      successMetric: 'Average calendar days from submission to decision < 10',
+      timeHorizon: 'FY2026',
+      status: 'published',
+      capabilities: ['Online Permitting', 'Business License Management'],
+      valueStreams: ['Obtain a Building Permit'],
+    },
+    {
+      name: 'Improve resident service request resolution rate',
+      description: 'Increase the percentage of 311 service requests resolved within SLA targets.',
+      successMetric: '90% of requests resolved within 5 business days',
+      timeHorizon: 'FY2025',
+      status: 'published',
+      capabilities: ['311 Resident Services'],
+      valueStreams: ['Report a Non-Emergency Issue'],
+    },
+    {
+      name: 'Modernize records infrastructure',
+      description: 'Replace the legacy on-premise records system with a cloud-native platform to reduce risk and improve access.',
+      successMetric: 'OpenText Livelink decommissioned and all records migrated by Q4 FY2026',
+      timeHorizon: '18 months',
+      status: 'draft',
+      capabilities: ['Records Management'],
+      valueStreams: [],
     },
   ],
 }
