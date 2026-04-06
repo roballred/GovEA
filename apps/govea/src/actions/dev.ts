@@ -1,0 +1,128 @@
+'use server'
+
+import { db } from '@/db/client'
+import {
+  personas, capabilities, applications, tags, personaTypes,
+  personaTags, capabilityPersonas, applicationCapabilities,
+} from '@/db/schema'
+import { eq } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
+import { isAdmin } from '@/lib/rbac'
+import { redirect } from 'next/navigation'
+import { TEST_DATASETS } from '@/db/seeds/test-datasets'
+
+export async function resetToDataset(datasetKey: string) {
+  if (process.env.NODE_ENV !== 'development') {
+    throw new Error('Dataset reset is only available in development mode')
+  }
+
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  if (!isAdmin(session.user as any)) throw new Error('Admin required')
+
+  const orgId = (session.user as any).organizationId as string
+  const dataset = TEST_DATASETS[datasetKey]
+  if (!dataset) throw new Error(`Unknown dataset: ${datasetKey}`)
+
+  // ── Wipe org content (junction tables cascade automatically) ──────────────
+  await db.delete(applications).where(eq(applications.organizationId, orgId))
+  await db.delete(capabilities).where(eq(capabilities.organizationId, orgId))
+  await db.delete(personas).where(eq(personas.organizationId, orgId))
+  await db.delete(tags).where(eq(tags.organizationId, orgId))
+  await db.delete(personaTypes).where(eq(personaTypes.organizationId, orgId))
+
+  // ── Insert persona types ──────────────────────────────────────────────────
+  const typeRows = dataset.personaTypes.length > 0
+    ? await db.insert(personaTypes)
+        .values(dataset.personaTypes.map(name => ({ name, organizationId: orgId })))
+        .onConflictDoNothing()
+        .returning()
+    : []
+
+  // ── Insert tags ───────────────────────────────────────────────────────────
+  const tagRows = dataset.tags.length > 0
+    ? await db.insert(tags)
+        .values(dataset.tags.map(name => ({ name, organizationId: orgId })))
+        .onConflictDoNothing()
+        .returning()
+    : []
+
+  const tagByName = Object.fromEntries(tagRows.map(t => [t.name, t.id]))
+
+  if (dataset.personas.length === 0) return
+
+  // ── Insert personas ───────────────────────────────────────────────────────
+  const personaRows = await db.insert(personas)
+    .values(dataset.personas.map(p => ({
+      name: p.name,
+      description: p.description,
+      type: p.type || null,
+      status: p.status,
+      organizationId: orgId,
+    })))
+    .returning()
+
+  const personaByName = Object.fromEntries(personaRows.map(p => [p.name, p.id]))
+
+  // Insert persona → tag junctions
+  const personaTagRows = dataset.personas.flatMap(p =>
+    p.tags
+      .filter(t => tagByName[t])
+      .map(t => ({ personaId: personaByName[p.name], tagId: tagByName[t] }))
+  )
+  if (personaTagRows.length > 0) {
+    await db.insert(personaTags).values(personaTagRows)
+  }
+
+  if (dataset.capabilities.length === 0) return
+
+  // ── Insert capabilities ───────────────────────────────────────────────────
+  const capabilityRows = await db.insert(capabilities)
+    .values(dataset.capabilities.map(c => ({
+      name: c.name,
+      description: c.description,
+      domain: c.domain,
+      status: c.status,
+      organizationId: orgId,
+    })))
+    .returning()
+
+  const capabilityByName = Object.fromEntries(capabilityRows.map(c => [c.name, c.id]))
+
+  // Insert capability → persona junctions
+  const capPersonaRows = dataset.capabilities.flatMap(c =>
+    c.personas
+      .filter(p => personaByName[p])
+      .map(p => ({ capabilityId: capabilityByName[c.name], personaId: personaByName[p] }))
+  )
+  if (capPersonaRows.length > 0) {
+    await db.insert(capabilityPersonas).values(capPersonaRows)
+  }
+
+  if (dataset.applications.length === 0) return
+
+  // ── Insert applications ───────────────────────────────────────────────────
+  const applicationRows = await db.insert(applications)
+    .values(dataset.applications.map(a => ({
+      name: a.name,
+      description: a.description,
+      vendor: a.vendor,
+      hostingModel: a.hostingModel,
+      lifecycleStatus: a.lifecycleStatus,
+      status: a.status,
+      organizationId: orgId,
+    })))
+    .returning()
+
+  const applicationByName = Object.fromEntries(applicationRows.map(a => [a.name, a.id]))
+
+  // Insert application → capability junctions
+  const appCapRows = dataset.applications.flatMap(a =>
+    a.capabilities
+      .filter(c => capabilityByName[c])
+      .map(c => ({ applicationId: applicationByName[a.name], capabilityId: capabilityByName[c] }))
+  )
+  if (appCapRows.length > 0) {
+    await db.insert(applicationCapabilities).values(appCapRows)
+  }
+}

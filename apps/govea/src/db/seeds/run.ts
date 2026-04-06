@@ -1,7 +1,7 @@
 import { GOV_TAXONOMY } from './gov-taxonomy'
-import { DEV_USERS, DEFAULT_PERSONA_TYPES } from './dev-fixtures'
+import { DEV_USERS, DEFAULT_PERSONA_TYPES, DEFAULT_TAGS } from './dev-fixtures'
 import { db } from '../client'
-import { users, organizations, personaTypes } from '../schema'
+import { users, organizations, personaTypes, tags } from '../schema'
 import bcrypt from 'bcryptjs'
 
 async function seed() {
@@ -40,8 +40,12 @@ async function seed() {
     for (const name of DEFAULT_PERSONA_TYPES) {
       await db.insert(personaTypes).values({ name, organizationId: orgId }).onConflictDoNothing()
     }
-
     console.log(`Seeded ${DEFAULT_PERSONA_TYPES.length} default persona types`)
+
+    for (const name of DEFAULT_TAGS) {
+      await db.insert(tags).values({ name, organizationId: orgId }).onConflictDoNothing()
+    }
+    console.log(`Seeded ${DEFAULT_TAGS.length} default tags`)
   }
 
   console.log('Seed complete.')

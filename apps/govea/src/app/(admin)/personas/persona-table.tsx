@@ -1,8 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Persona, PersonaType } from '@/db/schema'
-import { createPersona, editPersona, deletePersona, createPersonaType, deletePersonaType } from '@/actions/personas'
+import type { Persona, PersonaType, Tag } from '@/db/schema'
+import {
+  createPersona, editPersona, deletePersona,
+  createPersonaType, deletePersonaType,
+  createTag, deleteTag,
+} from '@/actions/personas'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,11 +20,14 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
-type PersonaRow = Pick<Persona, 'id' | 'name' | 'description' | 'type' | 'status' | 'visibility' | 'createdAt'>
+type PersonaRow = Persona & {
+  personaTags: { tag: Tag }[]
+}
 
 interface Props {
   personas: PersonaRow[]
   personaTypes: PersonaType[]
+  allTags: Tag[]
   role: Role
 }
 
@@ -42,18 +49,22 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function PersonaTable({ personas, personaTypes, role }: Props) {
+export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [tagFilter, setTagFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<PersonaRow | null>(null)
   const [manageTypesOpen, setManageTypesOpen] = useState(false)
+  const [manageTagsOpen, setManageTagsOpen] = useState(false)
   const [newTypeName, setNewTypeName] = useState('')
+  const [newTagName, setNewTagName] = useState('')
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
@@ -63,8 +74,9 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
   const filtered = personas.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
     const matchType = typeFilter === 'all' || p.type === typeFilter
+    const matchTag = tagFilter === 'all' || p.personaTags.some(pt => pt.tag.id === tagFilter)
     const matchStatus = statusFilter === 'all' || p.status === statusFilter
-    return matchSearch && matchType && matchStatus
+    return matchSearch && matchType && matchTag && matchStatus
   })
 
   async function handleCreate(formData: FormData) {
@@ -109,6 +121,22 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
     })
   }
 
+  async function handleAddTag() {
+    if (!newTagName.trim()) return
+    startTransition(async () => {
+      await createTag(newTagName.trim())
+      setNewTagName('')
+      refresh()
+    })
+  }
+
+  async function handleDeleteTag(tagId: string) {
+    startTransition(async () => {
+      await deleteTag(tagId)
+      refresh()
+    })
+  }
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -131,6 +159,16 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
           ))}
         </select>
         <select
+          value={tagFilter}
+          onChange={e => setTagFilter(e.target.value)}
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="all">All tags</option>
+          {allTags.map(t => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+        <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -142,9 +180,14 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
         </select>
         <div className="ml-auto flex items-center gap-2">
           {canDelete && (
-            <Button variant="outline" size="sm" onClick={() => setManageTypesOpen(true)}>
-              Manage types
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={() => setManageTagsOpen(true)}>
+                Manage tags
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setManageTypesOpen(true)}>
+                Manage types
+              </Button>
+            </>
           )}
           {canEdit && (
             <Button onClick={() => setCreateOpen(true)} size="sm">
@@ -161,6 +204,7 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Tags</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Visibility</TableHead>
               <TableHead>Created</TableHead>
@@ -170,7 +214,7 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-8">
                   {personas.length === 0
                     ? 'No personas yet. Add one to get started.'
                     : 'No personas match the current filters.'}
@@ -181,6 +225,21 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.name}</TableCell>
                 <TableCell className="text-muted-foreground">{p.type ?? '—'}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {p.personaTags.length === 0
+                      ? <span className="text-muted-foreground text-sm">—</span>
+                      : p.personaTags.map(({ tag }) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border-indigo-200"
+                          >
+                            {tag.name}
+                          </span>
+                        ))
+                    }
+                  </div>
+                </TableCell>
                 <TableCell>
                   <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[p.status])}>
                     {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
@@ -219,6 +278,53 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
         </Table>
       </div>
 
+      {/* Manage Tags Dialog */}
+      <Dialog open={manageTagsOpen} onOpenChange={setManageTagsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage tags</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tags are cross-cutting labels for filtering and search. Changes apply to your organization only.
+          </p>
+          <div className="space-y-2">
+            {allTags.length === 0 && (
+              <p className="text-sm text-muted-foreground py-2">No tags defined yet.</p>
+            )}
+            {allTags.map(t => (
+              <div key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  {t.name}
+                </span>
+                <Button
+                  variant="ghost" size="sm"
+                  disabled={isPending}
+                  onClick={() => handleDeleteTag(t.id)}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Input
+              placeholder="New tag name…"
+              value={newTagName}
+              onChange={e => setNewTagName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
+              disabled={isPending}
+            />
+            <Button onClick={handleAddTag} disabled={isPending || !newTagName.trim()} size="sm">
+              Add
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageTagsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Manage Types Dialog */}
       <Dialog open={manageTypesOpen} onOpenChange={setManageTypesOpen}>
         <DialogContent>
@@ -236,8 +342,7 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
               <div key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                 <span className="text-sm">{t.name}</span>
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant="ghost" size="sm"
                   disabled={isPending}
                   onClick={() => handleDeleteType(t.id)}
                   className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
@@ -290,6 +395,19 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
                 ))}
               </select>
             </div>
+            {allTags.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Tags</Label>
+                <div className="max-h-36 overflow-y-auto space-y-1 rounded-md border border-input p-2">
+                  {allTags.map(t => (
+                    <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" name="tagIds" value={t.id} className="rounded" />
+                      {t.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Status</Label>
               <select name="status" defaultValue="draft" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -340,6 +458,22 @@ export function PersonaTable({ personas, personaTypes, role }: Props) {
                 ))}
               </select>
             </div>
+            {allTags.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Tags</Label>
+                <div className="max-h-36 overflow-y-auto space-y-1 rounded-md border border-input p-2">
+                  {allTags.map(t => {
+                    const checked = editTarget?.personaTags.some(pt => pt.tag.id === t.id) ?? false
+                    return (
+                      <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="tagIds" value={t.id} defaultChecked={checked} className="rounded" />
+                        {t.name}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Status</Label>
               <select name="status" defaultValue={editTarget?.status} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
