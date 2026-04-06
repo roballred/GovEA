@@ -33,6 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/personas', label: 'Personas', roles: ['admin', 'contributor', 'viewer'] as Role[] },
     { href: '/capabilities', label: 'Capabilities', roles: ['admin', 'contributor', 'viewer'] as Role[] },
     { href: '/applications', label: 'Applications', roles: ['admin', 'contributor', 'viewer'] as Role[] },
+    { href: '/value-streams', label: 'Value Streams', roles: ['admin', 'contributor', 'viewer'] as Role[] },
     { href: '/adrs', label: 'ADRs', roles: ['admin', 'contributor', 'viewer'] as Role[] },
     { href: '/taxonomy', label: 'Taxonomy', roles: ['admin', 'contributor', 'viewer'] as Role[] },
     { href: '/users', label: 'Users', roles: ['admin'] as Role[] },
