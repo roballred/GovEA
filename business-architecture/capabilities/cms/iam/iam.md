@@ -19,6 +19,6 @@ The system must control who can access it, how they authenticate, and what they 
 | First-Run Setup | [iam-first-run-setup.md](./iam-first-run-setup.md) | Bootstrap initial Admin account on first launch |
 
 ## Rules
-- IAM is always active — no part of the system is accessible without authentication
+- IAM is always active — authentication is required by default; public access to published content is an opt-in configuration controlled by the Admin
 - Local authentication is always available as a fallback, even when SSO is configured
 - All IAM events are logged and immutable
