@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getPersonas } from '@/actions/personas'
+import { getPersonas, getPersonaTypes } from '@/actions/personas'
 import { PersonaTable } from './persona-table'
 import type { Role } from '@/lib/rbac'
 
@@ -11,7 +11,10 @@ export default async function PersonasPage() {
   const orgId = (session.user as any).organizationId as string
   const role = (session.user as any).role as Role
 
-  const personaList = await getPersonas(orgId)
+  const [personaList, typeList] = await Promise.all([
+    getPersonas(orgId),
+    getPersonaTypes(orgId),
+  ])
 
   return (
     <div className="space-y-6">
@@ -19,7 +22,7 @@ export default async function PersonasPage() {
         <h1 className="text-2xl font-bold tracking-tight">Personas</h1>
         <p className="text-muted-foreground mt-1">People your organization serves and the needs they have.</p>
       </div>
-      <PersonaTable personas={personaList} role={role} />
+      <PersonaTable personas={personaList} personaTypes={typeList} role={role} />
     </div>
   )
 }
