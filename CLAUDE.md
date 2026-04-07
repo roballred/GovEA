@@ -37,6 +37,20 @@ SSO users default to Viewer. Admins promote as needed.
 
 ---
 
+## Required Workflow (no exceptions)
+
+Standards.md §4–5 require this sequence for every code change. Do not skip steps.
+
+1. **Create a GitHub issue** — include title, labels, persona/capability traceability, and acceptance criteria before writing any code
+2. **Create a branch** — `feature/issue-N-short-description` or `fix/issue-N-short-description`
+3. **Implement** — on the branch, following Standards.md
+4. **Commit** — reference the issue number (e.g. `closes #N`)
+5. **Open a PR** — link to the issue, document what changed, why, and how it was tested
+
+If you cannot create an issue (e.g. no GitHub access), draft the full issue body and stop — do not proceed to implementation until the issue exists.
+
+---
+
 ## GitHub
 
 Repo: https://github.com/roballred/GovEA
