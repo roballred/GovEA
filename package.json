@@ -5,7 +5,10 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "test": "turbo test"
+    "test": "turbo test",
+    "demo:start": "sh scripts/demo-start.sh",
+    "demo:docker": "docker compose -f docker-compose.demo.yml up --build",
+    "demo:stop": "docker compose -f docker-compose.demo.yml down"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

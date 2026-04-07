@@ -1,0 +1,18 @@
+FROM node:20-alpine
+RUN corepack enable pnpm
+
+WORKDIR /app
+
+# Install dependencies first (cache layer)
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY apps/govea/package.json ./apps/govea/
+COPY packages/core/package.json ./packages/core/
+RUN pnpm install --frozen-lockfile
+
+# Copy source (overridden by volume mount in docker-compose.demo.yml when cloned locally)
+COPY . .
+
+EXPOSE 3000
+
+# Runs migrations, seeds dev data, then starts the dev server
+CMD ["sh", "-c", "pnpm --filter govea db:migrate && pnpm --filter govea db:seed && pnpm --filter govea dev"]
