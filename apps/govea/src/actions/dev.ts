@@ -136,12 +136,9 @@ export async function resetToDataset(datasetKey: string) {
 
   // ── Insert value streams ──────────────────────────────────────────────────
   for (const vs of dataset.valueStreams) {
-    const stakeholderPersonaId = personaByName[vs.stakeholderPersona] ?? null
-
     const [vsRow] = await db.insert(valueStreams).values({
       name: vs.name,
       description: vs.description,
-      stakeholderPersonaId,
       valueItem: vs.valueItem,
       status: vs.status,
       organizationId: orgId,
