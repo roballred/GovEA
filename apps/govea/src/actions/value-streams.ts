@@ -29,7 +29,6 @@ export async function getValueStreams(organizationId: string) {
     where: (vs, { eq }) => eq(vs.organizationId, organizationId),
     orderBy: (vs, { asc }) => [asc(vs.name)],
     with: {
-      stakeholderPersona: true,
       stages: {
         orderBy: (s, { asc }) => [asc(s.order)],
         with: {
@@ -46,7 +45,6 @@ export async function getValueStream(id: string) {
   return db.query.valueStreams.findFirst({
     where: (vs, { eq }) => eq(vs.id, id),
     with: {
-      stakeholderPersona: true,
       stages: {
         orderBy: (s, { asc }) => [asc(s.order)],
         with: {
@@ -65,7 +63,6 @@ export async function createValueStream(formData: FormData) {
 
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
-  const stakeholderPersonaId = (formData.get('stakeholderPersonaId') as string) || null
   const valueItem = (formData.get('valueItem') as string) || null
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
@@ -73,7 +70,6 @@ export async function createValueStream(formData: FormData) {
   const [vs] = await db.insert(valueStreams).values({
     name,
     description,
-    stakeholderPersonaId,
     valueItem,
     status,
     visibility,
@@ -98,7 +94,6 @@ export async function editValueStream(valueStreamId: string, formData: FormData)
 
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
-  const stakeholderPersonaId = (formData.get('stakeholderPersonaId') as string) || null
   const valueItem = (formData.get('valueItem') as string) || null
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
@@ -108,7 +103,6 @@ export async function editValueStream(valueStreamId: string, formData: FormData)
   await db.update(valueStreams).set({
     name,
     description,
-    stakeholderPersonaId,
     valueItem,
     status,
     visibility,

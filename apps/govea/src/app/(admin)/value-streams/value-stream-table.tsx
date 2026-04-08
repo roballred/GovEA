@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createValueStream, editValueStream, deleteValueStream } from '@/actions/value-streams'
-import type { ValueStream, Persona } from '@/db/schema'
+import type { ValueStream } from '@/db/schema'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -18,13 +18,11 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
 type ValueStreamRow = ValueStream & {
-  stakeholderPersona: Persona | null
   stages: { id: string }[]
 }
 
 interface Props {
   valueStreams: ValueStreamRow[]
-  personas: Persona[]
   role: Role
 }
 
@@ -46,7 +44,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function ValueStreamTable({ valueStreams, personas, role }: Props) {
+export function ValueStreamTable({ valueStreams, role }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
@@ -115,7 +113,6 @@ export function ValueStreamTable({ valueStreams, personas, role }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Stakeholder</TableHead>
               <TableHead>Stages</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Visibility</TableHead>
@@ -125,7 +122,7 @@ export function ValueStreamTable({ valueStreams, personas, role }: Props) {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={canEdit ? 5 : 4} className="text-center text-muted-foreground py-8">
                   {valueStreams.length === 0
                     ? 'No value streams yet. Add one to get started.'
                     : 'No value streams match the current filters.'}
@@ -138,9 +135,6 @@ export function ValueStreamTable({ valueStreams, personas, role }: Props) {
                   <Link href={`/value-streams/${vs.id}`} className="hover:underline">
                     {vs.name}
                   </Link>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {vs.stakeholderPersona?.name ?? '—'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {vs.stages.length}
@@ -191,14 +185,6 @@ export function ValueStreamTable({ valueStreams, personas, role }: Props) {
               <textarea name="description" rows={2}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Stakeholder persona</Label>
-              <select name="stakeholderPersonaId" defaultValue=""
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="">— None —</option>
-                {personas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
             <FormField label="Value delivered" name="valueItem" placeholder="What is delivered to the stakeholder?" />
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -236,14 +222,6 @@ export function ValueStreamTable({ valueStreams, personas, role }: Props) {
               <Label>Description</Label>
               <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Stakeholder persona</Label>
-              <select name="stakeholderPersonaId" defaultValue={editTarget?.stakeholderPersonaId ?? ''}
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="">— None —</option>
-                {personas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
             </div>
             <FormField label="Value delivered" name="valueItem" defaultValue={editTarget?.valueItem ?? ''} />
             <div className="space-y-1.5">
