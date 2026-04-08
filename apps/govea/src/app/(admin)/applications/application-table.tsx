@@ -16,7 +16,8 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
-type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor' | 'version' | 'hostingModel' | 'lifecycleStatus' | 'status' | 'visibility' | 'createdAt'> & {
+type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor' | 'version' | 'hostingModel' | 'lifecycleStatus' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
+  organization: { id: string; name: string } | null
   applicationCapabilities: { capability: Pick<Capability, 'id' | 'name'> }[]
 }
 
@@ -24,6 +25,7 @@ interface Props {
   applications: ApplicationRow[]
   capabilities: Pick<Capability, 'id' | 'name'>[]
   role: Role
+  currentOrgId: string
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -51,13 +53,18 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function ApplicationTable({ applications, capabilities, role }: Props) {
+export function ApplicationTable({ applications, capabilities, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [search, setSearch] = useState('')
   const [lifecycleFilter, setLifecycleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [orgFilter, setOrgFilter] = useState('all')
+
+  const orgOptions = Array.from(new Map(
+    applications.map(a => [a.organizationId, a.organization?.name ?? 'Unknown'])
+  ).entries())
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ApplicationRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ApplicationRow | null>(null)
@@ -71,7 +78,8 @@ export function ApplicationTable({ applications, capabilities, role }: Props) {
     const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase())
     const matchLifecycle = lifecycleFilter === 'all' || a.lifecycleStatus === lifecycleFilter
     const matchStatus = statusFilter === 'all' || a.status === statusFilter
-    return matchSearch && matchLifecycle && matchStatus
+    const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? a.organizationId === currentOrgId : a.organizationId === orgFilter)
+    return matchSearch && matchLifecycle && matchStatus && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -132,6 +140,15 @@ export function ApplicationTable({ applications, capabilities, role }: Props) {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        {orgOptions.length > 1 && (
+          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+            <option value="all">All organizations</option>
+            <option value="own">My organization</option>
+            {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
             + New application
@@ -165,7 +182,16 @@ export function ApplicationTable({ applications, capabilities, role }: Props) {
             )}
             {filtered.map(a => (
               <TableRow key={a.id}>
-                <TableCell className="font-medium">{a.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {a.name}
+                    {a.organizationId !== currentOrgId && a.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {a.organization.name}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{a.vendor ?? '—'}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -194,7 +220,7 @@ export function ApplicationTable({ applications, capabilities, role }: Props) {
                     {VISIBILITY_LABELS[a.visibility]}
                   </span>
                 </TableCell>
-                {canEdit && (
+                {canEdit && a.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(a)} className="h-7 px-2 text-xs">
@@ -213,6 +239,7 @@ export function ApplicationTable({ applications, capabilities, role }: Props) {
                     </div>
                   </TableCell>
                 )}
+                {canEdit && a.organizationId !== currentOrgId && <TableCell />}
               </TableRow>
             ))}
           </TableBody>

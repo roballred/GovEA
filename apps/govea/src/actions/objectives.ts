@@ -2,7 +2,8 @@
 
 import { db } from '@/db/client'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray, or } from 'drizzle-orm'
+import { getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -23,10 +24,25 @@ async function requireAdmin() {
 }
 
 export async function getObjectives(organizationId: string) {
+  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+
   return db.query.strategicObjectives.findMany({
-    where: (o, { eq }) => eq(o.organizationId, organizationId),
+    where: (o, { eq, or, and, inArray }) => {
+      const base = eq(o.organizationId, organizationId)
+      const instanceWide = eq(o.visibility, 'instance')
+      if (connectedOrgIds.length === 0) return or(base, instanceWide)
+      return or(
+        base,
+        instanceWide,
+        and(
+          inArray(o.organizationId, connectedOrgIds),
+          inArray(o.visibility, ['connections', 'instance'])
+        )
+      )
+    },
     orderBy: (o, { asc }) => [asc(o.name)],
     with: {
+      organization: true,
       objectiveCapabilities: { with: { capability: true } },
       objectiveValueStreams: { with: { valueStream: true } },
     },

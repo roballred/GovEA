@@ -25,7 +25,8 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export default async function ValueStreamDetailPage({ params }: { params: { id: string } }) {
+export default async function ValueStreamDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await auth()
   if (!session?.user) redirect('/login')
 
@@ -34,7 +35,7 @@ export default async function ValueStreamDetailPage({ params }: { params: { id: 
   const canEdit = role === 'admin' || role === 'contributor'
 
   const [vs, capabilityList] = await Promise.all([
-    getValueStream(params.id),
+    getValueStream(id),
     getCapabilities(orgId),
   ])
 

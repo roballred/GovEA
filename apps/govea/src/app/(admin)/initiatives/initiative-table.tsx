@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
 type InitiativeRow = Initiative & {
+  organization: { id: string; name: string } | null
   initiativeCapabilities: { capability: Capability; impact: string | null }[]
   initiativeObjectives: { objective: StrategicObjective }[]
 }
@@ -27,6 +28,7 @@ interface Props {
   capabilities: Capability[]
   objectives: StrategicObjective[]
   role: Role
+  currentOrgId: string
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -47,10 +49,15 @@ const STATUS_LABELS: Record<string, string> = {
 
 const IMPACT_OPTIONS = ['build', 'improve', 'retire']
 
-export function InitiativeTable({ initiatives, capabilities, objectives, role }: Props) {
+export function InitiativeTable({ initiatives, capabilities, objectives, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
+  const [orgFilter, setOrgFilter] = useState('all')
+
+  const orgOptions = Array.from(new Map(
+    initiatives.map(i => [i.organizationId, i.organization?.name ?? 'Unknown'])
+  ).entries())
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<InitiativeRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<InitiativeRow | null>(null)
@@ -61,9 +68,11 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role }:
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
-  const filtered = initiatives.filter(i =>
-    statusFilter === 'all' || i.status === statusFilter
-  )
+  const filtered = initiatives.filter(i => {
+    const matchStatus = statusFilter === 'all' || i.status === statusFilter
+    const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? i.organizationId === currentOrgId : i.organizationId === orgFilter)
+    return matchStatus && matchOrg
+  })
 
   function openCreate() {
     setSelectedCaps([])
@@ -119,6 +128,15 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role }:
           <option value="complete">Complete</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        {orgOptions.length > 1 && (
+          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+            <option value="all">All organizations</option>
+            <option value="own">My organization</option>
+            {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        )}
         {canEdit && (
           <Button onClick={openCreate} size="sm" className="ml-auto">
             + New initiative
@@ -152,9 +170,16 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role }:
             {filtered.map(initiative => (
               <TableRow key={initiative.id}>
                 <TableCell className="font-medium">
-                  <Link href={`/initiatives/${initiative.id}`} className="hover:underline">
-                    {initiative.name}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/initiatives/${initiative.id}`} className="hover:underline">
+                      {initiative.name}
+                    </Link>
+                    {initiative.organizationId !== currentOrgId && initiative.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {initiative.organization.name}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                   {initiative.startDate || initiative.endDate
@@ -185,7 +210,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role }:
                     {STATUS_LABELS[initiative.status]}
                   </span>
                 </TableCell>
-                {canEdit && (
+                {canEdit && initiative.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(initiative)} className="h-7 px-2 text-xs">Edit</Button>
@@ -198,6 +223,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role }:
                     </div>
                   </TableCell>
                 )}
+                {canEdit && initiative.organizationId !== currentOrgId && <TableCell />}
               </TableRow>
             ))}
           </TableBody>

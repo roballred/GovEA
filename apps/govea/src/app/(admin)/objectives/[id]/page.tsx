@@ -22,11 +22,12 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export default async function ObjectiveDetailPage({ params }: { params: { id: string } }) {
+export default async function ObjectiveDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const obj = await getObjective(params.id)
+  const obj = await getObjective(id)
   if (!obj) notFound()
 
   return (
