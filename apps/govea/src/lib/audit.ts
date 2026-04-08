@@ -17,9 +17,9 @@ export async function writeAuditLog(params: AuditParams) {
     await db.insert(auditLog).values({
       action: params.action,
       entityType: params.entityType,
-      entityId: (params.entityId ?? null) as any,
-      userId: (params.userId ?? null) as any,
-      organizationId: (params.organizationId ?? null) as any,
+      entityId: params.entityId ?? null,
+      userId: params.userId ?? null,
+      organizationId: params.organizationId ?? null,
       before: params.before ?? null,
       after: params.after ?? null,
       metadata: params.metadata ?? null,

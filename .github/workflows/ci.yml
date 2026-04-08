@@ -28,4 +28,22 @@ jobs:
         run: pnpm --filter govea exec tsc --noEmit
         # tsc uses apps/govea/tsconfig.json (strict: true, noEmit: true)
         # No database connection needed — Drizzle types are static schema definitions
-        # Lint is tracked separately in issue #122 (requires ESLint config setup)
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter govea lint

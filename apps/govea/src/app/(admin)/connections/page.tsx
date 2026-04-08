@@ -7,9 +7,9 @@ import { ConnectionsTable } from './connections-table'
 export default async function ConnectionsPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin(session.user as any)) redirect('/dashboard')
+  if (!isAdmin(session.user)) redirect('/dashboard')
 
-  const orgId = (session.user as any).organizationId as string
+  const orgId = session.user.organizationId!
 
   const [connections, otherOrgs] = await Promise.all([
     getConnections(orgId),

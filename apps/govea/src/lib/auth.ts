@@ -2,18 +2,34 @@ import NextAuth from 'next-auth'
 import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
 import Credentials from 'next-auth/providers/credentials'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
+import type {
+  DefaultPostgresUsersTable,
+  DefaultPostgresAccountsTable,
+  DefaultPostgresSessionsTable,
+  DefaultPostgresVerificationTokenTable,
+} from '@auth/drizzle-adapter/lib/pg'
 import { db } from '@/db/client'
 import { users, accounts, sessions, verificationTokens, organizations } from '@/db/schema'
 import bcrypt from 'bcryptjs'
 import { asc, eq } from 'drizzle-orm'
 import { writeAuditLog } from '@/lib/audit'
+import type { Role } from '@/lib/rbac'
+
+// Extended user type that includes our custom fields returned from the credentials provider
+interface AppUser {
+  id: string
+  email: string | null
+  name: string | null
+  role: Role
+  organizationId: string | null
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
-    usersTable: users as any,
-    accountsTable: accounts as any,
-    sessionsTable: sessions as any,
-    verificationTokensTable: verificationTokens as any,
+    usersTable: users as unknown as DefaultPostgresUsersTable,
+    accountsTable: accounts as unknown as DefaultPostgresAccountsTable,
+    sessionsTable: sessions as unknown as DefaultPostgresSessionsTable,
+    verificationTokensTable: verificationTokens as unknown as DefaultPostgresVerificationTokenTable,
   }),
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 }, // 24h
   providers: [
@@ -67,15 +83,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.role = (user as any).role
-        token.organizationId = (user as any).organizationId
+        const appUser = user as unknown as AppUser
+        token.id = appUser.id
+        token.role = appUser.role
+        token.organizationId = appUser.organizationId
       }
       return token
     },
     async session({ session, token }) {
       session.user.id = token.id as string
-      session.user.role = token.role as any
+      session.user.role = token.role as Role
       session.user.organizationId = token.organizationId as string | null
       return session
     },
@@ -97,7 +114,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         entityType: 'user',
         entityId: user.id,
         userId: user.id,
-        organizationId: (user as any).organizationId,
+        organizationId: (user as unknown as AppUser).organizationId,
       })
     },
     async signOut(message) {

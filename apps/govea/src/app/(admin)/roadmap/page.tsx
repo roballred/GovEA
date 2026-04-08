@@ -40,7 +40,7 @@ export default async function RoadmapPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const orgId = (session.user as any).organizationId as string
+  const orgId = session.user.organizationId!
   const allInitiatives = await getInitiatives(orgId)
 
   // Group by status, respecting display order

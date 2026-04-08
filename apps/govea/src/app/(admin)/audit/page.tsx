@@ -11,7 +11,7 @@ import {
 export default async function AuditPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin((session.user as any))) redirect('/dashboard')
+  if (!isAdmin(session.user)) redirect('/dashboard')
 
   const entries = await db
     .select({ log: auditLog, user: users })

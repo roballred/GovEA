@@ -4,7 +4,7 @@ import { db } from '@/db/client'
 import {
   initiatives, initiativeCapabilities, initiativeObjectives,
 } from '@/db/schema'
-import { eq, inArray, or, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
@@ -13,14 +13,14 @@ import { canEdit, isAdmin } from '@/lib/rbac'
 async function requireContributor() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!canEdit(session.user as any)) throw new Error('Forbidden')
+  if (!canEdit(session.user)) throw new Error('Forbidden')
   return session
 }
 
 async function requireAdmin() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin(session.user as any)) throw new Error('Forbidden')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
   return session
 }
 
@@ -63,16 +63,16 @@ export async function getInitiative(id: string) {
 export async function createInitiative(formData: FormData) {
   const session = await requireContributor()
 
-  const orgId = (session.user as any).organizationId as string
-  const userId = (session.user as any).id as string
+  const orgId = session.user.organizationId as string
+  const userId = session.user.id
 
   const [row] = await db.insert(initiatives).values({
     name: formData.get('name') as string,
     description: (formData.get('description') as string) || null,
-    status: (formData.get('status') as any) || 'proposed',
+    status: (formData.get('status') as 'proposed' | 'active' | 'on-hold' | 'complete' | 'cancelled') || 'proposed',
     startDate: (formData.get('startDate') as string) || null,
     endDate: (formData.get('endDate') as string) || null,
-    visibility: (formData.get('visibility') as any) || 'org',
+    visibility: (formData.get('visibility') as 'org' | 'connections' | 'instance') || 'org',
     organizationId: orgId,
     createdBy: userId,
     updatedBy: userId,
@@ -94,15 +94,15 @@ export async function createInitiative(formData: FormData) {
 export async function editInitiative(id: string, formData: FormData) {
   const session = await requireContributor()
 
-  const userId = (session.user as any).id as string
+  const userId = session.user.id
 
   await db.update(initiatives).set({
     name: formData.get('name') as string,
     description: (formData.get('description') as string) || null,
-    status: (formData.get('status') as any) || 'proposed',
+    status: (formData.get('status') as 'proposed' | 'active' | 'on-hold' | 'complete' | 'cancelled') || 'proposed',
     startDate: (formData.get('startDate') as string) || null,
     endDate: (formData.get('endDate') as string) || null,
-    visibility: (formData.get('visibility') as any) || 'org',
+    visibility: (formData.get('visibility') as 'org' | 'connections' | 'instance') || 'org',
     updatedBy: userId,
     updatedAt: new Date(),
   }).where(eq(initiatives.id, id))

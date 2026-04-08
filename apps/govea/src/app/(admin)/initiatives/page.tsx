@@ -4,14 +4,12 @@ import { getInitiatives } from '@/actions/initiatives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getObjectives } from '@/actions/objectives'
 import { InitiativeTable } from './initiative-table'
-import type { Role } from '@/lib/rbac'
-
 export default async function InitiativesPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const orgId = (session.user as any).organizationId as string
-  const role = (session.user as any).role as Role
+  const orgId = session.user.organizationId!
+  const role = session.user.role
 
   const [initiativeList, capabilityList, objectiveList] = await Promise.all([
     getInitiatives(orgId),

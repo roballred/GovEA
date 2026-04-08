@@ -2,14 +2,12 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getValueStreams } from '@/actions/value-streams'
 import { ValueStreamTable } from './value-stream-table'
-import type { Role } from '@/lib/rbac'
-
 export default async function ValueStreamsPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const orgId = (session.user as any).organizationId as string
-  const role = (session.user as any).role as Role
+  const orgId = session.user.organizationId!
+  const role = session.user.role
 
   const valueStreamList = await getValueStreams(orgId)
 

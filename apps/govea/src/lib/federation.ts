@@ -1,5 +1,4 @@
 import { db } from '@/db/client'
-import { orgConnections } from '@/db/schema'
 
 export async function getConnectedOrgIds(organizationId: string): Promise<string[]> {
   const connections = await db.query.orgConnections.findMany({

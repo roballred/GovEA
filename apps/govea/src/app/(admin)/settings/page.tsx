@@ -5,16 +5,15 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { themes } from '@/lib/themes'
 import { updateOrgTheme } from '@/actions/settings'
-import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 export default async function SettingsPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const org = (session.user as any).organizationId
+  const org = session.user.organizationId
     ? await db.query.organizations.findFirst({
-        where: eq(organizations.id, (session.user as any).organizationId),
+        where: eq(organizations.id, session.user.organizationId),
       })
     : null
 

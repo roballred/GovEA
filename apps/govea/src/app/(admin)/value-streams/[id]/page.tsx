@@ -3,7 +3,6 @@ import { redirect, notFound } from 'next/navigation'
 import { getValueStream } from '@/actions/value-streams'
 import { getCapabilities } from '@/actions/capabilities'
 import { StageManager } from './stage-manager'
-import type { Role } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -30,8 +29,8 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const role = (session.user as any).role as Role
-  const orgId = (session.user as any).organizationId as string
+  const role = session.user.role
+  const orgId = session.user.organizationId!
   const canEdit = role === 'admin' || role === 'contributor'
 
   const [vs, capabilityList] = await Promise.all([

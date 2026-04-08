@@ -2,14 +2,12 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getPersonas, getPersonaTypes, getTags } from '@/actions/personas'
 import { PersonaTable } from './persona-table'
-import type { Role } from '@/lib/rbac'
-
 export default async function PersonasPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const orgId = (session.user as any).organizationId as string
-  const role = (session.user as any).role as Role
+  const orgId = session.user.organizationId!
+  const role = session.user.role
 
   const [personaList, typeList, tagList] = await Promise.all([
     getPersonas(orgId),
