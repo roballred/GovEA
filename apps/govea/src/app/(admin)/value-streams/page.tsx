@@ -1,7 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getValueStreams } from '@/actions/value-streams'
-import { getPersonas } from '@/actions/personas'
 import { ValueStreamTable } from './value-stream-table'
 import type { Role } from '@/lib/rbac'
 
@@ -12,10 +11,7 @@ export default async function ValueStreamsPage() {
   const orgId = (session.user as any).organizationId as string
   const role = (session.user as any).role as Role
 
-  const [valueStreamList, personaList] = await Promise.all([
-    getValueStreams(orgId),
-    getPersonas(orgId),
-  ])
+  const valueStreamList = await getValueStreams(orgId)
 
   return (
     <div className="space-y-6">
@@ -25,7 +21,7 @@ export default async function ValueStreamsPage() {
           End-to-end sequences of stages that deliver measurable outcomes to your stakeholders.
         </p>
       </div>
-      <ValueStreamTable valueStreams={valueStreamList} personas={personaList} role={role} />
+      <ValueStreamTable valueStreams={valueStreamList} role={role} />
     </div>
   )
 }

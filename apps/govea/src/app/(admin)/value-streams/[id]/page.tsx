@@ -67,13 +67,6 @@ export default async function ValueStreamDetailPage({ params }: { params: { id: 
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">
           <div>
-            <span className="text-muted-foreground">Stakeholder: </span>
-            {vs.stakeholderPersona
-              ? <span className="font-medium">{vs.stakeholderPersona.name}</span>
-              : <span className="text-muted-foreground">—</span>
-            }
-          </div>
-          <div>
             <span className="text-muted-foreground">Value delivered: </span>
             {vs.valueItem
               ? <span className="font-medium">{vs.valueItem}</span>
