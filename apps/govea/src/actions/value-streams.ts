@@ -2,7 +2,8 @@
 
 import { db } from '@/db/client'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray, or } from 'drizzle-orm'
+import { getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -25,10 +26,25 @@ async function requireAdmin() {
 // ── Value Streams ─────────────────────────────────────────────────────────────
 
 export async function getValueStreams(organizationId: string) {
+  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+
   return db.query.valueStreams.findMany({
-    where: (vs, { eq }) => eq(vs.organizationId, organizationId),
+    where: (vs, { eq, or, and, inArray }) => {
+      const base = eq(vs.organizationId, organizationId)
+      const instanceWide = eq(vs.visibility, 'instance')
+      if (connectedOrgIds.length === 0) return or(base, instanceWide)
+      return or(
+        base,
+        instanceWide,
+        and(
+          inArray(vs.organizationId, connectedOrgIds),
+          inArray(vs.visibility, ['connections', 'instance'])
+        )
+      )
+    },
     orderBy: (vs, { asc }) => [asc(vs.name)],
     with: {
+      organization: true,
       stages: {
         orderBy: (s, { asc }) => [asc(s.order)],
         with: {

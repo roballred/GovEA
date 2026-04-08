@@ -38,11 +38,12 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export default async function InitiativeDetailPage({ params }: { params: { id: string } }) {
+export default async function InitiativeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const initiative = await getInitiative(params.id)
+  const initiative = await getInitiative(id)
   if (!initiative) notFound()
 
   return (

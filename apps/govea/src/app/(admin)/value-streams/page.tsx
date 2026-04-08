@@ -21,7 +21,7 @@ export default async function ValueStreamsPage() {
           End-to-end sequences of stages that deliver measurable outcomes to your stakeholders.
         </p>
       </div>
-      <ValueStreamTable valueStreams={valueStreamList} role={role} />
+      <ValueStreamTable valueStreams={valueStreamList} role={role} currentOrgId={orgId} />
     </div>
   )
 }

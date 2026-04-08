@@ -23,7 +23,7 @@ export default async function PersonasPage() {
         <h1 className="text-2xl font-bold tracking-tight">Personas</h1>
         <p className="text-muted-foreground mt-1">People your organization serves and the needs they have.</p>
       </div>
-      <PersonaTable personas={personaList} personaTypes={typeList} allTags={tagList} role={role} />
+      <PersonaTable personas={personaList} personaTypes={typeList} allTags={tagList} role={role} currentOrgId={orgId} />
     </div>
   )
 }

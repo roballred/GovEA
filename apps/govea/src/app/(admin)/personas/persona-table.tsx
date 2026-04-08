@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
 type PersonaRow = Persona & {
+  organization: { id: string; name: string } | null
   personaTags: { tag: Tag }[]
 }
 
@@ -29,6 +30,7 @@ interface Props {
   personaTypes: PersonaType[]
   allTags: Tag[]
   role: Role
+  currentOrgId: string
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -49,7 +51,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
+export function PersonaTable({ personas, personaTypes, allTags, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -57,6 +59,11 @@ export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
   const [typeFilter, setTypeFilter] = useState('all')
   const [tagFilter, setTagFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [orgFilter, setOrgFilter] = useState('all')
+
+  const orgOptions = Array.from(new Map(
+    personas.map(p => [p.organizationId, p.organization?.name ?? 'Unknown'])
+  ).entries())
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
@@ -76,7 +83,8 @@ export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
     const matchType = typeFilter === 'all' || p.type === typeFilter
     const matchTag = tagFilter === 'all' || p.personaTags.some(pt => pt.tag.id === tagFilter)
     const matchStatus = statusFilter === 'all' || p.status === statusFilter
-    return matchSearch && matchType && matchTag && matchStatus
+    const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? p.organizationId === currentOrgId : p.organizationId === orgFilter)
+    return matchSearch && matchType && matchTag && matchStatus && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -178,6 +186,15 @@ export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        {orgOptions.length > 1 && (
+          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+            <option value="all">All organizations</option>
+            <option value="own">My organization</option>
+            {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        )}
         <div className="ml-auto flex items-center gap-2">
           {canDelete && (
             <>
@@ -223,7 +240,16 @@ export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
             )}
             {filtered.map(p => (
               <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {p.name}
+                    {p.organizationId !== currentOrgId && p.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {p.organization.name}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{p.type ?? '—'}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -253,7 +279,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
                 <TableCell className="text-muted-foreground text-sm">
                   {new Date(p.createdAt).toLocaleDateString()}
                 </TableCell>
-                {canEdit && (
+                {canEdit && p.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(p)} className="h-7 px-2 text-xs">
@@ -272,6 +298,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role }: Props) {
                     </div>
                   </TableCell>
                 )}
+                {canEdit && p.organizationId !== currentOrgId && <TableCell />}
               </TableRow>
             ))}
           </TableBody>

@@ -2,7 +2,8 @@
 
 import { db } from '@/db/client'
 import { personas, personaTypes, personaTags, tags } from '@/db/schema'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, or } from 'drizzle-orm'
+import { getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -133,10 +134,25 @@ export async function deleteTag(tagId: string) {
 // ── Personas ──────────────────────────────────────────────────────────────────
 
 export async function getPersonas(organizationId: string) {
+  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+
   return db.query.personas.findMany({
-    where: (p, { eq }) => eq(p.organizationId, organizationId),
+    where: (p, { eq, or, and, inArray }) => {
+      const base = eq(p.organizationId, organizationId)
+      const instanceWide = eq(p.visibility, 'instance')
+      if (connectedOrgIds.length === 0) return or(base, instanceWide)
+      return or(
+        base,
+        instanceWide,
+        and(
+          inArray(p.organizationId, connectedOrgIds),
+          inArray(p.visibility, ['connections', 'instance'])
+        )
+      )
+    },
     orderBy: (p, { asc }) => [asc(p.name)],
     with: {
+      organization: true,
       personaTags: {
         with: { tag: true },
       },

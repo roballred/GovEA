@@ -16,7 +16,8 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
-type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'status' | 'visibility' | 'createdAt'> & {
+type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
+  organization: { id: string; name: string } | null
   capabilityPersonas: { persona: Pick<Persona, 'id' | 'name'> }[]
 }
 
@@ -24,6 +25,7 @@ interface Props {
   capabilities: CapabilityRow[]
   personas: Pick<Persona, 'id' | 'name'>[]
   role: Role
+  currentOrgId: string
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -44,12 +46,17 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function CapabilityTable({ capabilities, personas, role }: Props) {
+export function CapabilityTable({ capabilities, personas, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [orgFilter, setOrgFilter] = useState('all')
+
+  const orgOptions = Array.from(new Map(
+    capabilities.map(c => [c.organizationId, c.organization?.name ?? 'Unknown'])
+  ).entries())
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<CapabilityRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CapabilityRow | null>(null)
@@ -62,7 +69,8 @@ export function CapabilityTable({ capabilities, personas, role }: Props) {
   const filtered = capabilities.filter(c => {
     const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || c.status === statusFilter
-    return matchSearch && matchStatus
+    const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? c.organizationId === currentOrgId : c.organizationId === orgFilter)
+    return matchSearch && matchStatus && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -112,6 +120,15 @@ export function CapabilityTable({ capabilities, personas, role }: Props) {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        {orgOptions.length > 1 && (
+          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+            <option value="all">All organizations</option>
+            <option value="own">My organization</option>
+            {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
             + New capability
@@ -144,7 +161,16 @@ export function CapabilityTable({ capabilities, personas, role }: Props) {
             )}
             {filtered.map(c => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {c.name}
+                    {c.organizationId !== currentOrgId && c.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {c.organization.name}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{c.domain ?? '—'}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -168,7 +194,7 @@ export function CapabilityTable({ capabilities, personas, role }: Props) {
                     {VISIBILITY_LABELS[c.visibility]}
                   </span>
                 </TableCell>
-                {canEdit && (
+                {canEdit && c.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(c)} className="h-7 px-2 text-xs">
@@ -187,6 +213,7 @@ export function CapabilityTable({ capabilities, personas, role }: Props) {
                     </div>
                   </TableCell>
                 )}
+                {canEdit && c.organizationId !== currentOrgId && <TableCell />}
               </TableRow>
             ))}
           </TableBody>

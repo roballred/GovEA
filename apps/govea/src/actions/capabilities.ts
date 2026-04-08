@@ -2,7 +2,8 @@
 
 import { db } from '@/db/client'
 import { capabilities, capabilityPersonas } from '@/db/schema'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, or } from 'drizzle-orm'
+import { getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -23,9 +24,26 @@ async function requireAdmin() {
 }
 
 export async function getCapabilities(organizationId: string) {
+  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+
   return db.query.capabilities.findMany({
-    where: (c, { eq }) => eq(c.organizationId, organizationId),
-    with: { capabilityPersonas: { with: { persona: true } } },
+    where: (c, { eq, or, and, inArray }) => {
+      const base = eq(c.organizationId, organizationId)
+      const instanceWide = eq(c.visibility, 'instance')
+      if (connectedOrgIds.length === 0) return or(base, instanceWide)
+      return or(
+        base,
+        instanceWide,
+        and(
+          inArray(c.organizationId, connectedOrgIds),
+          inArray(c.visibility, ['connections', 'instance'])
+        )
+      )
+    },
+    with: {
+      organization: true,
+      capabilityPersonas: { with: { persona: true } },
+    },
     orderBy: (c, { asc }) => [asc(c.name)],
   })
 }

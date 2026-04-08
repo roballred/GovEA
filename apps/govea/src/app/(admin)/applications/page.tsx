@@ -23,7 +23,7 @@ export default async function ApplicationsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Applications</h1>
         <p className="text-muted-foreground mt-1">Your application portfolio, linked to the capabilities they support.</p>
       </div>
-      <ApplicationTable applications={applicationList} capabilities={capabilityList} role={role} />
+      <ApplicationTable applications={applicationList} capabilities={capabilityList} role={role} currentOrgId={orgId} />
     </div>
   )
 }

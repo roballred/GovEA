@@ -32,6 +32,7 @@ export default async function ObjectivesPage() {
         capabilities={capabilityList}
         valueStreams={valueStreamList}
         role={role}
+        currentOrgId={orgId}
       />
     </div>
   )

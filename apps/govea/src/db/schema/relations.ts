@@ -10,7 +10,11 @@ import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives }
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
 
-export const capabilitiesRelations = relations(capabilities, ({ many }) => ({
+export const capabilitiesRelations = relations(capabilities, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [capabilities.organizationId],
+    references: [organizations.id],
+  }),
   capabilityPersonas: many(capabilityPersonas),
   valueStreamStageCapabilities: many(valueStreamStageCapabilities),
   objectiveCapabilities: many(objectiveCapabilities),
@@ -32,7 +36,11 @@ export const capabilityPersonasRelations = relations(capabilityPersonas, ({ one 
 
 // ─── Personas ────────────────────────────────────────────────────────────────
 
-export const personasRelations = relations(personas, ({ many }) => ({
+export const personasRelations = relations(personas, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [personas.organizationId],
+    references: [organizations.id],
+  }),
   capabilityPersonas: many(capabilityPersonas),
   personaTags: many(personaTags),
   valueStreamPersonas: many(valueStreamPersonas),
@@ -201,7 +209,11 @@ export const initiativeApplicationsRelations = relations(initiativeApplications,
 
 // ─── Applications ────────────────────────────────────────────────────────────
 
-export const applicationsRelations = relations(applications, ({ many }) => ({
+export const applicationsRelations = relations(applications, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [applications.organizationId],
+    references: [organizations.id],
+  }),
   applicationCapabilities: many(applicationCapabilities),
   initiativeApplications: many(initiativeApplications),
   objectiveApplications: many(objectiveApplications),

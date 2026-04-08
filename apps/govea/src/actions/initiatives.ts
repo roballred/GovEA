@@ -4,7 +4,8 @@ import { db } from '@/db/client'
 import {
   initiatives, initiativeCapabilities, initiativeObjectives,
 } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray, or, and } from 'drizzle-orm'
+import { getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -24,9 +25,24 @@ async function requireAdmin() {
 }
 
 export async function getInitiatives(orgId: string) {
+  const connectedOrgIds = await getConnectedOrgIds(orgId)
+
   return db.query.initiatives.findMany({
-    where: eq(initiatives.organizationId, orgId),
+    where: (i, { eq, or, and, inArray }) => {
+      const base = eq(i.organizationId, orgId)
+      const instanceWide = eq(i.visibility, 'instance')
+      if (connectedOrgIds.length === 0) return or(base, instanceWide)
+      return or(
+        base,
+        instanceWide,
+        and(
+          inArray(i.organizationId, connectedOrgIds),
+          inArray(i.visibility, ['connections', 'instance'])
+        )
+      )
+    },
     with: {
+      organization: true,
       initiativeCapabilities: { with: { capability: true } },
       initiativeObjectives: { with: { objective: true } },
     },

@@ -18,12 +18,14 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
 type ValueStreamRow = ValueStream & {
+  organization: { id: string; name: string } | null
   stages: { id: string }[]
 }
 
 interface Props {
   valueStreams: ValueStreamRow[]
   role: Role
+  currentOrgId: string
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -44,10 +46,15 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function ValueStreamTable({ valueStreams, role }: Props) {
+export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
+  const [orgFilter, setOrgFilter] = useState('all')
+
+  const orgOptions = Array.from(new Map(
+    valueStreams.map(vs => [vs.organizationId, vs.organization?.name ?? 'Unknown'])
+  ).entries())
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ValueStreamRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ValueStreamRow | null>(null)
@@ -56,9 +63,11 @@ export function ValueStreamTable({ valueStreams, role }: Props) {
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
-  const filtered = valueStreams.filter(vs =>
-    statusFilter === 'all' || vs.status === statusFilter
-  )
+  const filtered = valueStreams.filter(vs => {
+    const matchStatus = statusFilter === 'all' || vs.status === statusFilter
+    const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? vs.organizationId === currentOrgId : vs.organizationId === orgFilter)
+    return matchStatus && matchOrg
+  })
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -100,6 +109,15 @@ export function ValueStreamTable({ valueStreams, role }: Props) {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        {orgOptions.length > 1 && (
+          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+            <option value="all">All organizations</option>
+            <option value="own">My organization</option>
+            {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New value stream
@@ -132,9 +150,16 @@ export function ValueStreamTable({ valueStreams, role }: Props) {
             {filtered.map(vs => (
               <TableRow key={vs.id}>
                 <TableCell className="font-medium">
-                  <Link href={`/value-streams/${vs.id}`} className="hover:underline">
-                    {vs.name}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/value-streams/${vs.id}`} className="hover:underline">
+                      {vs.name}
+                    </Link>
+                    {vs.organizationId !== currentOrgId && vs.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {vs.organization.name}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {vs.stages.length}
@@ -149,7 +174,7 @@ export function ValueStreamTable({ valueStreams, role }: Props) {
                     {VISIBILITY_LABELS[vs.visibility]}
                   </span>
                 </TableCell>
-                {canEdit && (
+                {canEdit && vs.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(vs)} className="h-7 px-2 text-xs">
@@ -168,6 +193,7 @@ export function ValueStreamTable({ valueStreams, role }: Props) {
                     </div>
                   </TableCell>
                 )}
+                {canEdit && vs.organizationId !== currentOrgId && <TableCell />}
               </TableRow>
             ))}
           </TableBody>

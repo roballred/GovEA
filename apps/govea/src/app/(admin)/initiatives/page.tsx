@@ -32,6 +32,7 @@ export default async function InitiativesPage() {
         capabilities={capabilityList}
         objectives={objectiveList}
         role={role}
+        currentOrgId={orgId}
       />
     </div>
   )
