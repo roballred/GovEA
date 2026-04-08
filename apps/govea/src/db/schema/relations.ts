@@ -226,9 +226,14 @@ export const adrsRelations = relations(adrs, ({ one, many }) => ({
     fields: [adrs.organizationId],
     references: [organizations.id],
   }),
+  // Self-referential: the ADR this one was superseded by
   supersededByAdr: one(adrs, {
     fields: [adrs.supersededBy],
     references: [adrs.id],
+    relationName: 'adr_supersession',
+  }),
+  // Self-referential: ADRs that this one supersedes (both sides required by Drizzle)
+  supersedes: many(adrs, {
     relationName: 'adr_supersession',
   }),
   adrCapabilities: many(adrCapabilities),
