@@ -39,10 +39,11 @@ Personas -> Capabilities -> Applications
 
 ## Roadmap
 
-- **Current phase:** design and technical decision-making. The codebase was reset to build from a clean foundation before implementation.
-- **Next build steps:** scaffold the Next.js + TypeScript project, then define the Drizzle schema aligned to the capability data model.
-- **v1 focus:** single-organization EA repository, configurable content types, taxonomy management, local auth + optional SSO, fixed roles (Admin / Contributor / Viewer), workflow, audit trail, first-run setup, and Docker-friendly deployment.
-- **v2 direction:** multi-tenancy, ARB review simulation using reviewer personas, and hosted SaaS deployment options.
+- **Current phase:** active implementation and architecture hardening. The repository now includes a working Next.js application, Drizzle schema and migrations, seeded datasets, admin UI, authentication flows, and Docker-based dev/demo support.
+- **Implemented today:** applications, capabilities, personas, value streams, strategic objectives, initiatives, roadmap views, ADRs, audit history, taxonomy, user management, setup flows, and reusable `@govea/core` primitives.
+- **Current priorities:** close remaining architecture-documentation gaps, expand automated coverage, improve local bootstrap and demo workflows, and continue filling core EA capability areas such as lifecycle, analysis, and integrations.
+- **Near-term direction:** strengthen multi-organization support, improve stakeholder-facing views and detail pages, and keep implementation aligned with persona and capability standards.
+- **Longer-term direction:** ARB review simulation using reviewer personas and broader hosted SaaS deployment options.
 - **Testing principle:** test infrastructure, synthetic data, and restorable test states are part of the development cycle, not an afterthought.
 
 ---
