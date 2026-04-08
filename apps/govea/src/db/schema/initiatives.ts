@@ -2,6 +2,7 @@ import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { capabilities } from './capabilities'
+import { applications } from './applications'
 import { strategicObjectives } from './objectives'
 
 export const initiativeStatusEnum = pgEnum('initiative_status', [
@@ -45,3 +46,12 @@ export const initiativeObjectives = pgTable('initiative_objectives', {
 })
 
 export type InitiativeObjective = typeof initiativeObjectives.$inferSelect
+
+// Junction: initiative ↔ application (with impact label)
+export const initiativeApplications = pgTable('initiative_applications', {
+  initiativeId: uuid('initiative_id').notNull().references(() => initiatives.id, { onDelete: 'cascade' }),
+  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
+  impact: text('impact'),   // 'build' | 'improve' | 'retire' | 'migrate' | null
+})
+
+export type InitiativeApplication = typeof initiativeApplications.$inferSelect
