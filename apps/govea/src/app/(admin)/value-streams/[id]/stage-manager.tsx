@@ -30,7 +30,6 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<StageWithCapabilities | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<StageWithCapabilities | null>(null)
-  const [capStage, setCapStage] = useState<StageWithCapabilities | null>(null)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
 

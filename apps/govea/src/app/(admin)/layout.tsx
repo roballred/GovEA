@@ -19,13 +19,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const role = (session.user as any).role as Role
+  const role = session.user.role
 
   // Load org theme
   let themeStyle = ''
-  if ((session.user as any).organizationId) {
+  if (session.user.organizationId) {
     const org = await db.query.organizations.findFirst({
-      where: eq(organizations.id, (session.user as any).organizationId),
+      where: eq(organizations.id, session.user.organizationId),
     })
     if (org) {
       const theme = getTheme(org.theme)

@@ -3,14 +3,12 @@ import { redirect } from 'next/navigation'
 import { getApplications } from '@/actions/applications'
 import { getCapabilities } from '@/actions/capabilities'
 import { ApplicationTable } from './application-table'
-import type { Role } from '@/lib/rbac'
-
 export default async function ApplicationsPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const orgId = (session.user as any).organizationId as string
-  const role = (session.user as any).role as Role
+  const orgId = session.user.organizationId!
+  const role = session.user.role
 
   const [applicationList, capabilityList] = await Promise.all([
     getApplications(orgId),

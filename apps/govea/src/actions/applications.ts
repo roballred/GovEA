@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import { applications, applicationCapabilities } from '@/db/schema'
-import { eq, and, inArray, or } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -12,14 +12,14 @@ import { redirect } from 'next/navigation'
 async function requireContributor() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!canEdit(session.user as any)) throw new Error('Forbidden')
+  if (!canEdit(session.user)) throw new Error('Forbidden')
   return session
 }
 
 async function requireAdmin() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin(session.user as any)) throw new Error('Forbidden')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
   return session
 }
 

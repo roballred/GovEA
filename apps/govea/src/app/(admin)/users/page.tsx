@@ -7,7 +7,7 @@ import { UserTable } from './user-table'
 export default async function UsersPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin((session.user as any))) redirect('/dashboard')
+  if (!isAdmin(session.user)) redirect('/dashboard')
 
   const userList = await getUsers(session.user.organizationId!)
 

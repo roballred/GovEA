@@ -12,9 +12,9 @@ import { redirect } from 'next/navigation'
 export async function updateOrgTheme(themeId: string) {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin(session.user as any)) throw new Error('Forbidden')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
 
-  const orgId = (session.user as any).organizationId!
+  const orgId = session.user.organizationId!
 
   // Validate theme ID
   const valid = themes.find(t => t.id === themeId)

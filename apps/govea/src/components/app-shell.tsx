@@ -134,11 +134,15 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [prevPathname, setPrevPathname] = useState(pathname)
 
-  // Close mobile sidebar on navigation
-  useEffect(() => {
-    setSidebarOpen(false)
-  }, [pathname])
+  // Close mobile sidebar on navigation — React-idiomatic derived state update during render
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname)
+    if (sidebarOpen) {
+      setSidebarOpen(false)
+    }
+  }
 
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {

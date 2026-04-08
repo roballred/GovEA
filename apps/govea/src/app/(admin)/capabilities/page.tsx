@@ -3,14 +3,12 @@ import { redirect } from 'next/navigation'
 import { getCapabilities } from '@/actions/capabilities'
 import { getPersonas } from '@/actions/personas'
 import { CapabilityTable } from './capability-table'
-import type { Role } from '@/lib/rbac'
-
 export default async function CapabilitiesPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const orgId = (session.user as any).organizationId as string
-  const role = (session.user as any).role as Role
+  const orgId = session.user.organizationId!
+  const role = session.user.role
 
   const [capabilityList, personaList] = await Promise.all([
     getCapabilities(orgId),

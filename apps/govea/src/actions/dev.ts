@@ -21,9 +21,9 @@ export async function resetToDataset(datasetKey: string) {
 
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin(session.user as any)) throw new Error('Admin required')
+  if (!isAdmin(session.user)) throw new Error('Admin required')
 
-  const orgId = (session.user as any).organizationId as string
+  const orgId = session.user.organizationId as string
   const dataset = TEST_DATASETS[datasetKey]
   if (!dataset) throw new Error(`Unknown dataset: ${datasetKey}`)
 
@@ -38,12 +38,11 @@ export async function resetToDataset(datasetKey: string) {
   await db.delete(personaTypes).where(eq(personaTypes.organizationId, orgId))
 
   // ── Insert persona types ─────────────────────────────────────────────────
-  const typeRows = dataset.personaTypes.length > 0
-    ? await db.insert(personaTypes)
-        .values(dataset.personaTypes.map(name => ({ name, organizationId: orgId })))
-        .onConflictDoNothing()
-        .returning()
-    : []
+  if (dataset.personaTypes.length > 0) {
+    await db.insert(personaTypes)
+      .values(dataset.personaTypes.map(name => ({ name, organizationId: orgId })))
+      .onConflictDoNothing()
+  }
 
   // ── Insert tags ───────────────────────────────────────────────────────────
   const tagRows = dataset.tags.length > 0

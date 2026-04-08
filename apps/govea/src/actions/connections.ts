@@ -11,7 +11,7 @@ import { redirect } from 'next/navigation'
 async function requireAdmin() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin(session.user as any)) throw new Error('Forbidden')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
   return session
 }
 

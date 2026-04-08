@@ -222,7 +222,7 @@ export function ConnectionsTable({ connections, otherOrgs, orgId }: Props) {
           ) : (
             <form action={handleRequest} className="space-y-3">
               <div className="space-y-1.5">
-                <p className="text-sm text-muted-foreground">The target organization's admin will need to accept before the connection becomes active.</p>
+                <p className="text-sm text-muted-foreground">The target organization&apos;s admin will need to accept before the connection becomes active.</p>
                 <select name="targetOrgId" required className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                   <option value="">Select an organization…</option>
                   {availableOrgs.map(o => (
