@@ -195,7 +195,6 @@ async function seed() {
         valueItem: vs.valueItem,
         status: vs.status,
         visibility: vs.visibility,
-        stakeholderPersonaId: devPersonaIds[vs.stakeholderPersonas[0]] ?? null,
       }).returning()
       vsId = inserted.id
     }
