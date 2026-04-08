@@ -38,7 +38,6 @@ export type DatasetValueStreamStage = {
 export type DatasetValueStream = {
   name: string
   description: string
-  stakeholderPersona: string // persona name
   valueItem: string
   status: 'draft' | 'published' | 'archived'
   stages: DatasetValueStreamStage[]
@@ -187,7 +186,7 @@ export const DATASET_STARTER: Dataset = {
     {
       name: 'Obtain a Building Permit',
       description: 'A resident or business owner applies for and receives an approved building permit.',
-      stakeholderPersona: 'Resident',
+
       valueItem: 'Approved permit enabling legal construction or renovation',
       status: 'published',
       stages: [
@@ -382,7 +381,7 @@ export const DATASET_CITY_DEMO: Dataset = {
     {
       name: 'Obtain a Building Permit',
       description: 'A resident or business owner applies for and receives an approved building permit to begin construction or renovation.',
-      stakeholderPersona: 'Business Owner',
+
       valueItem: 'Approved permit enabling legal construction or renovation',
       status: 'published',
       stages: [
@@ -395,7 +394,7 @@ export const DATASET_CITY_DEMO: Dataset = {
     {
       name: 'Report a Non-Emergency Issue',
       description: 'A resident reports a non-emergency service issue (pothole, graffiti, broken streetlight) and tracks its resolution.',
-      stakeholderPersona: 'Resident',
+
       valueItem: 'Confirmed service request with status tracking',
       status: 'published',
       stages: [
@@ -407,7 +406,7 @@ export const DATASET_CITY_DEMO: Dataset = {
     {
       name: 'Onboard a New City Employee',
       description: 'A new employee is provisioned with system access, HR enrollment, and payroll setup.',
-      stakeholderPersona: 'IT Administrator',
+
       valueItem: 'Fully provisioned employee ready for first day',
       status: 'draft',
       stages: [
