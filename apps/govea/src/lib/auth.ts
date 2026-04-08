@@ -2,12 +2,6 @@ import NextAuth from 'next-auth'
 import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
 import Credentials from 'next-auth/providers/credentials'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
-import type {
-  DefaultPostgresUsersTable,
-  DefaultPostgresAccountsTable,
-  DefaultPostgresSessionsTable,
-  DefaultPostgresVerificationTokenTable,
-} from '@auth/drizzle-adapter/lib/pg'
 import { db } from '@/db/client'
 import { users, accounts, sessions, verificationTokens, organizations } from '@/db/schema'
 import bcrypt from 'bcryptjs'
@@ -25,12 +19,8 @@ interface AppUser {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db, {
-    usersTable: users as unknown as DefaultPostgresUsersTable,
-    accountsTable: accounts as unknown as DefaultPostgresAccountsTable,
-    sessionsTable: sessions as unknown as DefaultPostgresSessionsTable,
-    verificationTokensTable: verificationTokens as unknown as DefaultPostgresVerificationTokenTable,
-  }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  adapter: DrizzleAdapter(db, { usersTable: users, accountsTable: accounts, sessionsTable: sessions, verificationTokensTable: verificationTokens } as any),
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 }, // 24h
   providers: [
     ...(process.env.AUTH_MICROSOFT_ENTRA_ID_ID
