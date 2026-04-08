@@ -1,0 +1,40 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/govea
+      AUTH_SECRET: demo-secret-not-for-production
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      DEV: "true"
+    volumes:
+      # Mount source for hot reload. node_modules are kept in anonymous
+      # volumes so the container's pre-built install is not overwritten.
+      - .:/app
+      - /app/node_modules
+      - /app/apps/govea/node_modules
+      - /app/packages/core/node_modules
+      - /app/apps/govea/.next
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: govea
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - demo_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  demo_postgres_data:
