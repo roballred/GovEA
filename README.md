@@ -41,7 +41,7 @@ Personas -> Capabilities -> Applications
 
 ## Development Approach
 
-This project is developed using the [EasyEA framework](https://github.com/roballred/EasyEA) — a people-centered, lightweight methodology designed for everyday work rather than compliance theater.
+This project is developed using the [EasyEA framework](https://github.com/roballred/EasyEA) — a people-centered, lightweight methodology designed for everyday work.
 
 All development standards are defined in [`Standards.md`](./Standards.md). The short version:
 
