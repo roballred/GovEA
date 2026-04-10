@@ -33,8 +33,25 @@ Debt that is named and tracked is manageable. Debt that is invisible becomes the
 - Resolving a debt item requires linking it to an initiative or explicitly marking it `accepted` with rationale; it cannot be closed without one or the other
 - Debt items must be linked to at least one architecture object; unattached debt items are not permitted
 
+## Federation Behavior
+
+Debt items are always owned by the organization that creates them. Federation does not change ownership.
+
+**Creating debt against cross-org linked objects:** An agency may create a debt item linked to a cross-org object they can see (e.g., "we've linked to the enterprise Licensing capability but have no application implementing it — that gap is our debt to close"). The debt item belongs to the agency, not to the org whose capability is referenced. The referenced cross-org object appears in the debt item's linked objects list as a read-only reference.
+
+**Visibility of debt items across org boundaries:** Debt items follow `mo-content-visibility` exactly. Default visibility is `org` — debt is private to the creating organization. An agency may choose to share debt items at `connections` or `instance` visibility, making them visible to connected orgs or the full instance. This is always an explicit opt-in by the agency.
+
+**What Enterprise Architects see:**
+- Debt items they created on enterprise-owned content (at any visibility)
+- Debt items from other orgs that those orgs have shared at `connections` or `instance` visibility
+- They do not see `org`-visibility debt from agencies, even if that debt references enterprise capabilities they own
+
+**Design principle:** An Enterprise Architect cannot use debt tracking as a surveillance mechanism to discover problems in agencies that have not chosen to share them. The federation model is a professional network, not an audit trail. If agencies know that linking to an enterprise capability automatically exposes their debt to central IT, they will not link — and the entire federation model fails.
+
+**Auto-flagged debt and cross-org objects:** The system-detected debt queue (lifecycle-based flags) only fires against objects the org owns. An agency is never auto-flagged for debt conditions in a cross-org linked object that belongs to another org.
+
 ## Links
 
-- Depends on: `po-application-portfolio`, `po-capability-map`, `po-architecture-decisions`, `pl-initiatives`
+- Depends on: `po-application-portfolio`, `po-capability-map`, `po-architecture-decisions`, `pl-initiatives`, `mo-content-visibility`, `mo-cross-org-linking`
 - Related: `rm-repository-completeness`, `rm-end-to-end-traceability`
 - Personas served: Enterprise Architect, Agency EA Coordinator
