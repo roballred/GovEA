@@ -34,3 +34,8 @@ npm-debug.log*
 
 # Temporary research and working files
 ea-research/
+
+# Playwright — generated at runtime, never committed
+apps/govea/tests/e2e/.auth/
+apps/govea/playwright-report/
+apps/govea/test-results/
