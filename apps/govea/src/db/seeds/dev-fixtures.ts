@@ -6,7 +6,7 @@
 //   - City of Riverdale (primary dev org) — full EA content, three user roles
 //   - Office of Digital Services (state agency) — second org for multi-org scenario
 //
-// An active org connection between them and a cross-org capability link are
+// An active org connection between them and multiple cross-org capability links are
 // created to exercise the federation/visibility use case.
 
 // ─── Orgs ────────────────────────────────────────────────────────────────────
@@ -50,7 +50,17 @@ export const DEFAULT_TAGS = [
   'multilingual',
 ]
 
+// Tag assignments for specific personas — seeds the personaTags junction table.
+export const DEV_PERSONA_TAGS = [
+  { personaName: 'Resident',             tags: ['mobile-first', 'high-volume', 'low-digital-literacy', 'multilingual'] },
+  { personaName: 'Small Business Owner', tags: ['high-volume', 'multilingual'] },
+  { personaName: 'Field Inspector',      tags: ['mobile-first', 'accessibility'] },
+  { personaName: 'City Council Member',  tags: ['accessibility'] },
+]
+
 // ─── Personas (City of Riverdale) ────────────────────────────────────────────
+// Coverage: status = draft ✓, published ✓, archived ✓
+//           visibility = org ✓, connections ✓, instance ✓
 
 export const DEV_PERSONAS = [
   {
@@ -102,10 +112,19 @@ export const DEV_PERSONAS = [
     status: 'draft' as const,
     visibility: 'connections' as const,
   },
+  // archived + instance — exercises both missing enum values
+  {
+    name: 'Legacy System Operator',
+    description: 'Staff role responsible for operating and maintaining legacy on-premises systems. Role phased out as systems are decommissioned.',
+    type: 'Staff',
+    status: 'archived' as const,
+    visibility: 'instance' as const,
+  },
 ]
 
 // ─── Capabilities (City of Riverdale) ────────────────────────────────────────
-// Each capability maps to one or more persona names from DEV_PERSONAS.
+// Coverage: status = draft ✓, published ✓, archived ✓
+//           visibility = org ✓, connections ✓, instance ✓
 
 export const DEV_CAPABILITIES = [
   {
@@ -172,16 +191,29 @@ export const DEV_CAPABILITIES = [
     visibility: 'connections' as const,
     personas: ['State Agency Liaison', 'IT Staff'],
   },
+  // archived + instance — exercises both missing enum values
+  {
+    name: 'Print & Mail Services',
+    description: 'Printed correspondence and physical mail delivery for city communications. Sunset in favour of digital notifications.',
+    domain: 'Administrative Services',
+    status: 'archived' as const,
+    visibility: 'instance' as const,
+    personas: ['IT Staff'],
+  },
 ]
 
 // ─── Applications (City of Riverdale) ────────────────────────────────────────
-// Each application maps to one or more capability names from DEV_CAPABILITIES.
+// Coverage: lifecycleStatus = active ✓, sunset ✓, decommissioned ✓, planned ✓
+//           hostingModel = saas ✓, on-prem ✓, hybrid ✓
+//           status = published ✓, draft ✓
+//           version field — non-null example on planned app
 
 export const DEV_APPLICATIONS = [
   {
     name: 'Accela',
     description: 'Permitting and licensing platform used by Community Development and Code Enforcement.',
     vendor: 'Accela',
+    version: undefined as string | undefined,
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
@@ -191,6 +223,7 @@ export const DEV_APPLICATIONS = [
     name: 'Workday',
     description: 'HR and payroll system used enterprise-wide for all city employees.',
     vendor: 'Workday',
+    version: undefined as string | undefined,
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
@@ -200,6 +233,7 @@ export const DEV_APPLICATIONS = [
     name: 'ArcGIS Online',
     description: 'Cloud GIS platform for mapping, spatial analysis, and field data collection.',
     vendor: 'Esri',
+    version: undefined as string | undefined,
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
@@ -209,6 +243,7 @@ export const DEV_APPLICATIONS = [
     name: 'OpenGov',
     description: 'Budget transparency and performance management platform used by Finance and department directors.',
     vendor: 'OpenGov',
+    version: undefined as string | undefined,
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
@@ -218,6 +253,7 @@ export const DEV_APPLICATIONS = [
     name: 'CityWorks',
     description: 'Work order and asset management system for Public Works. On-prem installation, approaching end of vendor support.',
     vendor: 'Trimble',
+    version: undefined as string | undefined,
     hostingModel: 'on-prem',
     lifecycleStatus: 'sunset' as const,
     status: 'published' as const,
@@ -227,6 +263,7 @@ export const DEV_APPLICATIONS = [
     name: 'Microsoft Entra ID',
     description: 'Cloud identity provider used for staff SSO. Residents use a separate local credential store.',
     vendor: 'Microsoft',
+    version: undefined as string | undefined,
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
@@ -234,16 +271,33 @@ export const DEV_APPLICATIONS = [
   },
   {
     name: 'Legacy Permitting System',
-    description: 'In-house permitting system built in 2008. Being retired in favour of Accela.',
+    description: 'In-house permitting system built in 2008. Retired in favour of Accela.',
     vendor: 'In-house',
+    version: undefined as string | undefined,
     hostingModel: 'on-prem',
     lifecycleStatus: 'decommissioned' as const,
     status: 'published' as const,
     capabilities: ['Online Permitting'],
   },
+  // planned + hybrid + version — covers all three missing field values
+  {
+    name: 'Next-Gen Work Order System',
+    description: 'Cloud-native work order and asset management platform selected to replace CityWorks. Implementation begins Q2 FY2026.',
+    vendor: 'Cityworks Cloud',
+    version: '4.0.0',
+    hostingModel: 'hybrid',
+    lifecycleStatus: 'planned' as const,
+    status: 'draft' as const,
+    capabilities: ['Service Request Management', 'GIS Mapping'],
+  },
 ]
 
 // ─── Strategic Objectives (City of Riverdale) ─────────────────────────────────
+// Coverage: status = draft ✓, published ✓, archived ✓
+//           visibility = org ✓, connections ✓, instance ✓
+//           timeHorizon = multiple values (FY2024, FY2026, FY2027, 3-year)
+//           applications and valueStreams arrays — seed objectiveApplications /
+//           objectiveValueStreams junction tables
 
 export const DEV_OBJECTIVES = [
   {
@@ -252,7 +306,10 @@ export const DEV_OBJECTIVES = [
     successMetric: '80% of permit applications submitted online by end of FY2026',
     timeHorizon: 'FY2026',
     status: 'published' as const,
+    visibility: 'org' as const,
     capabilities: ['Online Permitting', 'Service Request Management', 'Digital Identity & Authentication'],
+    applications: ['Accela', 'Microsoft Entra ID'],
+    valueStreams: ['Permit to Certificate', 'Service Request to Resolution'],
   },
   {
     name: 'Modernise Legacy Infrastructure',
@@ -260,7 +317,10 @@ export const DEV_OBJECTIVES = [
     successMetric: 'Zero active on-prem systems older than 10 years by FY2027',
     timeHorizon: 'FY2027',
     status: 'published' as const,
+    visibility: 'org' as const,
     capabilities: ['GIS Mapping', 'Service Request Management'],
+    applications: ['CityWorks', 'Legacy Permitting System'],
+    valueStreams: ['Permit to Certificate'],
   },
   {
     name: 'Enable Cross-Agency Data Sharing',
@@ -268,11 +328,29 @@ export const DEV_OBJECTIVES = [
     successMetric: 'At least 2 active data exchange agreements with state agencies by end of FY2026',
     timeHorizon: 'FY2026',
     status: 'draft' as const,
+    visibility: 'connections' as const,
     capabilities: ['Cross-Agency Data Sharing', 'Digital Identity & Authentication'],
+    applications: [] as string[],
+    valueStreams: [] as string[],
+  },
+  // archived + instance — exercises both missing enum values
+  {
+    name: 'Migrate to Cloud-First Infrastructure',
+    description: 'Previous strategic priority to move all infrastructure to cloud by FY2024. Superseded by the more targeted Modernise Legacy Infrastructure objective.',
+    successMetric: 'All production workloads cloud-hosted by FY2024',
+    timeHorizon: 'FY2024',
+    status: 'archived' as const,
+    visibility: 'instance' as const,
+    capabilities: ['Digital Identity & Authentication'],
+    applications: [] as string[],
+    valueStreams: [] as string[],
   },
 ]
 
 // ─── Value Streams (City of Riverdale) ───────────────────────────────────────
+// Coverage: status = published ✓, draft ✓
+//           visibility = org ✓, connections ✓
+//           stakeholderPersonas — seeds valueStreamPersonas junction table
 
 export const DEV_VALUE_STREAMS = [
   {
@@ -331,9 +409,35 @@ export const DEV_VALUE_STREAMS = [
       },
     ],
   },
+  // draft + connections — covers missing status and visibility values
+  {
+    name: 'Business Registration',
+    description: 'Journey from a new business registering with the city through to receiving all required approvals to operate.',
+    valueItem: 'Approved business registration enabling legal operation',
+    status: 'draft' as const,
+    visibility: 'connections' as const,
+    stakeholderPersonas: ['Small Business Owner'],
+    stages: [
+      {
+        name: 'Initial Registration',
+        description: 'Business owner submits registration details and initial documentation.',
+        order: 1,
+        capabilities: ['Business License Management', 'Digital Identity & Authentication'],
+      },
+      {
+        name: 'Verification & Compliance',
+        description: 'Staff verify business details and check zoning and compliance requirements.',
+        order: 2,
+        capabilities: ['Business License Management', 'GIS Mapping'],
+      },
+    ],
+  },
 ]
 
 // ─── Initiatives (City of Riverdale) ─────────────────────────────────────────
+// Coverage: status = proposed ✓, active ✓, on-hold ✓, complete ✓, cancelled ✓
+//           capability impact = improve ✓, build ✓, retire ✓
+//           application impact = build ✓, retire ✓, improve ✓, migrate ✓
 
 export const DEV_INITIATIVES = [
   {
@@ -343,12 +447,12 @@ export const DEV_INITIATIVES = [
     startDate: 'Q1 FY2026',
     endDate: 'Q4 FY2026',
     capabilities: [
-      { name: 'Online Permitting',          impact: 'improve' },
+      { name: 'Online Permitting',           impact: 'improve' },
       { name: 'Business License Management', impact: 'improve' },
     ],
     applications: [
-      { name: 'Accela',                    impact: 'build'  },
-      { name: 'Legacy Permitting System',  impact: 'retire' },
+      { name: 'Accela',                   impact: 'build'  },
+      { name: 'Legacy Permitting System', impact: 'retire' },
     ],
     objectives: ['Improve Digital Service Delivery'],
   },
@@ -363,13 +467,66 @@ export const DEV_INITIATIVES = [
       { name: 'GIS Mapping',               impact: 'improve' },
     ],
     applications: [
-      { name: 'CityWorks', impact: 'retire' },
+      { name: 'CityWorks',                  impact: 'retire' },
+      { name: 'Next-Gen Work Order System', impact: 'build'  },
+    ],
+    objectives: ['Modernise Legacy Infrastructure'],
+  },
+  // on-hold — covers missing status; application impact 'improve'
+  {
+    name: 'Cross-Agency Data Exchange Pilot',
+    description: 'Pilot structured data exchange with two state agencies to validate the technical approach before full rollout. Currently on hold pending legal review of data sharing agreements.',
+    status: 'on-hold' as const,
+    startDate: 'Q3 FY2026',
+    endDate: 'Q1 FY2027',
+    capabilities: [
+      { name: 'Cross-Agency Data Sharing',        impact: 'build'   },
+      { name: 'Digital Identity & Authentication', impact: 'improve' },
+    ],
+    applications: [
+      { name: 'Microsoft Entra ID', impact: 'improve' },
+    ],
+    objectives: ['Enable Cross-Agency Data Sharing'],
+  },
+  // complete — covers missing status
+  {
+    name: 'Resident Portal Redesign',
+    description: 'Redesign of the public-facing resident portal to improve mobile accessibility and reduce call volume to the service centre. Completed Q4 FY2025.',
+    status: 'complete' as const,
+    startDate: 'Q1 FY2025',
+    endDate: 'Q4 FY2025',
+    capabilities: [
+      { name: 'Digital Identity & Authentication', impact: 'improve' },
+      { name: 'Service Request Management',        impact: 'improve' },
+    ],
+    applications: [
+      { name: 'Microsoft Entra ID', impact: 'improve' },
+    ],
+    objectives: ['Improve Digital Service Delivery'],
+  },
+  // cancelled — covers missing status; application impact 'migrate'
+  {
+    name: 'ERP Consolidation Evaluation',
+    description: 'Evaluation of enterprise resource planning platforms to consolidate HR, Finance, and procurement. Cancelled Q3 FY2025 due to budget constraints and vendor market reassessment.',
+    status: 'cancelled' as const,
+    startDate: 'Q2 FY2025',
+    endDate: null as string | null,
+    capabilities: [
+      { name: 'HR Self-Service',  impact: 'retire' },
+      { name: 'Budget Reporting', impact: 'retire' },
+    ],
+    applications: [
+      { name: 'Workday',  impact: 'migrate' },
+      { name: 'OpenGov',  impact: 'migrate' },
     ],
     objectives: ['Modernise Legacy Infrastructure'],
   },
 ]
 
 // ─── ADRs (City of Riverdale) ─────────────────────────────────────────────────
+// Coverage: status = accepted ✓, proposed ✓, deprecated ✓, superseded ✓
+//           supersededByNumber — self-reference chain resolved in run.ts
+//           all four junction tables: capabilities, applications, initiatives, objectives
 
 export const DEV_ADRS = [
   {
@@ -379,8 +536,67 @@ export const DEV_ADRS = [
     decision: 'All new application acquisitions will default to SaaS hosting unless a documented security, compliance, or integration requirement mandates on-premises deployment. On-prem exceptions require Director-level approval and an exit plan.',
     consequences: 'Reduces infrastructure maintenance burden and improves vendor-managed update cadence. Increases reliance on internet connectivity and vendor SLAs. Requires updated procurement templates and vendor risk assessment processes.',
     status: 'accepted' as const,
+    supersededByNumber: null as string | null,
     capabilities: ['Digital Identity & Authentication', 'Cross-Agency Data Sharing'],
     applications: ['Accela', 'ArcGIS Online', 'OpenGov'],
+    initiatives: ['Accela Implementation'],
+    objectives: ['Modernise Legacy Infrastructure'],
+  },
+  // proposed — covers missing status
+  {
+    number: 'ADR-002',
+    title: 'Use OAuth 2.0 / OIDC for all resident-facing authentication flows',
+    context: 'The city currently has fragmented authentication across citizen-facing services, with some using legacy username/password forms and others using ad-hoc SSO integrations. This creates security risk and a poor user experience.',
+    decision: 'All resident-facing authentication flows will implement OAuth 2.0 with OIDC. Microsoft Entra ID is the designated identity provider for staff. A separate resident credential store will be maintained for services not requiring SSO.',
+    consequences: 'Improves security posture and enables single sign-on for residents. Increases dependency on Microsoft Entra ID availability. Requires migration of existing legacy authentication implementations.',
+    status: 'proposed' as const,
+    supersededByNumber: null as string | null,
+    capabilities: ['Digital Identity & Authentication'],
+    applications: ['Microsoft Entra ID'],
+    initiatives: ['Cross-Agency Data Exchange Pilot'],
+    objectives: ['Improve Digital Service Delivery'],
+  },
+  // deprecated — covers missing status; no application or initiative links (null examples)
+  {
+    number: 'ADR-003',
+    title: 'Require on-premises deployment for all financial systems',
+    context: 'An earlier security policy required all financial systems to be deployed on-premises to comply with city data residency requirements. Documented as an architectural constraint in the 2019 technology strategy.',
+    decision: 'All financial management and budget systems must be deployed on-premises within city-owned infrastructure.',
+    consequences: 'Provided data residency assurance under the 2019 policy. Created significant infrastructure and maintenance overhead. Superseded by updated cloud security posture and the SaaS-first direction (ADR-001).',
+    status: 'deprecated' as const,
+    supersededByNumber: null as string | null,
+    capabilities: ['Budget Reporting'],
+    applications: [] as string[],
+    initiatives: [] as string[],
+    objectives: [] as string[],
+  },
+  // superseded — covers missing status; supersededByNumber resolved in run.ts
+  {
+    number: 'ADR-004',
+    title: 'Use legacy XML/SOAP gateway for cross-agency data exchange',
+    context: "At the time this decision was made, the city's integration with the state used a legacy XML/SOAP-based API gateway that was the only approved integration pattern for state agency data exchange.",
+    decision: 'All cross-agency data exchange will use the state-provided XML/SOAP gateway and its associated authentication mechanism.',
+    consequences: 'Enabled initial data exchange with the state. Gateway has since been decommissioned by the state. This decision is formally superseded by ADR-005, which adopts REST/JSON with OAuth 2.0.',
+    status: 'superseded' as const,
+    supersededByNumber: 'ADR-005',
+    capabilities: ['Cross-Agency Data Sharing'],
+    applications: [] as string[],
+    initiatives: [] as string[],
+    objectives: [] as string[],
+  },
+  // accepted (second instance) — supersedes ADR-004
+  {
+    number: 'ADR-005',
+    title: 'Adopt REST/JSON APIs with OAuth 2.0 for all cross-agency integrations',
+    context: 'The legacy XML/SOAP gateway (governed by ADR-004) has been decommissioned by the state. New state integration APIs use REST/JSON. The city needs a current integration pattern for all future cross-agency data exchange.',
+    decision: 'All new and migrated cross-agency integrations will use REST/JSON APIs authenticated via OAuth 2.0. API contracts will be documented using OpenAPI specifications and reviewed by the Architecture Review Board.',
+    consequences: 'Aligns with state and industry direction. Reduces integration complexity versus SOAP. Requires updating existing integrations. Supersedes ADR-004.',
+    status: 'accepted' as const,
+    supersededByNumber: null as string | null,
+    capabilities: ['Cross-Agency Data Sharing', 'Digital Identity & Authentication'],
+    applications: ['Microsoft Entra ID'],
+    initiatives: ['Cross-Agency Data Exchange Pilot'],
+    objectives: ['Enable Cross-Agency Data Sharing'],
   },
 ]
 
@@ -444,12 +660,27 @@ export const STATE_APPLICATIONS = [
   },
 ]
 
-// ─── Multi-org connection ─────────────────────────────────────────────────────
-// Describes the cross-org link to create between the two orgs.
-// sourceCapability (City of Riverdale) implements targetCapability (State Org).
+// ─── Multi-org cross-org links ────────────────────────────────────────────────
+// Coverage: linkType = implements ✓, extends ✓, maps_to ✓
+//
+// Note: 'State Grants Management' has 'org' visibility; in runtime federation
+// traversal City of Riverdale cannot follow that link. The row is seeded to
+// exercise the data model regardless of visibility enforcement.
 
-export const DEV_CROSS_ORG_LINK = {
-  sourceCapabilityName: 'Digital Identity & Authentication',
-  targetCapabilityName: 'Statewide Identity Verification',
-  linkType: 'implements' as const,
-}
+export const DEV_CROSS_ORG_LINKS = [
+  {
+    sourceCapabilityName: 'Digital Identity & Authentication',
+    targetCapabilityName: 'Statewide Identity Verification',
+    linkType: 'implements' as const,
+  },
+  {
+    sourceCapabilityName: 'Cross-Agency Data Sharing',
+    targetCapabilityName: 'Open Data Platform',
+    linkType: 'extends' as const,
+  },
+  {
+    sourceCapabilityName: 'Budget Reporting',
+    targetCapabilityName: 'State Grants Management',
+    linkType: 'maps_to' as const,
+  },
+]
