@@ -133,6 +133,16 @@ export async function deleteTag(tagId: string) {
 
 // ── Personas ──────────────────────────────────────────────────────────────────
 
+export async function getPersona(id: string) {
+  return db.query.personas.findFirst({
+    where: eq(personas.id, id),
+    with: {
+      organization: true,
+      personaTags: { with: { tag: true } },
+    },
+  })
+}
+
 export async function getPersonas(organizationId: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
 

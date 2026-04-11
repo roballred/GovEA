@@ -8,6 +8,7 @@ import {
   createTag, deleteTag,
 } from '@/actions/personas'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -242,7 +243,9 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
               <TableRow key={p.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    {p.name}
+                    <Link href={`/personas/${p.id}`} className="hover:underline">
+                      {p.name}
+                    </Link>
                     {p.organizationId !== currentOrgId && p.organization && (
                       <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
                         {p.organization.name}
