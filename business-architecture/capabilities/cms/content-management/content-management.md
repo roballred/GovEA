@@ -24,5 +24,9 @@ The system must provide a complete content management foundation — defining co
 - The core GovEA constraint must be enforced at publish time: Applications must link to Capabilities; Capabilities must link to Personas
 - All content changes are versioned and auditable
 
+## Deferred to v2
+
+**Content quality / completeness monitoring** — a dedicated capability covering completeness scoring, quality flags, and trend reporting across the repository is deferred to v2. The Admin Dashboard surfaces a basic completeness summary in v1 (percentage of published items with all recommended fields populated), which is sufficient for early adopters. Full quality monitoring requires a larger repository to be meaningful and validated user need beyond what v1 personas confirm.
+
 ## Links
 - Depends on: IAM

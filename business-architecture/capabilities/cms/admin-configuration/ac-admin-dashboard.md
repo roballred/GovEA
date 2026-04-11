@@ -13,6 +13,7 @@ The system must provide administrators with an at-a-glance overview of system he
 - Show user account summary — total users, active users, users by role
 - Display lifecycle risk summary — Applications in aging, sunset, or decommissioned status
 - Show system status — database connectivity, last backup timestamp
+- Display content completeness summary — percentage of published content items with all recommended fields populated, broken down by content type
 
 ## Rules
 - Dashboard data reflects real-time state — no stale cache

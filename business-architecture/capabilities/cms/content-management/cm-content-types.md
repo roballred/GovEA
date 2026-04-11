@@ -15,6 +15,22 @@ The system must allow administrators to define and configure the structure of co
 - Enable or disable workflow and audit trail per content type
 - Preview the content type form before publishing the schema
 
+## Data Classification Field
+
+All content types should support an optional **sensitivity classification** field. This is not a full access control system — it is a signal field that surfaces the data sensitivity question before content is published.
+
+Recommended values:
+
+| Value | Meaning |
+|---|---|
+| Public | Suitable for public-facing display; no sensitivity concerns |
+| Internal | For internal agency use; not for public release |
+| Restricted | Sensitive content; review before sharing outside the team |
+
+- Classification is set by the contributor at authoring time; it defaults to Internal if not set
+- Classification does not gate access in v1 — that is a v2 concern — but it must be visible to Admins and surfaced in the Admin Dashboard
+- Agencies with specific data classification standards (e.g. CUI, FOUO) should map those to these three values rather than extending the field in v1
+
 ## Rules
 - Content type changes must not destroy existing content — removing a field hides it, it does not delete stored data
 - At least one field must be designated as the display title for each content type

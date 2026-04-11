@@ -25,6 +25,25 @@ The Content Viewer is anyone who needs to read and navigate published content bu
 ## Critical Insight
 The Content Viewer will not come back if the first experience is confusing or the content feels out of date. Trust is built through clear navigation, visible publish dates, and outputs written for a general audience. SSO must work transparently — any login friction is a reason to go back to email and spreadsheets.
 
+## Data Stored About This Persona
+
+GovEA stores the following personal data about Content Viewer accounts:
+
+| Data | Purpose | Retention |
+|---|---|---|
+| Full name | Display in UI and session | Retained for the life of the account |
+| Email address | Authentication | Retained for the life of the account |
+| Role assignment | Access control (Viewer) | Retained for the life of the account |
+| Login timestamps | Audit trail | Subject to audit log retention policy (default: 12 months) |
+
+**SSO users:** For users who authenticate via Microsoft Entra ID SSO, GovEA does not store a password. Name and email are provided by the identity provider at login and stored locally for display and audit purposes.
+
+**No content interaction data is stored:** GovEA does not track which content items a Viewer reads, how long they spend on a page, or what they search for.
+
+**Authority:** Data is collected under the agency's IT system administration authority. No data is shared with third parties.
+
+**Access and deletion:** An Admin can deactivate a Viewer account. Deactivation prevents login but does not delete audit trail entries. Full account data deletion requires a database-level operation documented in the deployment guide.
+
 ## Relevant Capabilities
 - Front-end content display and navigation
 - Search and filtering

@@ -25,6 +25,23 @@ The CMS Administrator is the person responsible for setting up, configuring, and
 ## Critical Insight
 The CMS Administrator is not a developer and should never need to be. If administrative functions require code changes or CLI access, the system has failed this persona. Every configuration action they need to perform must be available through the UI, and every access decision must be auditable.
 
+## Data Stored About This Persona
+
+GovEA stores the following personal data about CMS Administrator accounts:
+
+| Data | Purpose | Retention |
+|---|---|---|
+| Full name | Display in audit log and UI | Retained for the life of the account |
+| Email address | Authentication, notifications, audit log | Retained for the life of the account |
+| Hashed password | Local authentication (if not SSO-only) | Retained until account is deleted |
+| Role assignment | Access control | Retained for the life of the account |
+| Login timestamps | Audit trail | Subject to audit log retention policy (default: 12 months) |
+| Action history | Audit trail — records all content and IAM changes | Subject to audit log retention policy |
+
+**Authority:** Data is collected under the agency's IT system administration authority. No data is shared with third parties. No data is used for purposes other than operating the system.
+
+**Access and deletion:** An Admin can deactivate their own account or have another Admin do so. Deactivation prevents login but does not delete audit trail entries — those are immutable by design. To fully remove personal data, a database-level deletion is required; this is a manual process documented in the deployment guide.
+
 ## Relevant Capabilities
 - Back-end content administration
 - User and role management
