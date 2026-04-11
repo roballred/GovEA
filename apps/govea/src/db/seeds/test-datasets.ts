@@ -68,6 +68,20 @@ export type DatasetInitiative = {
   objectives: string[]      // objective names
 }
 
+export type DatasetADR = {
+  number: string            // e.g. "ADR-001"
+  title: string
+  context: string
+  decision: string
+  consequences: string
+  status: 'proposed' | 'accepted' | 'deprecated' | 'superseded'
+  supersededByNumber: string | null
+  capabilities: string[]   // capability names
+  applications: string[]   // application names
+  initiatives: string[]    // initiative names
+  objectives: string[]     // objective names
+}
+
 export type Dataset = {
   label: string
   description: string
@@ -79,6 +93,7 @@ export type Dataset = {
   valueStreams: DatasetValueStream[]
   objectives: DatasetObjective[]
   initiatives: DatasetInitiative[]
+  adrs: DatasetADR[]
 }
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
@@ -96,6 +111,7 @@ export const DATASET_BLANK: Dataset = {
   valueStreams: [],
   objectives: [],
   initiatives: [],
+  adrs: [],
 }
 
 // ── Dataset 2: Starter ────────────────────────────────────────────────────────
@@ -214,6 +230,21 @@ export const DATASET_STARTER: Dataset = {
       startDate: 'Q1 FY2026',
       endDate: 'Q3 FY2026',
       capabilities: [{ name: 'Online Permitting', impact: 'improve' }],
+      objectives: ['Reduce permit processing time by 40%'],
+    },
+  ],
+  adrs: [
+    {
+      number: 'ADR-001',
+      title: 'Use SaaS hosting for Accela',
+      context: 'The city previously ran an in-house permitting system on aging on-premises infrastructure that required dedicated IT staff to maintain. Moving to a vendor-hosted SaaS model was evaluated as part of the Accela selection.',
+      decision: 'Accela will be deployed as a SaaS solution. The city will not host or manage the application infrastructure. Vendor SLAs will govern availability and patching.',
+      consequences: 'Reduces IT maintenance burden and keeps the platform on current releases. Increases reliance on vendor uptime and introduces data residency considerations that must be addressed in the contract.',
+      status: 'accepted',
+      supersededByNumber: null,
+      capabilities: ['Online Permitting'],
+      applications: ['Accela'],
+      initiatives: ['Accela Online Portal Upgrade'],
       objectives: ['Reduce permit processing time by 40%'],
     },
   ],
@@ -477,6 +508,60 @@ export const DATASET_CITY_DEMO: Dataset = {
         { name: 'Records Management', impact: 'build' },
       ],
       objectives: ['Modernize records infrastructure'],
+    },
+  ],
+  adrs: [
+    {
+      number: 'ADR-001',
+      title: 'Adopt SaaS-first hosting for new application acquisitions',
+      context: 'The city operates several aging on-premises systems that require dedicated infrastructure, patching, and specialist staff. CityWorks and OpenText Livelink are both approaching end of vendor support and represent significant maintenance risk.',
+      decision: 'All new application acquisitions will default to SaaS hosting unless a documented security, compliance, or integration requirement mandates on-premises deployment. On-prem exceptions require Director-level approval and a documented exit plan.',
+      consequences: 'Reduces infrastructure maintenance burden and improves vendor-managed update cadence. Increases reliance on internet connectivity and vendor SLAs. Requires updated procurement templates and vendor risk assessment processes.',
+      status: 'accepted',
+      supersededByNumber: null,
+      capabilities: ['Online Permitting', 'Business License Management'],
+      applications: ['Accela', 'CrowdStrike Falcon'],
+      initiatives: ['Accela Online Portal Upgrade', 'Migrate Records to Cloud Platform'],
+      objectives: ['Reduce permit processing time by 40%'],
+    },
+    {
+      number: 'ADR-002',
+      title: 'Use OAuth 2.0 / OIDC for all resident-facing authentication flows',
+      context: 'Resident-facing services currently use fragmented authentication — some rely on legacy username/password forms, others on ad-hoc integrations. This creates security risk and poor user experience across service touchpoints.',
+      decision: 'All resident-facing authentication flows will implement OAuth 2.0 with OIDC. A separate resident credential store will be maintained for services not requiring SSO. Staff authentication continues through the existing enterprise SSO pathway.',
+      consequences: 'Improves security posture and enables consistent single sign-on for residents. Requires migration of legacy authentication implementations. Increases dependency on the identity provider for resident service availability.',
+      status: 'proposed',
+      supersededByNumber: null,
+      capabilities: ['Online Permitting', '311 Resident Services'],
+      applications: [],
+      initiatives: ['Accela Online Portal Upgrade', 'Deploy 311 Mobile App'],
+      objectives: ['Improve resident service request resolution rate'],
+    },
+    {
+      number: 'ADR-003',
+      title: 'Decommission OpenText Livelink in favour of cloud-native records platform',
+      context: 'OpenText Livelink is an on-premises document and records management system that is sunset and no longer receiving vendor updates. It represents a compliance and operational risk as the city\'s official records repository.',
+      decision: 'OpenText Livelink will be decommissioned by Q4 FY2026. All official city records will be migrated to a cloud-native records platform selected through a competitive procurement process. Migration includes validation of retention schedules and chain-of-custody documentation.',
+      consequences: 'Eliminates a critical infrastructure risk and brings records management into compliance with updated retention policies. Migration carries data integrity risk that must be mitigated through phased migration and parallel operation during transition.',
+      status: 'accepted',
+      supersededByNumber: null,
+      capabilities: ['Records Management'],
+      applications: ['OpenText Livelink'],
+      initiatives: ['Migrate Records to Cloud Platform'],
+      objectives: ['Modernize records infrastructure'],
+    },
+    {
+      number: 'ADR-004',
+      title: 'Require on-premises deployment for all financial systems',
+      context: 'An earlier city security policy required financial systems to be deployed on-premises to meet data residency requirements. This was documented as an architectural constraint in the prior technology strategy.',
+      decision: 'All financial management and budget systems must be deployed on-premises within city-owned infrastructure.',
+      consequences: 'Provided data residency assurance under the prior policy but created significant infrastructure and maintenance overhead. Superseded by the updated cloud security posture and SaaS-first direction established in ADR-001.',
+      status: 'superseded',
+      supersededByNumber: 'ADR-001',
+      capabilities: ['Budget Management'],
+      applications: [],
+      initiatives: [],
+      objectives: [],
     },
   ],
 }
