@@ -20,7 +20,7 @@ async function tryLogin(page: Page, email: string, password: string): Promise<bo
   await page.goto('/login')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   // Success lands on /dashboard; failure stays on /login (with an error)
   await page.waitForURL(/\/(dashboard|login)/, { timeout: 10_000 })
   return page.url().includes('/dashboard')
@@ -43,7 +43,7 @@ test.describe('deactivated user cannot log in', () => {
     await dialog.getByLabel('Name').fill('E2E Deactivated')
     await dialog.getByLabel('Email').fill(email)
     await dialog.getByLabel('Password').fill(TEST_PASSWORD)
-    await dialog.getByRole('combobox', { name: 'Role' }).selectOption('contributor')
+    await dialog.locator('#create-role').selectOption('contributor')
     await dialog.getByRole('button', { name: 'Create user' }).click()
     await expect(dialog).not.toBeVisible()
 
