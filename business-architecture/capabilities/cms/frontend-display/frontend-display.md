@@ -19,6 +19,16 @@ The system must present published content to users in a way that is clear, navig
 | Public & Authenticated Views | [fd-public-authenticated-views.md](./fd-public-authenticated-views.md) | Control what requires login vs. what is publicly accessible |
 | Theming | [fd-theming.md](./fd-theming.md) | Theme selection, agency branding, and content rendering customization |
 
+## Success Criteria
+
+The following outcomes indicate Front-end Display is working well for a 1–3 person government IT department 6 months after deployment:
+
+- A department head can answer "what applications support the permitting process?" by navigating from a capability to its linked applications — without asking IT
+- A Viewer who has never used GovEA before can find a specific application record within 2 minutes using search or navigation, without a manual
+- Content reads as plain English to a non-technical audience — no EA jargon appears in labels, headings, or body copy (see [fd-content-display.md](./fd-content-display.md) for the jargon avoidance standard)
+- Published dates are visible on all content so Viewers can assess freshness without contacting the author
+- The front end loads and is fully readable without JavaScript enabled
+
 ## Rules
 - Only published content is ever visible to Viewers — workflow state is the gate
 - Core content must render without JavaScript — progressive enhancement only
