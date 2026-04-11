@@ -47,3 +47,69 @@ jobs:
 
       - name: Lint
         run: pnpm --filter govea lint
+
+  smoke:
+    name: E2E smoke tests
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: govea
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/govea
+      AUTH_SECRET: ci-smoke-secret-not-for-production
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers (Chromium only)
+        run: pnpm --filter govea exec playwright install --with-deps chromium
+
+      - name: Run database migrations
+        run: pnpm --filter govea db:migrate
+
+      # The db:seed script uses `tsx --env-file .env.local`.  Create an empty
+      # placeholder so tsx does not fail on the missing file.  All real env
+      # vars flow in from the job-level `env:` block above.
+      - name: Create placeholder .env.local
+        run: touch apps/govea/.env.local
+
+      - name: Seed database
+        run: pnpm --filter govea db:seed
+        env:
+          DEV: "true"
+
+      - name: Run E2E smoke tests
+        run: pnpm --filter govea test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/govea/playwright-report/
+          retention-days: 7
