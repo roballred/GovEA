@@ -63,20 +63,9 @@ Both must pass before merge.
 
 ---
 
-## Capability Roadmap
+## Capabilities
 
-GovEA's capability roadmap is grounded in the [`ea-research/EA-Tools-Market-Research-2026.md`](./ea-research/EA-Tools-Market-Research-2026.md) — a structured analysis of 7 leading EA platforms, 12 practitioner personas, and 45+ capabilities mapped across 8 groups.
-
-Key findings that shape GovEA's direction:
-
-- **EA Adoption & Engagement is the most cited systemic problem across all commercial tools.** No existing tool solves it well. This is a primary differentiator target for GovEA.
-- **Integration is severely underserved.** Gaps in PPM, HR, API management, and process mining force manual work that limits EA's analytical credibility in every tool reviewed.
-- **The mid-market is underserved.** The fastest-growing segment — organisations of 500–2,000 employees building their first EA practice — is largely ignored by tools designed for large enterprises. Government agencies at that scale are the core GovEA audience.
-- **Plain-language outputs are absent.** No tool reviewed produces outputs designed for elected officials or non-technical stakeholders. GovEA treats this as a first-class requirement, not a reporting add-on.
-
-### Capability groups under development
-
-The following 8 groups define GovEA's target capability surface, derived from the market research and filtered through GovEA's personas:
+GovEA's capability surface spans 8 groups, each driven by validated government EA practitioner personas:
 
 | Group | Description |
 |---|---|
@@ -89,16 +78,40 @@ The following 8 groups define GovEA's target capability surface, derived from th
 | Collaboration & Stakeholder Engagement | Role-based access, stakeholder views, change notifications |
 | Reporting & Documentation | Plain-language outputs, configurable reports, KPI tracking |
 
-Capabilities are defined one at a time through the EasyEA workflow: persona validation → capability definition → ARB review → implementation issues. The research document is a reference source, not an implementation backlog.
+For the full capability inventory — including implementation status — see [`capabilities.md`](./capabilities.md).
+
+Capabilities are defined one at a time through the EasyEA workflow: persona validation → capability definition → ARB review → implementation issues.
 
 ---
 
 ## Current Status
 
-- **Implemented:** applications, capabilities, personas, value streams, strategic objectives, initiatives, roadmap views, ADRs, audit history, taxonomy, user management, setup flows, multi-org federation scaffolding, and reusable `@govea/core` primitives
-- **Active work:** closing architecture-documentation gaps, expanding automated test coverage, improving local bootstrap and demo workflows
-- **Near-term:** strengthen multi-organization support, improve stakeholder-facing views and detail pages
-- **Longer-term:** ARB review simulation using reviewer personas, broader hosted SaaS deployment options, and progressive capability coverage across the 8 groups above
+**Implemented:**
+- Full CRUD for the core EA object model: applications, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
+- Mission-first traceability: Personas → Capabilities → Applications enforced at the application layer
+- Roadmap view — initiatives and objectives visualized on a timeline
+- Audit trail — immutable before/after log of all changes
+- Taxonomy — hierarchical org-scoped classification for all content
+- Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
+- User management and first-run setup flow
+- Multi-org federation scaffolding — connection requests, visibility levels, cross-org linking
+- Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
+- E2E smoke test coverage across all routes × roles (Playwright)
+
+**Active work:**
+- Expanding automated test coverage
+- Improving local bootstrap and demo workflows
+
+**Near-term:**
+- Stakeholder-facing views and plain-language detail pages
+- Repository completeness signals and gap detection
+- Stronger multi-organization support
+
+**Longer-term:**
+- End-to-end traceability and architecture debt tracking
+- ARB review simulation using reviewer personas
+- Broader hosted SaaS deployment options
+- Progressive coverage across remaining capability groups
 
 ---
 
