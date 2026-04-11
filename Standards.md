@@ -93,6 +93,67 @@ Reference sources (external frameworks, existing products, prior art used as inp
     - Treat AI output as a draft, not truth.
     - Verify assumptions against the codebase, tests, docs, and human judgment.
 
+## Traceability Convention
+
+Every issue, pull request, and commit that touches implementation should be traceable to a capability and persona. This section defines the lightweight convention used throughout this repository.
+
+### Capability IDs
+
+Sub-capabilities are identified by their file stem — the filename without `.md`:
+
+```
+business-architecture/capabilities/cms/iam/iam-user-management.md  →  iam-user-management
+business-architecture/capabilities/cms/content-management/cm-content-authoring.md  →  cm-content-authoring
+business-architecture/capabilities/ea/repository-modelling/rm-end-to-end-traceability.md  →  rm-end-to-end-traceability
+```
+
+This ID is stable as long as the file is not renamed. It is the reference used in issues, PRs, and commits.
+
+Capability group parent files are referenced by their directory path:
+
+```
+business-architecture/capabilities/cms/iam/  →  cms/iam
+business-architecture/capabilities/cms/content-management/  →  cms/content-management
+```
+
+### Issue format
+
+Issues that implement a capability should include a `Capability:` line in the body:
+
+```
+Capability: iam-user-management
+Persona: CMS Administrator
+```
+
+Multiple capabilities may be listed. Issues that span a group can reference the group instead:
+```
+Capability group: cms/iam
+```
+
+### Pull request format
+
+PRs should reference the originating issue and the capability in the description:
+
+```
+Closes #42
+Capability: iam-user-management
+```
+
+### Commit message format
+
+For commits that implement or change a capability, include the capability ID in the message body or as a footer:
+
+```
+feat(iam): add user deactivation with last-admin guard
+
+Capability: iam-user-management
+Closes #42
+```
+
+This is a convention, not enforcement. The goal is a clear record of why each change exists — not compliance overhead.
+
+---
+
 ## Draft Workflow
 
 1. Set direction using EasyEA: business goals, problems, principles, and constraints.

@@ -230,8 +230,8 @@ export function UserTable({ users, currentUserId }: Props) {
             <FormField label="Email" name="email" type="email" required />
             <FormField label="Password" name="password" type="password" required minLength={8} />
             <div className="space-y-1.5">
-              <Label>Role</Label>
-              <select name="role" defaultValue="viewer" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+              <Label htmlFor="create-role">Role</Label>
+              <select id="create-role" name="role" defaultValue="viewer" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="viewer">Viewer</option>
                 <option value="contributor">Contributor</option>
                 <option value="admin">Admin</option>
@@ -255,8 +255,8 @@ export function UserTable({ users, currentUserId }: Props) {
             <FormField label="Name" name="name" type="text" required defaultValue={editTarget?.name ?? ''} />
             <FormField label="Email" name="email" type="email" required defaultValue={editTarget?.email} />
             <div className="space-y-1.5">
-              <Label>Role</Label>
-              <select name="role" defaultValue={editTarget?.role} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+              <Label htmlFor="edit-role">Role</Label>
+              <select id="edit-role" name="role" defaultValue={editTarget?.role} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="viewer">Viewer</option>
                 <option value="contributor">Contributor</option>
                 <option value="admin">Admin</option>
@@ -293,10 +293,11 @@ export function UserTable({ users, currentUserId }: Props) {
 }
 
 function FormField({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const id = props.id ?? label.toLowerCase().replace(/\s+/g, '-')
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
-      <Input {...props} />
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} {...props} />
     </div>
   )
 }

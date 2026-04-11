@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import type { Capability, Persona } from '@/db/schema'
 import { createCapability, editCapability, deleteCapability } from '@/actions/capabilities'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -163,7 +164,9 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
               <TableRow key={c.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    {c.name}
+                    <Link href={`/capabilities/${c.id}`} className="hover:underline">
+                      {c.name}
+                    </Link>
                     {c.organizationId !== currentOrgId && c.organization && (
                       <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
                         {c.organization.name}

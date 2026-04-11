@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getInitiative } from '@/actions/initiatives'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { LinkedItemCard } from '@/components/linked-item-card'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -52,7 +53,6 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         ← Initiatives
       </Link>
 
-      {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight">{initiative.name}</h1>
@@ -80,32 +80,29 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
 
       <hr />
 
-      {/* Linked Capabilities */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Capabilities</h2>
         {initiative.initiativeCapabilities.length === 0 ? (
           <p className="text-sm text-muted-foreground">No capabilities linked.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {initiative.initiativeCapabilities.map(({ capability, impact }) => (
-              <span
+              <LinkedItemCard
                 key={capability.id}
-                className="inline-flex items-center gap-2 rounded-md border px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 border-blue-200"
-              >
-                {capability.name}
-                <span className="text-xs text-blue-400">{capability.domain}</span>
-                {impact && (
+                href={`/capabilities/${capability.id}`}
+                name={capability.name}
+                meta={capability.domain}
+                badge={impact ? (
                   <span className={cn('inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium', IMPACT_STYLES[impact] ?? 'bg-slate-100 text-slate-600 border-slate-200')}>
                     {impact}
                   </span>
-                )}
-              </span>
+                ) : undefined}
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* Linked Objectives */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Strategic Objectives</h2>
         {initiative.initiativeObjectives.length === 0 ? (
@@ -113,16 +110,12 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         ) : (
           <div className="space-y-2">
             {initiative.initiativeObjectives.map(({ objective }) => (
-              <Link
+              <LinkedItemCard
                 key={objective.id}
                 href={`/objectives/${objective.id}`}
-                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-muted/50 transition-colors"
-              >
-                <span className="font-medium text-sm">{objective.name}</span>
-                {objective.timeHorizon && (
-                  <span className="text-xs text-muted-foreground">{objective.timeHorizon}</span>
-                )}
-              </Link>
+                name={objective.name}
+                meta={objective.timeHorizon}
+              />
             ))}
           </div>
         )}

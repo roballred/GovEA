@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import type { Application, Capability } from '@/db/schema'
 import { createApplication, editApplication, deleteApplication } from '@/actions/applications'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -184,7 +185,9 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
               <TableRow key={a.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    {a.name}
+                    <Link href={`/applications/${a.id}`} className="hover:underline">
+                      {a.name}
+                    </Link>
                     {a.organizationId !== currentOrgId && a.organization && (
                       <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
                         {a.organization.name}

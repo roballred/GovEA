@@ -23,6 +23,16 @@ async function requireAdmin() {
   return session
 }
 
+export async function getCapability(id: string) {
+  return db.query.capabilities.findFirst({
+    where: eq(capabilities.id, id),
+    with: {
+      organization: true,
+      capabilityPersonas: { with: { persona: true } },
+    },
+  })
+}
+
 export async function getCapabilities(organizationId: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
 
