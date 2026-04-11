@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getApplication } from '@/actions/applications'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { LinkedItemCard } from '@/components/linked-item-card'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -97,15 +98,13 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         {application.applicationCapabilities.length === 0 ? (
           <p className="text-sm text-muted-foreground">No capabilities linked to this application.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {application.applicationCapabilities.map(({ capability }) => (
-              <Link
+              <LinkedItemCard
                 key={capability.id}
                 href={`/capabilities/${capability.id}`}
-                className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
-              >
-                {capability.name}
-              </Link>
+                name={capability.name}
+              />
             ))}
           </div>
         )}

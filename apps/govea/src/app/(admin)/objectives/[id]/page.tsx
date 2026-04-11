@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getObjective } from '@/actions/objectives'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { LinkedItemCard } from '@/components/linked-item-card'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -36,7 +37,6 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
         ← Strategic Objectives
       </Link>
 
-      {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight">{obj.name}</h1>
@@ -68,7 +68,6 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
 
       <hr />
 
-      {/* Linked Value Streams */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Value Streams</h2>
         {obj.objectiveValueStreams.length === 0 ? (
@@ -76,22 +75,21 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
         ) : (
           <div className="space-y-2">
             {obj.objectiveValueStreams.map(({ valueStream }) => (
-              <Link
+              <LinkedItemCard
                 key={valueStream.id}
                 href={`/value-streams/${valueStream.id}`}
-                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-muted/50 transition-colors"
-              >
-                <span className="font-medium text-sm">{valueStream.name}</span>
-                <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[valueStream.status])}>
-                  {valueStream.status.charAt(0).toUpperCase() + valueStream.status.slice(1)}
-                </span>
-              </Link>
+                name={valueStream.name}
+                badge={
+                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[valueStream.status])}>
+                    {valueStream.status.charAt(0).toUpperCase() + valueStream.status.slice(1)}
+                  </span>
+                }
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* Linked Capabilities */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Capabilities</h2>
         {obj.objectiveCapabilities.length === 0 ? (
@@ -99,16 +97,12 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
         ) : (
           <div className="space-y-2">
             {obj.objectiveCapabilities.map(({ capability }) => (
-              <Link
+              <LinkedItemCard
                 key={capability.id}
                 href={`/capabilities/${capability.id}`}
-                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-muted/50 transition-colors"
-              >
-                <span className="font-medium text-sm">{capability.name}</span>
-                {capability.domain && (
-                  <span className="text-xs text-muted-foreground">{capability.domain}</span>
-                )}
-              </Link>
+                name={capability.name}
+                meta={capability.domain}
+              />
             ))}
           </div>
         )}

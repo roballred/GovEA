@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getCapability } from '@/actions/capabilities'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { LinkedItemCard } from '@/components/linked-item-card'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -71,15 +72,13 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         {capability.capabilityPersonas.length === 0 ? (
           <p className="text-sm text-muted-foreground">No personas linked to this capability.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {capability.capabilityPersonas.map(({ persona }) => (
-              <Link
+              <LinkedItemCard
                 key={persona.id}
                 href={`/personas/${persona.id}`}
-                className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 transition-colors"
-              >
-                {persona.name}
-              </Link>
+                name={persona.name}
+              />
             ))}
           </div>
         )}
