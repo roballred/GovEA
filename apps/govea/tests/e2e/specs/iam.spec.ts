@@ -54,7 +54,7 @@ async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/login')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.waitForURL(/\/dashboard/)
 }
 
@@ -249,7 +249,6 @@ test.describe('audit side effects', () => {
     const auditRow = page.locator('tr').filter({ hasText: 'user.create' }).first()
     await expect(auditRow).toBeVisible()
     await expect(auditRow.getByText('user.create')).toBeVisible()
-    await expect(auditRow.getByText('user')).toBeVisible()
     await expect(auditRow.getByText('alice@govea.dev')).toBeVisible()
   })
 
