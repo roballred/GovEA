@@ -71,12 +71,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      // Credentials provider already checks isActive before returning the user
+      // object (see authorize above). For SSO providers we must check here
+      // because the adapter finds/creates the user without consulting isActive.
+      if (account?.provider !== 'credentials') {
+        if (!user.email) return false
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.email, user.email),
+        })
+        // Allow new SSO users (not yet in DB — adapter will create them with
+        // isActive defaulting to 'true'). Block only explicitly deactivated users.
+        if (dbUser && dbUser.isActive !== 'true') return false
+      }
+      return true
+    },
     async jwt({ token, user }) {
       if (user) {
+        // Initial sign-in — populate token from the authenticated user object.
         const appUser = user as unknown as AppUser
         token.id = appUser.id
         token.role = appUser.role
         token.organizationId = appUser.organizationId
+        token.checkedAt = Date.now()
+      } else if (token.id) {
+        // Subsequent requests — re-validate isActive every 5 minutes so that
+        // deactivating a user takes effect without waiting for the 24h JWT to
+        // expire. Returning null clears the session cookie and forces re-login.
+        const CHECK_INTERVAL_MS = 5 * 60 * 1000
+        const lastCheck = (token.checkedAt as number) ?? 0
+        if (Date.now() - lastCheck > CHECK_INTERVAL_MS) {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.id as string),
+          })
+          if (!dbUser || dbUser.isActive !== 'true') return null
+          token.checkedAt = Date.now()
+        }
       }
       return token
     },
