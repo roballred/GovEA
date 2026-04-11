@@ -13,9 +13,22 @@ The system must log all identity and access management events so that administra
 - Display the audit log in the admin UI with filtering by event type, user, and date range
 - Export the audit log as CSV
 
+## Retention Policy
+
+Audit logs are subject to government records retention requirements. The defaults below are designed to align with common state and local government retention schedules for IT system access logs.
+
+| Setting | Default | Recommended maximum | On expiry |
+|---|---|---|---|
+| Retention period | 12 months | 7 years | Entries are permanently deleted |
+
+- The 12-month default aligns with a common minimum for government IT access logs; agencies with longer statutory requirements must increase this in Site Settings
+- The 7-year recommended maximum reflects typical government records schedules for administrative system logs; beyond this, storage cost and query performance degrade without corresponding compliance benefit
+- No automated archival to external storage is provided in v1 — Admins must export via CSV before the retention window expires if long-term records are required
+- Admins are responsible for confirming their configured period meets their agency's records retention schedule
+
 ## Rules
 - Audit log entries are immutable — no user including Admin can edit or delete them through the application
-- Logs must be retained for a configurable period (default: 12 months)
+- Logs must be retained for a configurable period (default: 12 months, recommended maximum: 7 years)
 - Failed login attempts must be logged including the email address used
 
 ## Log Integrity

@@ -13,10 +13,24 @@ The system must retain a complete history of changes to every content item so th
 - Restore a previous version (creates a new version — does not overwrite history)
 - Display the current version number on the content item
 
+## Retention Policy
+
+Retaining every version of every content item indefinitely creates unbounded storage growth. GovEA applies a configurable retention policy per content type.
+
+| Setting | Default | Notes |
+|---|---|---|
+| Retention mode | Keep last N versions | Simplest to reason about; alternative: keep versions within X months |
+| Default N | 25 versions | Sufficient for normal editorial workflows without runaway storage |
+| On limit reached | Oldest versions pruned | Pruning is automatic; the current published version is never pruned |
+
+- The retention policy is configurable per content type by an Admin
+- The currently published version and the version immediately preceding it are always retained regardless of the retention limit
+- Pruned versions are permanently deleted — export or download before they are pruned if long-term version history is required
+
 ## Rules
-- Version history is append-only — versions cannot be deleted individually
+- Version history is append-only — versions cannot be deleted individually by users
 - Restoring a previous version creates a new version rather than rolling back
-- All versions are retained for the life of the content item
+- The currently published and immediately preceding versions are never automatically pruned
 - Version history is visible to Admins and Contributors; not visible to Viewers
 
 ## Links
