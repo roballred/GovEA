@@ -97,15 +97,17 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
         {obj.objectiveCapabilities.length === 0 ? (
           <p className="text-sm text-muted-foreground">No capabilities linked.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {obj.objectiveCapabilities.map(({ capability }) => (
               <Link
                 key={capability.id}
                 href={`/capabilities/${capability.id}`}
-                className="inline-flex items-center rounded-md border px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
+                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-muted/50 transition-colors"
               >
-                {capability.name}
-                {capability.domain && <span className="ml-2 text-xs text-blue-400">{capability.domain}</span>}
+                <span className="font-medium text-sm">{capability.name}</span>
+                {capability.domain && (
+                  <span className="text-xs text-muted-foreground">{capability.domain}</span>
+                )}
               </Link>
             ))}
           </div>

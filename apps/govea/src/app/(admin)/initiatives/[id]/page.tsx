@@ -86,20 +86,24 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         {initiative.initiativeCapabilities.length === 0 ? (
           <p className="text-sm text-muted-foreground">No capabilities linked.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {initiative.initiativeCapabilities.map(({ capability, impact }) => (
               <Link
                 key={capability.id}
                 href={`/capabilities/${capability.id}`}
-                className="inline-flex items-center gap-2 rounded-md border px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
+                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-muted/50 transition-colors"
               >
-                {capability.name}
-                {capability.domain && <span className="text-xs text-blue-400">{capability.domain}</span>}
-                {impact && (
-                  <span className={cn('inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium', IMPACT_STYLES[impact] ?? 'bg-slate-100 text-slate-600 border-slate-200')}>
-                    {impact}
-                  </span>
-                )}
+                <span className="font-medium text-sm">{capability.name}</span>
+                <div className="flex items-center gap-2">
+                  {capability.domain && (
+                    <span className="text-xs text-muted-foreground">{capability.domain}</span>
+                  )}
+                  {impact && (
+                    <span className={cn('inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium', IMPACT_STYLES[impact] ?? 'bg-slate-100 text-slate-600 border-slate-200')}>
+                      {impact}
+                    </span>
+                  )}
+                </div>
               </Link>
             ))}
           </div>
