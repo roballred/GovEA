@@ -149,6 +149,28 @@ GovEA is designed specifically for the agencies commercial tools ignore: 500–2
 
 GovEA is open source and welcomes contributions. Before opening a pull request, read [`Standards.md`](./Standards.md) — it defines the workflow for both human and AI-assisted contributions.
 
+### Traceability
+
+Every issue and PR that touches implementation should link back to a persona and capability. Capability IDs are the file stem of the relevant sub-capability file:
+
+```
+business-architecture/capabilities/cms/iam/iam-user-management.md  →  iam-user-management
+```
+
+In issues:
+```
+Capability: iam-user-management
+Persona: CMS Administrator
+```
+
+In PR descriptions:
+```
+Closes #42
+Capability: iam-user-management
+```
+
+See [`Standards.md`](./Standards.md) for the full traceability convention.
+
 Issues and pull requests: [github.com/roballred/GovEA](https://github.com/roballred/GovEA)
 
 ---
