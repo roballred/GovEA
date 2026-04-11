@@ -33,15 +33,17 @@ async function createUser(
   opts: { name: string; email: string; password: string; role: 'viewer' | 'contributor' | 'admin' },
 ) {
   await page.getByRole('button', { name: '+ Add user' }).click()
-  await expect(page.getByRole('dialog', { name: 'Add user' })).toBeVisible()
+  const dialog = page.getByRole('dialog', { name: 'Add user' })
+  await expect(dialog).toBeVisible()
 
-  await page.getByLabel('Name').fill(opts.name)
-  await page.getByLabel('Email').fill(opts.email)
-  await page.getByLabel('Password').fill(opts.password)
-  await page.getByRole('combobox', { name: 'Role' }).selectOption(opts.role)
-  await page.getByRole('button', { name: 'Create user' }).click()
+  // Scope all field lookups to the dialog to avoid ambiguity with the rest of the page
+  await dialog.getByLabel('Name').fill(opts.name)
+  await dialog.getByLabel('Email').fill(opts.email)
+  await dialog.getByLabel('Password').fill(opts.password)
+  await dialog.getByRole('combobox', { name: 'Role' }).selectOption(opts.role)
+  await dialog.getByRole('button', { name: 'Create user' }).click()
 
-  await expect(page.getByRole('dialog', { name: 'Add user' })).not.toBeVisible()
+  await expect(dialog).not.toBeVisible()
 }
 
 /**
@@ -88,14 +90,15 @@ test.describe('user lifecycle', () => {
     }
 
     await userRow(page, email).getByRole('button', { name: 'Edit' }).click()
-    await expect(page.getByRole('dialog', { name: 'Edit user' })).toBeVisible()
+    const editDialog = page.getByRole('dialog', { name: 'Edit user' })
+    await expect(editDialog).toBeVisible()
 
-    await page.getByLabel('Name').fill('E2E Lifecycle Edited')
-    await page.getByLabel('Email').fill(editedEmail)
-    await page.getByRole('combobox', { name: 'Role' }).selectOption('viewer')
-    await page.getByRole('button', { name: 'Save changes' }).click()
+    await editDialog.getByLabel('Name').fill('E2E Lifecycle Edited')
+    await editDialog.getByLabel('Email').fill(editedEmail)
+    await editDialog.getByRole('combobox', { name: 'Role' }).selectOption('viewer')
+    await editDialog.getByRole('button', { name: 'Save changes' }).click()
 
-    await expect(page.getByRole('dialog', { name: 'Edit user' })).not.toBeVisible()
+    await expect(editDialog).not.toBeVisible()
     await expect(userRow(page, editedEmail)).toBeVisible()
     await expect(userRow(page, editedEmail).getByText('Viewer')).toBeVisible()
   })
