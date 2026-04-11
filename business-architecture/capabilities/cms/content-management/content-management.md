@@ -19,6 +19,16 @@ The system must provide a complete content management foundation — defining co
 | Content Relationships | [cm-content-relationships.md](./cm-content-relationships.md) | Link content items and enforce GovEA relationship rules |
 | Content Search & Filtering | [cm-content-search-filtering.md](./cm-content-search-filtering.md) | Full-text search and attribute-based filtering |
 
+## Success Criteria
+
+The following outcomes indicate Content Management is working well for a 1–3 person government IT department 6 months after deployment:
+
+- A contributor can create, link, and publish an application record without training — the form is self-explanatory and enforces required relationships before publish
+- A Viewer can tell whether the content they are reading is current — the published date is visible without scrolling or clicking
+- A contributor can find any existing content record using search in under 30 seconds
+- The GovEA traceability rule (Applications → Capabilities → Personas) is never violated in published content — the system blocks or prompts before publish if a required link is missing
+- Taxonomy terms are used consistently — contributors select from existing terms rather than inventing new ones for the same concept
+
 ## Rules
 - Published content is the only content visible to Viewers — workflow state gates all display
 - The core GovEA constraint must be enforced at publish time: Applications must link to Capabilities; Capabilities must link to Personas
