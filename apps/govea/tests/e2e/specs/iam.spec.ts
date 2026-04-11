@@ -138,6 +138,9 @@ test.describe('user lifecycle', () => {
 // ─── Last-admin protection ────────────────────────────────────────────────────
 
 test.describe('last-admin protection', () => {
+  // This test spans two browser contexts (Alice + guard admin) with multiple
+  // network round-trips. Give it 3× the default timeout.
+  test.slow()
   /**
    * The seeded org has exactly one admin (alice@govea.dev). Alice is the current
    * user in the admin storageState, so her row has no action buttons (isSelf).
