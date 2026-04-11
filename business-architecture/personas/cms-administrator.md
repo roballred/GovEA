@@ -1,5 +1,7 @@
 # Persona: CMS Administrator
 
+**Validation Status: Assumed** — drafted without direct user research. Pain points and goals are plausible but generic. Must not drive implementation beyond what is already built until validated through interviews with real government IT administrators in a state or local government context (1–3 person IT shop).
+
 ## Role Type
 Internal — Back-end administrator
 

@@ -1,5 +1,7 @@
 # Persona: Content Viewer
 
+**Validation Status: Assumed** — drafted without direct user research. Goals and pain points reflect plausible friction for non-technical government stakeholders but have not been confirmed through interviews with real department heads, elected officials, or budget staff. Must not drive front-end display decisions beyond what is already built until validated.
+
 ## Role Type
 Internal / External — Front-end information consumer
 
