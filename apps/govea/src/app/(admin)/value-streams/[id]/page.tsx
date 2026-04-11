@@ -112,12 +112,13 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
                 {stage.stageCapabilities.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pl-9">
                     {stage.stageCapabilities.map(({ capability }) => (
-                      <span
+                      <Link
                         key={capability.id}
-                        className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border-blue-200"
+                        href={`/capabilities/${capability.id}`}
+                        className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
                       >
                         {capability.name}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 )}

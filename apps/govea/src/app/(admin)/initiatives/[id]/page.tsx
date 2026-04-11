@@ -88,18 +88,19 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         ) : (
           <div className="flex flex-wrap gap-2">
             {initiative.initiativeCapabilities.map(({ capability, impact }) => (
-              <span
+              <Link
                 key={capability.id}
-                className="inline-flex items-center gap-2 rounded-md border px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 border-blue-200"
+                href={`/capabilities/${capability.id}`}
+                className="inline-flex items-center gap-2 rounded-md border px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
               >
                 {capability.name}
-                <span className="text-xs text-blue-400">{capability.domain}</span>
+                {capability.domain && <span className="text-xs text-blue-400">{capability.domain}</span>}
                 {impact && (
                   <span className={cn('inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium', IMPACT_STYLES[impact] ?? 'bg-slate-100 text-slate-600 border-slate-200')}>
                     {impact}
                   </span>
                 )}
-              </span>
+              </Link>
             ))}
           </div>
         )}

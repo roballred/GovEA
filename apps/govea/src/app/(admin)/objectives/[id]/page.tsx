@@ -99,13 +99,14 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
         ) : (
           <div className="flex flex-wrap gap-2">
             {obj.objectiveCapabilities.map(({ capability }) => (
-              <span
+              <Link
                 key={capability.id}
-                className="inline-flex items-center rounded-md border px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 border-blue-200"
+                href={`/capabilities/${capability.id}`}
+                className="inline-flex items-center rounded-md border px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
               >
                 {capability.name}
-                <span className="ml-2 text-xs text-blue-400">{capability.domain}</span>
-              </span>
+                {capability.domain && <span className="ml-2 text-xs text-blue-400">{capability.domain}</span>}
+              </Link>
             ))}
           </div>
         )}
