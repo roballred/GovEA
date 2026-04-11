@@ -71,6 +71,13 @@
       "when": 1775492778752,
       "tag": "0009_silly_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775614347123,
+      "tag": "0010_blushing_george_stacy",
+      "breakpoints": true
     }
   ]
 }
