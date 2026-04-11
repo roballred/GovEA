@@ -53,11 +53,14 @@ const DYNAMIC_ROUTES = [
 // ─── Role fixtures ────────────────────────────────────────────────────────────
 
 // Paths are relative to the playwright.config.ts location (apps/govea/).
+// isAdmin — both 'admin' and 'state-admin' have role:'admin' in their own org.
+// The RBAC check (isAdmin) tests role only, not org, so both reach admin-only routes.
+// Only 'contributor' and 'viewer' are redirected away from admin-only routes.
 const ROLES = [
-  { name: 'admin',       storageState: 'tests/e2e/.auth/admin.json'       },
-  { name: 'contributor', storageState: 'tests/e2e/.auth/contributor.json' },
-  { name: 'viewer',      storageState: 'tests/e2e/.auth/viewer.json'      },
-  { name: 'state-admin', storageState: 'tests/e2e/.auth/state-admin.json' },
+  { name: 'admin',       storageState: 'tests/e2e/.auth/admin.json',       isAdmin: true  },
+  { name: 'contributor', storageState: 'tests/e2e/.auth/contributor.json', isAdmin: false },
+  { name: 'viewer',      storageState: 'tests/e2e/.auth/viewer.json',      isAdmin: false },
+  { name: 'state-admin', storageState: 'tests/e2e/.auth/state-admin.json', isAdmin: true  },
 ] as const
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -85,7 +88,7 @@ async function expectNoServerError(page: Page, route: string) {
 
 // ─── Test matrix ─────────────────────────────────────────────────────────────
 
-for (const { name: role, storageState } of ROLES) {
+for (const { name: role, storageState, isAdmin } of ROLES) {
   test.describe(`[${role}]`, () => {
     test.use({ storageState })
 
@@ -106,9 +109,9 @@ for (const { name: role, storageState } of ROLES) {
 
     // ── Admin-only routes ─────────────────────────────────────────────────
 
-    if (role === 'admin') {
+    if (isAdmin) {
       for (const route of ADMIN_ONLY_ROUTES) {
-        test(`${route} → 200, no server error (admin)`, async ({ page }) => {
+        test(`${route} → 200, no server error`, async ({ page }) => {
           const response = await page.goto(route)
           expect(
             response?.status(),
@@ -120,12 +123,12 @@ for (const { name: role, storageState } of ROLES) {
       }
     } else {
       for (const route of ADMIN_ONLY_ROUTES) {
-        test(`${route} → clean redirect to /dashboard (non-admin)`, async ({ page }) => {
+        test(`${route} → clean redirect to /dashboard`, async ({ page }) => {
           await page.goto(route)
-          // Non-admins should be redirected — that's the correct behaviour, not an error.
+          // contributor and viewer are redirected — healthy behaviour, not an error.
           await expect(
             page,
-            `${route}: non-admin ${role} should land on /dashboard`,
+            `${route}: ${role} should land on /dashboard`,
           ).toHaveURL(/\/dashboard/)
         })
       }
