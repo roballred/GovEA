@@ -40,7 +40,7 @@ async function createUser(
   await dialog.getByLabel('Name').fill(opts.name)
   await dialog.getByLabel('Email').fill(opts.email)
   await dialog.getByLabel('Password').fill(opts.password)
-  await dialog.getByRole('combobox', { name: 'Role' }).selectOption(opts.role)
+  await dialog.locator('#create-role').selectOption(opts.role)
   await dialog.getByRole('button', { name: 'Create user' }).click()
 
   await expect(dialog).not.toBeVisible()
@@ -95,7 +95,7 @@ test.describe('user lifecycle', () => {
 
     await editDialog.getByLabel('Name').fill('E2E Lifecycle Edited')
     await editDialog.getByLabel('Email').fill(editedEmail)
-    await editDialog.getByRole('combobox', { name: 'Role' }).selectOption('viewer')
+    await editDialog.locator('#edit-role').selectOption('viewer')
     await editDialog.getByRole('button', { name: 'Save changes' }).click()
 
     await expect(editDialog).not.toBeVisible()
