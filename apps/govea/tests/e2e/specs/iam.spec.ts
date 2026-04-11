@@ -164,12 +164,12 @@ test.describe('last-admin protection', () => {
     const alicePage = await aliceCtx.newPage()
     await alicePage.goto('/users')
     await createUser(alicePage, {
-      name: 'E2E Guard Admin',
+      name: 'E2E Guard',
       email: guardEmail,
       password: TEST_PASSWORD,
       role: 'admin',
     })
-    await expect(userRow(alicePage, guardEmail).getByText('Admin')).toBeVisible()
+    await expect(userRow(alicePage, guardEmail).getByText('admin', { exact: true })).toBeVisible()
 
     // ── Step 2: guard admin logs in via local auth ────────────────────────
     const guardCtx = await browser.newContext()
