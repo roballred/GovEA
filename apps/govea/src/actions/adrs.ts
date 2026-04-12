@@ -64,6 +64,7 @@ export async function getADR(id: string) {
       adrApplications: { with: { application: true } },
       adrInitiatives: { with: { initiative: true } },
       adrObjectives: { with: { objective: true } },
+      principleAdrs: { with: { principle: true } },
     },
   })
 }

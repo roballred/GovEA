@@ -70,6 +70,23 @@ export type DatasetInitiative = {
   objectives: string[]      // objective names
 }
 
+export type DatasetPrinciple = {
+  title: string
+  rationale: string
+  implications: string
+  status: 'draft' | 'published' | 'archived'
+  adrs: string[]          // ADR numbers
+  capabilities: string[]  // capability names
+}
+
+export type DatasetGlossaryTerm = {
+  term: string
+  definition: string
+  domain?: string
+  notes?: string
+  status: 'draft' | 'published' | 'archived'
+}
+
 export type DatasetADR = {
   number: string            // e.g. "ADR-001"
   title: string
@@ -96,6 +113,8 @@ export type Dataset = {
   objectives: DatasetObjective[]
   initiatives: DatasetInitiative[]
   adrs: DatasetADR[]
+  principles: DatasetPrinciple[]
+  glossary: DatasetGlossaryTerm[]
 }
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
@@ -114,6 +133,8 @@ export const DATASET_BLANK: Dataset = {
   objectives: [],
   initiatives: [],
   adrs: [],
+  principles: [],
+  glossary: [],
 }
 
 // ── Dataset 2: Starter ────────────────────────────────────────────────────────
@@ -254,6 +275,44 @@ export const DATASET_STARTER: Dataset = {
       applications: ['Accela'],
       initiatives: ['Accela Online Portal Upgrade'],
       objectives: ['Reduce permit processing time by 40%'],
+    },
+  ],
+  principles: [
+    {
+      title: 'Prefer SaaS for standard business systems',
+      rationale: 'Hosting standard applications on-premises creates infrastructure overhead and keeps the city on older versions. Where vendors offer SaaS deployment and data residency requirements can be met, SaaS reduces maintenance burden and ensures currency.',
+      implications: 'New application acquisitions must default to SaaS. On-premises exceptions require documented justification covering security, compliance, or integration constraints, and a Director-level sign-off.',
+      status: 'published',
+      adrs: ['ADR-001'],
+      capabilities: ['Online Permitting', 'HR Self-Service', 'GIS Mapping'],
+    },
+  ],
+  glossary: [
+    {
+      term: 'Capability',
+      definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+      domain: 'Enterprise Architecture',
+      notes: 'Capabilities are technology-agnostic. The same capability can be supported by different applications over time.',
+      status: 'published',
+    },
+    {
+      term: 'Persona',
+      definition: 'A named, representative user or stakeholder type that interacts with city services. Personas capture goals, context, and pain points to guide service and system design.',
+      domain: 'Enterprise Architecture',
+      status: 'published',
+    },
+    {
+      term: 'Architecture Decision Record (ADR)',
+      definition: 'A documented record of a significant architecture or technology decision — what was decided, why, and what the consequences are.',
+      domain: 'Enterprise Architecture',
+      notes: 'ADRs are immutable by convention. Superseded decisions are marked as such and linked to the newer decision, preserving the history.',
+      status: 'published',
+    },
+    {
+      term: 'SaaS (Software as a Service)',
+      definition: 'A software delivery model in which the vendor hosts and operates the application on behalf of the customer. The customer accesses it over the internet and pays on a subscription basis.',
+      domain: 'Information Technology',
+      status: 'published',
     },
   ],
 }
@@ -586,6 +645,110 @@ export const DATASET_CITY_DEMO: Dataset = {
       applications: [],
       initiatives: [],
       objectives: [],
+    },
+  ],
+  principles: [
+    {
+      title: 'SaaS first for new application acquisitions',
+      rationale: 'On-premises infrastructure creates disproportionate maintenance overhead for a city IT team. Vendor-managed SaaS keeps the city on current releases and shifts patching and availability responsibility to the vendor.',
+      implications: 'All new application procurements default to SaaS. On-premises deployment requires Director-level approval, a documented technical justification, and a documented exit plan. Existing on-premises systems are assessed for migration at each contract renewal.',
+      status: 'published',
+      adrs: ['ADR-001', 'ADR-003'],
+      capabilities: ['Online Permitting', 'Business License Management', 'Records Management'],
+    },
+    {
+      title: 'Open standards for resident-facing authentication',
+      rationale: 'Fragmented authentication across resident-facing services creates inconsistent security posture and poor user experience. Standardising on OAuth 2.0 / OIDC provides a well-understood, auditable identity layer.',
+      implications: 'New resident-facing services must implement OAuth 2.0 with OIDC. Legacy authentication implementations are migrated as part of system upgrades. Staff authentication continues through the existing enterprise SSO pathway.',
+      status: 'published',
+      adrs: ['ADR-002'],
+      capabilities: ['Online Permitting', '311 Resident Services'],
+    },
+    {
+      title: 'Preserve records chain of custody through system transitions',
+      rationale: 'Official city records carry legal and compliance obligations. Any migration between records systems must preserve metadata, retention schedules, and audit trails to satisfy public records law.',
+      implications: 'Records migrations require a validated data mapping exercise and parallel operation of source and target systems until sign-off. Disposition of records from decommissioned systems requires legal review.',
+      status: 'draft',
+      adrs: ['ADR-003'],
+      capabilities: ['Records Management'],
+    },
+  ],
+  glossary: [
+    {
+      term: 'Capability',
+      definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+      domain: 'Enterprise Architecture',
+      notes: 'Capabilities are technology-agnostic. The same capability can be supported by different applications over time.',
+      status: 'published',
+    },
+    {
+      term: 'Persona',
+      definition: 'A named, representative user or stakeholder type that interacts with city services. Personas capture goals, context, and pain points to guide service and system design.',
+      domain: 'Enterprise Architecture',
+      status: 'published',
+    },
+    {
+      term: 'Architecture Decision Record (ADR)',
+      definition: 'A documented record of a significant architecture or technology decision — what was decided, why, and what the consequences are.',
+      domain: 'Enterprise Architecture',
+      notes: 'ADRs are immutable by convention. Superseded decisions are marked as such and linked to the newer decision, preserving the history.',
+      status: 'published',
+    },
+    {
+      term: 'Value Stream',
+      definition: 'The sequence of activities that deliver a specific outcome of value to a stakeholder. Value streams cross departmental boundaries and end with a concrete result for the recipient.',
+      domain: 'Enterprise Architecture',
+      status: 'published',
+    },
+    {
+      term: 'SaaS (Software as a Service)',
+      definition: 'A software delivery model in which the vendor hosts and operates the application on behalf of the customer. The customer accesses it over the internet and pays on a subscription basis.',
+      domain: 'Information Technology',
+      status: 'published',
+    },
+    {
+      term: 'OAuth 2.0',
+      definition: 'An open authorization framework that enables applications to obtain limited access to user accounts on another service. Used as the foundation for modern single sign-on and API authorization.',
+      domain: 'Information Technology',
+      notes: 'Often paired with OIDC (OpenID Connect) for authentication. OAuth 2.0 alone covers authorization; OIDC adds identity.',
+      status: 'published',
+    },
+    {
+      term: 'OIDC (OpenID Connect)',
+      definition: 'An identity layer built on top of OAuth 2.0 that allows applications to verify the identity of a user based on authentication performed by an authorization server.',
+      domain: 'Information Technology',
+      status: 'published',
+    },
+    {
+      term: 'Lifecycle Status',
+      definition: 'The stage of a system or application in its operational life: planned, active, sunset, or decommissioned. Used to assess portfolio health and plan transitions.',
+      domain: 'Portfolio Management',
+      status: 'published',
+    },
+    {
+      term: 'Retention Schedule',
+      definition: 'A documented policy that specifies how long different categories of records must be kept before they may be destroyed or archived.',
+      domain: 'Records Management',
+      notes: 'Retention schedules are typically set by state law and must be followed during any records system migration.',
+      status: 'published',
+    },
+    {
+      term: 'Sunset',
+      definition: 'The status of a system that is still operational but is no longer receiving new investment and is scheduled for decommissioning. Sunset systems represent known technical risk.',
+      domain: 'Portfolio Management',
+      status: 'published',
+    },
+    {
+      term: 'Data Residency',
+      definition: 'The requirement that data be stored and processed within a specific geographic or jurisdictional boundary. Often a constraint in public sector procurement.',
+      domain: 'Information Technology',
+      status: 'published',
+    },
+    {
+      term: 'Service Level Agreement (SLA)',
+      definition: 'A contract between a service provider and customer that defines the expected level of service, including availability, response times, and remedies for non-compliance.',
+      domain: 'Portfolio Management',
+      status: 'published',
     },
   ],
 }

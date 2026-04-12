@@ -683,6 +683,126 @@ export const STATE_APPLICATIONS = [
 // traversal City of Riverdale cannot follow that link. The row is seeded to
 // exercise the data model regardless of visibility enforcement.
 
+// ─── Principles (City of Riverdale) ─────────────────────────────────────────
+
+export const DEV_PRINCIPLES = [
+  {
+    title: 'SaaS first for new application acquisitions',
+    rationale: 'On-premises infrastructure creates disproportionate maintenance overhead for a city IT team. Vendor-managed SaaS keeps the city on current releases and shifts patching and availability responsibility to the vendor.',
+    implications: 'All new application procurements default to SaaS. On-premises deployment requires Director-level approval, a documented technical justification, and a documented exit plan.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Online Permitting', 'Business License Management', 'Digital Identity & Authentication'],
+    adrs: [] as string[], // resolved from ADR numbers at seed time
+  },
+  {
+    title: 'Open standards for resident-facing authentication',
+    rationale: 'Fragmented authentication across resident-facing services creates inconsistent security posture and poor user experience. Standardising on OAuth 2.0 / OIDC provides a well-understood, auditable identity layer.',
+    implications: 'New resident-facing services must implement OAuth 2.0 with OIDC. Legacy authentication implementations are migrated as part of system upgrades. Staff authentication continues through the existing enterprise SSO pathway.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Digital Identity & Authentication', 'Online Permitting', 'Service Request Management'],
+    adrs: [] as string[],
+  },
+  {
+    title: 'Design for low digital literacy first',
+    rationale: 'A significant portion of residents have low digital literacy, use mobile devices as their primary internet access, or are non-native English speakers. Services designed for these users work for everyone.',
+    implications: 'All resident-facing services must be tested against low-literacy and mobile-first criteria before launch. Plain-language summaries are required for all public-facing content.',
+    status: 'draft' as const,
+    visibility: 'connections' as const,
+    capabilities: ['Online Permitting', 'Service Request Management', '311 Resident Services'],
+    adrs: [] as string[],
+  },
+]
+
+// ─── Glossary (City of Riverdale) ────────────────────────────────────────────
+
+export const DEV_GLOSSARY = [
+  {
+    term: 'Capability',
+    definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+    domain: 'Enterprise Architecture',
+    notes: 'Capabilities are technology-agnostic. The same capability can be supported by different applications over time.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Persona',
+    definition: 'A named, representative user or stakeholder type that interacts with city services. Personas capture goals, context, and pain points to guide service and system design.',
+    domain: 'Enterprise Architecture',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Architecture Decision Record (ADR)',
+    definition: 'A documented record of a significant architecture or technology decision — what was decided, why, and what the consequences are.',
+    domain: 'Enterprise Architecture',
+    notes: 'ADRs are immutable by convention. Superseded decisions are marked as such and linked to the newer decision, preserving the history.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Value Stream',
+    definition: 'The sequence of activities that deliver a specific outcome of value to a stakeholder. Value streams cross departmental boundaries and end with a concrete result for the recipient.',
+    domain: 'Enterprise Architecture',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'SaaS (Software as a Service)',
+    definition: 'A software delivery model in which the vendor hosts and operates the application on behalf of the customer. The customer accesses it over the internet and pays on a subscription basis.',
+    domain: 'Information Technology',
+    status: 'published' as const,
+    visibility: 'instance' as const,
+  },
+  {
+    term: 'OAuth 2.0',
+    definition: 'An open authorization framework that enables applications to obtain limited access to user accounts on another service. Used as the foundation for modern single sign-on and API authorization.',
+    domain: 'Information Technology',
+    notes: 'Often paired with OIDC (OpenID Connect) for authentication. OAuth 2.0 alone covers authorization; OIDC adds identity.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'OIDC (OpenID Connect)',
+    definition: 'An identity layer built on top of OAuth 2.0 that allows applications to verify the identity of a user based on authentication performed by an authorization server.',
+    domain: 'Information Technology',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Lifecycle Status',
+    definition: 'The stage of a system or application in its operational life: planned, active, sunset, or decommissioned. Used to assess portfolio health and plan transitions.',
+    domain: 'Portfolio Management',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Sunset',
+    definition: 'The status of a system that is still operational but is no longer receiving new investment and is scheduled for decommissioning. Sunset systems represent known technical risk.',
+    domain: 'Portfolio Management',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Data Residency',
+    definition: 'The requirement that data be stored and processed within a specific geographic or jurisdictional boundary. Often a constraint in public sector procurement.',
+    domain: 'Information Technology',
+    status: 'draft' as const,
+    visibility: 'connections' as const,
+  },
+  {
+    term: 'Retention Schedule',
+    definition: 'A documented policy that specifies how long different categories of records must be kept before they may be destroyed or archived.',
+    domain: 'Records Management',
+    notes: 'Retention schedules are typically set by state law and must be followed during any records system migration.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+]
+
+// ─── Cross-org links ──────────────────────────────────────────────────────────
+
 export const DEV_CROSS_ORG_LINKS = [
   {
     sourceCapabilityName: 'Digital Identity & Authentication',

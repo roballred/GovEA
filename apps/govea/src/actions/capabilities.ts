@@ -29,6 +29,7 @@ export async function getCapability(id: string) {
     with: {
       organization: true,
       capabilityPersonas: { with: { persona: true } },
+      principleCapabilities: { with: { principle: true } },
     },
   })
 }

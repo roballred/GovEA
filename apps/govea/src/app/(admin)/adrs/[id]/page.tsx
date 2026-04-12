@@ -155,6 +155,20 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
         </Section>
       )}
 
+      {adr.principleAdrs && adr.principleAdrs.length > 0 && (
+        <Section title="Principles">
+          <div className="space-y-2">
+            {adr.principleAdrs.map(({ principle }) => (
+              <LinkedItemCard
+                key={principle.id}
+                href={`/principles/${principle.id}`}
+                name={principle.title}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
+
       <div className="text-xs text-muted-foreground pt-4 border-t">
         Created {new Date(adr.createdAt).toLocaleDateString()} · Updated {new Date(adr.updatedAt).toLocaleDateString()}
       </div>

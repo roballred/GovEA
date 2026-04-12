@@ -8,6 +8,8 @@ import {
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   initiatives, initiativeCapabilities, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
+  principles, principleAdrs, principleCapabilities,
+  glossaryTerms,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -29,6 +31,8 @@ export async function resetToDataset(datasetKey: string) {
   if (!dataset) throw new Error(`Unknown dataset: ${datasetKey}`)
 
   // ── Wipe org content (junction tables cascade automatically) ──────────────
+  await db.delete(principles).where(eq(principles.organizationId, orgId))
+  await db.delete(glossaryTerms).where(eq(glossaryTerms.organizationId, orgId))
   await db.delete(adrs).where(eq(adrs.organizationId, orgId))
   await db.delete(initiatives).where(eq(initiatives.organizationId, orgId))
   await db.delete(strategicObjectives).where(eq(strategicObjectives.organizationId, orgId))
@@ -302,4 +306,41 @@ export async function resetToDataset(datasetKey: string) {
       .map(o => ({ adrId, objectiveId: objectiveByName[o] }))
     if (objJoinRows.length > 0) await db.insert(adrObjectives).values(objJoinRows).onConflictDoNothing()
   }
+
+  if (!dataset.principles || dataset.principles.length === 0) return
+
+  // ── Insert principles ─────────────────────────────────────────────────────
+  for (const pDef of dataset.principles) {
+    const [pRow] = await db.insert(principles).values({
+      title: pDef.title,
+      rationale: pDef.rationale,
+      implications: pDef.implications,
+      status: pDef.status,
+      organizationId: orgId,
+    }).returning()
+
+    const pCapRows = (pDef.capabilities ?? [])
+      .filter(c => capabilityByName[c])
+      .map(c => ({ principleId: pRow.id, capabilityId: capabilityByName[c] }))
+    if (pCapRows.length > 0) await db.insert(principleCapabilities).values(pCapRows).onConflictDoNothing()
+
+    const pAdrRows = (pDef.adrs ?? [])
+      .filter(n => adrByNumber[n])
+      .map(n => ({ principleId: pRow.id, adrId: adrByNumber[n] }))
+    if (pAdrRows.length > 0) await db.insert(principleAdrs).values(pAdrRows).onConflictDoNothing()
+  }
+
+  if (!dataset.glossary || dataset.glossary.length === 0) return
+
+  // ── Insert glossary terms ─────────────────────────────────────────────────
+  await db.insert(glossaryTerms).values(
+    dataset.glossary.map(g => ({
+      term: g.term,
+      definition: g.definition,
+      domain: g.domain ?? null,
+      notes: g.notes ?? null,
+      status: g.status,
+      organizationId: orgId,
+    }))
+  )
 }

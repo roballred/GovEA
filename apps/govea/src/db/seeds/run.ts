@@ -7,6 +7,7 @@ import {
   DEV_PERSONA_TAGS,
   DEV_PERSONAS, DEV_CAPABILITIES, DEV_APPLICATIONS,
   DEV_OBJECTIVES, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
+  DEV_PRINCIPLES, DEV_GLOSSARY,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
   DEV_CROSS_ORG_LINKS,
 } from './dev-fixtures'
@@ -19,6 +20,8 @@ import {
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
+  principles, principleAdrs, principleCapabilities,
+  glossaryTerms,
   taxonomyTerms,
   orgConnections, crossOrgLinks,
 } from '../schema'
@@ -465,6 +468,49 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${DEV_ADRS.length} ADRs with junction links and supersededBy chain`)
+
+  // Principles
+  for (const p of DEV_PRINCIPLES) {
+    const existing = await db.query.principles.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.title, p.title)),
+    })
+    if (existing) continue
+    const [pRow] = await db.insert(principles).values({
+      title: p.title,
+      rationale: p.rationale,
+      implications: p.implications,
+      status: p.status,
+      visibility: p.visibility,
+      organizationId: devOrgId,
+    }).returning()
+    for (const capName of p.capabilities) {
+      const capId = devCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.principleCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.principleId, pRow.id), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow.id, capabilityId: capId })
+    }
+  }
+  console.log(`  ✓ ${DEV_PRINCIPLES.length} principles`)
+
+  // Glossary
+  for (const g of DEV_GLOSSARY) {
+    const existing = await db.query.glossaryTerms.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.term, g.term)),
+    })
+    if (existing) continue
+    await db.insert(glossaryTerms).values({
+      term: g.term,
+      definition: g.definition,
+      domain: g.domain ?? null,
+      notes: g.notes ?? null,
+      status: g.status,
+      visibility: g.visibility,
+      organizationId: devOrgId,
+    })
+  }
+  console.log(`  ✓ ${DEV_GLOSSARY.length} glossary terms`)
 
   // ── Org 2: Office of Digital Services ────────────────────────────────────
 

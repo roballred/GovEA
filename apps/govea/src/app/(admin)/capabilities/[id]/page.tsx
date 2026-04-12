@@ -111,6 +111,21 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
           </div>
         )}
       </div>
+
+      {capability.principleCapabilities && capability.principleCapabilities.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Principles</h2>
+          <div className="space-y-2">
+            {capability.principleCapabilities.map(({ principle }) => (
+              <LinkedItemCard
+                key={principle.id}
+                href={`/principles/${principle.id}`}
+                name={principle.title}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
