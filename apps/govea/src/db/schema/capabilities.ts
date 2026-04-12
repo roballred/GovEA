@@ -9,7 +9,9 @@ export const capabilities = pgTable('capabilities', {
   organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description'),
-  domain: text('domain'), // top-level taxonomy domain
+  domain: text('domain'),       // top-level taxonomy domain
+  behaviors: text('behaviors'), // what the capability must do — one behavior per line
+  rules: text('rules'),         // constraints and invariants — one rule per line
   status: workflowStatusEnum('status').notNull().default('draft'),
   visibility: visibilityEnum('visibility').notNull().default('org'),
   createdBy: uuid('created_by').references(() => users.id),

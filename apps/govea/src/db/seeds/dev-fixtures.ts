@@ -131,6 +131,8 @@ export const DEV_CAPABILITIES = [
     name: 'Online Permitting',
     description: 'Residents and businesses submit, pay for, and track permit applications without visiting a counter.',
     domain: 'Community Development',
+    behaviors: 'Submit a permit application online with required documents and fee payment\nTrack the status of an in-progress application\nReceive automated notifications when application status changes\nSchedule required inspections after permit approval\nDownload an approved permit',
+    rules: 'Applications must be scoped to an organization\nOnly published capabilities are visible to external users\nFee collection must occur before an application is accepted for review',
     status: 'published' as const,
     visibility: 'org' as const,
     personas: ['Resident', 'Small Business Owner', 'Field Inspector'],
@@ -139,6 +141,8 @@ export const DEV_CAPABILITIES = [
     name: 'Business License Management',
     description: 'Issue, renew, and revoke business licenses. Notify owners of expiry and compliance requirements.',
     domain: 'Community Development',
+    behaviors: 'Issue a new business operating license upon successful application and payment\nSend renewal reminders before license expiry\nSchedule and record compliance inspections\nRevoke or suspend licenses for non-compliance',
+    rules: 'A license may only be issued after all required inspections are passed\nRenewal notices must be sent at least 60 days before expiry',
     status: 'published' as const,
     visibility: 'org' as const,
     personas: ['Small Business Owner'],
@@ -147,6 +151,8 @@ export const DEV_CAPABILITIES = [
     name: 'HR Self-Service',
     description: 'Employees view pay stubs, request leave, update personal information, and access benefits.',
     domain: 'Legislative & Executive',
+    behaviors: 'View current and historical pay stubs\nUpdate personal information such as address and emergency contacts\nRequest time off and view leave balances\nEnroll in or change benefits during open enrollment',
+    rules: 'Employees may only access their own payroll and personal records\nBenefits changes are only permitted during open enrollment windows',
     status: 'published' as const,
     visibility: 'org' as const,
     personas: ['IT Staff'],
@@ -155,6 +161,8 @@ export const DEV_CAPABILITIES = [
     name: 'GIS Mapping',
     description: 'Geographic information services supporting public-facing maps, field data collection, and internal spatial analysis.',
     domain: 'Information Technology',
+    behaviors: 'View and query authoritative city basemap layers\nSearch for addresses, parcels, and points of interest\nExport map views as images or spatial data files\nPublish curated public-facing map applications',
+    rules: 'Authoritative spatial data layers are managed by GIS staff only\nPublic-facing maps may only include approved, published layers',
     status: 'published' as const,
     visibility: 'connections' as const,
     personas: ['IT Staff', 'Field Inspector'],
@@ -163,6 +171,8 @@ export const DEV_CAPABILITIES = [
     name: 'Budget Reporting',
     description: 'Directors and elected officials access real-time budget vs. actuals and forecast dashboards.',
     domain: 'Finance & Budget',
+    behaviors: 'View budget vs. actuals comparisons by department and fund\nGenerate forecast dashboards for the current fiscal year\nExport budget reports to PDF or spreadsheet',
+    rules: 'Budget data is read-only in this capability — modifications are made in the source financial system\nOnly published budget reports are visible to elected officials',
     status: 'published' as const,
     visibility: 'org' as const,
     personas: ['Department Director', 'City Council Member'],
@@ -171,6 +181,8 @@ export const DEV_CAPABILITIES = [
     name: 'Service Request Management',
     description: 'Residents submit and track non-emergency service requests such as pothole repairs, graffiti removal, and missed pickups.',
     domain: 'Public Works',
+    behaviors: 'Accept non-emergency service requests via web and mobile\nRoute requests to the responsible department automatically\nSend status updates to the resident at each workflow stage\nAllow residents to track open requests in real time',
+    rules: 'Emergency-level requests must be redirected and not accepted through this channel\nService requests must be acknowledged within one business day of submission',
     status: 'published' as const,
     visibility: 'org' as const,
     personas: ['Resident'],
@@ -179,6 +191,8 @@ export const DEV_CAPABILITIES = [
     name: 'Digital Identity & Authentication',
     description: 'Unified login for residents and staff across city digital services. Supports local accounts and optional SSO.',
     domain: 'Information Technology',
+    behaviors: 'Authenticate residents and staff via local credentials or SSO\nIssue and refresh short-lived access tokens\nEnforce multi-factor authentication for privileged roles\nProvide self-service password reset for local accounts',
+    rules: 'All resident-facing authentication flows must use OAuth 2.0 with OIDC\nTokens must expire within 8 hours for staff and 24 hours for residents',
     status: 'published' as const,
     visibility: 'org' as const,
     personas: ['Resident', 'Small Business Owner', 'IT Staff'],
@@ -187,6 +201,8 @@ export const DEV_CAPABILITIES = [
     name: 'Cross-Agency Data Sharing',
     description: 'Structured data exchange between the city and state agencies via secure APIs and agreed data standards.',
     domain: 'Information Technology',
+    behaviors: 'Expose approved city data sets to authorised state agency consumers via API\nIngest state agency data into the city data platform on a scheduled basis\nLog all data exchange events with timestamps and consumer identity',
+    rules: 'Data sharing agreements must be in place before any exchange is activated\nAll APIs must enforce mutual TLS and token-based authorisation',
     status: 'draft' as const,
     visibility: 'connections' as const,
     personas: ['State Agency Liaison', 'IT Staff'],
@@ -666,6 +682,132 @@ export const STATE_APPLICATIONS = [
 // Note: 'State Grants Management' has 'org' visibility; in runtime federation
 // traversal City of Riverdale cannot follow that link. The row is seeded to
 // exercise the data model regardless of visibility enforcement.
+
+// ─── Principles (City of Riverdale) ─────────────────────────────────────────
+
+export const DEV_PRINCIPLES = [
+  {
+    name: 'SaaS First',
+    description: 'Default to vendor-hosted SaaS for all new application acquisitions unless a documented constraint requires otherwise.',
+    title: 'SaaS first for new application acquisitions',
+    rationale: 'On-premises infrastructure creates disproportionate maintenance overhead for a city IT team. Vendor-managed SaaS keeps the city on current releases and shifts patching and availability responsibility to the vendor.',
+    implications: 'All new application procurements default to SaaS. On-premises deployment requires Director-level approval, a documented technical justification, and a documented exit plan.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Online Permitting', 'Business License Management', 'Digital Identity & Authentication'],
+    adrs: [] as string[], // resolved from ADR numbers at seed time
+  },
+  {
+    name: 'Open Standards Auth',
+    description: 'All resident-facing authentication flows use OAuth 2.0 with OIDC for a consistent, auditable identity layer.',
+    title: 'Open standards for resident-facing authentication',
+    rationale: 'Fragmented authentication across resident-facing services creates inconsistent security posture and poor user experience. Standardising on OAuth 2.0 / OIDC provides a well-understood, auditable identity layer.',
+    implications: 'New resident-facing services must implement OAuth 2.0 with OIDC. Legacy authentication implementations are migrated as part of system upgrades. Staff authentication continues through the existing enterprise SSO pathway.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Digital Identity & Authentication', 'Online Permitting', 'Service Request Management'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'Accessibility First',
+    description: 'Design resident-facing services for low digital literacy and mobile use — services that work for the hardest cases work for everyone.',
+    title: 'Design for low digital literacy first',
+    rationale: 'A significant portion of residents have low digital literacy, use mobile devices as their primary internet access, or are non-native English speakers. Services designed for these users work for everyone.',
+    implications: 'All resident-facing services must be tested against low-literacy and mobile-first criteria before launch. Plain-language summaries are required for all public-facing content.',
+    status: 'draft' as const,
+    visibility: 'connections' as const,
+    capabilities: ['Online Permitting', 'Service Request Management'],
+    adrs: [] as string[],
+  },
+]
+
+// ─── Glossary (City of Riverdale) ────────────────────────────────────────────
+
+export const DEV_GLOSSARY = [
+  {
+    term: 'Capability',
+    definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+    domain: 'Enterprise Architecture',
+    notes: 'Capabilities are technology-agnostic. The same capability can be supported by different applications over time.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Persona',
+    definition: 'A named, representative user or stakeholder type that interacts with city services. Personas capture goals, context, and pain points to guide service and system design.',
+    domain: 'Enterprise Architecture',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Architecture Decision Record (ADR)',
+    definition: 'A documented record of a significant architecture or technology decision — what was decided, why, and what the consequences are.',
+    domain: 'Enterprise Architecture',
+    notes: 'ADRs are immutable by convention. Superseded decisions are marked as such and linked to the newer decision, preserving the history.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Value Stream',
+    definition: 'The sequence of activities that deliver a specific outcome of value to a stakeholder. Value streams cross departmental boundaries and end with a concrete result for the recipient.',
+    domain: 'Enterprise Architecture',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'SaaS (Software as a Service)',
+    definition: 'A software delivery model in which the vendor hosts and operates the application on behalf of the customer. The customer accesses it over the internet and pays on a subscription basis.',
+    domain: 'Information Technology',
+    status: 'published' as const,
+    visibility: 'instance' as const,
+  },
+  {
+    term: 'OAuth 2.0',
+    definition: 'An open authorization framework that enables applications to obtain limited access to user accounts on another service. Used as the foundation for modern single sign-on and API authorization.',
+    domain: 'Information Technology',
+    notes: 'Often paired with OIDC (OpenID Connect) for authentication. OAuth 2.0 alone covers authorization; OIDC adds identity.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'OIDC (OpenID Connect)',
+    definition: 'An identity layer built on top of OAuth 2.0 that allows applications to verify the identity of a user based on authentication performed by an authorization server.',
+    domain: 'Information Technology',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Lifecycle Status',
+    definition: 'The stage of a system or application in its operational life: planned, active, sunset, or decommissioned. Used to assess portfolio health and plan transitions.',
+    domain: 'Portfolio Management',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Sunset',
+    definition: 'The status of a system that is still operational but is no longer receiving new investment and is scheduled for decommissioning. Sunset systems represent known technical risk.',
+    domain: 'Portfolio Management',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Data Residency',
+    definition: 'The requirement that data be stored and processed within a specific geographic or jurisdictional boundary. Often a constraint in public sector procurement.',
+    domain: 'Information Technology',
+    status: 'draft' as const,
+    visibility: 'connections' as const,
+  },
+  {
+    term: 'Retention Schedule',
+    definition: 'A documented policy that specifies how long different categories of records must be kept before they may be destroyed or archived.',
+    domain: 'Records Management',
+    notes: 'Retention schedules are typically set by state law and must be followed during any records system migration.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+]
+
+// ─── Cross-org links ──────────────────────────────────────────────────────────
 
 export const DEV_CROSS_ORG_LINKS = [
   {

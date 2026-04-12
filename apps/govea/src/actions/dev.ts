@@ -7,6 +7,9 @@ import {
   valueStreams, valueStreamStages, valueStreamStageCapabilities,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   initiatives, initiativeCapabilities, initiativeObjectives,
+  adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
+  principles, principleAdrs, principleCapabilities,
+  glossaryTerms, glossaryTermSources,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -28,6 +31,9 @@ export async function resetToDataset(datasetKey: string) {
   if (!dataset) throw new Error(`Unknown dataset: ${datasetKey}`)
 
   // ── Wipe org content (junction tables cascade automatically) ──────────────
+  await db.delete(principles).where(eq(principles.organizationId, orgId))
+  await db.delete(glossaryTerms).where(eq(glossaryTerms.organizationId, orgId))
+  await db.delete(adrs).where(eq(adrs.organizationId, orgId))
   await db.delete(initiatives).where(eq(initiatives.organizationId, orgId))
   await db.delete(strategicObjectives).where(eq(strategicObjectives.organizationId, orgId))
   await db.delete(valueStreams).where(eq(valueStreams.organizationId, orgId))
@@ -87,6 +93,8 @@ export async function resetToDataset(datasetKey: string) {
       name: c.name,
       description: c.description,
       domain: c.domain,
+      behaviors: c.behaviors ?? null,
+      rules: c.rules ?? null,
       status: c.status,
       organizationId: orgId,
     })))
@@ -104,6 +112,7 @@ export async function resetToDataset(datasetKey: string) {
     await db.insert(capabilityPersonas).values(capPersonaRows)
   }
 
+  const applicationByName: Record<string, string> = {}
   if (dataset.applications.length > 0) {
     // ── Insert applications ─────────────────────────────────────────────────
     const applicationRows = await db.insert(applications)
@@ -118,7 +127,7 @@ export async function resetToDataset(datasetKey: string) {
       })))
       .returning()
 
-    const applicationByName = Object.fromEntries(applicationRows.map(a => [a.name, a.id]))
+    for (const a of applicationRows) applicationByName[a.name] = a.id
 
     // Insert application → capability junctions
     const appCapRows = dataset.applications.flatMap(a =>
@@ -235,6 +244,118 @@ export async function resetToDataset(datasetKey: string) {
       .map(o => ({ initiativeId: initRow.id, objectiveId: objectiveByName[o] }))
     if (initObjRows.length > 0) {
       await db.insert(initiativeObjectives).values(initObjRows).onConflictDoNothing()
+    }
+  }
+
+  if (!dataset.adrs || dataset.adrs.length === 0) return
+
+  // ── Insert ADRs ───────────────────────────────────────────────────────────
+  // Build initiative name → id map from what we just inserted
+  const iniRows = await db.select({ id: initiatives.id, name: initiatives.name })
+    .from(initiatives)
+    .where(eq(initiatives.organizationId, orgId))
+  const initiativeByName = Object.fromEntries(iniRows.map(i => [i.name, i.id]))
+
+  // First pass: insert all ADRs without supersededBy
+  const adrByNumber: Record<string, string> = {}
+  for (const adrDef of dataset.adrs) {
+    const [adrRow] = await db.insert(adrs).values({
+      number: adrDef.number,
+      title: adrDef.title,
+      context: adrDef.context,
+      decision: adrDef.decision,
+      consequences: adrDef.consequences,
+      status: adrDef.status,
+      organizationId: orgId,
+    }).returning()
+    adrByNumber[adrDef.number] = adrRow.id
+  }
+
+  // Second pass: resolve supersededBy self-references
+  for (const adrDef of dataset.adrs) {
+    if (!adrDef.supersededByNumber) continue
+    const adrId = adrByNumber[adrDef.number]
+    const supersedingId = adrByNumber[adrDef.supersededByNumber]
+    if (adrId && supersedingId) {
+      await db.update(adrs).set({ supersededBy: supersedingId }).where(eq(adrs.id, adrId))
+    }
+  }
+
+  // Junction tables
+  for (const adrDef of dataset.adrs) {
+    const adrId = adrByNumber[adrDef.number]
+    if (!adrId) continue
+
+    const capRows = (adrDef.capabilities ?? [])
+      .filter(c => capabilityByName[c])
+      .map(c => ({ adrId, capabilityId: capabilityByName[c] }))
+    if (capRows.length > 0) await db.insert(adrCapabilities).values(capRows).onConflictDoNothing()
+
+    const appRows = (adrDef.applications ?? [])
+      .filter(a => applicationByName[a])
+      .map(a => ({ adrId, applicationId: applicationByName[a] }))
+    if (appRows.length > 0) await db.insert(adrApplications).values(appRows).onConflictDoNothing()
+
+    const iniJoinRows = (adrDef.initiatives ?? [])
+      .filter(i => initiativeByName[i])
+      .map(i => ({ adrId, initiativeId: initiativeByName[i] }))
+    if (iniJoinRows.length > 0) await db.insert(adrInitiatives).values(iniJoinRows).onConflictDoNothing()
+
+    const objJoinRows = (adrDef.objectives ?? [])
+      .filter(o => objectiveByName[o])
+      .map(o => ({ adrId, objectiveId: objectiveByName[o] }))
+    if (objJoinRows.length > 0) await db.insert(adrObjectives).values(objJoinRows).onConflictDoNothing()
+  }
+
+  if (!dataset.principles || dataset.principles.length === 0) return
+
+  // ── Insert principles ─────────────────────────────────────────────────────
+  for (const pDef of dataset.principles) {
+    const [pRow] = await db.insert(principles).values({
+      name: pDef.name,
+      description: pDef.description ?? null,
+      title: pDef.title ?? null,
+      rationale: pDef.rationale,
+      implications: pDef.implications,
+      status: pDef.status,
+      organizationId: orgId,
+    }).returning()
+
+    const pCapRows = (pDef.capabilities ?? [])
+      .filter(c => capabilityByName[c])
+      .map(c => ({ principleId: pRow.id, capabilityId: capabilityByName[c] }))
+    if (pCapRows.length > 0) await db.insert(principleCapabilities).values(pCapRows).onConflictDoNothing()
+
+    const pAdrRows = (pDef.adrs ?? [])
+      .filter(n => adrByNumber[n])
+      .map(n => ({ principleId: pRow.id, adrId: adrByNumber[n] }))
+    if (pAdrRows.length > 0) await db.insert(principleAdrs).values(pAdrRows).onConflictDoNothing()
+  }
+
+  if (!dataset.glossary || dataset.glossary.length === 0) return
+
+  // ── Insert glossary terms ─────────────────────────────────────────────────
+  for (const g of dataset.glossary) {
+    const [termRow] = await db.insert(glossaryTerms).values({
+      term: g.term,
+      definition: g.definition,
+      definitionSource: g.definitionSource ?? null,
+      definitionSourceUrl: g.definitionSourceUrl ?? null,
+      domain: g.domain ?? null,
+      notes: g.notes ?? null,
+      status: g.status,
+      organizationId: orgId,
+    }).returning()
+
+    if (g.sources && g.sources.length > 0) {
+      await db.insert(glossaryTermSources).values(
+        g.sources.map(s => ({
+          termId: termRow.id,
+          name: s.name,
+          url: s.url ?? null,
+          definition: s.definition,
+        }))
+      )
     }
   }
 }

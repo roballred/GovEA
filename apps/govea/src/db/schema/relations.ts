@@ -7,6 +7,8 @@ import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStr
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams, objectiveApplications } from './objectives'
 import { initiatives, initiativeCapabilities, initiativeObjectives, initiativeApplications } from './initiatives'
 import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives } from './adrs'
+import { principles, principleAdrs, principleCapabilities } from './principles'
+import { glossaryTerms, glossaryTermSources } from './glossary'
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
 
@@ -21,6 +23,7 @@ export const capabilitiesRelations = relations(capabilities, ({ one, many }) => 
   initiativeCapabilities: many(initiativeCapabilities),
   applicationCapabilities: many(applicationCapabilities),
   adrCapabilities: many(adrCapabilities),
+  principleCapabilities: many(principleCapabilities),
 }))
 
 export const capabilityPersonasRelations = relations(capabilityPersonas, ({ one }) => ({
@@ -252,6 +255,7 @@ export const adrsRelations = relations(adrs, ({ one, many }) => ({
   adrApplications: many(adrApplications),
   adrInitiatives: many(adrInitiatives),
   adrObjectives: many(adrObjectives),
+  principleAdrs: many(principleAdrs),
 }))
 
 export const adrCapabilitiesRelations = relations(adrCapabilities, ({ one }) => ({
@@ -295,5 +299,55 @@ export const adrObjectivesRelations = relations(adrObjectives, ({ one }) => ({
   objective: one(strategicObjectives, {
     fields: [adrObjectives.objectiveId],
     references: [strategicObjectives.id],
+  }),
+}))
+
+// ─── Principles ───────────────────────────────────────────────────────────────
+
+export const principlesRelations = relations(principles, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [principles.organizationId],
+    references: [organizations.id],
+  }),
+  principleAdrs: many(principleAdrs),
+  principleCapabilities: many(principleCapabilities),
+}))
+
+export const principleAdrsRelations = relations(principleAdrs, ({ one }) => ({
+  principle: one(principles, {
+    fields: [principleAdrs.principleId],
+    references: [principles.id],
+  }),
+  adr: one(adrs, {
+    fields: [principleAdrs.adrId],
+    references: [adrs.id],
+  }),
+}))
+
+export const principleCapabilitiesRelations = relations(principleCapabilities, ({ one }) => ({
+  principle: one(principles, {
+    fields: [principleCapabilities.principleId],
+    references: [principles.id],
+  }),
+  capability: one(capabilities, {
+    fields: [principleCapabilities.capabilityId],
+    references: [capabilities.id],
+  }),
+}))
+
+// ─── Glossary ─────────────────────────────────────────────────────────────────
+
+export const glossaryTermsRelations = relations(glossaryTerms, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [glossaryTerms.organizationId],
+    references: [organizations.id],
+  }),
+  sources: many(glossaryTermSources),
+}))
+
+export const glossaryTermSourcesRelations = relations(glossaryTermSources, ({ one }) => ({
+  term: one(glossaryTerms, {
+    fields: [glossaryTermSources.termId],
+    references: [glossaryTerms.id],
   }),
 }))

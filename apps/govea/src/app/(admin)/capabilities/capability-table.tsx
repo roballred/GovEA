@@ -17,7 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 
-type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
+type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
   organization: { id: string; name: string } | null
   capabilityPersonas: { persona: Pick<Persona, 'id' | 'name'> }[]
 }
@@ -225,7 +225,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New capability</DialogTitle>
           </DialogHeader>
@@ -233,9 +233,21 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
             <FormField label="Name" name="name" required />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={3} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+              <textarea name="description" rows={2} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Domain (optional)" name="domain" />
+            <div className="space-y-1.5">
+              <Label htmlFor="create-behaviors">Behaviors</Label>
+              <textarea id="create-behaviors" name="behaviors" rows={4}
+                placeholder="One behavior per line — what the capability must do"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-rules">Rules</Label>
+              <textarea id="create-rules" name="rules" rows={3}
+                placeholder="One rule per line — constraints and invariants"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
             <div className="space-y-1.5">
               <Label>Personas</Label>
               <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">
@@ -276,7 +288,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
 
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit capability</DialogTitle>
           </DialogHeader>
@@ -284,9 +296,23 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={3} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Domain (optional)" name="domain" defaultValue={editTarget?.domain ?? ''} />
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-behaviors">Behaviors</Label>
+              <textarea id="edit-behaviors" name="behaviors" rows={4}
+                placeholder="One behavior per line — what the capability must do"
+                defaultValue={editTarget?.behaviors ?? ''}
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-rules">Rules</Label>
+              <textarea id="edit-rules" name="rules" rows={3}
+                placeholder="One rule per line — constraints and invariants"
+                defaultValue={editTarget?.rules ?? ''}
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
             <div className="space-y-1.5">
               <Label>Personas</Label>
               <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">

@@ -67,6 +67,34 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
       <hr />
 
+      {capability.behaviors && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Behaviors</h2>
+          <ul className="space-y-1.5 text-sm text-muted-foreground">
+            {capability.behaviors.split('\n').filter(Boolean).map((line, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="mt-0.5 shrink-0 text-muted-foreground/50">—</span>
+                <span>{line.replace(/^[-•]\s*/, '')}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {capability.rules && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Rules</h2>
+          <ul className="space-y-1.5 text-sm text-muted-foreground">
+            {capability.rules.split('\n').filter(Boolean).map((line, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="mt-0.5 shrink-0 text-muted-foreground/50">—</span>
+                <span>{line.replace(/^[-•]\s*/, '')}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Personas</h2>
         {capability.capabilityPersonas.length === 0 ? (
@@ -83,6 +111,21 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
           </div>
         )}
       </div>
+
+      {capability.principleCapabilities && capability.principleCapabilities.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Principles</h2>
+          <div className="space-y-2">
+            {capability.principleCapabilities.map(({ principle }) => (
+              <LinkedItemCard
+                key={principle.id}
+                href={`/principles/${principle.id}`}
+                name={principle.name}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

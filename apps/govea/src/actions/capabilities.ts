@@ -29,6 +29,7 @@ export async function getCapability(id: string) {
     with: {
       organization: true,
       capabilityPersonas: { with: { persona: true } },
+      principleCapabilities: { with: { principle: true } },
     },
   })
 }
@@ -65,6 +66,8 @@ export async function createCapability(formData: FormData) {
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const domain = (formData.get('domain') as string) || null
+  const behaviors = (formData.get('behaviors') as string) || null
+  const rules = (formData.get('rules') as string) || null
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const personaIds = formData.getAll('personaIds') as string[]
@@ -73,6 +76,8 @@ export async function createCapability(formData: FormData) {
     name,
     description,
     domain,
+    behaviors,
+    rules,
     status,
     visibility,
     organizationId: orgId,
@@ -103,6 +108,8 @@ export async function editCapability(capabilityId: string, formData: FormData) {
   const name = formData.get('name') as string
   const description = (formData.get('description') as string) || null
   const domain = (formData.get('domain') as string) || null
+  const behaviors = (formData.get('behaviors') as string) || null
+  const rules = (formData.get('rules') as string) || null
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const personaIds = formData.getAll('personaIds') as string[]
@@ -113,6 +120,8 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     name,
     description,
     domain,
+    behaviors,
+    rules,
     status,
     visibility,
     updatedBy: session.user.id,

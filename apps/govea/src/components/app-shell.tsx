@@ -19,6 +19,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/personas', label: 'Personas' },
       { href: '/value-streams', label: 'Value Streams' },
       { href: '/capabilities', label: 'Capabilities' },
+      { href: '/glossary', label: 'Glossary' },
     ],
   },
   {
@@ -26,6 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/applications', label: 'Applications' },
       { href: '/adrs', label: 'ADRs' },
+      { href: '/principles', label: 'Principles' },
     ],
   },
   {
