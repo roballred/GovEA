@@ -226,6 +226,9 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
                 {canEdit && a.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Link href={`/applications/${a.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      </Link>
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(a)} className="h-7 px-2 text-xs">
                         Edit
                       </Button>
@@ -242,7 +245,13 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
                     </div>
                   </TableCell>
                 )}
-                {canEdit && a.organizationId !== currentOrgId && <TableCell />}
+                {canEdit && a.organizationId !== currentOrgId && (
+                  <TableCell>
+                    <Link href={`/applications/${a.id}`}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                    </Link>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

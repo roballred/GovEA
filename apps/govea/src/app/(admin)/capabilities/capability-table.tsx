@@ -200,6 +200,9 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
                 {canEdit && c.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Link href={`/capabilities/${c.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      </Link>
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(c)} className="h-7 px-2 text-xs">
                         Edit
                       </Button>
@@ -216,7 +219,13 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
                     </div>
                   </TableCell>
                 )}
-                {canEdit && c.organizationId !== currentOrgId && <TableCell />}
+                {canEdit && c.organizationId !== currentOrgId && (
+                  <TableCell>
+                    <Link href={`/capabilities/${c.id}`}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                    </Link>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

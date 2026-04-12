@@ -175,6 +175,9 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
                 {canEditRole && term.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Link href={`/glossary/${term.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      </Link>
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(term)} className="h-7 px-2 text-xs">Edit</Button>
                       {canDelete && (
                         <Button
@@ -189,7 +192,13 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
                     </div>
                   </TableCell>
                 )}
-                {canEditRole && term.organizationId !== currentOrgId && <TableCell />}
+                {canEditRole && term.organizationId !== currentOrgId && (
+                  <TableCell>
+                    <Link href={`/glossary/${term.id}`}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                    </Link>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -287,7 +296,7 @@ function TermForm({
     setSources(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
   }
 
-  function useSource(s: SourceRow) {
+  function applySource(s: SourceRow) {
     setDefinition(s.definition)
     setDefSource(s.name)
     setDefSourceUrl(s.url)
@@ -393,7 +402,7 @@ function TermForm({
             {s.name && s.definition && (
               <button
                 type="button"
-                onClick={() => useSource(s)}
+                onClick={() => applySource(s)}
                 className="text-xs text-blue-600 hover:underline"
               >
                 Use this definition

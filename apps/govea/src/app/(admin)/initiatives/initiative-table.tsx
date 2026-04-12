@@ -213,6 +213,9 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
                 {canEdit && initiative.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Link href={`/initiatives/${initiative.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      </Link>
                       <Button variant="ghost" size="sm" onClick={() => openEdit(initiative)} className="h-7 px-2 text-xs">Edit</Button>
                       {canDelete && (
                         <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(initiative)} disabled={isPending}
@@ -223,7 +226,13 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
                     </div>
                   </TableCell>
                 )}
-                {canEdit && initiative.organizationId !== currentOrgId && <TableCell />}
+                {canEdit && initiative.organizationId !== currentOrgId && (
+                  <TableCell>
+                    <Link href={`/initiatives/${initiative.id}`}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                    </Link>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

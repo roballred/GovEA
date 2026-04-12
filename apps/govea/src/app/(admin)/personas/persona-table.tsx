@@ -285,6 +285,9 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
                 {canEdit && p.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Link href={`/personas/${p.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      </Link>
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(p)} className="h-7 px-2 text-xs">
                         Edit
                       </Button>
@@ -301,7 +304,13 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
                     </div>
                   </TableCell>
                 )}
-                {canEdit && p.organizationId !== currentOrgId && <TableCell />}
+                {canEdit && p.organizationId !== currentOrgId && (
+                  <TableCell>
+                    <Link href={`/personas/${p.id}`}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                    </Link>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
