@@ -28,6 +28,8 @@ async function tryLogin(page: Page, email: string, password: string): Promise<bo
 
 test.describe('deactivated user cannot log in', () => {
   test.use({ storageState: 'tests/e2e/.auth/admin.json' })
+  // Multiple browser contexts + bcrypt in beforeAll make this slow in CI
+  test.slow()
 
   const email = `e2e-deactivated-${Date.now()}@govea.test`
 
