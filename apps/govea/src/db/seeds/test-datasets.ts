@@ -15,8 +15,10 @@ export type DatasetCapability = {
   name: string
   description: string
   domain: string
+  behaviors?: string  // one behavior per line
+  rules?: string      // one rule per line
   status: 'draft' | 'published' | 'archived'
-  personas: string[] // persona names
+  personas: string[]  // persona names
 }
 
 export type DatasetApplication = {
@@ -151,6 +153,8 @@ export const DATASET_STARTER: Dataset = {
       name: 'Online Permitting',
       description: 'Submit and track permit applications online without visiting a counter.',
       domain: 'Community Development',
+      behaviors: 'Submit a permit application online with required documents and fee payment\nTrack the status of an in-progress application\nReceive notifications when application status changes\nDownload an approved permit',
+      rules: 'Applications must be scoped to an organization\nOnly published capabilities appear in front-end views',
       status: 'published',
       personas: ['Resident'],
     },
@@ -158,6 +162,8 @@ export const DATASET_STARTER: Dataset = {
       name: 'HR Self-Service',
       description: 'Employee access to payroll, benefits, and HR forms without HR staff involvement.',
       domain: 'Legislative & Executive',
+      behaviors: 'View current and historical pay stubs\nUpdate personal information (address, emergency contacts)\nRequest time off and view leave balances\nEnroll in or change benefits during open enrollment',
+      rules: 'Access is restricted to the authenticated employee\'s own records\nBenefits changes are only permitted during open enrollment windows',
       status: 'published',
       personas: ['IT Staff', 'Department Director'],
     },
@@ -165,6 +171,8 @@ export const DATASET_STARTER: Dataset = {
       name: 'GIS Mapping',
       description: 'Geographic information services for staff planning and public-facing maps.',
       domain: 'Information Technology',
+      behaviors: 'View authoritative city basemap layers\nSearch for addresses and parcels\nExport map views as images or spatial data files',
+      rules: 'Authoritative spatial data layers are managed by GIS staff only\nPublic-facing maps show only published, approved layers',
       status: 'published',
       personas: ['IT Staff'],
     },
@@ -308,6 +316,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: 'Online Permitting',
       description: 'Citizens and businesses submit, track, and pay for permit applications without visiting a counter.',
       domain: 'Community Development',
+      behaviors: 'Submit a permit application online with required documents and fee payment\nTrack the status of an in-progress application\nReceive automated notifications when application status changes\nSchedule required inspections after permit approval\nDownload an approved permit',
+      rules: 'Applications must be scoped to an organization\nOnly published capabilities are visible to external users\nFee collection must occur before an application is accepted for review',
       status: 'published',
       personas: ['Resident', 'Business Owner'],
     },
@@ -315,6 +325,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: 'Business License Management',
       description: 'Issuance, renewal, and inspection scheduling for business operating licenses.',
       domain: 'Community Development',
+      behaviors: 'Issue a new business operating license upon successful application and payment\nSend renewal reminders before license expiry\nSchedule and record compliance inspections\nRevoke or suspend licenses for non-compliance',
+      rules: 'A license may only be issued after all required inspections are passed\nRenewal notices must be sent at least 60 days before expiry',
       status: 'published',
       personas: ['Business Owner'],
     },
@@ -322,6 +334,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: 'HR Self-Service',
       description: 'Employee access to payroll, benefits elections, time-off requests, and HR forms.',
       domain: 'Legislative & Executive',
+      behaviors: 'View current and historical pay stubs\nUpdate personal information such as address and emergency contacts\nRequest time off and view leave balances\nEnroll in or change benefits during open enrollment\nAccess and submit HR forms electronically',
+      rules: 'Employees may only access their own payroll and personal records\nBenefits changes are only permitted during open enrollment windows\nLeave requests require manager approval before they are confirmed',
       status: 'published',
       personas: ['IT Administrator', 'Department Director', 'Grant Coordinator'],
     },
@@ -329,6 +343,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: 'Budget Management',
       description: 'Departmental budget planning, tracking, and reporting for finance and elected oversight.',
       domain: 'Legislative & Executive',
+      behaviors: 'Enter and submit departmental budget requests for the next fiscal year\nTrack actuals against approved budget lines in real time\nGenerate budget vs. actuals reports for elected and executive review\nFlag budget lines that are forecasting an overrun',
+      rules: 'Budget submissions require director-level approval before forwarding to finance\nFinal budget figures may only be modified by Finance with Council authorization',
       status: 'published',
       personas: ['City Council Member', 'Department Director'],
     },
@@ -336,6 +352,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: 'GIS Mapping',
       description: 'Authoritative geographic data for internal planning and public-facing map applications.',
       domain: 'Information Technology',
+      behaviors: 'View and query authoritative city basemap layers\nSearch for addresses, parcels, and points of interest\nExport map views as images or spatial data files\nPublish curated public-facing map applications',
+      rules: 'Authoritative spatial data layers are managed by GIS staff only\nPublic-facing maps may only include approved, published layers',
       status: 'published',
       personas: ['IT Administrator'],
     },
@@ -343,6 +361,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: 'Cybersecurity Monitoring',
       description: 'Continuous threat detection, alerting, and incident response across city infrastructure.',
       domain: 'Information Technology',
+      behaviors: 'Detect anomalous activity and generate alerts in real time\nCorrelate events across endpoints, network, and cloud workloads\nEscalate confirmed incidents to the security response team\nMaintain an audit trail of all security events and response actions',
+      rules: 'All city endpoints must have the monitoring agent installed within 30 days of provisioning\nCritical alerts must be acknowledged within 15 minutes',
       status: 'published',
       personas: ['IT Administrator'],
     },
@@ -350,6 +370,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: '311 Resident Services',
       description: 'Omnichannel intake (web, phone, app) for non-emergency service requests and status tracking.',
       domain: 'Public Safety',
+      behaviors: 'Accept non-emergency service requests via web, mobile app, and phone\nRoute requests to the responsible department automatically\nSend status updates to the resident at each workflow stage\nAllow residents to track open requests in real time',
+      rules: 'Emergency-level requests must be redirected to 911 and not accepted through 311\nService requests must be acknowledged within one business day of submission',
       status: 'published',
       personas: ['Resident'],
     },
@@ -357,6 +379,8 @@ export const DATASET_CITY_DEMO: Dataset = {
       name: 'Records Management',
       description: 'Retention, retrieval, and disposition of official city records including grant documentation.',
       domain: 'Administration & Operations',
+      behaviors: 'Store and categorize official city records according to the retention schedule\nRetrieve records by keyword, date range, category, or custodian\nEnforce automated retention holds and disposition workflows\nGenerate chain-of-custody documentation for audits and legal requests',
+      rules: 'Records must be classified and assigned a retention category at the time of ingestion\nDisposition of records requires supervisor approval and is logged permanently',
       status: 'draft',
       personas: ['Grant Coordinator', 'Department Director'],
     },

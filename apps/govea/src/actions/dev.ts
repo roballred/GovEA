@@ -89,6 +89,8 @@ export async function resetToDataset(datasetKey: string) {
       name: c.name,
       description: c.description,
       domain: c.domain,
+      behaviors: c.behaviors ?? null,
+      rules: c.rules ?? null,
       status: c.status,
       organizationId: orgId,
     })))

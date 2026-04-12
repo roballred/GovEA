@@ -51,7 +51,7 @@ async function findOrCreatePersona(orgId: string, name: string, data: {
 }
 
 async function findOrCreateCapability(orgId: string, name: string, data: {
-  description?: string; domain?: string; status: 'draft' | 'published' | 'archived'; visibility: 'org' | 'connections' | 'instance'
+  description?: string; domain?: string; behaviors?: string; rules?: string; status: 'draft' | 'published' | 'archived'; visibility: 'org' | 'connections' | 'instance'
 }) {
   const existing = await db.query.capabilities.findFirst({
     where: (t, { eq: e, and }) => and(e(t.organizationId, orgId), e(t.name, name)),
@@ -146,7 +146,7 @@ async function seed() {
   const devCapabilityIds: Record<string, string> = {}
   for (const c of DEV_CAPABILITIES) {
     const capId = await findOrCreateCapability(devOrgId, c.name, {
-      description: c.description, domain: c.domain, status: c.status, visibility: c.visibility,
+      description: c.description, domain: c.domain, behaviors: c.behaviors, rules: c.rules, status: c.status, visibility: c.visibility,
     })
     devCapabilityIds[c.name] = capId
     for (const personaName of c.personas) {
