@@ -59,7 +59,17 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
 
       <div className="space-y-6">
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Definition</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold">Definition</h2>
+            {term.definitionSource && (
+              <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border-blue-200">
+                {term.definitionSourceUrl
+                  ? <a href={term.definitionSourceUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">Source: {term.definitionSource}</a>
+                  : <>Source: {term.definitionSource}</>
+                }
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{term.definition}</p>
         </div>
 
@@ -67,6 +77,32 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">Notes</h2>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{term.notes}</p>
+          </div>
+        )}
+
+        {term.sources && term.sources.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Reference Sources</h2>
+            <div className="space-y-3">
+              {term.sources.map(source => (
+                <div key={source.id} className="rounded-md border p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {source.url
+                        ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{source.name}</a>
+                        : source.name
+                      }
+                    </span>
+                    {term.definitionSource === source.name && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{source.definition}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

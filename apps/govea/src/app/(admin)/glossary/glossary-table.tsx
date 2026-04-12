@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createGlossaryTerm, editGlossaryTerm, deleteGlossaryTerm } from '@/actions/glossary'
-import type { GlossaryTerm } from '@/db/schema'
+import type { GlossaryTerm, GlossaryTermSource } from '@/db/schema'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -54,7 +54,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
   const [editTarget, setEditTarget] = useState<GlossaryRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<GlossaryRow | null>(null)
 
-  const canEdit = role === 'admin' || role === 'contributor'
+  const canEditRole = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
@@ -112,7 +112,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
             {domains.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         )}
-        {canEdit && (
+        {canEditRole && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New Term
           </Button>
@@ -129,13 +129,13 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
               <TableHead>Domain</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Visibility</TableHead>
-              {canEdit && <TableHead>Actions</TableHead>}
+              {canEditRole && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={canEditRole ? 6 : 5} className="text-center text-muted-foreground py-8">
                   {terms.length === 0
                     ? 'No glossary terms yet. Add one to get started.'
                     : 'No terms match the current filters.'}
@@ -172,7 +172,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
                     {VISIBILITY_LABELS[term.visibility]}
                   </span>
                 </TableCell>
-                {canEdit && term.organizationId === currentOrgId && (
+                {canEditRole && term.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(term)} className="h-7 px-2 text-xs">Edit</Button>
@@ -189,7 +189,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
                     </div>
                   </TableCell>
                 )}
-                {canEdit && term.organizationId !== currentOrgId && <TableCell />}
+                {canEditRole && term.organizationId !== currentOrgId && <TableCell />}
               </TableRow>
             ))}
           </TableBody>
@@ -198,44 +198,35 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={open => { if (!open) setCreateOpen(false) }}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Term</DialogTitle>
           </DialogHeader>
-          <form action={handleCreate} className="space-y-4">
-            <FormField label="Term" name="term" required placeholder="e.g. Capability" />
-            <TextareaField label="Definition" name="definition" required rows={3} placeholder="Plain-language definition" />
-            <FormField label="Domain" name="domain" placeholder="e.g. Information Technology" />
-            <TextareaField label="Notes" name="notes" rows={2} placeholder="Usage guidance, synonyms, or anti-patterns (optional)" />
-            <StatusVisibilityFields defaultStatus="draft" defaultVisibility="org" />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create Term'}</Button>
-            </DialogFooter>
-          </form>
+          <TermForm
+            isPending={isPending}
+            onSubmit={handleCreate}
+            onCancel={() => setCreateOpen(false)}
+            submitLabel="Create Term"
+            pendingLabel="Creating…"
+          />
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Term</DialogTitle>
           </DialogHeader>
-          <form action={handleEdit} className="space-y-4">
-            <FormField label="Term" name="term" required defaultValue={editTarget?.term} />
-            <TextareaField label="Definition" name="definition" required rows={3} defaultValue={editTarget?.definition} />
-            <FormField label="Domain" name="domain" defaultValue={editTarget?.domain ?? ''} />
-            <TextareaField label="Notes" name="notes" rows={2} defaultValue={editTarget?.notes ?? ''} />
-            <StatusVisibilityFields
-              defaultStatus={editTarget?.status ?? 'draft'}
-              defaultVisibility={editTarget?.visibility ?? 'org'}
-            />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
-            </DialogFooter>
-          </form>
+          <TermForm
+            key={editTarget?.id}
+            term={editTarget ?? undefined}
+            isPending={isPending}
+            onSubmit={handleEdit}
+            onCancel={() => setEditTarget(null)}
+            submitLabel="Save changes"
+            pendingLabel="Saving…"
+          />
         </DialogContent>
       </Dialog>
 
@@ -255,6 +246,168 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// ── TermForm ──────────────────────────────────────────────────────────────────
+
+type SourceRow = { name: string; url: string; definition: string }
+
+function TermForm({
+  term,
+  isPending,
+  onSubmit,
+  onCancel,
+  submitLabel,
+  pendingLabel,
+}: {
+  term?: GlossaryRow & { sources?: GlossaryTermSource[] }
+  isPending: boolean
+  onSubmit: (fd: FormData) => void
+  onCancel: () => void
+  submitLabel: string
+  pendingLabel: string
+}) {
+  const [definition, setDefinition] = useState(term?.definition ?? '')
+  const [defSource, setDefSource] = useState(term?.definitionSource ?? '')
+  const [defSourceUrl, setDefSourceUrl] = useState(term?.definitionSourceUrl ?? '')
+  const [sources, setSources] = useState<SourceRow[]>(
+    term?.sources?.map(s => ({ name: s.name, url: s.url ?? '', definition: s.definition })) ?? []
+  )
+
+  function addSource() {
+    setSources(prev => [...prev, { name: '', url: '', definition: '' }])
+  }
+
+  function removeSource(i: number) {
+    setSources(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  function updateSource(i: number, field: keyof SourceRow, value: string) {
+    setSources(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
+  }
+
+  function useSource(s: SourceRow) {
+    setDefinition(s.definition)
+    setDefSource(s.name)
+    setDefSourceUrl(s.url)
+  }
+
+  function clearSource() {
+    setDefSource('')
+    setDefSourceUrl('')
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    fd.set('definition', definition)
+    fd.set('definitionSource', defSource)
+    fd.set('definitionSourceUrl', defSourceUrl)
+    fd.set('sources', JSON.stringify(sources.filter(s => s.name && s.definition)))
+    onSubmit(fd)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <FormField label="Term" name="term" required defaultValue={term?.term} placeholder="e.g. Capability" />
+
+      {/* Definition with attribution */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="glossary-definition">Definition <span className="text-destructive">*</span></Label>
+          {defSource && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>Source:</span>
+              {defSourceUrl
+                ? <a href={defSourceUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">{defSource}</a>
+                : <span className="font-medium">{defSource}</span>
+              }
+              <button type="button" onClick={clearSource} className="ml-1 text-muted-foreground hover:text-foreground">×</button>
+            </div>
+          )}
+        </div>
+        <textarea
+          id="glossary-definition"
+          name="definition"
+          rows={3}
+          required
+          placeholder="Plain-language definition"
+          value={definition}
+          onChange={e => setDefinition(e.target.value)}
+          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+        />
+      </div>
+
+      <FormField label="Domain" name="domain" defaultValue={term?.domain ?? ''} placeholder="e.g. Information Technology" />
+      <TextareaField label="Notes" name="notes" rows={2} defaultValue={term?.notes ?? ''} placeholder="Usage guidance, synonyms, or anti-patterns (optional)" />
+      <StatusVisibilityFields defaultStatus={term?.status ?? 'draft'} defaultVisibility={term?.visibility ?? 'org'} />
+
+      {/* Reference Sources */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Reference Sources</Label>
+          <button
+            type="button"
+            onClick={addSource}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            + Add source
+          </button>
+        </div>
+        {sources.length === 0 && (
+          <p className="text-xs text-muted-foreground">No reference sources added. Sources let you track authoritative definitions and select one as active.</p>
+        )}
+        {sources.map((s, i) => (
+          <div key={i} className="rounded-md border p-3 space-y-2 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Source name (e.g. TOGAF 10)"
+                value={s.name}
+                onChange={e => updateSource(i, 'name', e.target.value)}
+                className="flex-1 h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <input
+                type="url"
+                placeholder="URL (optional)"
+                value={s.url}
+                onChange={e => updateSource(i, 'url', e.target.value)}
+                className="flex-1 h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button
+                type="button"
+                onClick={() => removeSource(i)}
+                className="text-muted-foreground hover:text-destructive text-sm px-1"
+              >
+                ×
+              </button>
+            </div>
+            <textarea
+              placeholder="Verbatim definition from this source"
+              value={s.definition}
+              onChange={e => updateSource(i, 'definition', e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+            />
+            {s.name && s.definition && (
+              <button
+                type="button"
+                onClick={() => useSource(s)}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                Use this definition
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" disabled={isPending}>{isPending ? pendingLabel : submitLabel}</Button>
+      </DialogFooter>
+    </form>
   )
 }
 

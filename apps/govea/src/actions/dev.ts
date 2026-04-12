@@ -9,7 +9,7 @@ import {
   initiatives, initiativeCapabilities, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleAdrs, principleCapabilities,
-  glossaryTerms,
+  glossaryTerms, glossaryTermSources,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -335,14 +335,27 @@ export async function resetToDataset(datasetKey: string) {
   if (!dataset.glossary || dataset.glossary.length === 0) return
 
   // ── Insert glossary terms ─────────────────────────────────────────────────
-  await db.insert(glossaryTerms).values(
-    dataset.glossary.map(g => ({
+  for (const g of dataset.glossary) {
+    const [termRow] = await db.insert(glossaryTerms).values({
       term: g.term,
       definition: g.definition,
+      definitionSource: g.definitionSource ?? null,
+      definitionSourceUrl: g.definitionSourceUrl ?? null,
       domain: g.domain ?? null,
       notes: g.notes ?? null,
       status: g.status,
       organizationId: orgId,
-    }))
-  )
+    }).returning()
+
+    if (g.sources && g.sources.length > 0) {
+      await db.insert(glossaryTermSources).values(
+        g.sources.map(s => ({
+          termId: termRow.id,
+          name: s.name,
+          url: s.url ?? null,
+          definition: s.definition,
+        }))
+      )
+    }
+  }
 }

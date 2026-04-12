@@ -81,12 +81,21 @@ export type DatasetPrinciple = {
   capabilities: string[]  // capability names
 }
 
+export type DatasetGlossaryTermSource = {
+  name: string
+  url?: string
+  definition: string
+}
+
 export type DatasetGlossaryTerm = {
   term: string
   definition: string
+  definitionSource?: string   // name of the active source (if selected from sources)
+  definitionSourceUrl?: string
   domain?: string
   notes?: string
   status: 'draft' | 'published' | 'archived'
+  sources?: DatasetGlossaryTermSource[]
 }
 
 export type DatasetADR = {
@@ -295,9 +304,21 @@ export const DATASET_STARTER: Dataset = {
     {
       term: 'Capability',
       definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+      definitionSource: 'EasyEA',
       domain: 'Enterprise Architecture',
       notes: 'Capabilities are technology-agnostic. The same capability can be supported by different applications over time.',
       status: 'published',
+      sources: [
+        {
+          name: 'TOGAF 10',
+          url: 'https://pubs.opengroup.org/togaf-standard/adm-techniques/chap08.html',
+          definition: 'A business capability is an expression of what a business does and can do. Business capabilities represent the fundamental building blocks of an organization.',
+        },
+        {
+          name: 'EasyEA',
+          definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+        },
+      ],
     },
     {
       term: 'Persona',
@@ -315,8 +336,16 @@ export const DATASET_STARTER: Dataset = {
     {
       term: 'SaaS (Software as a Service)',
       definition: 'A software delivery model in which the vendor hosts and operates the application on behalf of the customer. The customer accesses it over the internet and pays on a subscription basis.',
+      definitionSource: 'NIST SP 800-145',
       domain: 'Information Technology',
       status: 'published',
+      sources: [
+        {
+          name: 'NIST SP 800-145',
+          url: 'https://csrc.nist.gov/publications/detail/sp/800-145/final',
+          definition: 'The capability provided to the consumer is to use the provider\'s applications running on a cloud infrastructure. The applications are accessible from various client devices through either a thin client interface, such as a web browser.',
+        },
+      ],
     },
   ],
 }
@@ -687,15 +716,39 @@ export const DATASET_CITY_DEMO: Dataset = {
     {
       term: 'Capability',
       definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+      definitionSource: 'EasyEA',
       domain: 'Enterprise Architecture',
       notes: 'Capabilities are technology-agnostic. The same capability can be supported by different applications over time.',
       status: 'published',
+      sources: [
+        {
+          name: 'TOGAF 10',
+          url: 'https://pubs.opengroup.org/togaf-standard/adm-techniques/chap08.html',
+          definition: 'A business capability is an expression of what a business does and can do. Business capabilities represent the fundamental building blocks of an organization.',
+        },
+        {
+          name: 'EasyEA',
+          definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
+        },
+      ],
     },
     {
       term: 'Persona',
       definition: 'A named, representative user or stakeholder type that interacts with city services. Personas capture goals, context, and pain points to guide service and system design.',
+      definitionSource: 'EasyEA',
       domain: 'Enterprise Architecture',
       status: 'published',
+      sources: [
+        {
+          name: 'EasyEA',
+          definition: 'A named, representative user or stakeholder type that interacts with city services. Personas capture goals, context, and pain points to guide service and system design.',
+        },
+        {
+          name: 'Nielsen Norman Group',
+          url: 'https://www.nngroup.com/articles/persona/',
+          definition: 'Personas are fictional characters created to represent the different user types that might use a site, brand, or product in a similar way.',
+        },
+      ],
     },
     {
       term: 'Architecture Decision Record (ADR)',
@@ -703,31 +756,75 @@ export const DATASET_CITY_DEMO: Dataset = {
       domain: 'Enterprise Architecture',
       notes: 'ADRs are immutable by convention. Superseded decisions are marked as such and linked to the newer decision, preserving the history.',
       status: 'published',
+      sources: [
+        {
+          name: 'Architectural Decision Records (adr.github.io)',
+          url: 'https://adr.github.io/',
+          definition: 'An Architectural Decision (AD) is a justified software design choice that addresses a functional or non-functional requirement that is architecturally significant.',
+        },
+      ],
     },
     {
       term: 'Value Stream',
       definition: 'The sequence of activities that deliver a specific outcome of value to a stakeholder. Value streams cross departmental boundaries and end with a concrete result for the recipient.',
+      definitionSource: 'TOGAF 10',
       domain: 'Enterprise Architecture',
       status: 'published',
+      sources: [
+        {
+          name: 'TOGAF 10',
+          url: 'https://pubs.opengroup.org/togaf-standard/business-architecture/chap05.html',
+          definition: 'A value stream is an end-to-end collection of value-adding activities that create an overall result for a customer, stakeholder, or end user.',
+        },
+        {
+          name: 'Lean Enterprise Institute',
+          url: 'https://www.lean.org/lexicon-terms/value-stream/',
+          definition: 'All the actions (both value-creating and non-value-creating) currently required to bring a product through the main flows essential to every product.',
+        },
+      ],
     },
     {
       term: 'SaaS (Software as a Service)',
       definition: 'A software delivery model in which the vendor hosts and operates the application on behalf of the customer. The customer accesses it over the internet and pays on a subscription basis.',
+      definitionSource: 'NIST SP 800-145',
       domain: 'Information Technology',
       status: 'published',
+      sources: [
+        {
+          name: 'NIST SP 800-145',
+          url: 'https://csrc.nist.gov/publications/detail/sp/800-145/final',
+          definition: 'The capability provided to the consumer is to use the provider\'s applications running on a cloud infrastructure. The applications are accessible from various client devices through either a thin client interface, such as a web browser.',
+        },
+      ],
     },
     {
       term: 'OAuth 2.0',
       definition: 'An open authorization framework that enables applications to obtain limited access to user accounts on another service. Used as the foundation for modern single sign-on and API authorization.',
+      definitionSource: 'RFC 6749',
       domain: 'Information Technology',
       notes: 'Often paired with OIDC (OpenID Connect) for authentication. OAuth 2.0 alone covers authorization; OIDC adds identity.',
       status: 'published',
+      sources: [
+        {
+          name: 'RFC 6749',
+          url: 'https://datatracker.ietf.org/doc/html/rfc6749',
+          definition: 'The OAuth 2.0 authorization framework enables a third-party application to obtain limited access to an HTTP service, either on behalf of a resource owner by orchestrating an approval interaction between the resource owner and the HTTP service, or by allowing the third-party application to obtain access on its own behalf.',
+        },
+      ],
     },
     {
       term: 'OIDC (OpenID Connect)',
       definition: 'An identity layer built on top of OAuth 2.0 that allows applications to verify the identity of a user based on authentication performed by an authorization server.',
+      definitionSource: 'OpenID Foundation',
       domain: 'Information Technology',
       status: 'published',
+      sources: [
+        {
+          name: 'OpenID Foundation',
+          url: 'https://openid.net/connect/',
+          definition: 'OpenID Connect 1.0 is a simple identity layer on top of the OAuth 2.0 protocol. It allows Clients to verify the identity of the End-User based on the authentication performed by an Authorization Server.',
+        },
+      ],
     },
     {
       term: 'Lifecycle Status',

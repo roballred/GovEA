@@ -8,7 +8,7 @@ import { strategicObjectives, objectiveCapabilities, objectiveValueStreams, obje
 import { initiatives, initiativeCapabilities, initiativeObjectives, initiativeApplications } from './initiatives'
 import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives } from './adrs'
 import { principles, principleAdrs, principleCapabilities } from './principles'
-import { glossaryTerms } from './glossary'
+import { glossaryTerms, glossaryTermSources } from './glossary'
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
 
@@ -337,9 +337,17 @@ export const principleCapabilitiesRelations = relations(principleCapabilities, (
 
 // ─── Glossary ─────────────────────────────────────────────────────────────────
 
-export const glossaryTermsRelations = relations(glossaryTerms, ({ one }) => ({
+export const glossaryTermsRelations = relations(glossaryTerms, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [glossaryTerms.organizationId],
     references: [organizations.id],
+  }),
+  sources: many(glossaryTermSources),
+}))
+
+export const glossaryTermSourcesRelations = relations(glossaryTermSources, ({ one }) => ({
+  term: one(glossaryTerms, {
+    fields: [glossaryTermSources.termId],
+    references: [glossaryTerms.id],
   }),
 }))

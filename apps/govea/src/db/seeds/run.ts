@@ -21,7 +21,7 @@ import {
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleAdrs, principleCapabilities,
-  glossaryTerms,
+  glossaryTerms, glossaryTermSources,
   taxonomyTerms,
   orgConnections, crossOrgLinks,
 } from '../schema'
@@ -502,15 +502,23 @@ async function seed() {
       where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.term, g.term)),
     })
     if (existing) continue
-    await db.insert(glossaryTerms).values({
+    const [termRow] = await db.insert(glossaryTerms).values({
       term: g.term,
       definition: g.definition,
+      definitionSource: (g as { definitionSource?: string }).definitionSource ?? null,
+      definitionSourceUrl: (g as { definitionSourceUrl?: string }).definitionSourceUrl ?? null,
       domain: g.domain ?? null,
       notes: g.notes ?? null,
       status: g.status,
       visibility: g.visibility,
       organizationId: devOrgId,
-    })
+    }).returning()
+    const gSources = (g as { sources?: { name: string; url?: string; definition: string }[] }).sources
+    if (gSources && gSources.length > 0) {
+      await db.insert(glossaryTermSources).values(
+        gSources.map(s => ({ termId: termRow.id, name: s.name, url: s.url ?? null, definition: s.definition }))
+      )
+    }
   }
   console.log(`  ✓ ${DEV_GLOSSARY.length} glossary terms`)
 
