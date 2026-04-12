@@ -104,7 +104,7 @@ jobs:
           DEV: "true"
 
       - name: Run E2E smoke tests
-        run: pnpm --filter govea test:e2e
+        run: pnpm --filter govea exec playwright test tests/e2e/specs/smoke.spec.ts
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

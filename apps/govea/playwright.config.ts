@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   // In CI emit both GitHub annotations and an HTML report (uploaded as artifact).
   // Locally just use the HTML reporter.
   reporter: process.env.CI
