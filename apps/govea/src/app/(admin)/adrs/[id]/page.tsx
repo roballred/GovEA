@@ -162,7 +162,7 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
               <LinkedItemCard
                 key={principle.id}
                 href={`/principles/${principle.id}`}
-                name={principle.title}
+                name={principle.name}
               />
             ))}
           </div>

@@ -312,7 +312,9 @@ export async function resetToDataset(datasetKey: string) {
   // ── Insert principles ─────────────────────────────────────────────────────
   for (const pDef of dataset.principles) {
     const [pRow] = await db.insert(principles).values({
-      title: pDef.title,
+      name: pDef.name,
+      description: pDef.description ?? null,
+      title: pDef.title ?? null,
       rationale: pDef.rationale,
       implications: pDef.implications,
       status: pDef.status,

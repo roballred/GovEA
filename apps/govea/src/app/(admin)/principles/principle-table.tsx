@@ -115,7 +115,8 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Title</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Description</TableHead>
               <TableHead>Capabilities</TableHead>
               <TableHead>ADRs</TableHead>
               <TableHead>Status</TableHead>
@@ -126,7 +127,7 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-8">
                   {principles.length === 0
                     ? 'No principles yet. Add one to get started.'
                     : 'No principles match the current filters.'}
@@ -135,10 +136,10 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
             )}
             {filtered.map(principle => (
               <TableRow key={principle.id}>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <Link href={`/principles/${principle.id}`} className="hover:underline">
-                      {principle.title}
+                      {principle.name}
                     </Link>
                     {principle.organizationId !== currentOrgId && principle.organization && (
                       <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
@@ -146,6 +147,9 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
                       </span>
                     )}
                   </div>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground max-w-xs">
+                  <p className="line-clamp-2">{principle.description ?? '—'}</p>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -207,7 +211,9 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
             <DialogTitle>New Principle</DialogTitle>
           </DialogHeader>
           <form action={handleCreate} className="space-y-4">
-            <FormField label="Title" name="title" required placeholder="e.g. Prefer open standards for resident-facing services" />
+            <FormField label="Name" name="name" required placeholder="e.g. SaaS First" />
+            <TextareaField label="Description" name="description" rows={2} placeholder="One-sentence summary" />
+            <TextareaField label="Statement" name="title" rows={2} placeholder="Full imperative statement e.g. Prefer SaaS for all new application acquisitions" />
             <TextareaField label="Rationale" name="rationale" rows={3} placeholder="Why this principle exists and what problem it addresses" />
             <TextareaField label="Implications" name="implications" rows={3} placeholder="What this means in practice — constraints, expectations, and examples" />
             <LinkedItemsFields
@@ -232,7 +238,9 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
             <DialogTitle>Edit Principle</DialogTitle>
           </DialogHeader>
           <form action={handleEdit} className="space-y-4">
-            <FormField label="Title" name="title" required defaultValue={editTarget?.title} />
+            <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
+            <TextareaField label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} />
+            <TextareaField label="Statement" name="title" rows={2} defaultValue={editTarget?.title ?? ''} />
             <TextareaField label="Rationale" name="rationale" rows={3} defaultValue={editTarget?.rationale ?? ''} />
             <TextareaField label="Implications" name="implications" rows={3} defaultValue={editTarget?.implications ?? ''} />
             <LinkedItemsFields
@@ -258,7 +266,7 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
         <DialogContent>
           <DialogHeader><DialogTitle>Delete Principle</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Permanently delete <strong>{deleteTarget?.title}</strong>? This cannot be undone.
+            Permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>

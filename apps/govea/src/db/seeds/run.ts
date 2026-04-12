@@ -472,11 +472,13 @@ async function seed() {
   // Principles
   for (const p of DEV_PRINCIPLES) {
     const existing = await db.query.principles.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.title, p.title)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, p.name)),
     })
     if (existing) continue
     const [pRow] = await db.insert(principles).values({
-      title: p.title,
+      name: p.name,
+      description: p.description ?? null,
+      title: p.title ?? null,
       rationale: p.rationale,
       implications: p.implications,
       status: p.status,

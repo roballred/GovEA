@@ -120,7 +120,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
               <LinkedItemCard
                 key={principle.id}
                 href={`/principles/${principle.id}`}
-                name={principle.title}
+                name={principle.name}
               />
             ))}
           </div>

@@ -687,6 +687,8 @@ export const STATE_APPLICATIONS = [
 
 export const DEV_PRINCIPLES = [
   {
+    name: 'SaaS First',
+    description: 'Default to vendor-hosted SaaS for all new application acquisitions unless a documented constraint requires otherwise.',
     title: 'SaaS first for new application acquisitions',
     rationale: 'On-premises infrastructure creates disproportionate maintenance overhead for a city IT team. Vendor-managed SaaS keeps the city on current releases and shifts patching and availability responsibility to the vendor.',
     implications: 'All new application procurements default to SaaS. On-premises deployment requires Director-level approval, a documented technical justification, and a documented exit plan.',
@@ -696,6 +698,8 @@ export const DEV_PRINCIPLES = [
     adrs: [] as string[], // resolved from ADR numbers at seed time
   },
   {
+    name: 'Open Standards Auth',
+    description: 'All resident-facing authentication flows use OAuth 2.0 with OIDC for a consistent, auditable identity layer.',
     title: 'Open standards for resident-facing authentication',
     rationale: 'Fragmented authentication across resident-facing services creates inconsistent security posture and poor user experience. Standardising on OAuth 2.0 / OIDC provides a well-understood, auditable identity layer.',
     implications: 'New resident-facing services must implement OAuth 2.0 with OIDC. Legacy authentication implementations are migrated as part of system upgrades. Staff authentication continues through the existing enterprise SSO pathway.',
@@ -705,12 +709,14 @@ export const DEV_PRINCIPLES = [
     adrs: [] as string[],
   },
   {
+    name: 'Accessibility First',
+    description: 'Design resident-facing services for low digital literacy and mobile use — services that work for the hardest cases work for everyone.',
     title: 'Design for low digital literacy first',
     rationale: 'A significant portion of residents have low digital literacy, use mobile devices as their primary internet access, or are non-native English speakers. Services designed for these users work for everyone.',
     implications: 'All resident-facing services must be tested against low-literacy and mobile-first criteria before launch. Plain-language summaries are required for all public-facing content.',
     status: 'draft' as const,
     visibility: 'connections' as const,
-    capabilities: ['Online Permitting', 'Service Request Management', '311 Resident Services'],
+    capabilities: ['Online Permitting', 'Service Request Management'],
     adrs: [] as string[],
   },
 ]

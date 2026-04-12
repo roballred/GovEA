@@ -71,7 +71,9 @@ export async function createPrinciple(formData: FormData) {
   const session = await requireContributor()
   const orgId = session.user.organizationId!
 
-  const title = formData.get('title') as string
+  const name = formData.get('name') as string
+  const description = (formData.get('description') as string) || null
+  const title = (formData.get('title') as string) || null
   const rationale = (formData.get('rationale') as string) || null
   const implications = (formData.get('implications') as string) || null
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
@@ -80,7 +82,7 @@ export async function createPrinciple(formData: FormData) {
   const capabilityIds = formData.getAll('capabilityIds') as string[]
 
   const [principle] = await db.insert(principles).values({
-    title, rationale, implications, status, visibility,
+    name, description, title, rationale, implications, status, visibility,
     organizationId: orgId,
     createdBy: session.user.id,
     updatedBy: session.user.id,
@@ -94,7 +96,7 @@ export async function createPrinciple(formData: FormData) {
     entityId: principle.id,
     userId: session.user.id,
     organizationId: orgId,
-    after: { title, status, visibility },
+    after: { name, status, visibility },
   })
 }
 
@@ -102,7 +104,9 @@ export async function editPrinciple(principleId: string, formData: FormData) {
   const session = await requireContributor()
   const orgId = session.user.organizationId!
 
-  const title = formData.get('title') as string
+  const name = formData.get('name') as string
+  const description = (formData.get('description') as string) || null
+  const title = (formData.get('title') as string) || null
   const rationale = (formData.get('rationale') as string) || null
   const implications = (formData.get('implications') as string) || null
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
@@ -113,7 +117,7 @@ export async function editPrinciple(principleId: string, formData: FormData) {
   const before = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
 
   await db.update(principles).set({
-    title, rationale, implications, status, visibility,
+    name, description, title, rationale, implications, status, visibility,
     updatedBy: session.user.id,
     updatedAt: new Date(),
   }).where(and(eq(principles.id, principleId), eq(principles.organizationId, orgId)))
@@ -128,8 +132,8 @@ export async function editPrinciple(principleId: string, formData: FormData) {
     entityId: principleId,
     userId: session.user.id,
     organizationId: orgId,
-    before: { title: before?.title, status: before?.status },
-    after: { title, status, visibility },
+    before: { name: before?.name, status: before?.status },
+    after: { name, status, visibility },
   })
 }
 

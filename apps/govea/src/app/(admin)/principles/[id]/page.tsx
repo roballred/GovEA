@@ -39,7 +39,12 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">{principle.title}</h1>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">{principle.name}</h1>
+            {principle.description && (
+              <p className="text-muted-foreground">{principle.description}</p>
+            )}
+          </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[principle.status])}>
               {principle.status.charAt(0).toUpperCase() + principle.status.slice(1)}
@@ -54,6 +59,11 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
       <hr />
 
       <div className="space-y-6">
+        {principle.title && (
+          <Section title="Statement">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{principle.title}</p>
+          </Section>
+        )}
         {principle.rationale && (
           <Section title="Rationale">
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{principle.rationale}</p>

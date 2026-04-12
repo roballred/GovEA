@@ -9,7 +9,9 @@ import { capabilities } from './capabilities'
 export const principles = pgTable('principles', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-  title: text('title').notNull(),
+  name: text('name').notNull(),          // short label for display e.g. "SaaS First"
+  description: text('description'),      // one-sentence summary
+  title: text('title'),                  // full principle statement e.g. "Prefer SaaS for..."
   rationale: text('rationale'),
   implications: text('implications'),
   status: workflowStatusEnum('status').notNull().default('draft'),
