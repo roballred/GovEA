@@ -26,7 +26,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Portfolio',
     items: [
       { href: '/applications', label: 'Applications' },
-      { href: '/adrs', label: 'ADRs' },
+      { href: '/adrs', label: 'Decisions' },
       { href: '/principles', label: 'Principles' },
     ],
   },

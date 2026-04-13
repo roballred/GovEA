@@ -180,6 +180,9 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
                 {canEdit && o.organizationId === currentOrgId && (
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Link href={`/objectives/${o.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      </Link>
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(o)} className="h-7 px-2 text-xs">Edit</Button>
                       {canDelete && (
                         <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(o)} disabled={isPending}
@@ -190,7 +193,13 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
                     </div>
                   </TableCell>
                 )}
-                {canEdit && o.organizationId !== currentOrgId && <TableCell />}
+                {canEdit && o.organizationId !== currentOrgId && (
+                  <TableCell>
+                    <Link href={`/objectives/${o.id}`}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                    </Link>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
