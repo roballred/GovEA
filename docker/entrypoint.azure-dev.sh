@@ -1,7 +1,7 @@
 #!/bin/sh
 # Azure Container Apps entrypoint.
 # Waits for the Postgres sidecar (localhost:5432) before migrating + seeding,
-# then starts the Next.js dev server.
+# then builds and starts the Next.js app (production build for stable server action IDs).
 set -e
 
 echo ""
@@ -25,5 +25,9 @@ echo "==> Seeding database..."
 pnpm --filter govea db:seed
 
 echo ""
-echo "==> Starting dev server..."
-exec pnpm --filter govea dev
+echo "==> Building app..."
+pnpm --filter govea build
+
+echo ""
+echo "==> Starting server..."
+exec pnpm --filter govea start
