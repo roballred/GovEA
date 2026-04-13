@@ -16,15 +16,14 @@ The system must allow contributors to maintain a structured inventory of the org
 | Application Portfolio | [po-application-portfolio.md](./po-application-portfolio.md) | Manage applications with lifecycle status and capability links |
 | Capability Map | [po-capability-map.md](./po-capability-map.md) | Define business capabilities organized by domain, linked to applications and personas |
 | Architecture Decision Records | [po-architecture-decisions.md](./po-architecture-decisions.md) | Record, track, and supersede architecture decisions |
-| Principles | N/A | Implemented in the product as linked reference content; detailed capability documentation still to be added |
-| Glossary | N/A | Implemented in the product as shared terminology; detailed capability documentation still to be added |
+| Principles | [po-principles.md](./po-principles.md) | Capture architecture principles and link them to capabilities and decisions |
+| Glossary | [po-glossary.md](./po-glossary.md) | Maintain shared terminology to support consistent EA language across the repository |
 
 ## Rules
 - Portfolio records follow the standard content workflow: draft → published → archived
 - Only published records are visible to Content Viewers and Department Directors
 - Every application must link to at least one capability — this is a data integrity rule enforced at the application layer
 - Visibility controls (org / connections / instance) apply to all portfolio record types
-- Detailed capability documentation for Principles and Glossary should be added so the architecture inventory matches the shipped product
 
 ## Links
 - Related: Frontend Display — Portfolio Views, Planning, Content Management
