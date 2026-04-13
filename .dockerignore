@@ -1,0 +1,26 @@
+# Dependencies — installed inside the image by Dockerfile
+node_modules
+**/node_modules
+
+# Next.js build output
+.next
+**/.next
+
+# Test output
+playwright-report
+test-results
+
+# Local env files
+.env*.local
+.env
+
+# Git
+.git
+.gitignore
+
+# Dev tooling
+.turbo
+coverage
+
+# Docker files (not needed inside the image)
+docker-compose*.yml
