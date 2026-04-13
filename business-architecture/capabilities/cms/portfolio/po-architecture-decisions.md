@@ -35,11 +35,13 @@ The system must allow contributors to record, track, and supersede architecture 
 - Only published ADRs appear in front-end portfolio views
 
 ## Implementation Status
-Partially implemented in v1:
-- Schema: `adrs` table with full field set including `superseded_by` (`apps/govea/src/db/schema/adrs.ts`)
-- Admin UI: list view exists (`apps/govea/src/app/(admin)/adrs/page.tsx`)
-- **Not yet implemented:** create/edit forms, detail view, delete action, server actions
-- Front-end portfolio view references ADR list but depends on published ADR records existing
+Implemented in early v1:
+- Schema and server actions support the full ADR lifecycle, including supersession links
+- Admin UI includes list, detail, create, edit, and delete flows
+- ADRs can link to capabilities, applications, initiatives, and objectives
+
+Remaining gaps:
+- richer ADR analytics and debt-oriented reporting are still future work
 
 ## Links
 - Depends on: IAM — Role-Based Access Control, Content Management — Content Workflow

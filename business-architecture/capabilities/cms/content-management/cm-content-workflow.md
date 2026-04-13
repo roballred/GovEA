@@ -1,14 +1,14 @@
 # Capability: Content Workflow
 
 ## What It Does
-The system must manage the lifecycle state of each content item through a defined workflow. Content moves through states in a controlled sequence and only published content is visible to Viewers.
+The system must manage the lifecycle state of each content item through a defined workflow. For the core repository content model, content moves through Draft → Published → Archived and only published content is visible to Viewers. Planning entities currently use planning-specific lifecycle states.
 
 ## Personas
 - **CMS Administrator** — manages content state; can move content to any state
 - **Content Viewer** — sees only published content; workflow state is invisible to them
 
 ## Behaviors
-- Track each content item through three states: Draft → Published → Archived
+- Track core content items through three states: Draft → Published → Archived
 - Allow Contributors to move content from Draft to Published
 - Allow Contributors to move published content back to Draft for editing
 - Allow Admins to archive published content
@@ -24,7 +24,7 @@ The system must manage the lifecycle state of each content item through a define
 | Archived | Retired — hidden from Viewers; preserved for history and audit |
 
 ## Rules
-- Content cannot skip states — Draft must precede Published; Published must precede Archived
+- Core content cannot skip states — Draft must precede Published; Published must precede Archived
 - Archived content cannot be edited — it must be moved back to Draft first
 - Deleting a content item is separate from archiving — archive first, delete only when certain
 
