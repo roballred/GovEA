@@ -1,6 +1,6 @@
 # Capability Group: Planning
 
-The system must allow organizations to document their strategic direction, track the initiatives delivering on that direction, and visualize the relationship between strategy, initiatives, and the architecture portfolio on a timeline.
+The system must allow organizations to document their strategic direction, track the initiatives delivering on that direction, and visualize the relationship between strategy, initiatives, and the architecture portfolio. In the current product this is a strong early-v1 capability, but its workflow model is intentionally different from the core content workflow.
 
 ## Personas
 - **Enterprise Architect (Central IT)** — publishes enterprise-wide objectives and tracks capability alignment across agencies

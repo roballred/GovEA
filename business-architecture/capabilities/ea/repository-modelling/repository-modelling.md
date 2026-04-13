@@ -1,6 +1,6 @@
 # Capability Group: Repository & Modelling
 
-The system must maintain a reliable, navigable, and self-auditing store of all architecture objects — capabilities, applications, personas, decisions, and technology — and surface the relationships, gaps, and accumulated debt within that store so that architects and decision-makers can trust what they see.
+The system must maintain a reliable, navigable, and self-auditing store of all architecture objects — capabilities, applications, personas, decisions, and technology — and surface the relationships, gaps, and accumulated debt within that store so that architects and decision-makers can trust what they see. In the current product, most of this group remains roadmap work beyond the existing audit trail and early coverage signals.
 
 ## Personas
 
@@ -16,7 +16,7 @@ The system must maintain a reliable, navigable, and self-auditing store of all a
 |---|---|---|---|
 | End-to-End Traceability | [rm-end-to-end-traceability.md](./rm-end-to-end-traceability.md) | Not implemented | Cross-layer impact analysis from strategic goals through capabilities to applications |
 | Architecture Debt Tracking | [rm-architecture-debt.md](./rm-architecture-debt.md) | Not implemented | Surface and track decisions and conditions that constrain future options |
-| Repository Completeness | [rm-repository-completeness.md](./rm-repository-completeness.md) | Partially implemented | Signals and dashboards showing where the EA object store has gaps |
+| Repository Completeness | [rm-repository-completeness.md](./rm-repository-completeness.md) | Scaffolded | Early signals and dashboards showing where the EA object store has gaps |
 
 ## Capabilities Covered Elsewhere
 

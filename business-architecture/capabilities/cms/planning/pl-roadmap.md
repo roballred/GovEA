@@ -1,7 +1,7 @@
 # Capability: Roadmap
 
 ## What It Does
-The system must provide a timeline view of initiatives and their relationship to strategic objectives, allowing stakeholders to see what is planned, what is underway, and what has been delivered — and how these changes connect to the capability portfolio.
+The system must provide a roadmap view of initiatives and their relationship to strategic objectives, allowing stakeholders to see what is planned, what is underway, and what has been delivered — and how these changes connect to the capability portfolio.
 
 The roadmap is a view over existing planning content, not a standalone data store. It renders what is already captured in initiatives and objectives as a governed, readable timeline.
 
@@ -11,21 +11,20 @@ The roadmap is a view over existing planning content, not a standalone data stor
 - **Department Director** — primary consumer; reads the roadmap to understand what is changing and when, without needing to navigate the full architecture repository
 
 ## Behaviors
-- Display initiatives on a timeline grouped by status (proposed, active, complete)
+- Display initiatives grouped by planning status
 - Show the strategic objectives each initiative advances
 - Show the capabilities each initiative affects, with impact label
 - Filter the roadmap by status, capability, or objective
 - Display start and end dates where available; display "TBD" or "ongoing" where dates are not set
-- Render the roadmap from published content only — draft and archived initiatives do not appear to Viewers
+- Render the roadmap directly from initiative records and their planning metadata
 
 ## Rules
-- The roadmap does not have its own data — it is a rendered view of published initiatives with planning metadata
-- Only published initiatives appear in the roadmap view for Viewer-role users
+- The roadmap does not have its own data — it is a rendered view of initiatives with planning metadata
 - Initiatives without start/end dates appear in a "Unscheduled" section rather than being hidden
 - The roadmap is read-only; editing is done through the initiatives management interface
 
 ## Implementation Status
-- **v1:** Basic roadmap view implemented. Displays published initiatives grouped by status with objective and capability links. Date-based timeline rendering is deferred to a future iteration.
+- **v1:** Basic roadmap view implemented. Displays initiatives grouped by planning status with objective and capability links. Richer date-based timeline rendering is deferred to a future iteration.
 
 ## Links
 - Depends on: Initiatives, Strategic Objectives, Capabilities

@@ -16,12 +16,11 @@ The system must allow organizations to document change programmes (initiatives, 
 - View which initiatives are advancing a given objective
 - View which initiatives affect a given capability
 - Track initiative status through its lifecycle (proposed, active, on-hold, complete, cancelled)
-- Publish initiatives so they are visible to Viewer-role users
+- Display initiatives in roadmap and planning views using their planning status and dates
 
 ## Rules
 - An initiative must belong to an organization
-- Initiatives follow the standard content workflow: draft → published → archived
-- Only published initiatives are visible to Viewer-role users
+- Initiatives follow the planning lifecycle documented here: proposed, active, on-hold, complete, cancelled
 - An initiative with no linked capabilities is architecturally incomplete — this should surface as a completeness signal in the admin dashboard
 - Impact labels on capability links are optional but recommended; they communicate whether the initiative is building new capability or changing existing capability
 
