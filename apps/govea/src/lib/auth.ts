@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs'
 import { asc, eq } from 'drizzle-orm'
 import { writeAuditLog } from '@/lib/audit'
 import type { Role } from '@/lib/rbac'
+import { authConfig } from '@/lib/auth.config'
 
 // Extended user type that includes our custom fields returned from the credentials provider
 interface AppUser {
@@ -19,9 +20,9 @@ interface AppUser {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: DrizzleAdapter(db, { usersTable: users, accountsTable: accounts, sessionsTable: sessions, verificationTokensTable: verificationTokens } as any),
-  session: { strategy: 'jwt', maxAge: 60 * 60 * 24 }, // 24h
   providers: [
     ...(process.env.AUTH_MICROSOFT_ENTRA_ID_ID
       ? [MicrosoftEntraID({

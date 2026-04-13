@@ -1,5 +1,9 @@
-import { auth } from '@/lib/auth'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/lib/auth.config'
 import { NextResponse } from 'next/server'
+
+// Use the edge-safe config so middleware never touches Node.js built-ins (net, etc.)
+const { auth } = NextAuth(authConfig)
 
 const PUBLIC_PATHS = ['/login', '/setup', '/error', '/api/auth']
 
