@@ -10,17 +10,17 @@ export default async function TaxonomyPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const { domains, children } = await getTaxonomyTermsWithChildren(orgId)
+  const { types, values } = await getTaxonomyTermsWithChildren(orgId)
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Taxonomy</h1>
         <p className="text-muted-foreground mt-1">
-          Domains and classification terms used to organize capabilities and glossary entries.
+          Classification types and their values — used to organize capabilities and glossary entries.
         </p>
       </div>
-      <TaxonomyTable domains={domains} children={children} role={role} />
+      <TaxonomyTable types={types} values={values} role={role} />
     </div>
   )
 }

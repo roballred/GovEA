@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Capability, Persona, TaxonomyTerm } from '@/db/schema'
+import type { Capability, Persona } from '@/db/schema'
 import { createCapability, editCapability, deleteCapability } from '@/actions/capabilities'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DomainCombobox } from '@/components/domain-combobox'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -25,7 +26,7 @@ type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' |
 interface Props {
   capabilities: CapabilityRow[]
   personas: Pick<Persona, 'id' | 'name'>[]
-  domainTerms: Pick<TaxonomyTerm, 'id' | 'name'>[]
+  domainTerms: { id: string; name: string }[]
   role: Role
   currentOrgId: string
 }
@@ -245,7 +246,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
               <Label>Description</Label>
               <textarea name="description" rows={2} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
-            <DomainSelect domainTerms={domainTerms} defaultValue="" />
+            <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue="" />
             <div className="space-y-1.5">
               <Label htmlFor="create-behaviors">Behaviors</Label>
               <textarea id="create-behaviors" name="behaviors" rows={4}
@@ -308,7 +309,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
               <Label>Description</Label>
               <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
-            <DomainSelect domainTerms={domainTerms} defaultValue={editTarget?.domain ?? ''} />
+            <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue={editTarget?.domain ?? ''} />
             <div className="space-y-1.5">
               <Label htmlFor="edit-behaviors">Behaviors</Label>
               <textarea id="edit-behaviors" name="behaviors" rows={4}
@@ -395,25 +396,3 @@ function FormField({ label, ...props }: { label: string } & React.InputHTMLAttri
   )
 }
 
-function DomainSelect({ domainTerms, defaultValue }: { domainTerms: Pick<TaxonomyTerm, 'id' | 'name'>[]; defaultValue?: string }) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor="cap-domain">Domain (optional)</Label>
-      {domainTerms.length > 0 ? (
-        <select
-          id="cap-domain"
-          name="domain"
-          defaultValue={defaultValue ?? ''}
-          className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="">— None —</option>
-          {domainTerms.map(t => (
-            <option key={t.id} value={t.name}>{t.name}</option>
-          ))}
-        </select>
-      ) : (
-        <Input id="cap-domain" name="domain" defaultValue={defaultValue} placeholder="e.g. Information Technology" />
-      )}
-    </div>
-  )
-}
