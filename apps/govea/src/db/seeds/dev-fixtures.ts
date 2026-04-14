@@ -170,7 +170,7 @@ export const DEV_CAPABILITIES = [
   {
     name: 'Budget Reporting',
     description: 'Directors and elected officials access real-time budget vs. actuals and forecast dashboards.',
-    domain: 'Finance & Budget',
+    domain: 'Finance & Revenue',
     behaviors: 'View budget vs. actuals comparisons by department and fund\nGenerate forecast dashboards for the current fiscal year\nExport budget reports to PDF or spreadsheet',
     rules: 'Budget data is read-only in this capability — modifications are made in the source financial system\nOnly published budget reports are visible to elected officials',
     status: 'published' as const,
@@ -180,7 +180,7 @@ export const DEV_CAPABILITIES = [
   {
     name: 'Service Request Management',
     description: 'Residents submit and track non-emergency service requests such as pothole repairs, graffiti removal, and missed pickups.',
-    domain: 'Public Works',
+    domain: 'Infrastructure & Public Works',
     behaviors: 'Accept non-emergency service requests via web and mobile\nRoute requests to the responsible department automatically\nSend status updates to the resident at each workflow stage\nAllow residents to track open requests in real time',
     rules: 'Emergency-level requests must be redirected and not accepted through this channel\nService requests must be acknowledged within one business day of submission',
     status: 'published' as const,
@@ -722,7 +722,7 @@ export const STATE_CAPABILITIES = [
   {
     name: 'State Grants Management',
     description: 'System for local agencies to apply for, track, and report on state grants.',
-    domain: 'Finance & Budget',
+    domain: 'Finance & Revenue',
     status: 'published' as const,
     visibility: 'org' as const,
     personas: ['Local Government Partner'],
@@ -801,7 +801,7 @@ export const DEV_GLOSSARY = [
   {
     term: 'Capability',
     definition: 'A named ability the organization must have to deliver value. Capabilities describe what the organization does, not how it does it or which systems support it.',
-    domain: 'Enterprise Architecture',
+    domain: 'Information Technology',
     notes: 'Capabilities are technology-agnostic. The same capability can be supported by different applications over time.',
     status: 'published' as const,
     visibility: 'org' as const,
@@ -809,14 +809,14 @@ export const DEV_GLOSSARY = [
   {
     term: 'Persona',
     definition: 'A named, representative user or stakeholder type that interacts with city services. Personas capture goals, context, and pain points to guide service and system design.',
-    domain: 'Enterprise Architecture',
+    domain: 'Information Technology',
     status: 'published' as const,
     visibility: 'org' as const,
   },
   {
     term: 'Architecture Decision Record (ADR)',
     definition: 'A documented record of a significant architecture or technology decision — what was decided, why, and what the consequences are.',
-    domain: 'Enterprise Architecture',
+    domain: 'Information Technology',
     notes: 'ADRs are immutable by convention. Superseded decisions are marked as such and linked to the newer decision, preserving the history.',
     status: 'published' as const,
     visibility: 'org' as const,
@@ -824,7 +824,7 @@ export const DEV_GLOSSARY = [
   {
     term: 'Value Stream',
     definition: 'The sequence of activities that deliver a specific outcome of value to a stakeholder. Value streams cross departmental boundaries and end with a concrete result for the recipient.',
-    domain: 'Enterprise Architecture',
+    domain: 'Information Technology',
     status: 'published' as const,
     visibility: 'org' as const,
   },
@@ -853,14 +853,14 @@ export const DEV_GLOSSARY = [
   {
     term: 'Lifecycle Status',
     definition: 'The stage of a system or application in its operational life: planned, active, sunset, or decommissioned. Used to assess portfolio health and plan transitions.',
-    domain: 'Portfolio Management',
+    domain: 'Information Technology',
     status: 'published' as const,
     visibility: 'org' as const,
   },
   {
     term: 'Sunset',
     definition: 'The status of a system that is still operational but is no longer receiving new investment and is scheduled for decommissioning. Sunset systems represent known technical risk.',
-    domain: 'Portfolio Management',
+    domain: 'Information Technology',
     status: 'published' as const,
     visibility: 'org' as const,
   },
@@ -874,7 +874,7 @@ export const DEV_GLOSSARY = [
   {
     term: 'Retention Schedule',
     definition: 'A documented policy that specifies how long different categories of records must be kept before they may be destroyed or archived.',
-    domain: 'Records Management',
+    domain: 'Administrative Services',
     notes: 'Retention schedules are typically set by state law and must be followed during any records system migration.',
     status: 'published' as const,
     visibility: 'org' as const,
