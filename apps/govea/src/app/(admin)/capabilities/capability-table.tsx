@@ -15,6 +15,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 
 type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
@@ -53,11 +54,16 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [domainFilter, setDomainFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
 
   const orgOptions = Array.from(new Map(
     capabilities.map(c => [c.organizationId, c.organization?.name ?? 'Unknown'])
   ).entries())
+
+  const domainOptions = Array.from(
+    new Set(capabilities.map(c => c.domain).filter(Boolean))
+  ).sort() as string[]
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<CapabilityRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CapabilityRow | null>(null)
@@ -70,8 +76,9 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
   const filtered = capabilities.filter(c => {
     const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || c.status === statusFilter
+    const matchDomain = domainFilter === 'all' || c.domain === domainFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? c.organizationId === currentOrgId : c.organizationId === orgFilter)
-    return matchSearch && matchStatus && matchOrg
+    return matchSearch && matchStatus && matchDomain && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -121,6 +128,16 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        {domainOptions.length > 0 && (
+          <select
+            value={domainFilter}
+            onChange={e => setDomainFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All domains</option>
+            {domainOptions.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
         {orgOptions.length > 1 && (
           <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All organizations</option>
@@ -174,7 +191,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{c.domain ?? '—'}</TableCell>
+                <TableCell>{c.domain ? <DomainBadge domain={c.domain} /> : <span className="text-muted-foreground">—</span>}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {c.capabilityPersonas.length === 0
