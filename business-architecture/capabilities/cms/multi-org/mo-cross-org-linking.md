@@ -26,6 +26,7 @@ The system must allow an agency to link one of its own capabilities or personas 
 
 ## Rules
 - Cross-org links are directional: the initiating org owns the link; the target org approves or rejects it
+- **Approval does not grant write access.** An approved cross-org link gives the target org read attribution (the inbound link appears on their content item) — it does not allow the target org to edit, delete, or archive the source org's content
 - A link does not grant the target org any access to the source org's content beyond what visibility settings already allow
 - Deleting a local content item removes all cross-org links originating from it
 - If the target content item is deleted or its visibility is reduced so the source org can no longer see it, the link is automatically invalidated and both orgs are notified

@@ -19,11 +19,29 @@ The system must allow contributors and admins to control how broadly a persona, 
 - Never allow a user in org B to edit content owned by org A, regardless of visibility level
 - When a connection is removed, `connections`-visibility content from the removed org disappears from the user's view immediately
 
+## Access Matrix
+
+| Action | Owning org | Connected org (`connections`) | Any org (`instance`) |
+|---|---|---|---|
+| Read | ✅ | ✅ | ✅ |
+| Create cross-org link request | — | ✅ | ✅ |
+| Edit content | ✅ | ❌ | ❌ |
+| Delete content | ✅ (Admin) | ❌ | ❌ |
+| Change visibility | ✅ (Contributor+) | ❌ | ❌ |
+| Archive content | ✅ (Admin) | ❌ | ❌ |
+
+Content ownership never transfers across org boundaries. Sharing content at a broader visibility level does not grant any write access to other organizations.
+
 ## Rules
 - Default visibility for all new content is `org` — sharing is always an explicit opt-in
 - Read access to cross-org content does not imply write or delete access
+- Only the owning organization may edit, archive, or delete its content
 - Visibility changes are logged in the audit trail
 - `instance` visibility is appropriate for enterprise reference artifacts, not agency-internal content
+
+## Implementation Status
+- Visibility levels (`org`, `connections`, `instance`) are enforced on all read queries via `getConnectedOrgIds` in `federation.ts`
+- Write protection is enforced in all content mutation server actions via `assertOwnership` in `federation.ts` — throws before any DB write if the calling user's org does not own the content
 
 ## Links
 - Depends on: Org Connections (for `connections` level), IAM — Role-Based Access Control
