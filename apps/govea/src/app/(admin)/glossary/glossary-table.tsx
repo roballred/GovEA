@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createGlossaryTerm, editGlossaryTerm, deleteGlossaryTerm } from '@/actions/glossary'
-import type { GlossaryTerm, GlossaryTermSource } from '@/db/schema'
+import type { GlossaryTerm, GlossaryTermSource, TaxonomyTerm } from '@/db/schema'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ type GlossaryRow = GlossaryTerm & {
 
 interface Props {
   terms: GlossaryRow[]
+  domainTerms: Pick<TaxonomyTerm, 'id' | 'name'>[]
   role: Role
   currentOrgId: string
 }
@@ -45,7 +46,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function GlossaryTable({ terms, role, currentOrgId }: Props) {
+export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [search, setSearch] = useState('')
@@ -212,6 +213,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
             <DialogTitle>New Term</DialogTitle>
           </DialogHeader>
           <TermForm
+            domainTerms={domainTerms}
             isPending={isPending}
             onSubmit={handleCreate}
             onCancel={() => setCreateOpen(false)}
@@ -230,6 +232,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
           <TermForm
             key={editTarget?.id}
             term={editTarget ?? undefined}
+            domainTerms={domainTerms}
             isPending={isPending}
             onSubmit={handleEdit}
             onCancel={() => setEditTarget(null)}
@@ -264,6 +267,7 @@ type SourceRow = { name: string; url: string; definition: string }
 
 function TermForm({
   term,
+  domainTerms,
   isPending,
   onSubmit,
   onCancel,
@@ -271,6 +275,7 @@ function TermForm({
   pendingLabel,
 }: {
   term?: GlossaryRow & { sources?: GlossaryTermSource[] }
+  domainTerms: Pick<TaxonomyTerm, 'id' | 'name'>[]
   isPending: boolean
   onSubmit: (fd: FormData) => void
   onCancel: () => void
@@ -348,7 +353,24 @@ function TermForm({
         />
       </div>
 
-      <FormField label="Domain" name="domain" defaultValue={term?.domain ?? ''} placeholder="e.g. Information Technology" />
+      <div className="space-y-1.5">
+        <Label htmlFor="glossary-domain">Domain</Label>
+        {domainTerms.length > 0 ? (
+          <select
+            id="glossary-domain"
+            name="domain"
+            defaultValue={term?.domain ?? ''}
+            className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="">— None —</option>
+            {domainTerms.map(t => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+          </select>
+        ) : (
+          <Input id="glossary-domain" name="domain" defaultValue={term?.domain ?? ''} placeholder="e.g. Information Technology" />
+        )}
+      </div>
       <TextareaField label="Notes" name="notes" rows={2} defaultValue={term?.notes ?? ''} placeholder="Usage guidance, synonyms, or anti-patterns (optional)" />
       <StatusVisibilityFields defaultStatus={term?.status ?? 'draft'} defaultVisibility={term?.visibility ?? 'org'} />
 
