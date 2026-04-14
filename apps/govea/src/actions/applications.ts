@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { applications, applicationCapabilities } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -117,6 +117,7 @@ export async function editApplication(applicationId: string, formData: FormData)
   const capabilityIds = formData.getAll('capabilityIds') as string[]
 
   const before = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.update(applications).set({
     name,
@@ -155,6 +156,7 @@ export async function deleteApplication(applicationId: string) {
   const orgId = session.user.organizationId!
 
   const before = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(applications).where(
     and(eq(applications.id, applicationId), eq(applications.organizationId, orgId))

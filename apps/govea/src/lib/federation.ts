@@ -11,3 +11,17 @@ export async function getConnectedOrgIds(organizationId: string): Promise<string
     c.fromOrgId === organizationId ? c.toOrgId : c.fromOrgId
   )
 }
+
+/**
+ * Asserts that the entity's owning org matches the calling user's org.
+ * Throws if the entity is missing or owned by a different organization.
+ * Call this before any mutation to enforce cross-org write protection.
+ */
+export function assertOwnership(
+  entityOrgId: string | null | undefined,
+  callerOrgId: string,
+): void {
+  if (!entityOrgId || entityOrgId !== callerOrgId) {
+    throw new Error('Forbidden: content owned by another organization')
+  }
+}

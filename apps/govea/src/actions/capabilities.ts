@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { capabilities, capabilityPersonas } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -115,6 +115,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
   const personaIds = formData.getAll('personaIds') as string[]
 
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.update(capabilities).set({
     name,
@@ -152,6 +153,7 @@ export async function deleteCapability(capabilityId: string) {
   const orgId = session.user.organizationId!
 
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(capabilities).where(
     and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId))

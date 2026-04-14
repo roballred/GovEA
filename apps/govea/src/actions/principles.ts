@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { principles, principleAdrs, principleCapabilities } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -115,6 +115,7 @@ export async function editPrinciple(principleId: string, formData: FormData) {
   const capabilityIds = formData.getAll('capabilityIds') as string[]
 
   const before = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.update(principles).set({
     name, description, title, rationale, implications, status, visibility,
@@ -142,6 +143,7 @@ export async function deletePrinciple(principleId: string) {
   const orgId = session.user.organizationId!
 
   const before = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(principles).where(
     and(eq(principles.id, principleId), eq(principles.organizationId, orgId))
