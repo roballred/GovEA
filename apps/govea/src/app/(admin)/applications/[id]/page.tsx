@@ -104,6 +104,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 key={capability.id}
                 href={`/capabilities/${capability.id}`}
                 name={capability.name}
+                domain={capability.domain}
               />
             ))}
           </div>

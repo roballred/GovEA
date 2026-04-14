@@ -4,6 +4,7 @@ import { getCapability } from '@/actions/capabilities'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { LinkedItemCard } from '@/components/linked-item-card'
+import { DomainBadge } from '@/components/domain-badge'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -54,14 +55,11 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
           <p className="text-muted-foreground">{capability.description}</p>
         )}
 
-        <div className="flex flex-wrap gap-6 text-sm pt-1">
-          <div>
-            <span className="text-muted-foreground">Domain: </span>
-            {capability.domain
-              ? <span className="font-medium">{capability.domain}</span>
-              : <span className="text-muted-foreground">—</span>
-            }
-          </div>
+        <div className="flex flex-wrap gap-3 pt-1">
+          {capability.domain
+            ? <DomainBadge domain={capability.domain} />
+            : <span className="text-sm text-muted-foreground">No domain assigned</span>
+          }
         </div>
       </div>
 
