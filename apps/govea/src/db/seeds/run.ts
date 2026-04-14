@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, isNull } from 'drizzle-orm'
 import { GOV_TAXONOMY } from './gov-taxonomy'
 import {
   DEV_ORG, STATE_ORG,
@@ -182,42 +182,45 @@ async function seed() {
   }
   console.log(`  ✓ ${DEV_APPLICATIONS.length} applications`)
 
-  // Government taxonomy — 10 domains, 5 sub-terms each
-  for (const [domainIdx, domainEntry] of GOV_TAXONOMY.entries()) {
-    const existingDomain = await db.query.taxonomyTerms.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, domainEntry.domain)),
+  // Government taxonomy — Type: "Domain" with 10 government domain values
+  // Under our types/values model: "Domain" is the type, each domain name is a value within it.
+  const domainTypeSlug = 'domain'
+  let domainTypeId: string
+  const existingDomainType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, domainTypeSlug)),
+  })
+  if (existingDomainType) {
+    domainTypeId = existingDomainType.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Domain',
+      slug: domainTypeSlug,
+      description: 'Business and service domains used to classify capabilities and glossary terms.',
+      sortOrder: '0',
+    }).returning()
+    domainTypeId = inserted.id
+  }
+
+  let domainValueCount = 0
+  for (const [idx, domainEntry] of GOV_TAXONOMY.entries()) {
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, devOrgId), e(t.parentId, domainTypeId), e(t.name, domainEntry.domain)),
     })
-    let domainId: string
-    if (existingDomain) {
-      domainId = existingDomain.id
-    } else {
-      const [inserted] = await db.insert(taxonomyTerms).values({
+    if (!existing) {
+      await db.insert(taxonomyTerms).values({
         organizationId: devOrgId,
+        parentId: domainTypeId,
         name: domainEntry.domain,
         slug: toSlug(domainEntry.domain),
-        domain: domainEntry.domain,
-        sortOrder: String(domainIdx),
-      }).returning()
-      domainId = inserted.id
-    }
-
-    for (const [termIdx, termName] of domainEntry.terms.entries()) {
-      const existingTerm = await db.query.taxonomyTerms.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, termName)),
+        sortOrder: String(idx * 10),
       })
-      if (!existingTerm) {
-        await db.insert(taxonomyTerms).values({
-          organizationId: devOrgId,
-          parentId: domainId,
-          name: termName,
-          slug: toSlug(termName),
-          domain: domainEntry.domain,
-          sortOrder: String(termIdx),
-        })
-      }
+      domainValueCount++
     }
   }
-  console.log(`  ✓ ${GOV_TAXONOMY.length} taxonomy domains with sub-terms`)
+  console.log(`  ✓ "Domain" type with ${GOV_TAXONOMY.length} domain values (${domainValueCount} new)`)
 
   // Value Streams + stages + stage capability links + persona links
   const devValueStreamIds: Record<string, string> = {}

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DomainCombobox } from '@/components/domain-combobox'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -26,6 +27,7 @@ type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' |
 interface Props {
   capabilities: CapabilityRow[]
   personas: Pick<Persona, 'id' | 'name'>[]
+  domainTerms: { id: string; name: string }[]
   role: Role
   currentOrgId: string
 }
@@ -48,7 +50,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function CapabilityTable({ capabilities, personas, role, currentOrgId }: Props) {
+export function CapabilityTable({ capabilities, personas, domainTerms, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -261,7 +263,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
               <Label>Description</Label>
               <textarea name="description" rows={2} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
-            <FormField label="Domain (optional)" name="domain" />
+            <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue="" />
             <div className="space-y-1.5">
               <Label htmlFor="create-behaviors">Behaviors</Label>
               <textarea id="create-behaviors" name="behaviors" rows={4}
@@ -324,7 +326,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
               <Label>Description</Label>
               <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
-            <FormField label="Domain (optional)" name="domain" defaultValue={editTarget?.domain ?? ''} />
+            <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue={editTarget?.domain ?? ''} />
             <div className="space-y-1.5">
               <Label htmlFor="edit-behaviors">Behaviors</Label>
               <textarea id="edit-behaviors" name="behaviors" rows={4}
@@ -410,3 +412,4 @@ function FormField({ label, ...props }: { label: string } & React.InputHTMLAttri
     </div>
   )
 }
+

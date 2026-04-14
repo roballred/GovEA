@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { createGlossaryTerm, editGlossaryTerm, deleteGlossaryTerm } from '@/actions/glossary'
 import type { GlossaryTerm, GlossaryTermSource } from '@/db/schema'
+import { DomainCombobox } from '@/components/domain-combobox'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ type GlossaryRow = GlossaryTerm & {
 
 interface Props {
   terms: GlossaryRow[]
+  domainTerms: { id: string; name: string }[]
   role: Role
   currentOrgId: string
 }
@@ -45,7 +47,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function GlossaryTable({ terms, role, currentOrgId }: Props) {
+export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [search, setSearch] = useState('')
@@ -212,6 +214,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
             <DialogTitle>New Term</DialogTitle>
           </DialogHeader>
           <TermForm
+            domainTerms={domainTerms}
             isPending={isPending}
             onSubmit={handleCreate}
             onCancel={() => setCreateOpen(false)}
@@ -230,6 +233,7 @@ export function GlossaryTable({ terms, role, currentOrgId }: Props) {
           <TermForm
             key={editTarget?.id}
             term={editTarget ?? undefined}
+            domainTerms={domainTerms}
             isPending={isPending}
             onSubmit={handleEdit}
             onCancel={() => setEditTarget(null)}
@@ -264,6 +268,7 @@ type SourceRow = { name: string; url: string; definition: string }
 
 function TermForm({
   term,
+  domainTerms,
   isPending,
   onSubmit,
   onCancel,
@@ -271,6 +276,7 @@ function TermForm({
   pendingLabel,
 }: {
   term?: GlossaryRow & { sources?: GlossaryTermSource[] }
+  domainTerms: { id: string; name: string }[]
   isPending: boolean
   onSubmit: (fd: FormData) => void
   onCancel: () => void
@@ -348,7 +354,10 @@ function TermForm({
         />
       </div>
 
-      <FormField label="Domain" name="domain" defaultValue={term?.domain ?? ''} placeholder="e.g. Information Technology" />
+      <DomainCombobox
+        options={domainTerms.map(t => t.name)}
+        defaultValue={term?.domain ?? ''}
+      />
       <TextareaField label="Notes" name="notes" rows={2} defaultValue={term?.notes ?? ''} placeholder="Usage guidance, synonyms, or anti-patterns (optional)" />
       <StatusVisibilityFields defaultStatus={term?.status ?? 'draft'} defaultVisibility={term?.visibility ?? 'org'} />
 

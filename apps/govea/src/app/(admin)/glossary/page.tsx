@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getGlossaryTerms } from '@/actions/glossary'
+import { getTaxonomyDomains } from '@/actions/taxonomy'
 import { GlossaryTable } from './glossary-table'
 
 export default async function GlossaryPage() {
@@ -10,7 +11,10 @@ export default async function GlossaryPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const terms = await getGlossaryTerms(orgId)
+  const [terms, domainTerms] = await Promise.all([
+    getGlossaryTerms(orgId),
+    getTaxonomyDomains(orgId),
+  ])
 
   return (
     <div className="space-y-6">
@@ -20,7 +24,7 @@ export default async function GlossaryPage() {
           Shared vocabulary for terms and concepts used across the organization.
         </p>
       </div>
-      <GlossaryTable terms={terms} role={role} currentOrgId={orgId} />
+      <GlossaryTable terms={terms} domainTerms={domainTerms} role={role} currentOrgId={orgId} />
     </div>
   )
 }

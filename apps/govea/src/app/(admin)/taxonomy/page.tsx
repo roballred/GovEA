@@ -1,10 +1,26 @@
-export default function TaxonomyPage() {
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { getTaxonomyTermsWithChildren } from '@/actions/taxonomy'
+import { TaxonomyTable } from './taxonomy-table'
+
+export default async function TaxonomyPage() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const orgId = session.user.organizationId!
+  const role = session.user.role
+
+  const { types, values } = await getTaxonomyTermsWithChildren(orgId)
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Taxonomy</h1>
-        <p className="text-muted-foreground mt-1">Shared classification system for organizing capabilities and applications.</p>
+        <p className="text-muted-foreground mt-1">
+          Classification types and their values — used to organize capabilities and glossary entries.
+        </p>
       </div>
+      <TaxonomyTable types={types} values={values} role={role} />
     </div>
   )
 }
