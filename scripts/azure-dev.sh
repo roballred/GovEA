@@ -104,8 +104,8 @@ deploy_containerapp() {
       --registry-username "$ACR" \
       --registry-password "$acr_pass" \
       --command "/entrypoint.azure-dev.sh" \
-      --cpu 1.0 \
-      --memory 2Gi \
+      --cpu 2.0 \
+      --memory 4Gi \
       --env-vars \
         "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/govea" \
         "AUTH_SECRET=${secret}" \
