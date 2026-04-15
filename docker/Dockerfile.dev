@@ -28,11 +28,6 @@ COPY docker/entrypoint.dev.sh /entrypoint.dev.sh
 COPY docker/entrypoint.azure-dev.sh /entrypoint.azure-dev.sh
 RUN chmod +x /entrypoint.dev.sh /entrypoint.azure-dev.sh
 
-# Pre-build the Next.js app so the Azure container starts immediately
-# (migrations + seed + pnpm start) without a 3-4 min compile on every boot.
-# The DEV env var is set so the build behaves correctly for the dev environment.
-RUN DEV=true pnpm --filter govea build
-
 EXPOSE 3000
 
 ENTRYPOINT ["/entrypoint.dev.sh"]

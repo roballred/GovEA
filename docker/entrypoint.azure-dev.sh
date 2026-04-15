@@ -25,5 +25,5 @@ echo "==> Seeding database..."
 pnpm --filter govea db:seed
 
 echo ""
-echo "==> Starting server..."
-exec pnpm --filter govea start
+echo "==> Starting dev server..."
+exec pnpm --filter govea dev
