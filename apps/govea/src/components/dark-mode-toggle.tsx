@@ -1,29 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'govea-dark-mode'
 
-export function DarkModeToggle() {
-  const [dark, setDark] = useState(false)
-  const [mounted, setMounted] = useState(false)
+function getDarkSnapshot(): boolean {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  return stored === 'dark' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches)
+}
 
+function subscribe(cb: () => void): () => void {
+  window.addEventListener('storage', cb)
+  return () => window.removeEventListener('storage', cb)
+}
+
+export function DarkModeToggle() {
+  // useSyncExternalStore keeps dark state in sync with localStorage without
+  // calling setState inside useEffect (which triggers the lint rule).
+  // Server snapshot returns false so SSR output is stable.
+  const dark = useSyncExternalStore(subscribe, getDarkSnapshot, () => false)
+
+  // Apply the class to <html> whenever dark changes — pure DOM side effect
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    const isDark = stored === 'dark' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    document.documentElement.classList.toggle('dark', isDark)
-    setDark(isDark)
-    setMounted(true)
-  }, [])
+    document.documentElement.classList.toggle('dark', dark)
+  }, [dark])
 
   function toggle() {
     const next = !dark
-    setDark(next)
     localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light')
-    document.documentElement.classList.toggle('dark', next)
+    // Dispatch a storage event so useSyncExternalStore re-reads the snapshot
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }))
   }
-
-  if (!mounted) return <div className="h-8 w-8" />
 
   return (
     <button
