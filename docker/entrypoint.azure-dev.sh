@@ -25,9 +25,5 @@ echo "==> Seeding database..."
 pnpm --filter govea db:seed
 
 echo ""
-echo "==> Building app..."
-pnpm --filter govea build
-
-echo ""
 echo "==> Starting server..."
 exec pnpm --filter govea start
