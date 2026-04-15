@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { isSetupComplete, runSetup } from '@/actions/setup'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
