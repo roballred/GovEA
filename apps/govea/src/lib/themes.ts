@@ -89,8 +89,15 @@ export function getTheme(id: string): ThemeDefinition {
   return themes.find(t => t.id === id) ?? themes[0]
 }
 
+// Only the header/brand vars are injected as an inline style so they can be
+// set per-org without interfering with the dark mode CSS variable overrides in
+// globals.css. Content-area vars (--background, --card, etc.) are left to the
+// stylesheet so that the .dark selector can override them correctly.
+const BRAND_VARS = ['--header-bg', '--header-fg', '--header-border']
+
 export function themeToStyleString(theme: ThemeDefinition): string {
   const vars = Object.entries(theme.vars)
+    .filter(([k]) => BRAND_VARS.includes(k))
     .map(([k, v]) => `${k}: ${v}`)
     .join('; ')
   return `:root { ${vars} }`
