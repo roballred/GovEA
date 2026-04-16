@@ -22,11 +22,9 @@ pnpm --filter govea db:migrate
 
 echo ""
 echo "==> Seeding database..."
-# db:seed uses --env-file .env.local; in the container DATABASE_URL comes
-# from the Azure env, so write a minimal .env.local before seeding.
-mkdir -p /app/apps/govea
-echo "DATABASE_URL=$DATABASE_URL" > /app/apps/govea/.env.local
-pnpm --filter govea db:seed
+# db:seed:container reads DATABASE_URL directly from the environment
+# (no --env-file needed — Azure injects DATABASE_URL as an env var).
+pnpm --filter govea db:seed:container
 
 echo ""
 echo "==> Starting dev server..."
