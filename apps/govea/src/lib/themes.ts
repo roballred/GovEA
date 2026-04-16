@@ -4,6 +4,7 @@ export interface ThemeDefinition {
   id: ThemeId
   name: string
   description: string
+  darkMode: boolean
   previewColors: {
     header: string   // hex for preview swatch
     primary: string
@@ -17,6 +18,7 @@ export const themes: ThemeDefinition[] = [
     id: 'govea',
     name: 'GovEA',
     description: 'Clean, professional blue. WCAG AA compliant.',
+    darkMode: false,
     previewColors: {
       header: '#152c5c',
       primary: '#1a4fba',
@@ -52,6 +54,7 @@ export const themes: ThemeDefinition[] = [
     id: 'servicenow',
     name: 'ServiceNow',
     description: 'Dark header with purple accents. Familiar to ServiceNow users.',
+    darkMode: true,
     previewColors: {
       header: '#1c2433',
       primary: '#6b3fa0',
