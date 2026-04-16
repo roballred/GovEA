@@ -89,9 +89,26 @@ export function getTheme(id: string): ThemeDefinition {
   return themes.find(t => t.id === id) ?? themes[0]
 }
 
+// Header/brand vars apply in both light and dark mode (org branding is always visible).
+// Content-area vars (--background, --card, --primary, etc.) are scoped to
+// :root:not(.dark) so they apply in light mode only — the .dark {} block in
+// globals.css takes over when dark mode is active without being overridden by
+// this inline style tag.
+const BRAND_VARS = ['--header-bg', '--header-fg', '--header-border']
+
 export function themeToStyleString(theme: ThemeDefinition): string {
-  const vars = Object.entries(theme.vars)
+  const entries = Object.entries(theme.vars)
+
+  const brandVars = entries
+    .filter(([k]) => BRAND_VARS.includes(k))
     .map(([k, v]) => `${k}: ${v}`)
     .join('; ')
-  return `:root { ${vars} }`
+
+  const contentVars = entries
+    .filter(([k]) => !BRAND_VARS.includes(k))
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('; ')
+
+  // Brand vars always apply; content vars only apply when not in dark mode
+  return `:root { ${brandVars} } :root:not(.dark) { ${contentVars} }`
 }

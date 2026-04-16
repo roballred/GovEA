@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { DevToolbar } from '@/components/dev-toolbar'
+import { DarkModeToggle } from '@/components/dark-mode-toggle'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
@@ -259,6 +260,7 @@ export function AppShell({
             )}>
               {role}
             </span>
+            <DarkModeToggle />
             {signOutSlot}
           </div>
         </header>

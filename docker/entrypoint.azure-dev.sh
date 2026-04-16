@@ -22,7 +22,9 @@ pnpm --filter govea db:migrate
 
 echo ""
 echo "==> Seeding database..."
-pnpm --filter govea db:seed
+# db:seed:container reads DATABASE_URL directly from the environment
+# (no --env-file needed — Azure injects DATABASE_URL as an env var).
+pnpm --filter govea db:seed:container
 
 echo ""
 echo "==> Starting dev server..."

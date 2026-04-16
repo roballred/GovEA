@@ -11,6 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file .env.local src/db/seeds/run.ts",
+    "db:seed:container": "tsx src/db/seeds/run.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
