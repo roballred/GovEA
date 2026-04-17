@@ -1,9 +1,18 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getObjective } from '@/actions/objectives'
+import { getCapabilities } from '@/actions/capabilities'
+import { getValueStreams } from '@/actions/value-streams'
+import { getApplications } from '@/actions/applications'
+import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { LinkedItemCard } from '@/components/linked-item-card'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import {
+  linkObjectiveCapability, unlinkObjectiveCapability,
+  linkObjectiveValueStream, unlinkObjectiveValueStream,
+  linkObjectiveApplication, unlinkObjectiveApplication,
+} from '@/actions/links'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -28,8 +37,26 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const obj = await getObjective(id)
-  if (!obj) notFound()
+  const objective = await getObjective(id)
+  if (!objective) notFound()
+
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+
+  const [allCapabilities, allValueStreams, allApplications] = editor
+    ? await Promise.all([
+        getCapabilities(orgId),
+        getValueStreams(orgId),
+        getApplications(orgId),
+      ])
+    : [[], [], []]
+
+  const addCapability = linkObjectiveCapability.bind(null, id)
+  const removeCapability = unlinkObjectiveCapability.bind(null, id)
+  const addValueStream = linkObjectiveValueStream.bind(null, id)
+  const removeValueStream = unlinkObjectiveValueStream.bind(null, id)
+  const addApplication = linkObjectiveApplication.bind(null, id)
+  const removeApplication = unlinkObjectiveApplication.bind(null, id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -39,77 +66,86 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">{obj.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{objective.name}</h1>
           <div className="flex items-center gap-2 shrink-0">
-            <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[obj.status])}>
-              {obj.status.charAt(0).toUpperCase() + obj.status.slice(1)}
+            <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[objective.status])}>
+              {objective.status.charAt(0).toUpperCase() + objective.status.slice(1)}
             </span>
-            <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', VISIBILITY_STYLES[obj.visibility])}>
-              {VISIBILITY_LABELS[obj.visibility]}
+            <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', VISIBILITY_STYLES[objective.visibility])}>
+              {VISIBILITY_LABELS[objective.visibility]}
             </span>
           </div>
         </div>
 
-        {obj.description && (
-          <p className="text-muted-foreground">{obj.description}</p>
+        {objective.description && (
+          <p className="text-muted-foreground">{objective.description}</p>
         )}
 
-        <div className="grid grid-cols-2 gap-4 pt-1 text-sm">
-          <div className="space-y-0.5">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Success Metric</p>
-            <p>{obj.successMetric || <span className="text-muted-foreground">—</span>}</p>
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Time Horizon</p>
-            <p>{obj.timeHorizon || <span className="text-muted-foreground">—</span>}</p>
-          </div>
+        <div className="flex flex-wrap gap-6 text-sm pt-1">
+          {objective.successMetric && (
+            <div>
+              <span className="text-muted-foreground">Success metric: </span>
+              <span className="font-medium">{objective.successMetric}</span>
+            </div>
+          )}
+          {objective.timeHorizon && (
+            <div>
+              <span className="text-muted-foreground">Time horizon: </span>
+              <span className="font-medium">{objective.timeHorizon}</span>
+            </div>
+          )}
         </div>
       </div>
 
       <hr />
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Value Streams</h2>
-        {obj.objectiveValueStreams.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No value streams linked.</p>
-        ) : (
-          <div className="space-y-2">
-            {obj.objectiveValueStreams.map(({ valueStream }) => (
-              <LinkedItemCard
-                key={valueStream.id}
-                href={`/value-streams/${valueStream.id}`}
-                name={valueStream.name}
-                badge={
-                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[valueStream.status])}>
-                    {valueStream.status.charAt(0).toUpperCase() + valueStream.status.slice(1)}
-                  </span>
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      <RelationshipPanel
+        title="Capabilities"
+        items={objective.objectiveCapabilities.map(({ capability }) => ({
+          id: capability.id, name: capability.name,
+          href: `/capabilities/${capability.id}`, meta: capability.domain,
+        }))}
+        canEdit={editor}
+        available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+        addAction={addCapability}
+        removeAction={removeCapability}
+      />
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Capabilities</h2>
-        {obj.objectiveCapabilities.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No capabilities linked.</p>
-        ) : (
-          <div className="space-y-2">
-            {obj.objectiveCapabilities.map(({ capability }) => (
-              <LinkedItemCard
-                key={capability.id}
-                href={`/capabilities/${capability.id}`}
-                name={capability.name}
-                meta={capability.domain}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      <RelationshipPanel
+        title="Value Streams"
+        items={objective.objectiveValueStreams.map(({ valueStream }) => ({
+          id: valueStream.id, name: valueStream.name,
+          href: `/value-streams/${valueStream.id}`,
+        }))}
+        canEdit={editor}
+        available={allValueStreams.map(vs => ({ id: vs.id, name: vs.name }))}
+        addAction={addValueStream}
+        removeAction={removeValueStream}
+      />
+
+      <RelationshipPanel
+        title="Applications"
+        items={objective.objectiveApplications.map(({ application }) => ({
+          id: application.id, name: application.name,
+          href: `/applications/${application.id}`, meta: application.vendor,
+        }))}
+        canEdit={editor}
+        available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+        addAction={addApplication}
+        removeAction={removeApplication}
+      />
+
+      <RelationshipPanel
+        title="Initiatives"
+        items={objective.initiativeObjectives.map(({ initiative }) => ({
+          id: initiative.id, name: initiative.name,
+          href: `/initiatives/${initiative.id}`, meta: initiative.status,
+        }))}
+        canEdit={false}
+      />
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
-        Created {new Date(obj.createdAt).toLocaleDateString()} · Updated {new Date(obj.updatedAt).toLocaleDateString()}
+        Created {new Date(objective.createdAt).toLocaleDateString()} · Updated {new Date(objective.updatedAt).toLocaleDateString()}
       </div>
     </div>
   )

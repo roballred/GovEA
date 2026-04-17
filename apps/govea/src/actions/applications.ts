@@ -29,6 +29,9 @@ export async function getApplication(id: string) {
     with: {
       organization: true,
       applicationCapabilities: { with: { capability: true } },
+      initiativeApplications: { with: { initiative: true } },
+      objectiveApplications: { with: { objective: true } },
+      adrApplications: { with: { adr: true } },
     },
   })
 }

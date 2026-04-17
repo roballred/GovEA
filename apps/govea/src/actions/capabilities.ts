@@ -29,6 +29,10 @@ export async function getCapability(id: string) {
     with: {
       organization: true,
       capabilityPersonas: { with: { persona: true } },
+      applicationCapabilities: { with: { application: true } },
+      objectiveCapabilities: { with: { objective: true } },
+      initiativeCapabilities: { with: { initiative: true } },
+      adrCapabilities: { with: { adr: true } },
       principleCapabilities: { with: { principle: true } },
     },
   })

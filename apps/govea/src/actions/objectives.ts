@@ -55,6 +55,8 @@ export async function getObjective(id: string) {
     with: {
       objectiveCapabilities: { with: { capability: true } },
       objectiveValueStreams: { with: { valueStream: true } },
+      objectiveApplications: { with: { application: true } },
+      initiativeObjectives: { with: { initiative: true } },
     },
   })
 }

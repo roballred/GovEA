@@ -69,6 +69,8 @@ export async function getValueStream(id: string) {
           },
         },
       },
+      valueStreamPersonas: { with: { persona: true } },
+      objectiveValueStreams: { with: { objective: true } },
     },
   })
 }

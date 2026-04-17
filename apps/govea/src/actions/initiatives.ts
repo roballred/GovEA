@@ -56,6 +56,7 @@ export async function getInitiative(id: string) {
     with: {
       initiativeCapabilities: { with: { capability: true } },
       initiativeObjectives: { with: { objective: true } },
+      initiativeApplications: { with: { application: true } },
     },
   })
 }

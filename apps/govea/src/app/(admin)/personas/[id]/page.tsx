@@ -1,8 +1,17 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getPersona } from '@/actions/personas'
+import { getPersona, getPersonaTypes, getTags } from '@/actions/personas'
+import { getCapabilities } from '@/actions/capabilities'
+import { getValueStreams } from '@/actions/value-streams'
+import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import { PersonaEditButton } from '@/components/persona-edit-button'
+import {
+  linkPersonaCapability, unlinkPersonaCapability,
+  linkPersonaValueStream, unlinkPersonaValueStream,
+} from '@/actions/links'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -29,6 +38,23 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
 
   const persona = await getPersona(id)
   if (!persona) notFound()
+
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+
+  const [allCapabilities, allValueStreams, personaTypes, allTags] = editor
+    ? await Promise.all([
+        getCapabilities(orgId),
+        getValueStreams(orgId),
+        getPersonaTypes(orgId),
+        getTags(orgId),
+      ])
+    : [[], [], [], []]
+
+  const addCapability = linkPersonaCapability.bind(null, id)
+  const removeCapability = unlinkPersonaCapability.bind(null, id)
+  const addValueStream = linkPersonaValueStream.bind(null, id)
+  const removeValueStream = unlinkPersonaValueStream.bind(null, id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -64,6 +90,22 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
+      {editor && (
+        <PersonaEditButton
+          personaId={id}
+          initial={{
+            name: persona.name,
+            description: persona.description,
+            type: persona.type,
+            status: persona.status,
+            visibility: persona.visibility,
+            tagIds: persona.personaTags.map(pt => pt.tag.id),
+          }}
+          personaTypes={personaTypes}
+          tags={allTags}
+        />
+      )}
+
       <hr />
 
       <div className="space-y-3">
@@ -82,6 +124,34 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
             ))}
           </div>
         )}
+      </div>
+
+      <RelationshipPanel
+        title="Capabilities"
+        items={persona.capabilityPersonas.map(({ capability }) => ({
+          id: capability.id, name: capability.name,
+          href: `/capabilities/${capability.id}`, meta: capability.domain,
+        }))}
+        canEdit={editor}
+        available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+        addAction={addCapability}
+        removeAction={removeCapability}
+      />
+
+      <RelationshipPanel
+        title="Value Streams"
+        items={persona.valueStreamPersonas.map(({ valueStream }) => ({
+          id: valueStream.id, name: valueStream.name,
+          href: `/value-streams/${valueStream.id}`,
+        }))}
+        canEdit={editor}
+        available={allValueStreams.map(vs => ({ id: vs.id, name: vs.name }))}
+        addAction={addValueStream}
+        removeAction={removeValueStream}
+      />
+
+      <div className="text-xs text-muted-foreground pt-4 border-t">
+        Created {new Date(persona.createdAt).toLocaleDateString()} · Updated {new Date(persona.updatedAt).toLocaleDateString()}
       </div>
     </div>
   )
