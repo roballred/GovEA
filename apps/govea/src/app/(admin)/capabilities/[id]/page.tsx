@@ -1,10 +1,23 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getCapability } from '@/actions/capabilities'
+import { getApplications } from '@/actions/applications'
+import { getObjectives } from '@/actions/objectives'
+import { getInitiatives } from '@/actions/initiatives'
+import { getADRs } from '@/actions/adrs'
+import { getPersonas } from '@/actions/personas'
+import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { LinkedItemCard } from '@/components/linked-item-card'
 import { DomainBadge } from '@/components/domain-badge'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import {
+  linkCapabilityPersona, unlinkCapabilityPersona,
+  linkCapabilityApplication, unlinkCapabilityApplication,
+  linkCapabilityObjective, unlinkCapabilityObjective,
+  linkCapabilityInitiative, unlinkCapabilityInitiative,
+  linkCapabilityAdr, unlinkCapabilityAdr,
+} from '@/actions/links'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -31,6 +44,30 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
   const capability = await getCapability(id)
   if (!capability) notFound()
+
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+
+  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs] = editor
+    ? await Promise.all([
+        getPersonas(orgId),
+        getApplications(orgId),
+        getObjectives(orgId),
+        getInitiatives(orgId),
+        getADRs(orgId),
+      ])
+    : [[], [], [], [], []]
+
+  const addPersona = linkCapabilityPersona.bind(null, id)
+  const removePersona = unlinkCapabilityPersona.bind(null, id)
+  const addApplication = linkCapabilityApplication.bind(null, id)
+  const removeApplication = unlinkCapabilityApplication.bind(null, id)
+  const addObjective = linkCapabilityObjective.bind(null, id)
+  const removeObjective = unlinkCapabilityObjective.bind(null, id)
+  const addInitiative = linkCapabilityInitiative.bind(null, id)
+  const removeInitiative = unlinkCapabilityInitiative.bind(null, id)
+  const addAdr = linkCapabilityAdr.bind(null, id)
+  const removeAdr = unlinkCapabilityAdr.bind(null, id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -93,37 +130,82 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         </div>
       )}
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Personas</h2>
-        {capability.capabilityPersonas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No personas linked to this capability.</p>
-        ) : (
-          <div className="space-y-2">
-            {capability.capabilityPersonas.map(({ persona }) => (
-              <LinkedItemCard
-                key={persona.id}
-                href={`/personas/${persona.id}`}
-                name={persona.name}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      <hr />
 
-      {capability.principleCapabilities && capability.principleCapabilities.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Principles</h2>
-          <div className="space-y-2">
-            {capability.principleCapabilities.map(({ principle }) => (
-              <LinkedItemCard
-                key={principle.id}
-                href={`/principles/${principle.id}`}
-                name={principle.name}
-              />
-            ))}
-          </div>
-        </div>
+      <RelationshipPanel
+        title="Personas"
+        items={capability.capabilityPersonas.map(({ persona }) => ({
+          id: persona.id, name: persona.name,
+          href: `/personas/${persona.id}`, meta: persona.type,
+        }))}
+        canEdit={editor}
+        available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+        addAction={addPersona}
+        removeAction={removePersona}
+      />
+
+      <RelationshipPanel
+        title="Applications"
+        items={capability.applicationCapabilities.map(({ application }) => ({
+          id: application.id, name: application.name,
+          href: `/applications/${application.id}`, meta: application.vendor,
+        }))}
+        canEdit={editor}
+        available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+        addAction={addApplication}
+        removeAction={removeApplication}
+      />
+
+      <RelationshipPanel
+        title="Strategic Objectives"
+        items={capability.objectiveCapabilities.map(({ objective }) => ({
+          id: objective.id, name: objective.name,
+          href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
+        }))}
+        canEdit={editor}
+        available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+        addAction={addObjective}
+        removeAction={removeObjective}
+      />
+
+      <RelationshipPanel
+        title="Initiatives"
+        items={capability.initiativeCapabilities.map(({ initiative }) => ({
+          id: initiative.id, name: initiative.name,
+          href: `/initiatives/${initiative.id}`, meta: initiative.status,
+        }))}
+        canEdit={editor}
+        available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+        addAction={addInitiative}
+        removeAction={removeInitiative}
+      />
+
+      <RelationshipPanel
+        title="Architecture Decision Records"
+        items={capability.adrCapabilities.map(({ adr }) => ({
+          id: adr.id, name: adr.title,
+          href: `/adrs/${adr.id}`,
+          meta: `ADR-${String(adr.number).padStart(3, '0')}`,
+        }))}
+        canEdit={editor}
+        available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+        addAction={addAdr}
+        removeAction={removeAdr}
+      />
+
+      {capability.principleCapabilities.length > 0 && (
+        <RelationshipPanel
+          title="Principles"
+          items={capability.principleCapabilities.map(({ principle }) => ({
+            id: principle.id, name: principle.name, href: `/principles/${principle.id}`,
+          }))}
+          canEdit={false}
+        />
       )}
+
+      <div className="text-xs text-muted-foreground pt-4 border-t">
+        Created {new Date(capability.createdAt).toLocaleDateString()} · Updated {new Date(capability.updatedAt).toLocaleDateString()}
+      </div>
     </div>
   )
 }

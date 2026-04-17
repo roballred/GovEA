@@ -139,6 +139,8 @@ export async function getPersona(id: string) {
     with: {
       organization: true,
       personaTags: { with: { tag: true } },
+      capabilityPersonas: { with: { capability: true } },
+      valueStreamPersonas: { with: { valueStream: true } },
     },
   })
 }
