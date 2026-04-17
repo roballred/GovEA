@@ -12,12 +12,12 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 |---|---|---|
 | 1 | [Identity & Access Management](#1-identity--access-management) | Implemented |
 | 2 | [Content Management](#2-content-management) | Partially implemented |
-| 3 | [Portfolio Management](#3-portfolio-management) | Implemented |
+| 3 | [Portfolio Management](#3-portfolio-management) | Partially implemented |
 | 4 | [Planning & Roadmap](#4-planning--roadmap) | Implemented |
 | 5 | [Frontend Display](#5-frontend-display) | Partially implemented |
 | 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
-| 7 | [Multi-Organization Federation](#7-multi-organization-federation) | Scaffolded |
-| 8 | [Repository & Modelling](#8-repository--modelling) | Partially implemented |
+| 7 | [Multi-Organization Federation](#7-multi-organization-federation) | Prototype |
+| 8 | [Repository & Modelling](#8-repository--modelling) | Scaffolded |
 
 ---
 
@@ -54,10 +54,10 @@ Foundational content authoring and lifecycle capabilities shared across all EA c
 | Capability | Status | Description |
 |---|---|---|
 | Content Authoring | Implemented | Create, edit, and save content items |
-| Content Workflow | Implemented | Draft → Published → Archived lifecycle; Viewer-gated on Published |
+| Content Workflow | Partially implemented | Draft / published semantics exist, but workflow behavior is not yet fully consistent across all content areas |
 | Taxonomy Management | Implemented | Hierarchical org-scoped taxonomy terms for categorizing all content |
 | Content Relationships | Implemented | Link content items; enforce GovEA traceability rules at publish time |
-| Content Search & Filtering | Implemented | Embedded full-text search; no external search service required |
+| Content Search & Filtering | Partially implemented | Strong per-entity filtering and taxonomy-driven browse paths; true repository-wide search remains limited |
 | Content Types | Partially implemented | Configurable schemas for content; v1 types are fixed in the data model |
 | Content Versioning | Not implemented | Change history, diffs, and version restore |
 
@@ -74,7 +74,7 @@ The structured inventory of the organization's architecture objects.
 | Application Portfolio | Implemented | Manage applications with lifecycle status, capability links, and metadata |
 | Capability Map | Implemented | Define business capabilities organized by domain; linked to applications and personas |
 | Personas | Implemented | Define the people GovEA serves; linked to capabilities and value streams |
-| Architecture Decision Records (ADRs) | Implemented | Record, track, supersede, and link architecture decisions to capabilities, applications, initiatives, and objectives |
+| Architecture Decision Records (ADRs) | Partially implemented | ADR schema and list experience exist; full authoring and lifecycle tooling is not yet complete |
 | Value Streams | Implemented | Define value streams with ordered stages; link to capabilities and personas |
 
 **Data model relationships:**
@@ -96,9 +96,11 @@ Strategic direction, change initiatives, and timeline visualization.
 |---|---|---|
 | Strategic Objectives | Implemented | Define and track business goals; link to capabilities and value streams |
 | Initiatives | Implemented | Track change programmes; link to capabilities and objectives with impact labels (build / improve / retire / migrate) |
-| Roadmap View | Implemented | Visualize initiatives and objectives on a governed timeline |
+| Roadmap View | Implemented | Usable early-v1 roadmap surface for initiatives and objectives, with richer timeline semantics deferred |
 
 **Design principle:** Planning capabilities are a lens on existing architecture content. Strategic objectives trace to capabilities. Initiatives trace to objectives and capabilities. Nothing here is meaningful unless the underlying capability and persona content is maintained.
+
+This area is strong enough for demos and early v1 use, but the planning model should still be treated as evolving rather than fully settled.
 
 ---
 
@@ -115,7 +117,7 @@ How content is presented to authenticated users and, optionally, the public.
 | Content Display | Implemented | Detail pages with status badges, metadata, and linked records |
 | Public / Authenticated Views | Not implemented | Opt-in public access to published content without login |
 | Responsive Layout | Partially implemented | Desktop-first; mobile not a v1 priority |
-| Theming | Not implemented | Organization-branded themes |
+| Theming | Implemented | Built-in organization themes plus per-user dark mode for the authenticated app shell |
 
 ---
 
@@ -125,7 +127,7 @@ Organization-level settings and administrative tools.
 
 | Capability | Status | Description |
 |---|---|---|
-| Organization Settings | Implemented | Org name, branding, and configuration |
+| Organization Settings | Partially implemented | Core organization branding and appearance settings exist; broader configuration remains future work |
 | Persona Type Management | Implemented | Create and manage persona type categories |
 | Persona Tags | Implemented | Tag-based classification for personas |
 | Admin Dashboard | Partially implemented | Summary stats and navigation for admins |
@@ -142,9 +144,9 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 
 | Capability | Status | Description |
 |---|---|---|
-| Org Connections | Scaffolded | Establish and manage connections between organizations |
-| Content Visibility | Scaffolded | Control which content is visible at org / connections / instance level |
-| Cross-Org Linking | Scaffolded | Link local capabilities and personas to enterprise counterparts |
+| Org Connections | Prototype | Establish and manage connections between organizations |
+| Content Visibility | Prototype | Control which content is visible at org / connections / instance level |
+| Cross-Org Linking | Prototype | Link local capabilities and personas to enterprise counterparts |
 | Cross-Org Link Approval | Scaffolded | Review and approve or reject incoming cross-org link requests |
 
 **Visibility levels:**
@@ -157,6 +159,8 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 
 **Design principle:** Single-org installs work identically without federation UI or complexity. Federation is opt-in from the agency side — no org can be forced into a connection. Content ownership never transfers across org boundaries.
 
+Current reality: federation is no longer just schema groundwork. Connection-aware visibility, cross-org linking, and write-protection guardrails exist, but approval flows and deeper hardening are still in progress.
+
 ---
 
 ## 8. Repository & Modelling
@@ -166,9 +170,11 @@ Reliability, navigability, and self-auditing of the architecture store.
 | Capability | Status | Description |
 |---|---|---|
 | Audit Trail | Implemented | Immutable log of all create/update/delete events with before/after JSON |
-| Repository Completeness | Partially implemented | Signals showing where the EA object store has gaps |
+| Repository Completeness | Partially implemented | Early dashboard signals showing where the EA object store has gaps |
 | End-to-End Traceability | Not implemented | Cross-layer impact analysis from strategic goals through capabilities to applications |
 | Architecture Debt Tracking | Not implemented | Surface and track decisions and conditions that constrain future options |
+
+This group is strategically important, but today it is still mostly documented direction plus a small amount of shipped dashboarding rather than a mature product surface.
 
 **Out of scope for v1:**
 - Multi-framework modelling (ArchiMate, BPMN, UML) — GovEA uses enforced relationship chains and plain-language descriptions, not formal notation

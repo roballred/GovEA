@@ -86,17 +86,24 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 
 ## Current Status
 
-**Implemented:**
-- Full CRUD for the core EA object model: applications, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
+**Implemented / usable today:**
+- Strong core CRUD for applications, capabilities, personas, value streams, strategic objectives, initiatives, principles, and glossary entries
 - Mission-first traceability: Personas → Capabilities → Applications enforced at the application layer
-- Roadmap view — initiatives and objectives visualized on a timeline
+- Early-v1 planning surfaces: strategic objectives, initiatives, and a usable roadmap view
 - Audit trail — immutable before/after log of all changes
-- Taxonomy — hierarchical org-scoped classification for all content
+- Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, and domain-aware filtering
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
-- Multi-org federation scaffolding — connection requests, visibility levels, cross-org linking
+- Live admin dashboard with coverage, recent activity, and domain summaries
+- Multi-org federation prototype — connections, visibility controls, cross-org linking, and write-protection enforcement
 - Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes × roles (Playwright)
+
+**Partially implemented / still maturing:**
+- ADRs — schema and listing exist, but the full end-user authoring experience is not complete
+- Planning semantics and timeline presentation — useful for demos and early v1, but not fully settled
+- Admin configuration beyond core settings
+- Repository completeness, end-to-end traceability, and architecture debt tooling
 
 **Active work:**
 - Expanding automated test coverage
