@@ -11,11 +11,12 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/govea/node_modules ./apps/govea/node_modules
 COPY . .
 # Build @govea/core first (Next.js depends on it), then build govea directly
 # bypassing turbo to avoid workspace PATH resolution issues in Docker
 RUN cd packages/core && node ../../node_modules/typescript/bin/tsc
-RUN cd apps/govea && node ../../node_modules/next/dist/bin/next build
+RUN cd apps/govea && node node_modules/next/dist/bin/next build
 
 FROM base AS runner
 WORKDIR /app
