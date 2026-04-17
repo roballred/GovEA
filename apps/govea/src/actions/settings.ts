@@ -7,7 +7,9 @@ import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { themes } from '@/lib/themes'
+import { MODULE_DEFS, type ModuleKey } from '@/lib/modules'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 export async function updateOrgTheme(themeId: string) {
   const session = await auth()
@@ -37,4 +39,44 @@ export async function updateOrgTheme(themeId: string) {
     before: { theme: before?.theme },
     after: { theme: themeId },
   })
+
+  revalidatePath('/', 'layout')
+}
+
+/**
+ * Toggles a single module on or off for the current org.
+ * Absent key = on, so we only store explicit `false` values.
+ */
+export async function setModuleEnabled(key: ModuleKey, enabled: boolean) {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
+
+  // Validate key against known modules
+  if (!MODULE_DEFS.find(m => m.key === key)) throw new Error('Unknown module')
+
+  const orgId = session.user.organizationId!
+
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+  })
+
+  const before = org?.enabledModules ?? {}
+  const after = { ...before, [key]: enabled }
+
+  await db.update(organizations)
+    .set({ enabledModules: after, updatedAt: new Date() })
+    .where(eq(organizations.id, orgId))
+
+  await writeAuditLog({
+    action: 'settings.module_toggled',
+    entityType: 'organization',
+    entityId: orgId,
+    userId: session.user.id,
+    organizationId: orgId,
+    before: { [key]: before[key] ?? true },
+    after: { [key]: enabled },
+  })
+
+  revalidatePath('/', 'layout')
 }

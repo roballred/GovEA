@@ -21,8 +21,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const role = session.user.role
 
-  // Load org theme
+  // Load org settings (theme + enabled modules)
   let themeStyle = ''
+  let enabledModules: Record<string, boolean> = {}
   if (session.user.organizationId) {
     const org = await db.query.organizations.findFirst({
       where: eq(organizations.id, session.user.organizationId),
@@ -30,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     if (org) {
       const theme = getTheme(org.theme)
       themeStyle = themeToStyleString(theme)
+      enabledModules = org.enabledModules ?? {}
     }
   }
 
@@ -57,6 +59,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       roleBadgeClass={ROLE_BADGE_CLASS[role]}
       themeStyle={themeStyle}
       isDev={process.env.NODE_ENV === 'development'}
+      enabledModules={enabledModules}
       signOutSlot={signOutSlot}
     >
       {children}
