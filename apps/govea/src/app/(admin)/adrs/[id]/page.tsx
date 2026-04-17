@@ -15,6 +15,8 @@ import {
   linkAdrInitiative, unlinkAdrInitiative,
   linkAdrObjective, unlinkAdrObjective,
 } from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -47,7 +49,7 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const adr = await getADR(id)
+  const [adr, enabledModules] = await Promise.all([getADR(id), getEnabledModules()])
   if (!adr) notFound()
 
   const editor = canEdit(session.user)
@@ -129,55 +131,63 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
 
       <hr />
 
-      <RelationshipPanel
-        title="Capabilities"
-        items={adr.adrCapabilities.map(({ capability }) => ({
-          id: capability.id, name: capability.name,
-          href: `/capabilities/${capability.id}`, meta: capability.domain,
-        }))}
-        canEdit={editor}
-        available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
-        addAction={addCapability}
-        removeAction={removeCapability}
-      />
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={adr.adrCapabilities.map(({ capability }) => ({
+            id: capability.id, name: capability.name,
+            href: `/capabilities/${capability.id}`, meta: capability.domain,
+          }))}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Applications"
-        items={adr.adrApplications.map(({ application }) => ({
-          id: application.id, name: application.name,
-          href: `/applications/${application.id}`,
-        }))}
-        canEdit={editor}
-        available={allApplications.map(a => ({ id: a.id, name: a.name }))}
-        addAction={addApplication}
-        removeAction={removeApplication}
-      />
+      {isModuleEnabled(enabledModules, 'applications') && (
+        <RelationshipPanel
+          title="Applications"
+          items={adr.adrApplications.map(({ application }) => ({
+            id: application.id, name: application.name,
+            href: `/applications/${application.id}`,
+          }))}
+          canEdit={editor}
+          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          addAction={addApplication}
+          removeAction={removeApplication}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Initiatives"
-        items={adr.adrInitiatives.map(({ initiative }) => ({
-          id: initiative.id, name: initiative.name,
-          href: `/initiatives/${initiative.id}`, meta: initiative.status,
-        }))}
-        canEdit={editor}
-        available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
-        addAction={addInitiative}
-        removeAction={removeInitiative}
-      />
+      {isModuleEnabled(enabledModules, 'initiatives') && (
+        <RelationshipPanel
+          title="Initiatives"
+          items={adr.adrInitiatives.map(({ initiative }) => ({
+            id: initiative.id, name: initiative.name,
+            href: `/initiatives/${initiative.id}`, meta: initiative.status,
+          }))}
+          canEdit={editor}
+          available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+          addAction={addInitiative}
+          removeAction={removeInitiative}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Strategic Objectives"
-        items={adr.adrObjectives.map(({ objective }) => ({
-          id: objective.id, name: objective.name,
-          href: `/objectives/${objective.id}`,
-        }))}
-        canEdit={editor}
-        available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
-        addAction={addObjective}
-        removeAction={removeObjective}
-      />
+      {isModuleEnabled(enabledModules, 'objectives') && (
+        <RelationshipPanel
+          title="Strategic Objectives"
+          items={adr.adrObjectives.map(({ objective }) => ({
+            id: objective.id, name: objective.name,
+            href: `/objectives/${objective.id}`,
+          }))}
+          canEdit={editor}
+          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          addAction={addObjective}
+          removeAction={removeObjective}
+        />
+      )}
 
-      {adr.principleAdrs && adr.principleAdrs.length > 0 && (
+      {isModuleEnabled(enabledModules, 'principles') && adr.principleAdrs && adr.principleAdrs.length > 0 && (
         <RelationshipPanel
           title="Principles"
           items={adr.principleAdrs.map(({ principle }) => ({

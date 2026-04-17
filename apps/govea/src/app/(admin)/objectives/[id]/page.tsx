@@ -13,6 +13,8 @@ import {
   linkObjectiveValueStream, unlinkObjectiveValueStream,
   linkObjectiveApplication, unlinkObjectiveApplication,
 } from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -37,7 +39,7 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const objective = await getObjective(id)
+  const [objective, enabledModules] = await Promise.all([getObjective(id), getEnabledModules()])
   if (!objective) notFound()
 
   const editor = canEdit(session.user)
@@ -99,50 +101,58 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
 
       <hr />
 
-      <RelationshipPanel
-        title="Capabilities"
-        items={objective.objectiveCapabilities.map(({ capability }) => ({
-          id: capability.id, name: capability.name,
-          href: `/capabilities/${capability.id}`, meta: capability.domain,
-        }))}
-        canEdit={editor}
-        available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
-        addAction={addCapability}
-        removeAction={removeCapability}
-      />
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={objective.objectiveCapabilities.map(({ capability }) => ({
+            id: capability.id, name: capability.name,
+            href: `/capabilities/${capability.id}`, meta: capability.domain,
+          }))}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Value Streams"
-        items={objective.objectiveValueStreams.map(({ valueStream }) => ({
-          id: valueStream.id, name: valueStream.name,
-          href: `/value-streams/${valueStream.id}`,
-        }))}
-        canEdit={editor}
-        available={allValueStreams.map(vs => ({ id: vs.id, name: vs.name }))}
-        addAction={addValueStream}
-        removeAction={removeValueStream}
-      />
+      {isModuleEnabled(enabledModules, 'value-streams') && (
+        <RelationshipPanel
+          title="Value Streams"
+          items={objective.objectiveValueStreams.map(({ valueStream }) => ({
+            id: valueStream.id, name: valueStream.name,
+            href: `/value-streams/${valueStream.id}`,
+          }))}
+          canEdit={editor}
+          available={allValueStreams.map(vs => ({ id: vs.id, name: vs.name }))}
+          addAction={addValueStream}
+          removeAction={removeValueStream}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Applications"
-        items={objective.objectiveApplications.map(({ application }) => ({
-          id: application.id, name: application.name,
-          href: `/applications/${application.id}`, meta: application.vendor,
-        }))}
-        canEdit={editor}
-        available={allApplications.map(a => ({ id: a.id, name: a.name }))}
-        addAction={addApplication}
-        removeAction={removeApplication}
-      />
+      {isModuleEnabled(enabledModules, 'applications') && (
+        <RelationshipPanel
+          title="Applications"
+          items={objective.objectiveApplications.map(({ application }) => ({
+            id: application.id, name: application.name,
+            href: `/applications/${application.id}`, meta: application.vendor,
+          }))}
+          canEdit={editor}
+          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          addAction={addApplication}
+          removeAction={removeApplication}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Initiatives"
-        items={objective.initiativeObjectives.map(({ initiative }) => ({
-          id: initiative.id, name: initiative.name,
-          href: `/initiatives/${initiative.id}`, meta: initiative.status,
-        }))}
-        canEdit={false}
-      />
+      {isModuleEnabled(enabledModules, 'initiatives') && (
+        <RelationshipPanel
+          title="Initiatives"
+          items={objective.initiativeObjectives.map(({ initiative }) => ({
+            id: initiative.id, name: initiative.name,
+            href: `/initiatives/${initiative.id}`, meta: initiative.status,
+          }))}
+          canEdit={false}
+        />
+      )}
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
         Created {new Date(objective.createdAt).toLocaleDateString()} · Updated {new Date(objective.updatedAt).toLocaleDateString()}

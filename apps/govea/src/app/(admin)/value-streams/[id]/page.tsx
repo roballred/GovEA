@@ -11,6 +11,8 @@ import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkValueStreamPersona, unlinkValueStreamPersona,
 } from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -38,10 +40,11 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
 
-  const [vs, capabilityList, allPersonas] = await Promise.all([
+  const [vs, capabilityList, allPersonas, enabledModules] = await Promise.all([
     getValueStream(id),
     getCapabilities(orgId),
     editor ? getPersonas(orgId) : Promise.resolve([]),
+    getEnabledModules(),
   ])
 
   if (!vs) notFound()
@@ -118,7 +121,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
                 {stage.description && (
                   <p className="text-sm text-muted-foreground pl-9">{stage.description}</p>
                 )}
-                {stage.stageCapabilities.length > 0 && (
+                {isModuleEnabled(enabledModules, 'capabilities') && stage.stageCapabilities.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pl-9">
                     {stage.stageCapabilities.map(({ capability }) => (
                       <Link
@@ -146,26 +149,30 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
         )}
       </div>
 
-      <RelationshipPanel
-        title="Personas"
-        items={vs.valueStreamPersonas.map(({ persona }) => ({
-          id: persona.id, name: persona.name,
-          href: `/personas/${persona.id}`,
-        }))}
-        canEdit={editor}
-        available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
-        addAction={addPersona}
-        removeAction={removePersona}
-      />
+      {isModuleEnabled(enabledModules, 'personas') && (
+        <RelationshipPanel
+          title="Personas"
+          items={vs.valueStreamPersonas.map(({ persona }) => ({
+            id: persona.id, name: persona.name,
+            href: `/personas/${persona.id}`,
+          }))}
+          canEdit={editor}
+          available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+          addAction={addPersona}
+          removeAction={removePersona}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Strategic Objectives"
-        items={vs.objectiveValueStreams.map(({ objective }) => ({
-          id: objective.id, name: objective.name,
-          href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
-        }))}
-        canEdit={false}
-      />
+      {isModuleEnabled(enabledModules, 'objectives') && (
+        <RelationshipPanel
+          title="Strategic Objectives"
+          items={vs.objectiveValueStreams.map(({ objective }) => ({
+            id: objective.id, name: objective.name,
+            href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
+          }))}
+          canEdit={false}
+        />
+      )}
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
         Created {new Date(vs.createdAt).toLocaleDateString()} · Updated {new Date(vs.updatedAt).toLocaleDateString()}

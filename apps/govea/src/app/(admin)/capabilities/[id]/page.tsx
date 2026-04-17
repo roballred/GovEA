@@ -18,6 +18,8 @@ import {
   linkCapabilityInitiative, unlinkCapabilityInitiative,
   linkCapabilityAdr, unlinkCapabilityAdr,
 } from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -42,7 +44,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const capability = await getCapability(id)
+  const [capability, enabledModules] = await Promise.all([getCapability(id), getEnabledModules()])
   if (!capability) notFound()
 
   const editor = canEdit(session.user)
@@ -132,68 +134,78 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
       <hr />
 
-      <RelationshipPanel
-        title="Personas"
-        items={capability.capabilityPersonas.map(({ persona }) => ({
-          id: persona.id, name: persona.name,
-          href: `/personas/${persona.id}`, meta: persona.type,
-        }))}
-        canEdit={editor}
-        available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
-        addAction={addPersona}
-        removeAction={removePersona}
-      />
+      {isModuleEnabled(enabledModules, 'personas') && (
+        <RelationshipPanel
+          title="Personas"
+          items={capability.capabilityPersonas.map(({ persona }) => ({
+            id: persona.id, name: persona.name,
+            href: `/personas/${persona.id}`, meta: persona.type,
+          }))}
+          canEdit={editor}
+          available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+          addAction={addPersona}
+          removeAction={removePersona}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Applications"
-        items={capability.applicationCapabilities.map(({ application }) => ({
-          id: application.id, name: application.name,
-          href: `/applications/${application.id}`, meta: application.vendor,
-        }))}
-        canEdit={editor}
-        available={allApplications.map(a => ({ id: a.id, name: a.name }))}
-        addAction={addApplication}
-        removeAction={removeApplication}
-      />
+      {isModuleEnabled(enabledModules, 'applications') && (
+        <RelationshipPanel
+          title="Applications"
+          items={capability.applicationCapabilities.map(({ application }) => ({
+            id: application.id, name: application.name,
+            href: `/applications/${application.id}`, meta: application.vendor,
+          }))}
+          canEdit={editor}
+          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          addAction={addApplication}
+          removeAction={removeApplication}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Strategic Objectives"
-        items={capability.objectiveCapabilities.map(({ objective }) => ({
-          id: objective.id, name: objective.name,
-          href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
-        }))}
-        canEdit={editor}
-        available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
-        addAction={addObjective}
-        removeAction={removeObjective}
-      />
+      {isModuleEnabled(enabledModules, 'objectives') && (
+        <RelationshipPanel
+          title="Strategic Objectives"
+          items={capability.objectiveCapabilities.map(({ objective }) => ({
+            id: objective.id, name: objective.name,
+            href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
+          }))}
+          canEdit={editor}
+          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          addAction={addObjective}
+          removeAction={removeObjective}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Initiatives"
-        items={capability.initiativeCapabilities.map(({ initiative }) => ({
-          id: initiative.id, name: initiative.name,
-          href: `/initiatives/${initiative.id}`, meta: initiative.status,
-        }))}
-        canEdit={editor}
-        available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
-        addAction={addInitiative}
-        removeAction={removeInitiative}
-      />
+      {isModuleEnabled(enabledModules, 'initiatives') && (
+        <RelationshipPanel
+          title="Initiatives"
+          items={capability.initiativeCapabilities.map(({ initiative }) => ({
+            id: initiative.id, name: initiative.name,
+            href: `/initiatives/${initiative.id}`, meta: initiative.status,
+          }))}
+          canEdit={editor}
+          available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+          addAction={addInitiative}
+          removeAction={removeInitiative}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Architecture Decision Records"
-        items={capability.adrCapabilities.map(({ adr }) => ({
-          id: adr.id, name: adr.title,
-          href: `/adrs/${adr.id}`,
-          meta: `ADR-${String(adr.number).padStart(3, '0')}`,
-        }))}
-        canEdit={editor}
-        available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
-        addAction={addAdr}
-        removeAction={removeAdr}
-      />
+      {isModuleEnabled(enabledModules, 'adrs') && (
+        <RelationshipPanel
+          title="Architecture Decision Records"
+          items={capability.adrCapabilities.map(({ adr }) => ({
+            id: adr.id, name: adr.title,
+            href: `/adrs/${adr.id}`,
+            meta: `ADR-${String(adr.number).padStart(3, '0')}`,
+          }))}
+          canEdit={editor}
+          available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+          addAction={addAdr}
+          removeAction={removeAdr}
+        />
+      )}
 
-      {capability.principleCapabilities.length > 0 && (
+      {isModuleEnabled(enabledModules, 'principles') && capability.principleCapabilities.length > 0 && (
         <RelationshipPanel
           title="Principles"
           items={capability.principleCapabilities.map(({ principle }) => ({

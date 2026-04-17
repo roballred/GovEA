@@ -14,6 +14,8 @@ import {
   linkInitiativeObjective, unlinkInitiativeObjective,
   linkInitiativeApplication, unlinkInitiativeApplication,
 } from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -50,7 +52,7 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const initiative = await getInitiative(id)
+  const [initiative, enabledModules] = await Promise.all([getInitiative(id), getEnabledModules()])
   if (!initiative) notFound()
 
   const editor = canEdit(session.user)
@@ -124,35 +126,41 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
 
       <hr />
 
-      <RelationshipPanel
-        title="Capabilities"
-        items={capabilityItems}
-        canEdit={editor}
-        available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
-        addAction={addCapability}
-        removeAction={removeCapability}
-      />
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={capabilityItems}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Strategic Objectives"
-        items={initiative.initiativeObjectives.map(({ objective }) => ({
-          id: objective.id, name: objective.name,
-          href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
-        }))}
-        canEdit={editor}
-        available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
-        addAction={addObjective}
-        removeAction={removeObjective}
-      />
+      {isModuleEnabled(enabledModules, 'objectives') && (
+        <RelationshipPanel
+          title="Strategic Objectives"
+          items={initiative.initiativeObjectives.map(({ objective }) => ({
+            id: objective.id, name: objective.name,
+            href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
+          }))}
+          canEdit={editor}
+          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          addAction={addObjective}
+          removeAction={removeObjective}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Applications"
-        items={applicationItems}
-        canEdit={editor}
-        available={allApplications.map(a => ({ id: a.id, name: a.name }))}
-        addAction={addApplication}
-        removeAction={removeApplication}
-      />
+      {isModuleEnabled(enabledModules, 'applications') && (
+        <RelationshipPanel
+          title="Applications"
+          items={applicationItems}
+          canEdit={editor}
+          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          addAction={addApplication}
+          removeAction={removeApplication}
+        />
+      )}
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
         Created {new Date(initiative.createdAt).toLocaleDateString()} · Updated {new Date(initiative.updatedAt).toLocaleDateString()}

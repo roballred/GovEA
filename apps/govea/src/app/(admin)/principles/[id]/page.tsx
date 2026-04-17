@@ -11,6 +11,8 @@ import {
   linkPrincipleCapability, unlinkPrincipleCapability,
   linkPrincipleAdr, unlinkPrincipleAdr,
 } from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -35,7 +37,7 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const principle = await getPrinciple(id)
+  const [principle, enabledModules] = await Promise.all([getPrinciple(id), getEnabledModules()])
   if (!principle) notFound()
 
   const editor = canEdit(session.user)
@@ -100,30 +102,34 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
 
       <hr />
 
-      <RelationshipPanel
-        title="Capabilities"
-        items={principle.principleCapabilities.map(({ capability }) => ({
-          id: capability.id, name: capability.name,
-          href: `/capabilities/${capability.id}`, meta: capability.domain,
-        }))}
-        canEdit={editor}
-        available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
-        addAction={addCapability}
-        removeAction={removeCapability}
-      />
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={principle.principleCapabilities.map(({ capability }) => ({
+            id: capability.id, name: capability.name,
+            href: `/capabilities/${capability.id}`, meta: capability.domain,
+          }))}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
+      )}
 
-      <RelationshipPanel
-        title="Architecture Decision Records"
-        items={principle.principleAdrs.map(({ adr }) => ({
-          id: adr.id, name: adr.title,
-          href: `/adrs/${adr.id}`,
-          meta: `ADR-${String(adr.number).padStart(3, '0')}`,
-        }))}
-        canEdit={editor}
-        available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
-        addAction={addAdr}
-        removeAction={removeAdr}
-      />
+      {isModuleEnabled(enabledModules, 'adrs') && (
+        <RelationshipPanel
+          title="Architecture Decision Records"
+          items={principle.principleAdrs.map(({ adr }) => ({
+            id: adr.id, name: adr.title,
+            href: `/adrs/${adr.id}`,
+            meta: `ADR-${String(adr.number).padStart(3, '0')}`,
+          }))}
+          canEdit={editor}
+          available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+          addAction={addAdr}
+          removeAction={removeAdr}
+        />
+      )}
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
         Created {new Date(principle.createdAt).toLocaleDateString()} · Updated {new Date(principle.updatedAt).toLocaleDateString()}
