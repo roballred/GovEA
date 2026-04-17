@@ -23,6 +23,5 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/apps/govea/.next/standalone ./
 COPY --from=builder /app/apps/govea/.next/static ./apps/govea/.next/static
-COPY --from=builder /app/apps/govea/public ./apps/govea/public
 EXPOSE 3000
 CMD ["node", "apps/govea/server.js"]
