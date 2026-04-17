@@ -1,7 +1,7 @@
 # Capability: Admin & Configuration
 
 ## What It Does
-The system must provide administrators with a complete set of tools to configure, monitor, and maintain the site — from initial setup through ongoing operations — without requiring code changes or server access.
+The system must provide administrators with the tools needed to configure, monitor, and maintain the site without requiring code changes or server access. In the current product this is an early admin toolkit rather than a complete operations surface.
 
 ## Personas
 - **CMS Administrator** — the sole user of this capability group; configures and maintains the system on behalf of the organization
@@ -21,9 +21,8 @@ The system must provide administrators with a complete set of tools to configure
 
 The following outcomes indicate Admin & Configuration is working well for a 1–3 person government IT department 6 months after deployment:
 
-- An administrator can change site settings, configure email, and update security policy without touching a config file or restarting the server
+- An administrator can manage the currently supported settings and admin surfaces without touching a config file or restarting the server
 - When a GovEA update is applied, the administrator can verify the system is healthy using the Admin Dashboard — no CLI or log file access required
-- An administrator can export a full backup of content and configuration, and restore it on a new instance, without developer help
 - If the primary administrator leaves, a replacement can take over all administrative functions using the Admin Dashboard and User Management — no credentials or institutional knowledge are lost because they are documented in the system
 
 ## Upgrade & Migration
@@ -42,6 +41,10 @@ GovEA follows a migration-based upgrade model. This section defines expectations
 - All Admin & Configuration capabilities are accessible to Admins only
 - Configuration changes must not require a server restart
 - No Admin & Configuration function should require CLI or database access
+
+## Current Scope
+- Implemented today: admin dashboard, user management, audit visibility, taxonomy and persona metadata management, org connections, theme selection, and per-org module toggles
+- Future work: broader site settings, email configuration, backup/export, and security policy controls
 
 ## Links
 - Depends on: IAM

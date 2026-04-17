@@ -87,14 +87,16 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 ## Current Status
 
 **Implemented:**
-- Full CRUD for the core EA object model: applications, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
+- Full CRUD for the core EA object model: applications, capabilities, personas, value streams, strategic objectives, initiatives, ADRs, principles, and glossary terms
 - Mission-first traceability: Personas → Capabilities → Applications enforced at the application layer
 - Roadmap view — initiatives and objectives visualized on a timeline
+- Rich detail-page relationship panels across core entities, with inline link/unlink editing for contributors and persona inline editing from the detail page
 - Audit trail — immutable before/after log of all changes
 - Taxonomy — hierarchical org-scoped classification for all content
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
-- Multi-org federation scaffolding — connection requests, visibility levels, cross-org linking
+- Organization-level module toggles — admins can hide optional modules per org without deleting data
+- Multi-org federation prototype — connection requests, visibility-aware listings, cross-org linking, and write-protection guardrails
 - Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes × roles (Playwright)
 
@@ -106,6 +108,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Stakeholder-facing views and plain-language detail pages
 - Repository completeness signals and gap detection
 - Stronger multi-organization support
+- Broader server-action integration test coverage
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking
