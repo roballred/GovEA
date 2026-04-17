@@ -22,6 +22,18 @@ The system must allow multiple organizations to connect with each other, share a
 - No organization can read another organization's `org`-visibility content, regardless of connection status
 - All federation features are opt-in from the agency side — no org can be forced into a connection or a cross-org link
 - Content ownership never transfers across org boundaries — linking does not imply sharing or control
+- Read access to cross-org content never implies write or delete rights
+
+## Implementation Status
+Prototype in the current product:
+- Org connection records and connection-aware visibility exist
+- Cross-org linking exists for supported content types
+- Write-protection guardrails are enforced on server-side mutations
+
+Still maturing:
+- Incoming link approval workflows
+- Broader test coverage across role and visibility combinations
+- Deeper cross-org management UX
 
 ## Design Principle
 Federation must feel like a professional network, not an audit. Agencies connect and share because it is useful to them, not because it is required.

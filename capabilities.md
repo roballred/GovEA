@@ -12,7 +12,7 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 |---|---|---|
 | 1 | [Identity & Access Management](#1-identity--access-management) | Implemented |
 | 2 | [Content Management](#2-content-management) | Partially implemented |
-| 3 | [Portfolio Management](#3-portfolio-management) | Implemented |
+| 3 | [Portfolio Management](#3-portfolio-management) | Partially implemented |
 | 4 | [Planning & Roadmap](#4-planning--roadmap) | Implemented |
 | 5 | [Frontend Display](#5-frontend-display) | Partially implemented |
 | 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
@@ -104,6 +104,8 @@ Strategic direction, change initiatives, and timeline visualization.
 
 **Design principle:** Planning capabilities are a lens on existing architecture content. Strategic objectives trace to capabilities. Initiatives trace to objectives and capabilities. Nothing here is meaningful unless the underlying capability and persona content is maintained.
 
+This area is strong enough for demos and early v1 use, but the planning model should still be treated as evolving rather than fully settled.
+
 ---
 
 ## 5. Frontend Display
@@ -161,6 +163,8 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 
 **Design principle:** Single-org installs work identically without federation UI or complexity. Federation is opt-in from the agency side — no org can be forced into a connection. Content ownership never transfers across org boundaries.
 
+Current reality: federation is no longer just schema groundwork. Connection-aware visibility, cross-org linking, and write-protection guardrails exist, but approval flows and deeper hardening are still in progress.
+
 ---
 
 ## 8. Repository & Modelling
@@ -173,6 +177,8 @@ Reliability, navigability, and self-auditing of the architecture store.
 | Repository Completeness | Scaffolded | Early coverage signals exist, but this is not yet a dedicated repository-quality workflow |
 | End-to-End Traceability | Not implemented | Cross-layer impact analysis from strategic goals through capabilities to applications |
 | Architecture Debt Tracking | Not implemented | Surface and track decisions and conditions that constrain future options |
+
+This group is strategically important, but today it is still mostly documented direction plus a small amount of shipped dashboarding rather than a mature product surface.
 
 **Out of scope for v1:**
 - Multi-framework modelling (ArchiMate, BPMN, UML) — GovEA uses enforced relationship chains and plain-language descriptions, not formal notation

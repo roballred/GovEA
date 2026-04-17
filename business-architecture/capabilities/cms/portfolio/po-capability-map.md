@@ -19,7 +19,7 @@ The system must allow contributors to define and maintain the organization's bus
 - Navigate from a capability to its linked applications and personas
 
 ## Domain
-Free-text field used to group capabilities into top-level areas (e.g., "Citizen Services", "Finance", "HR", "IT"). Domain values are not controlled by a taxonomy in v1 — contributors enter them manually.
+Domain is now a controlled vocabulary backed by Taxonomy Management. Capability forms use a Domain combobox that prefers existing taxonomy values, while still allowing admins and contributors to add a new domain in-context when needed. If no `Domain` taxonomy type exists yet, the UI falls back gracefully until one is created.
 
 ## Rules
 - Capabilities are the anchor entity in the EasyEA methodology — applications link to capabilities, and capabilities link to personas

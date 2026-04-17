@@ -93,13 +93,21 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Live dashboard for EA practitioners with repository activity and coverage signals
 - Roadmap view — initiatives and objectives visualized through planning-status columns
 - Audit trail — immutable before/after log of all changes
-- Taxonomy — hierarchical org-scoped classification for all content
+- Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, and domain-aware filtering
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
+- Live admin dashboard with coverage, recent activity, and domain summaries
+- Multi-org federation prototype — connections, visibility controls, cross-org linking, and write-protection enforcement
 - Prototype multi-org federation — connection requests, visibility levels, shared content, cross-org linking
 - Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes × roles (Playwright)
 - Containerized local development plus Azure Container Apps dev deployment support
+
+**Partially implemented / still maturing:**
+- ADRs — schema and listing exist, but the full end-user authoring experience is not complete
+- Planning semantics and timeline presentation — useful for demos and early v1, but not fully settled
+- Admin configuration beyond core settings
+- Repository completeness, end-to-end traceability, and architecture debt tooling
 
 **Active work:**
 - Expanding automated test coverage

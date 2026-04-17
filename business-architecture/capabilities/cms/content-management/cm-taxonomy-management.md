@@ -27,6 +27,23 @@ The current implementation covers the Domain dimension: the `domain` field on ca
 | `sortOrder` | text \| null | Optional numeric string; lower values sort first |
 
 ## Behaviors
+- Define taxonomy types (for example `Domain`)
+- Add, edit, and delete taxonomy values within a type
+- Organize values under a type using parent/child relationships where needed
+- Tag content items with taxonomy values
+- Filter content lists by taxonomy value
+- Seed a standard government Domain vocabulary with 10 starter values
+- Create new domain values inline from capability and glossary forms when the needed value does not already exist
+
+## Seeded Domain Values
+Administrative Services, Public Safety, Infrastructure & Public Works, Community Development, Health & Human Services, Parks/Recreation/Culture, Transportation, Information Technology, Finance & Revenue, Legislative & Executive
+
+## Rules
+- Deleting a taxonomy term does not delete content tagged with it — the tag is removed from the content item
+- Taxonomy types and values must be scoped to an organization
+- Taxonomy values must be unique within their type for that organization
+- The seeded Domain vocabulary is editable — agencies can rename, add, or remove values
+- Capability and glossary forms should prefer taxonomy-backed Domain values rather than free-text drift
 
 ### Taxonomy Management Page
 
