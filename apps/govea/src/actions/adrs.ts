@@ -5,7 +5,7 @@ import {
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -132,6 +132,7 @@ export async function editADR(id: string, formData: FormData) {
   const objectiveIds = formData.getAll('objectiveIds') as string[]
 
   const before = await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.update(adrs).set({
     number,
@@ -168,6 +169,7 @@ export async function deleteADR(id: string) {
   const orgId = session.user.organizationId!
 
   const before = await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(adrs).where(and(eq(adrs.id, id), eq(adrs.organizationId, orgId)))
 

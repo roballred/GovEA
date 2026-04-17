@@ -1,7 +1,7 @@
 # Capability: Multi-Organization Federation
 
 ## What It Does
-The system must allow multiple organizations to connect with each other, share appropriate content across organizational boundaries, and link local EA artifacts to enterprise-wide counterparts — while preserving each organization's autonomy and keeping single-org installs simple.
+The system must allow multiple organizations to connect with each other, share appropriate content across organizational boundaries, and link local EA artifacts to enterprise-wide counterparts — while preserving each organization's autonomy and keeping single-org installs simple. In the current product this is a prototype capability: the core model and shared-read behaviors exist, while approval and hardening workflows remain in progress.
 
 ## Personas
 - **Enterprise Architect (Central IT)** — publishes enterprise capabilities and personas at instance level; sees aggregated view of agency adoption across connected orgs

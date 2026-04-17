@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DomainCombobox } from '@/components/domain-combobox'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -15,6 +16,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 
 type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
@@ -25,6 +27,7 @@ type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' |
 interface Props {
   capabilities: CapabilityRow[]
   personas: Pick<Persona, 'id' | 'name'>[]
+  domainTerms: { id: string; name: string }[]
   role: Role
   currentOrgId: string
 }
@@ -47,17 +50,22 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function CapabilityTable({ capabilities, personas, role, currentOrgId }: Props) {
+export function CapabilityTable({ capabilities, personas, domainTerms, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [domainFilter, setDomainFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
 
   const orgOptions = Array.from(new Map(
     capabilities.map(c => [c.organizationId, c.organization?.name ?? 'Unknown'])
   ).entries())
+
+  const domainOptions = Array.from(
+    new Set(capabilities.map(c => c.domain).filter(Boolean))
+  ).sort() as string[]
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<CapabilityRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CapabilityRow | null>(null)
@@ -70,8 +78,9 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
   const filtered = capabilities.filter(c => {
     const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || c.status === statusFilter
+    const matchDomain = domainFilter === 'all' || c.domain === domainFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? c.organizationId === currentOrgId : c.organizationId === orgFilter)
-    return matchSearch && matchStatus && matchOrg
+    return matchSearch && matchStatus && matchDomain && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -121,6 +130,16 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        {domainOptions.length > 0 && (
+          <select
+            value={domainFilter}
+            onChange={e => setDomainFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All domains</option>
+            {domainOptions.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
         {orgOptions.length > 1 && (
           <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All organizations</option>
@@ -174,7 +193,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{c.domain ?? '—'}</TableCell>
+                <TableCell>{c.domain ? <DomainBadge domain={c.domain} /> : <span className="text-muted-foreground">—</span>}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {c.capabilityPersonas.length === 0
@@ -244,7 +263,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
               <Label>Description</Label>
               <textarea name="description" rows={2} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
-            <FormField label="Domain (optional)" name="domain" />
+            <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue="" />
             <div className="space-y-1.5">
               <Label htmlFor="create-behaviors">Behaviors</Label>
               <textarea id="create-behaviors" name="behaviors" rows={4}
@@ -307,7 +326,7 @@ export function CapabilityTable({ capabilities, personas, role, currentOrgId }: 
               <Label>Description</Label>
               <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
-            <FormField label="Domain (optional)" name="domain" defaultValue={editTarget?.domain ?? ''} />
+            <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue={editTarget?.domain ?? ''} />
             <div className="space-y-1.5">
               <Label htmlFor="edit-behaviors">Behaviors</Label>
               <textarea id="edit-behaviors" name="behaviors" rows={4}
@@ -393,3 +412,4 @@ function FormField({ label, ...props }: { label: string } & React.InputHTMLAttri
     </div>
   )
 }
+

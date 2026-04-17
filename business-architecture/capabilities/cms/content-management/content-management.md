@@ -1,7 +1,7 @@
 # Capability: Content Management
 
 ## What It Does
-The system must provide a complete content management foundation — defining content structure, authoring content items, managing their lifecycle, organizing them with taxonomy, linking them together, and enabling users to find what they need.
+The system must provide a complete content management foundation — defining content structure, authoring content items, managing their lifecycle, organizing them with taxonomy, linking them together, and enabling users to find what they need. In the current product, core authoring and relationships are strong, while repository-wide search and fully consistent workflow behavior are still maturing.
 
 ## Personas
 - **CMS Administrator** — manages all content management functions; defines structure, authors and publishes content
@@ -25,14 +25,14 @@ The following outcomes indicate Content Management is working well for a 1–3 p
 
 - A contributor can create, link, and publish an application record without training — the form is self-explanatory and enforces required relationships before publish
 - A Viewer can tell whether the content they are reading is current — the published date is visible without scrolling or clicking
-- A contributor can find any existing content record using search in under 30 seconds
+- A contributor can find any existing content record using the current filters, taxonomy, and navigation in under 30 seconds
 - The GovEA traceability rule (Applications → Capabilities → Personas) is never violated in published content — the system blocks or prompts before publish if a required link is missing
 - Taxonomy terms are used consistently — contributors select from existing terms rather than inventing new ones for the same concept
 
 ## Rules
-- Published content is the only content visible to Viewers — workflow state gates all display
+- Published content is the only content visible to Viewers for the core content model — workflow state gates those displays
 - The core GovEA constraint must be enforced at publish time: Applications must link to Capabilities; Capabilities must link to Personas
-- All content changes are versioned and auditable
+- All content changes are auditable today; full version history and restore are future work
 
 ## Deferred to v2
 

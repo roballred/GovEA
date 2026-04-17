@@ -1,7 +1,7 @@
 # Capability: Front-end Display
 
 ## What It Does
-The system must present published content to users in a way that is clear, navigable, and useful without EA training — on any device, with or without a login depending on agency configuration.
+The system must present EA content to users in a way that is clear, navigable, and useful without EA training. The authenticated experience is substantial today; optional public unauthenticated publishing remains future work.
 
 ## Personas
 - **Content Viewer** — the primary user of all front-end display capabilities; expects to find information quickly and trust that it is current

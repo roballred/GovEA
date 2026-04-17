@@ -15,11 +15,12 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 
 type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor' | 'version' | 'hostingModel' | 'lifecycleStatus' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
   organization: { id: string; name: string } | null
-  applicationCapabilities: { capability: Pick<Capability, 'id' | 'name'> }[]
+  applicationCapabilities: { capability: Pick<Capability, 'id' | 'name' | 'domain'> }[]
 }
 
 interface Props {
@@ -61,11 +62,21 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
   const [search, setSearch] = useState('')
   const [lifecycleFilter, setLifecycleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [domainFilter, setDomainFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
 
   const orgOptions = Array.from(new Map(
     applications.map(a => [a.organizationId, a.organization?.name ?? 'Unknown'])
   ).entries())
+
+  // Domains are derived from linked capabilities — an app is "in" a domain via its capabilities
+  const domainOptions = Array.from(
+    new Set(
+      applications
+        .flatMap(a => a.applicationCapabilities.map(ac => ac.capability.domain))
+        .filter(Boolean)
+    )
+  ).sort() as string[]
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ApplicationRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ApplicationRow | null>(null)
@@ -79,8 +90,9 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
     const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase())
     const matchLifecycle = lifecycleFilter === 'all' || a.lifecycleStatus === lifecycleFilter
     const matchStatus = statusFilter === 'all' || a.status === statusFilter
+    const matchDomain = domainFilter === 'all' || a.applicationCapabilities.some(ac => ac.capability.domain === domainFilter)
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? a.organizationId === currentOrgId : a.organizationId === orgFilter)
-    return matchSearch && matchLifecycle && matchStatus && matchOrg
+    return matchSearch && matchLifecycle && matchStatus && matchDomain && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -141,6 +153,16 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        {domainOptions.length > 0 && (
+          <select
+            value={domainFilter}
+            onChange={e => setDomainFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All domains</option>
+            {domainOptions.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
         {orgOptions.length > 1 && (
           <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All organizations</option>
@@ -164,6 +186,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Vendor</TableHead>
+              <TableHead>Domains</TableHead>
               <TableHead>Capabilities</TableHead>
               <TableHead>Lifecycle</TableHead>
               <TableHead>Status</TableHead>
@@ -174,7 +197,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-8">
                   {applications.length === 0
                     ? 'No applications yet. Add one to get started.'
                     : 'No applications match the current filters.'}
@@ -196,6 +219,18 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{a.vendor ?? '—'}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {(() => {
+                      const uniqueDomains = Array.from(
+                        new Set(a.applicationCapabilities.map(ac => ac.capability.domain).filter(Boolean))
+                      ) as string[]
+                      return uniqueDomains.length === 0
+                        ? <span className="text-muted-foreground text-sm">—</span>
+                        : uniqueDomains.map(d => <DomainBadge key={d} domain={d} />)
+                    })()}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {a.applicationCapabilities.length === 0

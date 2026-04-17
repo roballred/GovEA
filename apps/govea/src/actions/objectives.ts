@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -112,6 +112,7 @@ export async function editObjective(objectiveId: string, formData: FormData) {
   const before = await db.query.strategicObjectives.findFirst({
     where: eq(strategicObjectives.id, objectiveId),
   })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.update(strategicObjectives).set({
     name, description, successMetric, timeHorizon, status, visibility,
@@ -147,6 +148,7 @@ export async function deleteObjective(objectiveId: string) {
   const before = await db.query.strategicObjectives.findFirst({
     where: eq(strategicObjectives.id, objectiveId),
   })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(strategicObjectives).where(
     and(eq(strategicObjectives.id, objectiveId), eq(strategicObjectives.organizationId, orgId))

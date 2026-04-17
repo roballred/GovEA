@@ -1,7 +1,7 @@
 # Capability Group: Portfolio Management
 
 ## What It Does
-The system must allow contributors to maintain a structured inventory of the organization's applications, business capabilities, and architecture decisions. Portfolio management is the authoring side — contributors create and update records; viewers consume them through portfolio views on the front end.
+The system must allow contributors to maintain a structured inventory of the organization's applications, business capabilities, architecture decisions, and supporting reference content. Portfolio management is the authoring side — contributors create and update records; viewers consume them through portfolio views on the front end.
 
 ## Personas
 - **CMS Contributor** — creates and maintains portfolio records
@@ -16,6 +16,8 @@ The system must allow contributors to maintain a structured inventory of the org
 | Application Portfolio | [po-application-portfolio.md](./po-application-portfolio.md) | Manage applications with lifecycle status and capability links |
 | Capability Map | [po-capability-map.md](./po-capability-map.md) | Define business capabilities organized by domain, linked to applications and personas |
 | Architecture Decision Records | [po-architecture-decisions.md](./po-architecture-decisions.md) | Record, track, and supersede architecture decisions |
+| Principles | [po-principles.md](./po-principles.md) | Capture architecture principles and link them to capabilities and decisions |
+| Glossary | [po-glossary.md](./po-glossary.md) | Maintain shared terminology to support consistent EA language across the repository |
 
 ## Rules
 - Portfolio records follow the standard content workflow: draft → published → archived
