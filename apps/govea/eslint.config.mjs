@@ -15,6 +15,9 @@ const config = [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      // Hydrating React state from localStorage after mount (empty-dep useEffect)
+      // is intentional and doesn't cause cascading renders — downgrade to warn.
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ]
