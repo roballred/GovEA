@@ -35,6 +35,11 @@ import {
   principles,
   principleCapabilities,
   principleAdrs,
+  services,
+  serviceCapabilities,
+  servicePersonas,
+  serviceApplications,
+  serviceValueStreams,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { assertOwnership } from '@/lib/federation'
@@ -528,4 +533,84 @@ export async function unlinkPrincipleAdr(principleId: string, adrId: string) {
     and(eq(principleAdrs.principleId, principleId), eq(principleAdrs.adrId, adrId))
   )
   revalidatePath(`/principles/${principleId}`)
+}
+
+// ── Service ↔ Capability ────────────────────────────────────────────────────
+
+export async function linkServiceCapability(serviceId: string, capabilityId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.insert(serviceCapabilities).values({ serviceId, capabilityId }).onConflictDoNothing()
+  revalidatePath(`/services/${serviceId}`)
+}
+
+export async function unlinkServiceCapability(serviceId: string, capabilityId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.delete(serviceCapabilities).where(
+    and(eq(serviceCapabilities.serviceId, serviceId), eq(serviceCapabilities.capabilityId, capabilityId))
+  )
+  revalidatePath(`/services/${serviceId}`)
+}
+
+// ── Service ↔ Persona ───────────────────────────────────────────────────────
+
+export async function linkServicePersona(serviceId: string, personaId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.insert(servicePersonas).values({ serviceId, personaId }).onConflictDoNothing()
+  revalidatePath(`/services/${serviceId}`)
+}
+
+export async function unlinkServicePersona(serviceId: string, personaId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.delete(servicePersonas).where(
+    and(eq(servicePersonas.serviceId, serviceId), eq(servicePersonas.personaId, personaId))
+  )
+  revalidatePath(`/services/${serviceId}`)
+}
+
+// ── Service ↔ Application ───────────────────────────────────────────────────
+
+export async function linkServiceApplication(serviceId: string, applicationId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.insert(serviceApplications).values({ serviceId, applicationId }).onConflictDoNothing()
+  revalidatePath(`/services/${serviceId}`)
+}
+
+export async function unlinkServiceApplication(serviceId: string, applicationId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.delete(serviceApplications).where(
+    and(eq(serviceApplications.serviceId, serviceId), eq(serviceApplications.applicationId, applicationId))
+  )
+  revalidatePath(`/services/${serviceId}`)
+}
+
+// ── Service ↔ Value Stream ──────────────────────────────────────────────────
+
+export async function linkServiceValueStream(serviceId: string, valueStreamId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.insert(serviceValueStreams).values({ serviceId, valueStreamId }).onConflictDoNothing()
+  revalidatePath(`/services/${serviceId}`)
+}
+
+export async function unlinkServiceValueStream(serviceId: string, valueStreamId: string) {
+  const { user } = await requireContributor()
+  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
+  assertOwnership(svc?.organizationId, user.organizationId!)
+  await db.delete(serviceValueStreams).where(
+    and(eq(serviceValueStreams.serviceId, serviceId), eq(serviceValueStreams.valueStreamId, valueStreamId))
+  )
+  revalidatePath(`/services/${serviceId}`)
 }

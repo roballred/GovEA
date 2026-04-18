@@ -112,6 +112,18 @@ export type DatasetADR = {
   objectives: string[]     // objective names
 }
 
+export type DatasetService = {
+  name: string
+  description: string
+  serviceOwner?: string
+  channels: ('online' | 'in-person' | 'phone' | 'mobile')[]
+  status: 'draft' | 'published' | 'archived'
+  personas: string[]       // persona names
+  capabilities: string[]   // capability names
+  applications: string[]   // application names
+  valueStreams: string[]    // value stream names
+}
+
 export type Dataset = {
   label: string
   description: string
@@ -126,6 +138,7 @@ export type Dataset = {
   adrs: DatasetADR[]
   principles: DatasetPrinciple[]
   glossary: DatasetGlossaryTerm[]
+  services: DatasetService[]
 }
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
@@ -146,6 +159,7 @@ export const DATASET_BLANK: Dataset = {
   adrs: [],
   principles: [],
   glossary: [],
+  services: [],
 }
 
 // ── Dataset 2: Starter ────────────────────────────────────────────────────────
@@ -346,6 +360,19 @@ export const DATASET_STARTER: Dataset = {
           definition: 'The capability provided to the consumer is to use the provider\'s applications running on a cloud infrastructure. The applications are accessible from various client devices through either a thin client interface, such as a web browser.',
         },
       ],
+    },
+  ],
+  services: [
+    {
+      name: 'Permit Application Service',
+      description: 'The resident-facing online service for submitting and tracking building permit applications.',
+      serviceOwner: 'Community Development',
+      channels: ['online'],
+      status: 'published',
+      personas: ['Resident'],
+      capabilities: ['Online Permitting'],
+      applications: ['Accela'],
+      valueStreams: ['Obtain a Building Permit'],
     },
   ],
 }
@@ -856,6 +883,63 @@ export const DATASET_CITY_DEMO: Dataset = {
       definition: 'A contract between a service provider and customer that defines the expected level of service, including availability, response times, and remedies for non-compliance.',
       domain: 'Portfolio Management',
       status: 'published',
+    },
+  ],
+  services: [
+    {
+      name: 'Permit Application Service',
+      description: 'Online service for residents and businesses to submit, pay for, and track building permit applications without visiting a counter.',
+      serviceOwner: 'Community Development',
+      channels: ['online'],
+      status: 'published',
+      personas: ['Resident', 'Business Owner'],
+      capabilities: ['Online Permitting'],
+      applications: ['Accela'],
+      valueStreams: ['Obtain a Building Permit'],
+    },
+    {
+      name: 'Business License Service',
+      description: 'Service for local businesses to apply for, renew, and manage operating licenses — available online and at the Community Development counter.',
+      serviceOwner: 'Community Development',
+      channels: ['online', 'in-person'],
+      status: 'published',
+      personas: ['Business Owner'],
+      capabilities: ['Business License Management'],
+      applications: ['Accela'],
+      valueStreams: [],
+    },
+    {
+      name: '311 Resident Request Service',
+      description: 'Omnichannel service for residents to report non-emergency issues such as potholes, graffiti, and broken streetlights — available online, by phone, and via mobile app.',
+      serviceOwner: 'City Manager Office',
+      channels: ['online', 'phone', 'mobile'],
+      status: 'published',
+      personas: ['Resident'],
+      capabilities: ['311 Resident Services'],
+      applications: [],
+      valueStreams: ['Report a Non-Emergency Issue'],
+    },
+    {
+      name: 'Employee Self-Service Portal',
+      description: 'Internal portal for city employees to access payroll, benefits, leave balances, and HR forms without contacting HR directly.',
+      serviceOwner: 'Human Resources',
+      channels: ['online'],
+      status: 'published',
+      personas: ['IT Administrator', 'Department Director', 'Grant Coordinator'],
+      capabilities: ['HR Self-Service'],
+      applications: ['Workday'],
+      valueStreams: ['Onboard a New City Employee'],
+    },
+    {
+      name: 'Public Records Request Service',
+      description: 'Service for members of the public and staff to submit and track requests for official city records under public records law.',
+      serviceOwner: 'City Clerk',
+      channels: ['online', 'in-person'],
+      status: 'draft',
+      personas: ['Resident'],
+      capabilities: ['Records Management'],
+      applications: ['OpenText Livelink'],
+      valueStreams: [],
     },
   ],
 }

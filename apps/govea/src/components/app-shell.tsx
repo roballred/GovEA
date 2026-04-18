@@ -21,6 +21,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/personas',      label: 'Personas',      moduleKey: 'personas' },
       { href: '/value-streams', label: 'Value Streams',  moduleKey: 'value-streams' },
       { href: '/capabilities',  label: 'Capabilities',   moduleKey: 'capabilities' },
+      { href: '/services',      label: 'Services',       moduleKey: 'services' },
       { href: '/glossary',      label: 'Glossary',       moduleKey: 'glossary' },
     ],
   },
