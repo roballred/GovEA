@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getPersonas, getPersonaTypes, getTags } from '@/actions/personas'
+import { getPersonas } from '@/actions/personas'
+import { getPersonaTypesFromTaxonomy, getPersonaTagsFromTaxonomy } from '@/actions/taxonomy'
 import { PersonaTable } from './persona-table'
 export default async function PersonasPage() {
   const session = await auth()
@@ -11,8 +12,8 @@ export default async function PersonasPage() {
 
   const [personaList, typeList, tagList] = await Promise.all([
     getPersonas(orgId),
-    getPersonaTypes(orgId),
-    getTags(orgId),
+    getPersonaTypesFromTaxonomy(orgId),
+    getPersonaTagsFromTaxonomy(orgId),
   ])
 
   return (

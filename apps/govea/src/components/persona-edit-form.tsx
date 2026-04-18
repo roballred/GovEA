@@ -8,12 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-interface PersonaType {
-  id: string
-  name: string
-}
-
-interface Tag {
+interface TaxonomyTerm {
   id: string
   name: string
 }
@@ -28,8 +23,8 @@ interface PersonaEditFormProps {
     visibility: 'org' | 'connections' | 'instance'
     tagIds: string[]
   }
-  personaTypes: PersonaType[]
-  tags: Tag[]
+  personaTypes: TaxonomyTerm[]
+  tags: TaxonomyTerm[]
   onCancel: () => void
 }
 

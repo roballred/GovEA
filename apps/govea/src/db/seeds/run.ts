@@ -3,8 +3,8 @@ import { GOV_TAXONOMY } from './gov-taxonomy'
 import {
   DEV_ORG, STATE_ORG,
   DEV_USERS, STATE_USERS,
-  DEFAULT_PERSONA_TYPES, DEFAULT_TAGS,
-  DEV_PERSONA_TAGS,
+  DEFAULT_PERSONA_TYPES, DEFAULT_PERSONA_TAGS,
+  DEV_PERSONA_TAG_ASSIGNMENTS,
   DEV_PERSONAS, DEV_CAPABILITIES, DEV_APPLICATIONS,
   DEV_OBJECTIVES, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
   DEV_PRINCIPLES, DEV_GLOSSARY,
@@ -13,7 +13,7 @@ import {
 } from './dev-fixtures'
 import { db } from '../client'
 import {
-  users, organizations, personaTypes, tags,
+  users, organizations,
   personas, personaTags, capabilities, applications,
   capabilityPersonas, applicationCapabilities,
   strategicObjectives, objectiveCapabilities, objectiveApplications, objectiveValueStreams,
@@ -99,27 +99,69 @@ async function seed() {
   }
   console.log(`  ✓ ${DEV_USERS.length} users (password: dev-password)`)
 
-  // Persona types
+  // Persona types — taxonomy terms under "Persona Type" type
+  let personaTypeTermId: string
+  const existingPersonaTypeType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'persona-type')),
+  })
+  if (existingPersonaTypeType) {
+    personaTypeTermId = existingPersonaTypeType.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Persona Type',
+      slug: 'persona-type',
+      description: 'Categories used to classify personas.',
+      sortOrder: '10',
+    }).returning()
+    personaTypeTermId = inserted.id
+  }
   for (const name of DEFAULT_PERSONA_TYPES) {
-    await db.insert(personaTypes).values({ name, organizationId: devOrgId }).onConflictDoNothing()
+    await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      parentId: personaTypeTermId,
+      name,
+      slug: toSlug(name),
+    }).onConflictDoNothing()
   }
 
-  // Tags — build id map for personaTags
+  // Persona tags — taxonomy terms under "Persona Tag" type; build id map for personaTags junction
+  let personaTagTypeId: string
+  const existingPersonaTagType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'persona-tag')),
+  })
+  if (existingPersonaTagType) {
+    personaTagTypeId = existingPersonaTagType.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Persona Tag',
+      slug: 'persona-tag',
+      description: 'Cross-cutting labels used to filter and search personas.',
+      sortOrder: '20',
+    }).returning()
+    personaTagTypeId = inserted.id
+  }
   const devTagIds: Record<string, string> = {}
-  for (const name of DEFAULT_TAGS) {
-    const [tag] = await db.insert(tags).values({ name, organizationId: devOrgId })
-      .onConflictDoNothing()
-      .returning()
-    if (tag) {
-      devTagIds[name] = tag.id
+  for (const name of DEFAULT_PERSONA_TAGS) {
+    const [term] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      parentId: personaTagTypeId,
+      name,
+      slug: toSlug(name),
+    }).onConflictDoNothing().returning()
+    if (term) {
+      devTagIds[name] = term.id
     } else {
-      const existing = await db.query.tags.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, name)),
+      const existing = await db.query.taxonomyTerms.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.parentId, personaTagTypeId), e(t.name, name)),
       })
       if (existing) devTagIds[name] = existing.id
     }
   }
-  console.log(`  ✓ ${DEFAULT_PERSONA_TYPES.length} persona types, ${DEFAULT_TAGS.length} tags`)
+  console.log(`  ✓ ${DEFAULT_PERSONA_TYPES.length} persona types, ${DEFAULT_PERSONA_TAGS.length} persona tags (taxonomy-backed)`)
 
   // Personas
   const devPersonaIds: Record<string, string> = {}
@@ -131,7 +173,7 @@ async function seed() {
   console.log(`  ✓ ${DEV_PERSONAS.length} personas`)
 
   // Persona tags — personaTags junction table
-  for (const assignment of DEV_PERSONA_TAGS) {
+  for (const assignment of DEV_PERSONA_TAG_ASSIGNMENTS) {
     const personaId = devPersonaIds[assignment.personaName]
     if (!personaId) continue
     for (const tagName of assignment.tags) {
