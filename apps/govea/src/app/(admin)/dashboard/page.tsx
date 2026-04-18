@@ -107,10 +107,10 @@ export default async function DashboardPage() {
       where: and(eq(crossOrgLinks.targetOrgId, orgId), eq(crossOrgLinks.status, 'pending')),
       orderBy: (l, { asc }) => [asc(l.createdAt)],
     }),
-    // Federation: outbound link status counts
+    // Federation: all link status counts for this org (source or target)
     db.select({ status: crossOrgLinks.status, count: count() })
       .from(crossOrgLinks)
-      .where(eq(crossOrgLinks.sourceOrgId, orgId))
+      .where(or(eq(crossOrgLinks.sourceOrgId, orgId), eq(crossOrgLinks.targetOrgId, orgId)))
       .groupBy(crossOrgLinks.status),
   ])
 
@@ -148,8 +148,8 @@ export default async function DashboardPage() {
     ...fedPersonas.map(p => [p.id, { name: p.name, href: `/personas/${p.id}` }] as const),
   ])
 
-  const fedOutboundByStatus: Record<string, number> = {}
-  for (const row of fedOutboundRows) fedOutboundByStatus[row.status] = Number(row.count)
+  const fedByStatus: Record<string, number> = {}
+  for (const row of fedOutboundRows) fedByStatus[row.status] = (fedByStatus[row.status] ?? 0) + Number(row.count)
 
   const federation = {
     inboundPending: fedInboundLinks.map(l => ({
@@ -157,9 +157,10 @@ export default async function DashboardPage() {
       linkType: l.linkType,
       entity: fedEntityMap.get(l.targetEntityId) ?? null,
     })),
-    outboundPending:  fedOutboundByStatus['pending']  ?? 0,
-    outboundRejected: fedOutboundByStatus['rejected'] ?? 0,
-    hasAny: fedInboundLinks.length > 0 || Object.keys(fedOutboundByStatus).length > 0,
+    outboundPending:  fedByStatus['pending']  ?? 0,
+    outboundRejected: fedByStatus['rejected'] ?? 0,
+    totalActive:      fedByStatus['active']   ?? 0,
+    hasAny: Object.values(fedByStatus).some(n => n > 0) || fedInboundLinks.length > 0,
   }
 
   return (
@@ -243,7 +244,9 @@ export default async function DashboardPage() {
                 </div>
               )}
               {federation.inboundPending.length === 0 && federation.outboundPending === 0 && federation.outboundRejected === 0 && (
-                <p className="text-sm text-muted-foreground">All cross-org links are active — no pending actions.</p>
+                <p className="text-sm text-muted-foreground">
+                  {federation.totalActive} active cross-org link{federation.totalActive !== 1 ? 's' : ''} — no pending actions.
+                </p>
               )}
             </CardContent>
           </Card>

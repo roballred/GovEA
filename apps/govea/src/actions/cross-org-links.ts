@@ -180,7 +180,11 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
     if (!peer) continue
 
     const visible = canReadWithContext(peer.organizationId, peer.visibility)
-    if (!visible && peer.organizationId !== callerOrgId) continue
+    // Always show inbound pending links regardless of source visibility —
+    // the target org needs to see who is requesting approval even if the
+    // source entity is not yet shared with them.
+    const isInboundPending = link.status === 'pending' && !outbound
+    if (!visible && peer.organizationId !== callerOrgId && !isInboundPending) continue
 
     const item: CrossOrgLinkItem = {
       id: link.id,
@@ -315,13 +319,6 @@ export async function approveCrossOrgLink(linkId: string) {
   })
   if (!link) throw new Error('Cross-org link not found or not authorized')
   if (link.status !== 'pending') throw new Error('Only pending links can be approved')
-
-  const source = await getEntity(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId)
-  const target = await getEntity(link.targetEntityType as CrossOrgEntityType, link.targetEntityId)
-  if (!source || !target) throw new Error('Cross-org link points to missing content')
-
-  const sourceVisible = await canReadFederatedEntity(source.organizationId, source.visibility, session.user.organizationId!)
-  if (!sourceVisible) throw new Error('Source content is no longer visible under the current federation rules')
 
   await db.update(crossOrgLinks).set({
     status: 'active',
