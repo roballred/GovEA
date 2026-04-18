@@ -60,6 +60,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
+  const canMutate = editor && service.organizationId === orgId
 
   const [allCapabilities, allPersonas, allApplications, allValueStreams] = editor
     ? await Promise.all([
@@ -130,8 +131,8 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             id: persona.id, name: persona.name,
             href: `/personas/${persona.id}`,
           }))}
-          canEdit={editor}
-          available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+          canEdit={canMutate}
+          available={allPersonas.filter(p => p.organizationId === orgId).map(p => ({ id: p.id, name: p.name }))}
           addAction={addPersona}
           removeAction={removePersona}
         />
@@ -145,8 +146,8 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             href: `/capabilities/${capability.id}`,
             meta: capability.domain ?? undefined,
           }))}
-          canEdit={editor}
-          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          canEdit={canMutate}
+          available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
           removeAction={removeCapability}
         />
@@ -160,8 +161,8 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             href: `/applications/${application.id}`,
             meta: application.vendor,
           }))}
-          canEdit={editor}
-          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          canEdit={canMutate}
+          available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
           addAction={addApplication}
           removeAction={removeApplication}
         />
@@ -174,8 +175,8 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             id: valueStream.id, name: valueStream.name,
             href: `/value-streams/${valueStream.id}`,
           }))}
-          canEdit={editor}
-          available={allValueStreams.map(vs => ({ id: vs.id, name: vs.name }))}
+          canEdit={canMutate}
+          available={allValueStreams.filter(vs => vs.organizationId === orgId).map(vs => ({ id: vs.id, name: vs.name }))}
           addAction={addValueStream}
           removeAction={removeValueStream}
         />

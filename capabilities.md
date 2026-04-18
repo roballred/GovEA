@@ -12,7 +12,7 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 |---|---|---|
 | 1 | [Identity & Access Management](#1-identity--access-management) | Implemented |
 | 2 | [Content Management](#2-content-management) | Partially implemented |
-| 3 | [Portfolio Management](#3-portfolio-management) | Partially implemented |
+| 3 | [Portfolio Management](#3-portfolio-management) | Implemented |
 | 4 | [Planning & Roadmap](#4-planning--roadmap) | Implemented |
 | 5 | [Frontend Display](#5-frontend-display) | Partially implemented |
 | 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
@@ -55,7 +55,7 @@ Foundational content authoring and lifecycle capabilities shared across all EA c
 |---|---|---|
 | Content Authoring | Implemented | Create, edit, and save content items |
 | Content Workflow | Partially implemented | Draft → Published → Archived is established for core content types, but planning entities still use their own lifecycle states |
-| Taxonomy Management | Implemented | Hierarchical org-scoped taxonomy terms for categorizing all content |
+| Taxonomy Management | Implemented | Hierarchical org-scoped taxonomy terms for domains, persona types, persona tags, and other controlled vocabularies |
 | Content Relationships | Implemented | Link content items; enforce GovEA traceability rules at publish time |
 | Content Search & Filtering | Partially implemented | Per-entity filtering and taxonomy-driven browsing exist; repository-wide search is still future work |
 | Content Types | Partially implemented | Configurable schemas for content; v1 types are fixed in the data model |
@@ -72,6 +72,7 @@ The structured inventory of the organization's architecture objects.
 | Capability | Status | Description |
 |---|---|---|
 | Application Portfolio | Implemented | Manage applications with lifecycle status, capability links, and metadata |
+| Services | Implemented | Manage government-facing services linked to personas, capabilities, applications, and value streams |
 | Capability Map | Implemented | Define business capabilities organized by domain; linked to applications, personas, principles, and decisions |
 | Personas | Implemented | Define the people GovEA serves; linked to capabilities and value streams |
 | Architecture Decision Records (ADRs) | Implemented | Record, track, supersede, and link architecture decisions to capabilities, applications, initiatives, and objectives |
@@ -83,6 +84,7 @@ The structured inventory of the organization's architecture objects.
 
 ```
 Personas → Capabilities → Applications
+Personas → Services → Applications, Capabilities, Value Streams
 Strategic Objectives → Capabilities, Value Streams, Applications
 Initiatives → Capabilities, Objectives, Applications
 ADRs → Capabilities, Applications, Initiatives, Objectives
@@ -99,10 +101,12 @@ Strategic direction, change initiatives, and timeline visualization.
 | Capability | Status | Description |
 |---|---|---|
 | Strategic Objectives | Implemented | Define and track business goals; link to capabilities and value streams |
-| Initiatives | Implemented | Track change programmes; link to capabilities and objectives with impact labels (build / improve / retire / migrate) |
+| Initiatives | Implemented | Track change programmes with planning lifecycle statuses; link to capabilities and objectives with impact labels (build / improve / retire / migrate) |
 | Roadmap View | Implemented | Visualize initiatives grouped by planning status with linked objectives and capability context |
 
 **Design principle:** Planning capabilities are a lens on existing architecture content. Strategic objectives trace to capabilities. Initiatives trace to objectives and capabilities. Nothing here is meaningful unless the underlying capability and persona content is maintained.
+
+**Current semantic model:** Strategic objectives follow the standard content workflow (`draft`, `published`, `archived`). Initiatives do not. They use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates. The roadmap is a read-only view over initiative records grouped by that planning status.
 
 This area is strong enough for demos and early v1 use, but the planning model should still be treated as evolving rather than fully settled.
 
@@ -132,8 +136,8 @@ Organization-level settings and administrative tools.
 | Capability | Status | Description |
 |---|---|---|
 | Organization Settings | Partially implemented | Theme selection is available today; broader org settings remain future work |
-| Persona Type Management | Implemented | Create and manage persona type categories |
-| Persona Tags | Implemented | Tag-based classification for personas |
+| Persona Type Management | Implemented | Manage persona type categories as taxonomy terms under the `Persona Type` branch |
+| Persona Tags | Implemented | Manage persona tag values as taxonomy terms under the `Persona Tag` branch |
 | Admin Dashboard | Implemented | Live practitioner dashboard with repository activity, coverage signals, and navigation shortcuts |
 | Feature Management | Not implemented | Enable/disable optional product features per org |
 | Email Configuration | Not implemented | SMTP setup for notifications and password reset |
@@ -151,7 +155,7 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 | Org Connections | Prototype | Establish and manage connections between organizations |
 | Content Visibility | Prototype | Control which content is visible at org / connections / instance level |
 | Cross-Org Linking | Prototype | Link local capabilities and personas to enterprise counterparts |
-| Cross-Org Link Approval | Scaffolded | Review and approve or reject incoming cross-org link requests |
+| Cross-Org Link Approval | Prototype | Review and approve or reject incoming cross-org link requests on shipped capability and persona detail pages |
 
 **Visibility levels:**
 
@@ -163,7 +167,7 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 
 **Design principle:** Single-org installs work identically without federation UI or complexity. Federation is opt-in from the agency side — no org can be forced into a connection. Content ownership never transfers across org boundaries.
 
-Current reality: federation is no longer just schema groundwork. Connection-aware visibility, cross-org linking, and write-protection guardrails exist, but approval flows and deeper hardening are still in progress.
+Current reality: federation is a working prototype, not just schema groundwork. Connection-aware visibility, approval-based cross-org linking, read-only remote detail pages, connection cleanup, and write-protection guardrails are shipped. Notifications, richer history, and broader cross-org management remain future work.
 
 ---
 

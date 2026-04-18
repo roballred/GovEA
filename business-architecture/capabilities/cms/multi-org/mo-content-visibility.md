@@ -40,8 +40,9 @@ Content ownership never transfers across org boundaries. Sharing content at a br
 - `instance` visibility is appropriate for enterprise reference artifacts, not agency-internal content
 
 ## Implementation Status
-- Visibility levels (`org`, `connections`, `instance`) are enforced on all read queries via `getConnectedOrgIds` in `federation.ts`
-- Write protection is enforced in all content mutation server actions via `assertOwnership` in `federation.ts` — throws before any DB write if the calling user's org does not own the content
+- Visibility levels (`org`, `connections`, `instance`) are enforced on shipped federated reads, including direct detail-page fetches, via `getConnectedOrgIds` in `federation.ts`
+- Write protection is enforced in content mutation server actions via `assertOwnership` in `federation.ts` — throws before any DB write if the calling user's org does not own the content
+- Remote federated detail pages are rendered read-only in the UI even when the viewer has contributor rights in their own organization
 
 ## Links
 - Depends on: Org Connections (for `connections` level), IAM — Role-Based Access Control

@@ -42,6 +42,7 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
+  const canMutate = editor && principle.organizationId === orgId
 
   const [allCapabilities, allAdrs] = editor
     ? await Promise.all([
@@ -109,8 +110,8 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
             id: capability.id, name: capability.name,
             href: `/capabilities/${capability.id}`, meta: capability.domain,
           }))}
-          canEdit={editor}
-          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          canEdit={canMutate}
+          available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
           removeAction={removeCapability}
         />
@@ -124,8 +125,8 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
             href: `/adrs/${adr.id}`,
             meta: `ADR-${String(adr.number).padStart(3, '0')}`,
           }))}
-          canEdit={editor}
-          available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+          canEdit={canMutate}
+          available={allAdrs.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
           addAction={addAdr}
           removeAction={removeAdr}
         />

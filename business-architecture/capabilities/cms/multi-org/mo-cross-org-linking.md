@@ -11,10 +11,11 @@ The system must allow an agency to link one of its own capabilities or personas 
 - Allow a contributor or admin to browse `instance`-visibility and `connections`-visibility capabilities and personas from other orgs
 - Allow the user to propose a cross-org link from a local content item to a cross-org item, specifying a link type (`implements`, `extends`, `maps_to`)
 - Set the link status to `pending` until the target org approves
-- Display pending outbound links on the content item's detail page, labeled as awaiting approval
-- Display approved cross-org links on both the source and target content items' detail pages
+- Display pending outbound links on the source content item's detail page, labeled as awaiting approval
+- Display inbound pending requests and approved links on the target content item's detail page
 - Allow the source org to withdraw a pending or approved link at any time
 - When a cross-org link is approved, it appears in the target org's content item as an inbound link (read-only attribution)
+- Hide local relationship edit controls when the current org is viewing a remote federated record
 
 ## Link Types
 
@@ -28,8 +29,8 @@ The system must allow an agency to link one of its own capabilities or personas 
 - Cross-org links are directional: the initiating org owns the link; the target org approves or rejects it
 - **Approval does not grant write access.** An approved cross-org link gives the target org read attribution (the inbound link appears on their content item) — it does not allow the target org to edit, delete, or archive the source org's content
 - A link does not grant the target org any access to the source org's content beyond what visibility settings already allow
-- Deleting a local content item removes all cross-org links originating from it
-- If the target content item is deleted or its visibility is reduced so the source org can no longer see it, the link is automatically invalidated and both orgs are notified
+- Removing an org connection removes cross-org links that depended on that trust relationship
+- Notification and approval-history surfaces are still future work; the current prototype relies on in-app status visibility on the linked records themselves
 
 ## Links
 - Depends on: Content Visibility, Org Connections, Cross-Org Link Approval

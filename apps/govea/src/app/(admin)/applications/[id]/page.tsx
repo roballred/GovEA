@@ -132,8 +132,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             id: capability.id, name: capability.name,
             href: `/capabilities/${capability.id}`, meta: capability.domain,
           }))}
-          canEdit={editor}
-          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          canEdit={canMutate}
+          available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
           removeAction={removeCapability}
         />
@@ -146,8 +146,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             id: objective.id, name: objective.name,
             href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
           }))}
-          canEdit={editor}
-          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          canEdit={canMutate}
+          available={allObjectives.filter(o => o.organizationId === orgId).map(o => ({ id: o.id, name: o.name }))}
           addAction={addObjective}
           removeAction={removeObjective}
         />
@@ -160,8 +160,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             id: initiative.id, name: initiative.name,
             href: `/initiatives/${initiative.id}`, meta: initiative.status,
           }))}
-          canEdit={editor}
-          available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+          canEdit={canMutate}
+          available={allInitiatives.filter(i => i.organizationId === orgId).map(i => ({ id: i.id, name: i.name }))}
           addAction={addInitiative}
           removeAction={removeInitiative}
         />
@@ -175,8 +175,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             href: `/adrs/${adr.id}`,
             meta: `ADR-${String(adr.number).padStart(3, '0')}`,
           }))}
-          canEdit={editor}
-          available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+          canEdit={canMutate}
+          available={allAdrs.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
           addAction={addAdr}
           removeAction={removeAdr}
         />
