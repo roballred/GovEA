@@ -54,6 +54,7 @@ export default async function DashboardPage() {
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
 
+  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is intentional
   const staleThreshold = new Date(Date.now() - REVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000)
 
   const [
