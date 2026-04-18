@@ -37,6 +37,8 @@ Personas -> Capabilities -> Applications
 - Additional core entities include **Architecture Decision Record (ADR)** and **Technology Lifecycle**.
 - v1 is single-organization, but the data model must preserve a path to v2 multi-tenancy by scoping users, roles, content types, and taxonomies to an organization.
 
+For the implementation-level schema reference — including field metadata, enums, and junction tables — see [`docs/data-model.md`](./docs/data-model.md).
+
 ---
 
 ## Development Approach
