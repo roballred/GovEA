@@ -42,7 +42,7 @@ jobs:
             --name govea-dev \
             --resource-group govea-dev-rg \
             --min-replicas 0 \
-            --max-replicas 0
+            --max-replicas 1
           echo "Container scaled to 0 — no compute charges until 6am PT"
 
       - name: Start container (scale to 1)
