@@ -18,7 +18,12 @@ The system must allow any user to follow a chain of relationships across the ful
 - From any application, navigate upward to linked capabilities, then to the personas those capabilities serve, then to any strategic objectives or initiatives connected to those capabilities
 - From any persona, see the full set of capabilities defined for them and the applications enabling each capability
 - Impact panel: select any object and see all directly and indirectly connected objects, grouped by type (objectives, capabilities, applications, personas, ADRs)
-- Broken chain indicator: surface objects where a required link is missing — applications with no capability, capabilities with no application, capabilities with no persona, personas with no capability
+- Broken chain indicator: surface objects where a required link is missing, with severity assigned by type:
+  - `critical` — published application with no linked capability (active governance gap)
+  - `high` — capability with no linked application (no evidence of delivery)
+  - `medium` — capability with no linked persona (justification chain incomplete)
+  - `low` — persona with no linked capability (documentation gap, not a delivery gap)
+- Broken chain indicators feed into the unified priority signal summary on the admin dashboard (see `rm-architecture-debt` for the unified view definition)
 - Cross-agency view (Enterprise Architect only): across connected organizations, show which capabilities are served by multiple independent applications — potential rationalisation signals
 
 ## Rules
@@ -27,6 +32,8 @@ The system must allow any user to follow a chain of relationships across the ful
 - Traceability navigation is read-only — no editing occurs within the trace view
 - Cross-agency traceability is available only to Enterprise Architect role and only where federation connections have been established and content is marked as `connections` or `instance` visibility
 - Broken chain indicators are visible to Contributors and Admins; they do not surface to Viewers (Viewers only see published, complete content)
+- Draft objects are excluded from impact panel traversal results for Viewer-role users — any object without a published version is treated as non-existent in traversal, regardless of relationship links
+- The traversal visibility gate described in the Federation Behavior section is a pre-ship security requirement; the impact panel must not ship until a security test matrix covering all role × visibility × federation-state combinations has been completed and reviewed by a human
 
 ## Federation Behavior
 

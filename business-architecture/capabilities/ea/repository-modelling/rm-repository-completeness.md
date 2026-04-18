@@ -23,14 +23,24 @@ A repository where everything appears equally authoritative — regardless of wh
 - Show a trend line for each metric over time so that progress (or regression) is visible
 - Surface a "completeness score" per capability domain — which areas of the architecture are well-maintained and which are gaps
 - Allow the Admin to configure the staleness threshold (default 12 months; configurable to 3, 6, 12, or 24 months)
-- Publish a read-only completeness summary to Viewers — showing high-level scores without exposing the drill-down list of incomplete objects (the gap list is internal; the score is publishable)
+- Allow the Admin to set a **completeness target** per capability domain (e.g., "80% of capabilities linked to at least one application"); the dashboard shows RAG progress toward each target rather than a raw score in isolation — green ≥ target, amber within 15 points below target, red more than 15 points below
+- Surface a **"most-needed actions" list** — the top 5 specific objects whose update would most improve the overall completeness score, shown only to Contributors and Admins; this gives architects a concrete starting point rather than a wall of signals to triage. Staleness warnings from this list also feed into the unified priority signal summary on the admin dashboard (see `rm-architecture-debt` for the unified view definition)
+- **Completeness publication** (opt-in, off by default):
+  - Admin explicitly enables completeness publication in org settings; it is off by default
+  - A configurable publication threshold must be set before enabling publication (default 50%; configurable 25–100%); the summary is suppressed automatically if the overall score drops below the threshold
+  - The published view shows **plain-language status labels** by default, not raw percentages: `actively maintained` (≥75%), `under development` (40–74%), `getting started` (<40%); admins may optionally enable raw percentage display for authenticated viewers
+  - An optional **admin-authored narrative field** allows admins to contextualise the label in plain language (example: "We launched our EA practice in January — this score reflects a practice in its first year, not an architecture in disrepair"); this narrative appears alongside the label in the published view
+  - Separate publication controls for authenticated internal viewers and unauthenticated (public) audiences; by default only authenticated users may see the completeness summary
 
 ## Rules
 
 - Completeness metrics are calculated at the organization level; cross-org completeness is not exposed across federation boundaries
-- The published completeness summary (visible to Viewers) must show only aggregate scores, not the list of incomplete objects — incomplete drafts should not be surfaced to readers
+- The published completeness summary (visible to Viewers) must show only the plain-language label and optional narrative — the drill-down list of incomplete objects is never published; incomplete drafts must not be surfaced to readers
 - Staleness is calculated from the last-modified date of the published version, not the draft; updating a draft does not reset the staleness clock until published
 - An object with no published version does not contribute to completeness scores — it simply does not exist from the repository's perspective
+- Completeness publication is opt-in and off by default; enabling it requires an explicit admin action and a publication threshold to be configured
+- Unauthenticated (public) audiences never see completeness summaries unless the admin explicitly enables public visibility as a separate step from enabling authenticated-viewer publication; the two controls are independent
+- If the completeness score falls below the configured publication threshold after publication has been enabled, the summary is automatically suppressed until the score recovers; Admins are notified when this occurs
 
 ## Implementation Notes
 
