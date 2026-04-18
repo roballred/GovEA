@@ -380,6 +380,7 @@ Usage notes:
 - capability domains are stored as taxonomy terms
 - persona types are taxonomy terms under the `Persona Type` branch
 - persona tags are taxonomy terms under the `Persona Tag` branch and linked through `persona_tags`
+- personas store the selected type label as text rather than a FK, so removing a taxonomy value does not rewrite existing persona records
 
 ## Federation and Visibility Tables
 
@@ -408,13 +409,13 @@ Cross-org relationships between content items. These intentionally avoid FKs on 
 |---|---|---|---|
 | `id` | UUID | Yes | Primary key |
 | `source_org_id` | UUID | Yes | Owning org of the source entity |
-| `source_entity_type` | text | Yes | Currently documented for capability/persona use |
+| `source_entity_type` | text | Yes | Currently used for capability/persona cross-org links |
 | `source_entity_id` | UUID | Yes | Source record id |
 | `target_org_id` | UUID | Yes | Owning org of the target entity |
-| `target_entity_type` | text | Yes | Currently documented for capability/persona use |
+| `target_entity_type` | text | Yes | Currently used for capability/persona cross-org links |
 | `target_entity_id` | UUID | Yes | Target record id |
 | `link_type` | `link_type` enum | Yes | `implements`, `extends`, `maps_to` |
-| `status` | `link_status` enum | Yes | `pending`, `active`, `rejected` |
+| `status` | `link_status` enum | Yes | `pending`, `active`, `rejected`; approval is required before a link becomes active |
 | `rejection_reason` | text | No | Reason for rejection |
 | `created_by` | UUID | No | FK to user |
 | `created_at` | timestamp | Yes | Defaults to `now()` |
@@ -480,10 +481,11 @@ These details matter when writing migrations, actions, tests, or exports:
    - `strategic_objectives.time_horizon`
    - `applications.hosting_model`
 4. `capabilities.behaviors` and `capabilities.rules` are stored as newline-delimited text rather than structured child records.
-5. `taxonomy_terms.parent_id` is hierarchical metadata, but it is not declared with an explicit FK in the schema file.
-6. `users.is_active` is currently stored as text with values like `'true'`, not a native boolean column.
-7. `cross_org_links` intentionally avoids direct FKs to business entity tables because those links cross tenant boundaries and are enforced in application code.
-8. `audit_log.before`, `audit_log.after`, and `audit_log.metadata` are JSONB and should be treated as schemaless event payloads.
+5. `personas.type` stores the selected taxonomy-backed type label as text, not a foreign key to `taxonomy_terms`.
+6. `taxonomy_terms.parent_id` is hierarchical metadata, but it is not declared with an explicit FK in the schema file.
+7. `users.is_active` is currently stored as text with values like `'true'`, not a native boolean column.
+8. `cross_org_links` intentionally avoids direct FKs to business entity tables because those links cross tenant boundaries and are enforced in application code.
+9. `audit_log.before`, `audit_log.after`, and `audit_log.metadata` are JSONB and should be treated as schemaless event payloads.
 
 ## Source of Truth
 
