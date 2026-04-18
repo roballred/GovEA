@@ -33,7 +33,9 @@ export const STATE_USERS = [
   { name: 'Sam StateAdmin',    email: 'sam@state.govea.dev',   role: 'admin'       as const },
 ]
 
-// ─── Persona types & tags (shared defaults) ──────────────────────────────────
+// ─── Persona types & tags (taxonomy-backed) ──────────────────────────────────
+// These are seeded as taxonomy terms under "Persona Type" and "Persona Tag"
+// taxonomy types. Management happens in the Taxonomy page, not the Personas page.
 
 export const DEFAULT_PERSONA_TYPES = [
   'Citizen',
@@ -42,7 +44,7 @@ export const DEFAULT_PERSONA_TYPES = [
   'External Partner',
 ]
 
-export const DEFAULT_TAGS = [
+export const DEFAULT_PERSONA_TAGS = [
   'mobile-first',
   'accessibility',
   'high-volume',
@@ -51,7 +53,7 @@ export const DEFAULT_TAGS = [
 ]
 
 // Tag assignments for specific personas — seeds the personaTags junction table.
-export const DEV_PERSONA_TAGS = [
+export const DEV_PERSONA_TAG_ASSIGNMENTS = [
   { personaName: 'Resident',             tags: ['mobile-first', 'high-volume', 'low-digital-literacy', 'multilingual'] },
   { personaName: 'Small Business Owner', tags: ['high-volume', 'multilingual'] },
   { personaName: 'Field Inspector',      tags: ['mobile-first', 'accessibility'] },

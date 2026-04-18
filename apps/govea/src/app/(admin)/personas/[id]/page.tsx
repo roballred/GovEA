@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getPersona, getPersonaTypes, getTags } from '@/actions/personas'
+import { getPersona } from '@/actions/personas'
+import { getPersonaTypesFromTaxonomy, getPersonaTagsFromTaxonomy } from '@/actions/taxonomy'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
 import { canEdit } from '@/lib/rbac'
@@ -46,8 +47,8 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
     ? await Promise.all([
         getCapabilities(orgId),
         getValueStreams(orgId),
-        getPersonaTypes(orgId),
-        getTags(orgId),
+        getPersonaTypesFromTaxonomy(orgId),
+        getPersonaTagsFromTaxonomy(orgId),
       ])
     : [[], [], [], []]
 

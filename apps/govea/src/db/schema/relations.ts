@@ -1,7 +1,8 @@
 import { relations } from 'drizzle-orm'
 import { capabilities, capabilityPersonas } from './capabilities'
 import { applications, applicationCapabilities } from './applications'
-import { personas, personaTags, personaTypes, tags } from './personas'
+import { personas, personaTags } from './personas'
+import { taxonomyTerms } from './taxonomy'
 import { organizations } from './organizations'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas } from './value-streams'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams, objectiveApplications } from './objectives'
@@ -49,29 +50,14 @@ export const personasRelations = relations(personas, ({ one, many }) => ({
   valueStreamPersonas: many(valueStreamPersonas),
 }))
 
-export const tagsRelations = relations(tags, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [tags.organizationId],
-    references: [organizations.id],
-  }),
-  personaTags: many(personaTags),
-}))
-
 export const personaTagsRelations = relations(personaTags, ({ one }) => ({
   persona: one(personas, {
     fields: [personaTags.personaId],
     references: [personas.id],
   }),
-  tag: one(tags, {
+  tag: one(taxonomyTerms, {
     fields: [personaTags.tagId],
-    references: [tags.id],
-  }),
-}))
-
-export const personaTypesRelations = relations(personaTypes, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [personaTypes.organizationId],
-    references: [organizations.id],
+    references: [taxonomyTerms.id],
   }),
 }))
 

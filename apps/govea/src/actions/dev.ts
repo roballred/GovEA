@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import {
-  personas, capabilities, applications, tags, personaTypes,
+  personas, capabilities, applications, taxonomyTerms,
   personaTags, capabilityPersonas, applicationCapabilities,
   valueStreams, valueStreamStages, valueStreamStageCapabilities,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
@@ -11,7 +11,7 @@ import {
   principles, principleAdrs, principleCapabilities,
   glossaryTerms, glossaryTermSources,
 } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, isNull } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { redirect } from 'next/navigation'
@@ -40,25 +40,52 @@ export async function resetToDataset(datasetKey: string) {
   await db.delete(applications).where(eq(applications.organizationId, orgId))
   await db.delete(capabilities).where(eq(capabilities.organizationId, orgId))
   await db.delete(personas).where(eq(personas.organizationId, orgId))
-  await db.delete(tags).where(eq(tags.organizationId, orgId))
-  await db.delete(personaTypes).where(eq(personaTypes.organizationId, orgId))
+  // Note: persona_types and tags tables were removed in migration 0016.
+  // Types are now managed via the Taxonomy page ("Persona Type" type).
+  // Tags are now taxonomy terms under "Persona Tag" type.
 
-  // ── Insert persona types ─────────────────────────────────────────────────
-  if (dataset.personaTypes.length > 0) {
-    await db.insert(personaTypes)
-      .values(dataset.personaTypes.map(name => ({ name, organizationId: orgId })))
-      .onConflictDoNothing()
+  // ── Resolve persona tag IDs from taxonomy ─────────────────────────────────
+  // Ensure the "Persona Tag" type exists, then find/create each tag as a child term.
+  let personaTagTypeId: string | null = null
+  if (dataset.tags.length > 0) {
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, orgId), isNull(t.parentId), e(t.slug, 'persona-tag')),
+    })
+    if (existing) {
+      personaTagTypeId = existing.id
+    } else {
+      const [created] = await db.insert(taxonomyTerms).values({
+        organizationId: orgId,
+        name: 'Persona Tag',
+        slug: 'persona-tag',
+        description: 'Cross-cutting labels used to filter and search personas.',
+        sortOrder: '20',
+      }).returning()
+      personaTagTypeId = created.id
+    }
   }
 
-  // ── Insert tags ───────────────────────────────────────────────────────────
-  const tagRows = dataset.tags.length > 0
-    ? await db.insert(tags)
-        .values(dataset.tags.map(name => ({ name, organizationId: orgId })))
-        .onConflictDoNothing()
-        .returning()
-    : []
-
-  const tagByName = Object.fromEntries(tagRows.map(t => [t.name, t.id]))
+  const tagByName: Record<string, string> = {}
+  for (const name of dataset.tags) {
+    if (!personaTagTypeId) break
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const [term] = await db.insert(taxonomyTerms).values({
+      organizationId: orgId,
+      parentId: personaTagTypeId,
+      name,
+      slug,
+    }).onConflictDoNothing().returning()
+    if (term) {
+      tagByName[name] = term.id
+    } else {
+      const found = await db.query.taxonomyTerms.findFirst({
+        where: (t, { eq: e, and }) =>
+          and(e(t.organizationId, orgId), e(t.parentId, personaTagTypeId!), e(t.name, name)),
+      })
+      if (found) tagByName[name] = found.id
+    }
+  }
 
   if (dataset.personas.length === 0) return
 

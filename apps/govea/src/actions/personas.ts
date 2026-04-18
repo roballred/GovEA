@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { personas, personaTypes, personaTags, tags } from '@/db/schema'
+import { personas, personaTags } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
@@ -21,114 +21,6 @@ async function requireAdmin() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) throw new Error('Forbidden')
   return session
-}
-
-// ── Persona Types ─────────────────────────────────────────────────────────────
-
-export async function getPersonaTypes(organizationId: string) {
-  return db.query.personaTypes.findMany({
-    where: (pt, { eq }) => eq(pt.organizationId, organizationId),
-    orderBy: (pt, { asc }) => [asc(pt.name)],
-  })
-}
-
-export async function createPersonaType(name: string) {
-  const session = await requireAdmin()
-  const orgId = session.user.organizationId!
-
-  const trimmed = name.trim()
-  if (!trimmed) throw new Error('Name is required')
-
-  const [pt] = await db.insert(personaTypes).values({
-    name: trimmed,
-    organizationId: orgId,
-  }).onConflictDoNothing().returning()
-
-  if (pt) {
-    await writeAuditLog({
-      action: 'persona_type.create',
-      entityType: 'persona_type',
-      entityId: pt.id,
-      userId: session.user.id,
-      organizationId: orgId,
-      after: { name: trimmed },
-    })
-  }
-}
-
-export async function deletePersonaType(typeId: string) {
-  const session = await requireAdmin()
-  const orgId = session.user.organizationId!
-
-  const before = await db.query.personaTypes.findFirst({
-    where: eq(personaTypes.id, typeId),
-  })
-
-  await db.delete(personaTypes).where(
-    and(eq(personaTypes.id, typeId), eq(personaTypes.organizationId, orgId))
-  )
-
-  await writeAuditLog({
-    action: 'persona_type.delete',
-    entityType: 'persona_type',
-    entityId: typeId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name },
-  })
-}
-
-// ── Tags ──────────────────────────────────────────────────────────────────────
-
-export async function getTags(organizationId: string) {
-  return db.query.tags.findMany({
-    where: (t, { eq }) => eq(t.organizationId, organizationId),
-    orderBy: (t, { asc }) => [asc(t.name)],
-  })
-}
-
-export async function createTag(name: string) {
-  const session = await requireAdmin()
-  const orgId = session.user.organizationId!
-
-  const trimmed = name.trim()
-  if (!trimmed) throw new Error('Name is required')
-
-  const [tag] = await db.insert(tags).values({
-    name: trimmed,
-    organizationId: orgId,
-  }).onConflictDoNothing().returning()
-
-  if (tag) {
-    await writeAuditLog({
-      action: 'tag.create',
-      entityType: 'tag',
-      entityId: tag.id,
-      userId: session.user.id,
-      organizationId: orgId,
-      after: { name: trimmed },
-    })
-  }
-}
-
-export async function deleteTag(tagId: string) {
-  const session = await requireAdmin()
-  const orgId = session.user.organizationId!
-
-  const before = await db.query.tags.findFirst({ where: eq(tags.id, tagId) })
-
-  await db.delete(tags).where(
-    and(eq(tags.id, tagId), eq(tags.organizationId, orgId))
-  )
-
-  await writeAuditLog({
-    action: 'tag.delete',
-    entityType: 'tag',
-    entityId: tagId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name },
-  })
 }
 
 // ── Personas ──────────────────────────────────────────────────────────────────
