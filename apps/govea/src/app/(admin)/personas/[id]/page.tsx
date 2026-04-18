@@ -4,7 +4,7 @@ import { getPersona } from '@/actions/personas'
 import { getPersonaTypesFromTaxonomy, getPersonaTagsFromTaxonomy } from '@/actions/taxonomy'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
-import { canEdit } from '@/lib/rbac'
+import { canEdit, isAdmin } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { RelationshipPanel } from '@/components/relationship-panel'
@@ -51,7 +51,7 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
   const canMutate = editor && persona.organizationId === orgId
-  const canApproveCrossOrg = session.user.role === 'admin' && persona.organizationId === orgId
+  const canApproveCrossOrg = isAdmin(session.user) && persona.organizationId === orgId
 
   const [allCapabilities, allValueStreams, personaTypes, allTags, crossOrgLinks] = editor
     ? await Promise.all([

@@ -2,12 +2,12 @@
 
 import { db } from '@/db/client'
 import { capabilities, crossOrgLinks, personas } from '@/db/schema'
-import { and, eq, or } from 'drizzle-orm'
+import { and, eq, inArray, or } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { writeAuditLog } from '@/lib/audit'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { redirect } from 'next/navigation'
-import { canReadFederatedEntity } from '@/lib/federation'
+import { canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { revalidatePath } from 'next/cache'
 
 export type CrossOrgEntityType = 'capability' | 'persona'
@@ -38,6 +38,8 @@ export interface CrossOrgLinkContext {
   outboundRejected: CrossOrgLinkItem[]
   availableTargets: CrossOrgTargetOption[]
 }
+
+type FederatedEntity = NonNullable<Awaited<ReturnType<typeof getEntity>>>
 
 async function requireContributor() {
   const session = await auth()
@@ -87,7 +89,43 @@ async function getEntity(type: CrossOrgEntityType, id: string) {
   }
 }
 
+async function getEntities(type: CrossOrgEntityType, ids: string[]) {
+  if (ids.length === 0) return new Map<string, FederatedEntity>()
+
+  if (type === 'capability') {
+    const results = await db.query.capabilities.findMany({
+      where: inArray(capabilities.id, ids),
+      with: { organization: true },
+    })
+    return new Map(results.map(capability => [capability.id, {
+      id: capability.id,
+      type,
+      name: capability.name,
+      organizationId: capability.organizationId,
+      organizationName: capability.organization?.name ?? 'Unknown org',
+      visibility: capability.visibility,
+      href: `/capabilities/${capability.id}`,
+    }]))
+  }
+
+  const results = await db.query.personas.findMany({
+    where: inArray(personas.id, ids),
+    with: { organization: true },
+  })
+  return new Map(results.map(persona => [persona.id, {
+    id: persona.id,
+    type,
+    name: persona.name,
+    organizationId: persona.organizationId,
+    organizationName: persona.organization?.name ?? 'Unknown org',
+    visibility: persona.visibility,
+    href: `/personas/${persona.id}`,
+  }]))
+}
+
 async function revalidateLinkPaths(sourceType: CrossOrgEntityType, sourceId: string, targetId: string) {
+  // Cross-org links are only allowed within the same entity type today, so both paths
+  // can be derived from the source type.
   revalidatePath(sourceType === 'capability' ? `/capabilities/${sourceId}` : `/personas/${sourceId}`)
   revalidatePath(sourceType === 'capability' ? `/capabilities/${targetId}` : `/personas/${targetId}`)
 }
@@ -120,14 +158,28 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
   const inboundPending: CrossOrgLinkItem[] = []
   const outboundPending: CrossOrgLinkItem[] = []
   const outboundRejected: CrossOrgLinkItem[] = []
+  const peerIds = Array.from(new Set(links.map(link =>
+    link.sourceEntityType === type && link.sourceEntityId === entityId
+      ? link.targetEntityId
+      : link.sourceEntityId
+  )))
+  const peersById = await getEntities(type, peerIds)
+  const connectedOrgIds = new Set(await getConnectedOrgIds(callerOrgId))
+
+  function canReadWithContext(organizationId: string | null | undefined, visibility: CrossOrgTargetOption['visibility'] | 'org' | null | undefined) {
+    if (!organizationId || !visibility) return false
+    if (organizationId === callerOrgId) return true
+    if (visibility === 'instance') return true
+    return visibility === 'connections' && connectedOrgIds.has(organizationId)
+  }
 
   for (const link of links) {
     const outbound = link.sourceEntityType === type && link.sourceEntityId === entityId
     const peerId = outbound ? link.targetEntityId : link.sourceEntityId
-    const peer = await getEntity(type, peerId)
+    const peer = peersById.get(peerId)
     if (!peer) continue
 
-    const visible = await canReadFederatedEntity(peer.organizationId, peer.visibility, callerOrgId)
+    const visible = canReadWithContext(peer.organizationId, peer.visibility)
     if (!visible && peer.organizationId !== callerOrgId) continue
 
     const item: CrossOrgLinkItem = {
@@ -177,8 +229,9 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
 
   const availableTargets: CrossOrgTargetOption[] = []
   for (const target of availableTargetsRaw) {
-    const visible = await canReadFederatedEntity(target.organizationId, target.visibility, callerOrgId)
+    const visible = canReadWithContext(target.organizationId, target.visibility)
     if (!visible || existingTargetIds.has(target.id)) continue
+    if (target.visibility !== 'connections' && target.visibility !== 'instance') continue
     availableTargets.push({
       id: target.id,
       name: target.name,
@@ -246,7 +299,7 @@ export async function requestCrossOrgLink(
   await writeAuditLog({
     action: 'cross_org_link.request',
     entityType: 'cross_org_link',
-    entityId: auditLinkId,
+    entityId: auditLinkId ?? undefined,
     userId: session.user.id,
     organizationId: source.organizationId,
     after: { sourceEntityId, targetEntityId, linkType, targetOrgId: target.organizationId, type },
@@ -288,15 +341,17 @@ export async function approveCrossOrgLink(linkId: string) {
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
 }
 
-export async function rejectCrossOrgLink(linkId: string) {
+export async function rejectCrossOrgLink(linkId: string, reason?: string) {
   const session = await requireAdmin()
   const link = await db.query.crossOrgLinks.findFirst({
     where: and(eq(crossOrgLinks.id, linkId), eq(crossOrgLinks.targetOrgId, session.user.organizationId!)),
   })
   if (!link) throw new Error('Cross-org link not found or not authorized')
+  if (link.status !== 'pending') throw new Error('Only pending links can be rejected')
 
   await db.update(crossOrgLinks).set({
     status: 'rejected',
+    rejectionReason: reason?.trim() ? reason.trim() : null,
     updatedAt: new Date(),
   }).where(eq(crossOrgLinks.id, linkId))
 
@@ -334,10 +389,37 @@ export async function withdrawCrossOrgLink(linkId: string) {
 }
 
 export async function removeLinksForConnection(orgAId: string, orgBId: string) {
+  const affectedLinks = await db.query.crossOrgLinks.findMany({
+    where: or(
+      and(eq(crossOrgLinks.sourceOrgId, orgAId), eq(crossOrgLinks.targetOrgId, orgBId)),
+      and(eq(crossOrgLinks.sourceOrgId, orgBId), eq(crossOrgLinks.targetOrgId, orgAId)),
+    ),
+  })
+
   await db.delete(crossOrgLinks).where(
     or(
       and(eq(crossOrgLinks.sourceOrgId, orgAId), eq(crossOrgLinks.targetOrgId, orgBId)),
       and(eq(crossOrgLinks.sourceOrgId, orgBId), eq(crossOrgLinks.targetOrgId, orgAId)),
     )
   )
+
+  if (affectedLinks.length > 0) {
+    await writeAuditLog({
+      action: 'cross_org_link.remove_for_connection',
+      entityType: 'org_connection',
+      organizationId: orgAId,
+      before: {
+        orgAId,
+        orgBId,
+        removedLinkIds: affectedLinks.map(link => link.id),
+        removedLinks: affectedLinks.map(link => ({
+          id: link.id,
+          sourceEntityId: link.sourceEntityId,
+          targetEntityId: link.targetEntityId,
+          status: link.status,
+          linkType: link.linkType,
+        })),
+      },
+    })
+  }
 }

@@ -40,12 +40,3 @@ export async function canReadFederatedEntity(
   const connectedOrgIds = await getConnectedOrgIds(callerOrgId)
   return connectedOrgIds.includes(entityOrgId)
 }
-
-export function assertLocalRelationshipTarget(
-  targetOrgId: string | null | undefined,
-  callerOrgId: string,
-): void {
-  if (!targetOrgId || targetOrgId !== callerOrgId) {
-    throw new Error('Forbidden: cross-org relationships require the federation approval flow')
-  }
-}

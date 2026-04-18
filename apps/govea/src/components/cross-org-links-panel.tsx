@@ -16,7 +16,7 @@ interface Props {
   canApprove: boolean
   requestAction: (targetId: string, linkType: CrossOrgLinkType) => Promise<void>
   approveAction: (linkId: string) => Promise<void>
-  rejectAction: (linkId: string) => Promise<void>
+  rejectAction: (linkId: string, reason?: string) => Promise<void>
   withdrawAction: (linkId: string) => Promise<void>
 }
 
@@ -67,6 +67,7 @@ export function CrossOrgLinksPanel({
   }
 
   const hasAnyLinks = approved.length > 0 || inboundPending.length > 0 || outboundPending.length > 0 || outboundRejected.length > 0
+  if (!hasAnyLinks && !canRequest && !canApprove) return null
 
   return (
     <div className="space-y-4">
@@ -148,7 +149,7 @@ export function CrossOrgLinksPanel({
                       <div className="text-xs text-muted-foreground">{link.peerOrganizationName}</div>
                     </div>
                     <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LINK_TYPE_STYLES[link.linkType])}>
-                      {link.linkType.replace('_', ' ')}
+                      {link.linkType.replaceAll('_', ' ')}
                     </span>
                   </Link>
                   {canRequest && (
@@ -180,7 +181,7 @@ export function CrossOrgLinksPanel({
                       <div className="text-xs text-muted-foreground">{link.peerOrganizationName}</div>
                     </div>
                     <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LINK_TYPE_STYLES[link.linkType])}>
-                      {link.linkType.replace('_', ' ')}
+                      {link.linkType.replaceAll('_', ' ')}
                     </span>
                   </div>
                   {canApprove && (
@@ -195,7 +196,11 @@ export function CrossOrgLinksPanel({
                       </button>
                       <button
                         type="button"
-                        onClick={() => run(() => rejectAction(link.id))}
+                        onClick={() => {
+                          const reason = window.prompt(`Optional rejection reason for ${link.peerName}`, '')
+                          if (reason === null) return
+                          run(() => rejectAction(link.id, reason || undefined))
+                        }}
                         disabled={isPending}
                         className="rounded-md px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 border border-destructive/20 disabled:opacity-50"
                       >
@@ -219,7 +224,7 @@ export function CrossOrgLinksPanel({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LINK_TYPE_STYLES[link.linkType])}>
-                      {link.linkType.replace('_', ' ')}
+                      {link.linkType.replaceAll('_', ' ')}
                     </span>
                     <button
                       type="button"
@@ -246,7 +251,7 @@ export function CrossOrgLinksPanel({
                       <div className="text-xs text-muted-foreground">{link.peerOrganizationName}</div>
                     </div>
                     <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LINK_TYPE_STYLES[link.linkType])}>
-                      {link.linkType.replace('_', ' ')}
+                      {link.linkType.replaceAll('_', ' ')}
                     </span>
                   </div>
                   {link.rejectionReason && (

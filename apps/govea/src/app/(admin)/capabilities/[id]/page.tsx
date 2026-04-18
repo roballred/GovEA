@@ -6,7 +6,7 @@ import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
 import { getADRs } from '@/actions/adrs'
 import { getPersonas } from '@/actions/personas'
-import { canEdit } from '@/lib/rbac'
+import { canEdit, isAdmin } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { DomainBadge } from '@/components/domain-badge'
@@ -58,7 +58,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
   const canMutate = editor && capability.organizationId === orgId
-  const canApproveCrossOrg = session.user.role === 'admin' && capability.organizationId === orgId
+  const canApproveCrossOrg = isAdmin(session.user) && capability.organizationId === orgId
 
   const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks] = editor
     ? await Promise.all([
