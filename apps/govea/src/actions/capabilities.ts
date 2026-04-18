@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 async function requireContributor() {
   const session = await auth()
@@ -171,4 +172,29 @@ export async function deleteCapability(capabilityId: string) {
     organizationId: orgId,
     before: { name: before?.name },
   })
+}
+
+export async function markCapabilityReviewed(capabilityId: string, _formData: FormData) {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const record = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
+  assertOwnership(record?.organizationId, orgId)
+
+  const now = new Date()
+  await db.update(capabilities).set({
+    lastReviewedBy: session.user.id,
+    lastReviewedAt: now,
+  }).where(and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId)))
+
+  await writeAuditLog({
+    action: 'capability.reviewed',
+    entityType: 'capability',
+    entityId: capabilityId,
+    userId: session.user.id,
+    organizationId: orgId,
+    after: { lastReviewedAt: now.toISOString() },
+  })
+
+  revalidatePath(`/capabilities/${capabilityId}`)
 }

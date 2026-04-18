@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getPersona } from '@/actions/personas'
+import { getPersona, markPersonaReviewed } from '@/actions/personas'
 import { getPersonaTypesFromTaxonomy, getPersonaTagsFromTaxonomy } from '@/actions/taxonomy'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
@@ -42,6 +42,7 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
+  const canMutate = editor && persona.organizationId === orgId
 
   const [allCapabilities, allValueStreams, personaTypes, allTags] = editor
     ? await Promise.all([
@@ -151,8 +152,20 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
         removeAction={removeValueStream}
       />
 
-      <div className="text-xs text-muted-foreground pt-4 border-t">
-        Created {new Date(persona.createdAt).toLocaleDateString()} · Updated {new Date(persona.updatedAt).toLocaleDateString()}
+      <div className="pt-4 border-t flex items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground">
+          Created {new Date(persona.createdAt).toLocaleDateString()} · Modified {new Date(persona.updatedAt).toLocaleDateString()}
+          {persona.lastReviewedAt
+            ? ` · Reviewed ${new Date(persona.lastReviewedAt).toLocaleDateString()}`
+            : ' · Never reviewed'}
+        </p>
+        {canMutate && (
+          <form action={markPersonaReviewed.bind(null, id)}>
+            <button type="submit" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+              Mark as reviewed
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )

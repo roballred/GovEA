@@ -6,10 +6,12 @@ import {
   strategicObjectives, valueStreams, principles, glossaryTerms,
   auditLog, users,
 } from '@/db/schema'
-import { count, eq, desc, asc } from 'drizzle-orm'
+import { and, count, eq, gt, isNotNull, desc, asc } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DomainBadge } from '@/components/domain-badge'
 import Link from 'next/link'
+
+const REVIEW_WINDOW_DAYS = 90
 
 function pivotCounts(rows: { status: string; count: number | string }[]) {
   const byStatus: Record<string, number> = {}
@@ -20,6 +22,11 @@ function pivotCounts(rows: { status: string; count: number | string }[]) {
     total += n
   }
   return { total, byStatus }
+}
+
+function pct(numerator: number, denominator: number) {
+  if (denominator === 0) return null
+  return Math.round((numerator / denominator) * 100)
 }
 
 const COVERAGE_ENTITIES = [
@@ -47,11 +54,17 @@ export default async function DashboardPage() {
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
 
+  const staleThreshold = new Date(Date.now() - REVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+
   const [
     personaRows, capabilityRows, applicationRows, adrRows,
     initiativeRows, objectiveRows, valueStreamRows, principleRows, glossaryRows,
     recentActivity,
     capsByDomain,
+    // Review health: total + recently modified + recently reviewed for each of 3 entity types
+    capTotal, capModified, capReviewed,
+    appTotal, appModified, appReviewed,
+    personaTotal, personaModified, personaReviewed,
   ] = await Promise.all([
     db.select({ status: personas.status,           count: count() }).from(personas)           .where(eq(personas.organizationId,           orgId)).groupBy(personas.status),
     db.select({ status: capabilities.status,       count: count() }).from(capabilities)       .where(eq(capabilities.organizationId,       orgId)).groupBy(capabilities.status),
@@ -75,6 +88,18 @@ export default async function DashboardPage() {
       .where(eq(capabilities.organizationId, orgId))
       .groupBy(capabilities.domain)
       .orderBy(asc(capabilities.domain)),
+    // Capability review health
+    db.select({ count: count() }).from(capabilities).where(eq(capabilities.organizationId, orgId)),
+    db.select({ count: count() }).from(capabilities).where(and(eq(capabilities.organizationId, orgId), gt(capabilities.updatedAt, staleThreshold))),
+    db.select({ count: count() }).from(capabilities).where(and(eq(capabilities.organizationId, orgId), isNotNull(capabilities.lastReviewedAt), gt(capabilities.lastReviewedAt, staleThreshold))),
+    // Application review health
+    db.select({ count: count() }).from(applications).where(eq(applications.organizationId, orgId)),
+    db.select({ count: count() }).from(applications).where(and(eq(applications.organizationId, orgId), gt(applications.updatedAt, staleThreshold))),
+    db.select({ count: count() }).from(applications).where(and(eq(applications.organizationId, orgId), isNotNull(applications.lastReviewedAt), gt(applications.lastReviewedAt, staleThreshold))),
+    // Persona review health
+    db.select({ count: count() }).from(personas).where(eq(personas.organizationId, orgId)),
+    db.select({ count: count() }).from(personas).where(and(eq(personas.organizationId, orgId), gt(personas.updatedAt, staleThreshold))),
+    db.select({ count: count() }).from(personas).where(and(eq(personas.organizationId, orgId), isNotNull(personas.lastReviewedAt), gt(personas.lastReviewedAt, staleThreshold))),
   ])
 
   const stats = {
@@ -88,6 +113,12 @@ export default async function DashboardPage() {
     principles:   pivotCounts(principleRows),
     glossary:     pivotCounts(glossaryRows),
   }
+
+  const reviewHealth = [
+    { label: 'Capabilities', href: '/capabilities', total: Number(capTotal[0].count),    modified: Number(capModified[0].count),    reviewed: Number(capReviewed[0].count) },
+    { label: 'Applications', href: '/applications', total: Number(appTotal[0].count),    modified: Number(appModified[0].count),    reviewed: Number(appReviewed[0].count) },
+    { label: 'Personas',     href: '/personas',     total: Number(personaTotal[0].count), modified: Number(personaModified[0].count), reviewed: Number(personaReviewed[0].count) },
+  ]
 
   const needsAttention = COVERAGE_ENTITIES
     .map(e => ({ ...e, draftCount: stats[e.key].byStatus[e.draftKey] ?? 0 }))
@@ -126,6 +157,43 @@ export default async function DashboardPage() {
             )
           })}
         </div>
+      </div>
+
+      {/* Review Health */}
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          Review Health <span className="font-normal normal-case">({REVIEW_WINDOW_DAYS}-day window)</span>
+        </p>
+        <Card>
+          <CardContent className="pt-4 pb-2">
+            <div className="divide-y">
+              {reviewHealth.map(row => {
+                const modifiedPct = pct(row.modified, row.total)
+                const reviewedPct = pct(row.reviewed, row.total)
+                return (
+                  <div key={row.label} className="py-3 flex items-center gap-4">
+                    <Link href={row.href} className="w-28 text-sm font-medium hover:underline shrink-0">{row.label}</Link>
+                    <div className="flex-1 flex items-center gap-6 text-sm">
+                      <span className="text-muted-foreground">
+                        Modified:{' '}
+                        <span className={modifiedPct !== null && modifiedPct < 50 ? 'text-amber-600 font-medium' : 'font-medium'}>
+                          {modifiedPct !== null ? `${modifiedPct}%` : '—'}
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Reviewed:{' '}
+                        <span className={reviewedPct !== null && reviewedPct < 50 ? 'text-amber-600 font-medium' : 'font-medium'}>
+                          {reviewedPct !== null ? `${reviewedPct}%` : '—'}
+                        </span>
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{row.total} total</span>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Capabilities by Domain */}

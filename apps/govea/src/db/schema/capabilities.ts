@@ -16,8 +16,10 @@ export const capabilities = pgTable('capabilities', {
   visibility: visibilityEnum('visibility').notNull().default('org'),
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),
+  lastReviewedBy: uuid('last_reviewed_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  lastReviewedAt: timestamp('last_reviewed_at'),
 })
 
 // Junction table: capabilities ↔ personas (many-to-many)

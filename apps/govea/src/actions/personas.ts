@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 async function requireContributor() {
   const session = await auth()
@@ -164,4 +165,29 @@ export async function deletePersona(personaId: string) {
     organizationId: orgId,
     before: { name: before?.name },
   })
+}
+
+export async function markPersonaReviewed(personaId: string, _formData: FormData) {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const record = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
+  assertOwnership(record?.organizationId, orgId)
+
+  const now = new Date()
+  await db.update(personas).set({
+    lastReviewedBy: session.user.id,
+    lastReviewedAt: now,
+  }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
+
+  await writeAuditLog({
+    action: 'persona.reviewed',
+    entityType: 'persona',
+    entityId: personaId,
+    userId: session.user.id,
+    organizationId: orgId,
+    after: { lastReviewedAt: now.toISOString() },
+  })
+
+  revalidatePath(`/personas/${personaId}`)
 }
