@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { glossaryTerms, glossaryTermSources } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -46,7 +46,10 @@ export async function getGlossaryTerms(orgId: string) {
 }
 
 export async function getGlossaryTerm(id: string) {
-  return db.query.glossaryTerms.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const term = await db.query.glossaryTerms.findFirst({
     where: eq(glossaryTerms.id, id),
     with: {
       organization: true,
@@ -55,6 +58,10 @@ export async function getGlossaryTerm(id: string) {
       },
     },
   })
+
+  if (!term) return null
+  const visible = await canReadFederatedEntity(term.organizationId, term.visibility, session.user.organizationId!)
+  return visible ? term : null
 }
 
 export async function createGlossaryTerm(formData: FormData) {

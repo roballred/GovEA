@@ -6,7 +6,7 @@ import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
 import { getADRs } from '@/actions/adrs'
 import { getPersonas } from '@/actions/personas'
-import { canEdit } from '@/lib/rbac'
+import { canEdit, isAdmin } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { DomainBadge } from '@/components/domain-badge'
@@ -20,6 +20,14 @@ import {
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
+import {
+  approveCrossOrgLink,
+  getCrossOrgLinkContext,
+  rejectCrossOrgLink,
+  requestCrossOrgLink,
+  withdrawCrossOrgLink,
+} from '@/actions/cross-org-links'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -49,16 +57,19 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
+  const canMutate = editor && capability.organizationId === orgId
+  const canApproveCrossOrg = isAdmin(session.user) && capability.organizationId === orgId
 
-  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs] = editor
+  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks] = editor
     ? await Promise.all([
         getPersonas(orgId),
         getApplications(orgId),
         getObjectives(orgId),
         getInitiatives(orgId),
         getADRs(orgId),
+        getCrossOrgLinkContext('capability', id),
       ])
-    : [[], [], [], [], []]
+    : [[], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }]
 
   const addPersona = linkCapabilityPersona.bind(null, id)
   const removePersona = unlinkCapabilityPersona.bind(null, id)
@@ -70,6 +81,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const removeInitiative = unlinkCapabilityInitiative.bind(null, id)
   const addAdr = linkCapabilityAdr.bind(null, id)
   const removeAdr = unlinkCapabilityAdr.bind(null, id)
+  const requestFederatedLink = requestCrossOrgLink.bind(null, 'capability', id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -141,8 +153,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             id: persona.id, name: persona.name,
             href: `/personas/${persona.id}`, meta: persona.type,
           }))}
-          canEdit={editor}
-          available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+          canEdit={canMutate}
+          available={allPersonas.filter(p => p.organizationId === orgId).map(p => ({ id: p.id, name: p.name }))}
           addAction={addPersona}
           removeAction={removePersona}
         />
@@ -155,8 +167,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             id: application.id, name: application.name,
             href: `/applications/${application.id}`, meta: application.vendor,
           }))}
-          canEdit={editor}
-          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          canEdit={canMutate}
+          available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
           addAction={addApplication}
           removeAction={removeApplication}
         />
@@ -169,8 +181,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             id: objective.id, name: objective.name,
             href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
           }))}
-          canEdit={editor}
-          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          canEdit={canMutate}
+          available={allObjectives.filter(o => o.organizationId === orgId).map(o => ({ id: o.id, name: o.name }))}
           addAction={addObjective}
           removeAction={removeObjective}
         />
@@ -183,8 +195,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             id: initiative.id, name: initiative.name,
             href: `/initiatives/${initiative.id}`, meta: initiative.status,
           }))}
-          canEdit={editor}
-          available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+          canEdit={canMutate}
+          available={allInitiatives.filter(i => i.organizationId === orgId).map(i => ({ id: i.id, name: i.name }))}
           addAction={addInitiative}
           removeAction={removeInitiative}
         />
@@ -198,12 +210,27 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             href: `/adrs/${adr.id}`,
             meta: `ADR-${String(adr.number).padStart(3, '0')}`,
           }))}
-          canEdit={editor}
-          available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+          canEdit={canMutate}
+          available={allAdrs.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
           addAction={addAdr}
           removeAction={removeAdr}
         />
       )}
+
+      <CrossOrgLinksPanel
+        entityLabel="Capability"
+        approved={crossOrgLinks.approved}
+        inboundPending={crossOrgLinks.inboundPending}
+        outboundPending={crossOrgLinks.outboundPending}
+        outboundRejected={crossOrgLinks.outboundRejected}
+        availableTargets={crossOrgLinks.availableTargets}
+        canRequest={canMutate}
+        canApprove={canApproveCrossOrg}
+        requestAction={requestFederatedLink}
+        approveAction={approveCrossOrgLink}
+        rejectAction={rejectCrossOrgLink}
+        withdrawAction={withdrawCrossOrgLink}
+      />
 
       {isModuleEnabled(enabledModules, 'principles') && capability.principleCapabilities.length > 0 && (
         <RelationshipPanel

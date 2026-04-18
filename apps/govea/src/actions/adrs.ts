@@ -5,7 +5,7 @@ import {
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -55,7 +55,10 @@ export async function getADRs(orgId: string) {
 }
 
 export async function getADR(id: string) {
-  return db.query.adrs.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const adr = await db.query.adrs.findFirst({
     where: eq(adrs.id, id),
     with: {
       organization: true,
@@ -67,6 +70,10 @@ export async function getADR(id: string) {
       principleAdrs: { with: { principle: true } },
     },
   })
+
+  if (!adr) return null
+  const visible = await canReadFederatedEntity(adr.organizationId, adr.visibility, session.user.organizationId!)
+  return visible ? adr : null
 }
 
 export async function createADR(formData: FormData) {

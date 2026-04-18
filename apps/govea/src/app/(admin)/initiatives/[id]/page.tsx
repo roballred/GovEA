@@ -57,6 +57,7 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
+  const canMutate = editor && initiative.organizationId === orgId
 
   const [allCapabilities, allObjectives, allApplications] = editor
     ? await Promise.all([
@@ -130,8 +131,8 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         <RelationshipPanel
           title="Capabilities"
           items={capabilityItems}
-          canEdit={editor}
-          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          canEdit={canMutate}
+          available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
           removeAction={removeCapability}
         />
@@ -144,8 +145,8 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
             id: objective.id, name: objective.name,
             href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
           }))}
-          canEdit={editor}
-          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          canEdit={canMutate}
+          available={allObjectives.filter(o => o.organizationId === orgId).map(o => ({ id: o.id, name: o.name }))}
           addAction={addObjective}
           removeAction={removeObjective}
         />
@@ -155,8 +156,8 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         <RelationshipPanel
           title="Applications"
           items={applicationItems}
-          canEdit={editor}
-          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          canEdit={canMutate}
+          available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
           addAction={addApplication}
           removeAction={removeApplication}
         />

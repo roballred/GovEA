@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { applications, applicationCapabilities } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -24,7 +24,10 @@ async function requireAdmin() {
 }
 
 export async function getApplication(id: string) {
-  return db.query.applications.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const application = await db.query.applications.findFirst({
     where: eq(applications.id, id),
     with: {
       organization: true,
@@ -34,6 +37,10 @@ export async function getApplication(id: string) {
       adrApplications: { with: { adr: true } },
     },
   })
+
+  if (!application) return null
+  const visible = await canReadFederatedEntity(application.organizationId, application.visibility, session.user.organizationId!)
+  return visible ? application : null
 }
 
 export async function getApplications(organizationId: string) {

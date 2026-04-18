@@ -4,7 +4,7 @@ import { getPersona } from '@/actions/personas'
 import { getPersonaTypesFromTaxonomy, getPersonaTagsFromTaxonomy } from '@/actions/taxonomy'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
-import { canEdit } from '@/lib/rbac'
+import { canEdit, isAdmin } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { RelationshipPanel } from '@/components/relationship-panel'
@@ -13,6 +13,14 @@ import {
   linkPersonaCapability, unlinkPersonaCapability,
   linkPersonaValueStream, unlinkPersonaValueStream,
 } from '@/actions/links'
+import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
+import {
+  approveCrossOrgLink,
+  getCrossOrgLinkContext,
+  rejectCrossOrgLink,
+  requestCrossOrgLink,
+  withdrawCrossOrgLink,
+} from '@/actions/cross-org-links'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -42,20 +50,24 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
+  const canMutate = editor && persona.organizationId === orgId
+  const canApproveCrossOrg = isAdmin(session.user) && persona.organizationId === orgId
 
-  const [allCapabilities, allValueStreams, personaTypes, allTags] = editor
+  const [allCapabilities, allValueStreams, personaTypes, allTags, crossOrgLinks] = editor
     ? await Promise.all([
         getCapabilities(orgId),
         getValueStreams(orgId),
         getPersonaTypesFromTaxonomy(orgId),
         getPersonaTagsFromTaxonomy(orgId),
+        getCrossOrgLinkContext('persona', id),
       ])
-    : [[], [], [], []]
+    : [[], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }]
 
   const addCapability = linkPersonaCapability.bind(null, id)
   const removeCapability = unlinkPersonaCapability.bind(null, id)
   const addValueStream = linkPersonaValueStream.bind(null, id)
   const removeValueStream = unlinkPersonaValueStream.bind(null, id)
+  const requestFederatedLink = requestCrossOrgLink.bind(null, 'persona', id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -91,7 +103,7 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {editor && (
+      {canMutate && (
         <PersonaEditButton
           personaId={id}
           initial={{
@@ -133,8 +145,8 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
           id: capability.id, name: capability.name,
           href: `/capabilities/${capability.id}`, meta: capability.domain,
         }))}
-        canEdit={editor}
-        available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+        canEdit={canMutate}
+        available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
         addAction={addCapability}
         removeAction={removeCapability}
       />
@@ -145,10 +157,25 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
           id: valueStream.id, name: valueStream.name,
           href: `/value-streams/${valueStream.id}`,
         }))}
-        canEdit={editor}
-        available={allValueStreams.map(vs => ({ id: vs.id, name: vs.name }))}
+        canEdit={canMutate}
+        available={allValueStreams.filter(vs => vs.organizationId === orgId).map(vs => ({ id: vs.id, name: vs.name }))}
         addAction={addValueStream}
         removeAction={removeValueStream}
+      />
+
+      <CrossOrgLinksPanel
+        entityLabel="Persona"
+        approved={crossOrgLinks.approved}
+        inboundPending={crossOrgLinks.inboundPending}
+        outboundPending={crossOrgLinks.outboundPending}
+        outboundRejected={crossOrgLinks.outboundRejected}
+        availableTargets={crossOrgLinks.availableTargets}
+        canRequest={canMutate}
+        canApprove={canApproveCrossOrg}
+        requestAction={requestFederatedLink}
+        approveAction={approveCrossOrgLink}
+        rejectAction={rejectCrossOrgLink}
+        withdrawAction={withdrawCrossOrgLink}
       />
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
