@@ -473,6 +473,7 @@ These details matter when writing migrations, actions, tests, or exports:
 
 1. `visibility` is a publication scope, not an authorization role. Access still depends on application logic and federation state.
 2. `status` is not uniform across all tables. Most content uses `workflow_status`, but initiatives and ADRs have their own enums.
+   Planning is intentionally split today: `strategic_objectives` use `workflow_status`, while `initiatives` use `initiative_status`.
 3. Several planning and display fields are stored as free text instead of stricter types:
    - `initiatives.start_date`
    - `initiatives.end_date`

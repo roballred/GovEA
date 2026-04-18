@@ -98,7 +98,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Service catalogue: first-class service records linked to personas, capabilities, applications, and value streams
 - Contributor-friendly relationship panels across detail pages, including in-context persona editing
 - Live dashboard for EA practitioners with repository activity and coverage signals
-- Roadmap view — initiatives and objectives visualized through planning-status columns
+- Demo-ready planning module — strategic objectives plus initiatives with a roadmap view grouped by planning status
 - Audit trail — immutable before/after log of all changes
 - Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
@@ -111,7 +111,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 
 **Partially implemented / still maturing:**
 - ADRs — schema and listing exist, but the full end-user authoring experience is not complete
-- Planning semantics and timeline presentation — useful for demos and early v1, but not fully settled
+- Planning semantics and timeline presentation — useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
 - Admin configuration beyond core settings
 - Repository completeness, end-to-end traceability, and architecture debt tooling
 
