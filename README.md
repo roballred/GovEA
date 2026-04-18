@@ -2,7 +2,7 @@
 
 **Open source enterprise architecture for state and local government.**
 
-GovEA helps government IT teams catalogue their application portfolio, map business capabilities to the people they serve, and make architecture decisions that trace back to real mission needs — not just technology inventory.
+GovEA helps government IT teams catalogue their application and service portfolio, map business capabilities to the people they serve, and make architecture decisions that trace back to real mission needs — not just technology inventory.
 
 Free. Open source. Runs on-prem or as a hosted service.
 
@@ -29,10 +29,13 @@ GovEA is built around a mission-first traceability chain:
 
 ```text
 Personas -> Capabilities -> Applications
+Personas -> Services -> Applications
 ```
 
 - Every **Application** must link to at least one **Capability**.
 - Every **Capability** must link to at least one **Persona**.
+- **Services** model the government-facing delivery layer and can link to personas, capabilities, applications, and value streams.
+- **Persona Type** and **Persona Tag** values are managed through **Taxonomy**, not through persona-specific admin tables.
 - **Organization** is the top-level tenant boundary.
 - Additional core entities include **Architecture Decision Record (ADR)** and **Technology Lifecycle**.
 - v1 is single-organization, but the data model must preserve a path to v2 multi-tenancy by scoping users, roles, content types, and taxonomies to an organization.
@@ -89,17 +92,18 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 ## Current Status
 
 **Implemented:**
-- Full CRUD for the core EA object model: applications, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
+- Full CRUD for the core EA object model: applications, services, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
 - Supporting reference content for principles and glossary terms
 - Mission-first traceability: Personas → Capabilities → Applications enforced at the application layer
+- Service catalogue: first-class service records linked to personas, capabilities, applications, and value streams
+- Contributor-friendly relationship panels across detail pages, including in-context persona editing
 - Live dashboard for EA practitioners with repository activity and coverage signals
 - Roadmap view — initiatives and objectives visualized through planning-status columns
 - Audit trail — immutable before/after log of all changes
-- Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, and domain-aware filtering
+- Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, and domain summaries
-- Multi-org federation prototype — connections, visibility controls, cross-org linking, and write-protection enforcement
 - Prototype multi-org federation — connection requests, visibility levels, shared content, cross-org linking
 - Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes × roles (Playwright)
@@ -114,13 +118,12 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 **Active work:**
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
-- Aligning product documentation with actual feature maturity
 
 **Near-term:**
 - Stakeholder-facing views and plain-language detail pages
 - Repository completeness signals and gap detection
 - Stronger multi-organization support
-- Repository-wide search and consistent workflow behavior across all entity types
+- Repository-wide search and broader workflow consistency across all entity types
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking

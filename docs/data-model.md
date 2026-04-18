@@ -8,6 +8,10 @@ It is intentionally implementation-focused:
 - which fields are required, optional, or enum-backed
 - how the major many-to-many relationships are modeled
 
+Recent product-shape changes reflected here:
+- `services` is now a first-class entity in the portfolio model
+- persona types and persona tags are taxonomy-backed, not separate vocabulary tables
+
 For product intent, personas, and capability definitions, see `business-architecture/`.
 
 ## Design Conventions
@@ -28,7 +32,7 @@ Shared enum semantics:
 | Enum | Values | Used by |
 |---|---|---|
 | `visibility` | `org`, `connections`, `instance` | Most publishable content |
-| `workflow_status` | `draft`, `published`, `archived` | Personas, capabilities, applications, value streams, objectives, principles, glossary |
+| `workflow_status` | `draft`, `published`, `archived` | Personas, capabilities, applications, services, value streams, objectives, principles, glossary |
 | `user_role` | `admin`, `contributor`, `viewer` | Users |
 
 ## Top-Level Model
@@ -39,6 +43,7 @@ erDiagram
   ORGANIZATIONS ||--o{ PERSONAS : owns
   ORGANIZATIONS ||--o{ CAPABILITIES : owns
   ORGANIZATIONS ||--o{ APPLICATIONS : owns
+  ORGANIZATIONS ||--o{ SERVICES : owns
   ORGANIZATIONS ||--o{ ADRS : owns
   ORGANIZATIONS ||--o{ VALUE_STREAMS : owns
   ORGANIZATIONS ||--o{ STRATEGIC_OBJECTIVES : owns
@@ -49,6 +54,10 @@ erDiagram
 
   PERSONAS }o--o{ CAPABILITIES : supports
   CAPABILITIES }o--o{ APPLICATIONS : implemented_by
+  SERVICES }o--o{ PERSONAS : serves
+  SERVICES }o--o{ CAPABILITIES : enabled_by
+  SERVICES }o--o{ APPLICATIONS : delivered_through
+  SERVICES }o--o{ VALUE_STREAMS : participates_in
   VALUE_STREAMS }o--o{ PERSONAS : serves
   VALUE_STREAM_STAGES }o--o{ CAPABILITIES : uses
   STRATEGIC_OBJECTIVES }o--o{ CAPABILITIES : advances
@@ -104,28 +113,6 @@ Additional Auth.js support tables:
 - `sessions`: persisted login sessions
 - `verification_tokens`: email/token verification records
 
-### `persona_types`
-
-Org-scoped controlled vocabulary for persona categories.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Unique per organization |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-
-### `tags`
-
-Org-scoped tag vocabulary used for personas.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Unique per organization |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-
 ### `personas`
 
 People-centered anchor objects representing who the organization serves.
@@ -136,7 +123,7 @@ People-centered anchor objects representing who the organization serves.
 | `organization_id` | UUID | Yes | FK to organization |
 | `name` | text | Yes | Persona label |
 | `description` | text | No | Narrative description |
-| `type` | text | No | Current selected persona type label |
+| `type` | text | No | Current selected persona type label; value is chosen from taxonomy |
 | `status` | `workflow_status` enum | Yes | Defaults to `draft` |
 | `visibility` | `visibility` enum | Yes | Defaults to `org` |
 | `created_by` | UUID | No | FK to user |
@@ -145,7 +132,7 @@ People-centered anchor objects representing who the organization serves.
 | `updated_at` | timestamp | Yes | Defaults to `now()` |
 
 Related tables:
-- `persona_tags`: join table between personas and tags
+- `persona_tags`: join table between personas and taxonomy-backed persona tags
 
 ### `capabilities`
 
@@ -196,6 +183,31 @@ Related tables:
 
 Implementation rule:
 - every application is expected to link to at least one capability at the application layer
+
+### `services`
+
+Government-facing service records that connect user-facing delivery to the underlying architecture.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | UUID | Yes | Primary key |
+| `organization_id` | UUID | Yes | FK to organization |
+| `name` | text | Yes | Service name |
+| `description` | text | No | Summary text |
+| `service_owner` | text | No | Free-text owner name or team |
+| `channels` | `text[]` | Yes | Delivery channels such as `online`, `in-person`, `phone`, `mobile` |
+| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
+| `visibility` | `visibility` enum | Yes | Defaults to `org` |
+| `created_by` | UUID | No | FK to user |
+| `updated_by` | UUID | No | FK to user |
+| `created_at` | timestamp | Yes | Defaults to `now()` |
+| `updated_at` | timestamp | Yes | Defaults to `now()` |
+
+Related tables:
+- `service_personas`
+- `service_capabilities`
+- `service_applications`
+- `service_value_streams`
 
 ### `adrs`
 
@@ -364,6 +376,11 @@ Org-scoped taxonomy hierarchy used for controlled vocabularies.
 | `created_at` | timestamp | Yes | Defaults to `now()` |
 | `updated_at` | timestamp | Yes | Defaults to `now()` |
 
+Usage notes:
+- capability domains are stored as taxonomy terms
+- persona types are taxonomy terms under the `Persona Type` branch
+- persona tags are taxonomy terms under the `Persona Tag` branch and linked through `persona_tags`
+
 ## Federation and Visibility Tables
 
 ### `org_connections`
@@ -428,9 +445,13 @@ GovEA uses explicit many-to-many join tables rather than arrays or JSON relation
 
 | Table | Connects | Extra metadata |
 |---|---|---|
-| `persona_tags` | personas ↔ tags | None |
+| `persona_tags` | personas ↔ taxonomy terms | None |
 | `capability_personas` | capabilities ↔ personas | None |
 | `application_capabilities` | applications ↔ capabilities | None |
+| `service_personas` | services ↔ personas | None |
+| `service_capabilities` | services ↔ capabilities | None |
+| `service_applications` | services ↔ applications | None |
+| `service_value_streams` | services ↔ value streams | None |
 | `value_stream_personas` | value streams ↔ personas | None |
 | `value_stream_stage_capabilities` | value stream stages ↔ capabilities | None |
 | `objective_capabilities` | objectives ↔ capabilities | None |
