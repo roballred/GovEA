@@ -29,7 +29,6 @@ GovEA is built around a mission-first traceability chain:
 
 ```text
 Personas -> Capabilities -> Applications
-Personas -> Services -> Applications
 ```
 
 - Every **Application** must link to at least one **Capability**.
