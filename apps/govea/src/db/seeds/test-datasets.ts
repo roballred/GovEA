@@ -1,7 +1,8 @@
 // Test and demo dataset presets.
 // Used by the dev toolbar to reset org content to a known state.
 // Each dataset defines personas, capabilities, applications, tags,
-// persona types, and the linkages between them.
+// and the linkages between them.
+// Persona types and tags are managed via Taxonomy (slug: persona-type / persona-tag).
 
 export type DatasetPersona = {
   name: string
@@ -115,8 +116,7 @@ export type DatasetADR = {
 export type Dataset = {
   label: string
   description: string
-  personaTypes: string[]
-  tags: string[]
+  tags: string[]  // taxonomy tag values seeded under "Persona Tag" type
   personas: DatasetPersona[]
   capabilities: DatasetCapability[]
   applications: DatasetApplication[]
@@ -130,12 +130,11 @@ export type Dataset = {
 
 // ── Dataset 1: Blank ──────────────────────────────────────────────────────────
 // Empty content — tests empty states and creation flows.
-// Restores default persona types and tags.
+// Restores default persona tags; persona types are managed in Taxonomy.
 
 export const DATASET_BLANK: Dataset = {
   label: 'Blank',
-  description: 'Empty — default types and tags only',
-  personaTypes: ['Citizen', 'Staff', 'Elected Official', 'External Partner'],
+  description: 'Empty — default tags only',
   tags: ['mobile-first', 'accessibility', 'high-volume', 'low-digital-literacy', 'multilingual'],
   personas: [],
   capabilities: [],
@@ -155,7 +154,6 @@ export const DATASET_BLANK: Dataset = {
 export const DATASET_STARTER: Dataset = {
   label: 'Starter',
   description: '3 personas · 3 capabilities · 3 applications',
-  personaTypes: ['Citizen', 'Staff', 'Elected Official', 'External Partner'],
   tags: ['mobile-first', 'accessibility', 'high-volume', 'low-digital-literacy', 'multilingual'],
   personas: [
     {
@@ -357,7 +355,6 @@ export const DATASET_STARTER: Dataset = {
 export const DATASET_CITY_DEMO: Dataset = {
   label: 'City Demo',
   description: '6 personas · 8 capabilities · 5 applications',
-  personaTypes: ['Citizen', 'Staff', 'Elected Official', 'External Partner'],
   tags: ['mobile-first', 'accessibility', 'high-volume', 'low-digital-literacy', 'multilingual'],
   personas: [
     {
