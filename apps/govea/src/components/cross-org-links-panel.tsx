@@ -49,8 +49,6 @@ export function CrossOrgLinksPanel({
   const [showRequest, setShowRequest] = useState(false)
   const [targetId, setTargetId] = useState('')
   const [linkType, setLinkType] = useState<CrossOrgLinkType>('implements')
-  const [rejectingLinkId, setRejectingLinkId] = useState<string | null>(null)
-  const [rejectionReason, setRejectionReason] = useState('')
 
   function handleRequest() {
     if (!targetId) return
@@ -59,23 +57,6 @@ export function CrossOrgLinksPanel({
       setTargetId('')
       setLinkType('implements')
       setShowRequest(false)
-    })
-  }
-
-  function openReject(linkId: string) {
-    setRejectingLinkId(linkId)
-    setRejectionReason('')
-  }
-
-  function cancelReject() {
-    setRejectingLinkId(null)
-    setRejectionReason('')
-  }
-
-  function confirmReject(linkId: string) {
-    startTransition(async () => {
-      await rejectAction(linkId, rejectionReason.trim() || undefined)
-      cancelReject()
     })
   }
 
@@ -204,60 +185,27 @@ export function CrossOrgLinksPanel({
                     </span>
                   </div>
                   {canApprove && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => run(() => approveAction(link.id))}
-                          disabled={isPending}
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 border border-emerald-200 disabled:opacity-50"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openReject(link.id)}
-                          disabled={isPending}
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 border border-destructive/20 disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                      </div>
-
-                      {rejectingLinkId === link.id && (
-                        <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 space-y-3">
-                          <label className="block space-y-1.5 text-sm">
-                            <span className="text-muted-foreground">Optional rejection reason</span>
-                            <textarea
-                              value={rejectionReason}
-                              onChange={e => setRejectionReason(e.target.value)}
-                              rows={3}
-                              autoFocus
-                              disabled={isPending}
-                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-                              placeholder={`Explain why ${link.peerName} is not a fit right now`}
-                            />
-                          </label>
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={cancelReject}
-                              disabled={isPending}
-                              className="rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border disabled:opacity-50"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => confirmReject(link.id)}
-                              disabled={isPending}
-                              className="rounded-md px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 border border-destructive/20 disabled:opacity-50"
-                            >
-                              {isPending ? 'Rejecting…' : 'Confirm rejection'}
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => run(() => approveAction(link.id))}
+                        disabled={isPending}
+                        className="rounded-md px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 border border-emerald-200 disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reason = window.prompt(`Optional rejection reason for ${link.peerName}`, '')
+                          if (reason === null) return
+                          run(() => rejectAction(link.id, reason || undefined))
+                        }}
+                        disabled={isPending}
+                        className="rounded-md px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 border border-destructive/20 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
                     </div>
                   )}
                 </div>
