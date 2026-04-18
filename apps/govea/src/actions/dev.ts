@@ -70,22 +70,20 @@ export async function resetToDataset(datasetKey: string) {
   for (const name of dataset.tags) {
     if (!personaTagTypeId) break
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    // Find-before-insert: taxonomyTerms has no unique constraint so
-    // onConflictDoNothing() would silently create duplicates on repeated resets.
-    const existingTag = await db.query.taxonomyTerms.findFirst({
-      where: (t, { eq: e, and }) =>
-        and(e(t.organizationId, orgId), e(t.parentId, personaTagTypeId!), e(t.name, name)),
-    })
-    if (existingTag) {
-      tagByName[name] = existingTag.id
-    } else {
-      const [term] = await db.insert(taxonomyTerms).values({
-        organizationId: orgId,
-        parentId: personaTagTypeId,
-        name,
-        slug,
-      }).returning()
+    const [term] = await db.insert(taxonomyTerms).values({
+      organizationId: orgId,
+      parentId: personaTagTypeId,
+      name,
+      slug,
+    }).onConflictDoNothing().returning()
+    if (term) {
       tagByName[name] = term.id
+    } else {
+      const found = await db.query.taxonomyTerms.findFirst({
+        where: (t, { eq: e, and }) =>
+          and(e(t.organizationId, orgId), e(t.parentId, personaTagTypeId!), e(t.name, name)),
+      })
+      if (found) tagByName[name] = found.id
     }
   }
 

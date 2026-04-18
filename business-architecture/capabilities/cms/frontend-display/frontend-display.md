@@ -25,6 +25,7 @@ The following outcomes indicate Front-end Display is working well for a 1–3 pe
 
 - A department head can answer "what applications support the permitting process?" by navigating from a capability to its linked applications — without asking IT
 - A Viewer who has never used GovEA before can find a specific application record within 2 minutes using search or navigation, without a manual
+- A Contributor can maintain links between related records directly from the relevant detail page without returning to a separate list view
 - Content reads as plain English to a non-technical audience — no EA jargon appears in labels, headings, or body copy (see [fd-content-display.md](./fd-content-display.md) for the jargon avoidance standard)
 - Published dates are visible on all content so Viewers can assess freshness without contacting the author
 - The front end loads and is fully readable without JavaScript enabled

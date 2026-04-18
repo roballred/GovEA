@@ -14,6 +14,8 @@ The system must render published content items in a clear, readable layout that 
 - Render rich text fields with formatting intact
 - Display taxonomy tags with links to filtered views of the same term
 - Show related content items with links to navigate to them
+- On shipped admin detail pages, show relationship panels inline with the rest of the content rather than sending editors back to separate list views
+- Expose edit affordances only to permitted users while keeping the same detail pages useful to Viewers
 
 ## Plain-Language Standard
 
@@ -36,6 +38,7 @@ This list is provisional. It should be validated against real users — specific
 - Only published content is ever rendered for Viewers — draft and archived content returns a 404
 - Field labels and content must not expose internal system identifiers or technical metadata
 - Content display must not require JavaScript to render — core content is server-rendered
+- Editor-only enhancements such as inline relationship management should layer on top of the read-only detail page rather than replacing it
 
 ## Links
 - Depends on: Content Management — Content Authoring, Content Management — Content Workflow

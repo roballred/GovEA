@@ -118,7 +118,7 @@ How content is presented to authenticated users and, optionally, the public.
 | Portfolio Views | Implemented | List and detail pages for all EA entity types |
 | Relationship Navigation | Implemented | Navigate between linked entities (capability ↔ application ↔ persona) |
 | Value Stream Display | Implemented | Visualize value stream stages with linked capabilities |
-| Content Display | Implemented | Detail pages with status badges, metadata, and linked records |
+| Content Display | Implemented | Detail pages with status badges, metadata, linked records, and contributor-friendly edit affordances on shipped surfaces |
 | Public / Authenticated Views | Not implemented | Opt-in public access to published content without login |
 | Responsive Layout | Partially implemented | Desktop-first; mobile not a v1 priority |
 | Theming | Implemented | Organization-selected predefined themes applied through settings |
