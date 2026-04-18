@@ -388,6 +388,28 @@ export async function withdrawCrossOrgLink(linkId: string) {
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
 }
 
+export async function revokeCrossOrgLink(linkId: string) {
+  const session = await requireAdmin()
+  const link = await db.query.crossOrgLinks.findFirst({
+    where: and(eq(crossOrgLinks.id, linkId), eq(crossOrgLinks.targetOrgId, session.user.organizationId!)),
+  })
+  if (!link) throw new Error('Cross-org link not found or not authorized')
+  if (link.status !== 'active') throw new Error('Only active links can be revoked')
+
+  await db.delete(crossOrgLinks).where(eq(crossOrgLinks.id, linkId))
+
+  await writeAuditLog({
+    action: 'cross_org_link.revoke',
+    entityType: 'cross_org_link',
+    entityId: linkId,
+    userId: session.user.id,
+    organizationId: session.user.organizationId!,
+    before: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, status: link.status, type: link.sourceEntityType },
+  })
+
+  await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
+}
+
 export async function removeLinksForConnection(orgAId: string, orgBId: string) {
   const affectedLinks = await db.query.crossOrgLinks.findMany({
     where: or(

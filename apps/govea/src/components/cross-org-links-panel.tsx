@@ -18,6 +18,7 @@ interface Props {
   approveAction: (linkId: string) => Promise<void>
   rejectAction: (linkId: string, reason?: string) => Promise<void>
   withdrawAction: (linkId: string) => Promise<void>
+  revokeAction?: (linkId: string) => Promise<void>
 }
 
 const LINK_TYPE_STYLES: Record<CrossOrgLinkType, string> = {
@@ -44,6 +45,7 @@ export function CrossOrgLinksPanel({
   approveAction,
   rejectAction,
   withdrawAction,
+  revokeAction,
 }: Props) {
   const [isPending, startTransition] = useTransition()
   const [showRequest, setShowRequest] = useState(false)
@@ -182,6 +184,17 @@ export function CrossOrgLinksPanel({
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
+                    </button>
+                  )}
+                  {canApprove && revokeAction && (
+                    <button
+                      type="button"
+                      onClick={() => run(() => revokeAction(link.id))}
+                      disabled={isPending}
+                      className="shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-border hover:border-destructive/20 transition-all disabled:opacity-30"
+                      aria-label={`Revoke link to ${link.peerName}`}
+                    >
+                      Revoke
                     </button>
                   )}
                 </div>

@@ -26,6 +26,7 @@ import {
   getCrossOrgLinkContext,
   rejectCrossOrgLink,
   requestCrossOrgLink,
+  revokeCrossOrgLink,
   withdrawCrossOrgLink,
 } from '@/actions/cross-org-links'
 
@@ -230,6 +231,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         approveAction={approveCrossOrgLink}
         rejectAction={rejectCrossOrgLink}
         withdrawAction={withdrawCrossOrgLink}
+        revokeAction={revokeCrossOrgLink}
       />
 
       {isModuleEnabled(enabledModules, 'principles') && capability.principleCapabilities.length > 0 && (
