@@ -647,7 +647,7 @@ async function seed() {
         targetEntityType: 'capability',
         targetEntityId: targetCapId,
         linkType: link.linkType,
-        status: 'active',
+        status: 'pending',
       })
     }
     console.log(`  ✓ Cross-org link (${link.linkType}): "${link.sourceCapabilityName}" → "${link.targetCapabilityName}"`)
