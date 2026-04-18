@@ -11,7 +11,7 @@ import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from 'vites
 import { createCapability, editCapability, deleteCapability } from '@/actions/capabilities'
 import { db } from '@/db/client'
 import { capabilities } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import {
   createTestOrg, createTestUser, cleanupOrg,
   makeSession, getCapabilitiesForOrg, getAuditLogsForEntity,
@@ -150,7 +150,7 @@ describe('capabilities actions', () => {
       const logs = await getAuditLogsForEntity(capId)
       // Find by known after value — avoids timestamp-ordering ambiguity
       const entry = logs.find(
-        l => l.action === 'capability.edit' && (l.after as any)?.name === 'After State',
+        l => l.action === 'capability.edit' && (l.after as Record<string, unknown>)?.name === 'After State',
       )
       expect(entry).toBeDefined()
       expect(entry!.before).toMatchObject({ name: 'Before State', status: 'draft' })
