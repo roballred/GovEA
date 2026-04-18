@@ -155,7 +155,7 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 | Org Connections | Prototype | Establish and manage connections between organizations |
 | Content Visibility | Prototype | Control which content is visible at org / connections / instance level |
 | Cross-Org Linking | Prototype | Link local capabilities and personas to enterprise counterparts |
-| Cross-Org Link Approval | Scaffolded | Review and approve or reject incoming cross-org link requests |
+| Cross-Org Link Approval | Prototype | Review and approve or reject incoming cross-org link requests on shipped capability and persona detail pages |
 
 **Visibility levels:**
 
@@ -167,7 +167,7 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 
 **Design principle:** Single-org installs work identically without federation UI or complexity. Federation is opt-in from the agency side — no org can be forced into a connection. Content ownership never transfers across org boundaries.
 
-Current reality: federation is no longer just schema groundwork. Connection-aware visibility, cross-org linking, and write-protection guardrails exist, but approval flows and deeper hardening are still in progress.
+Current reality: federation is a working prototype, not just schema groundwork. Connection-aware visibility, approval-based cross-org linking, read-only remote detail pages, connection cleanup, and write-protection guardrails are shipped. Notifications, richer history, and broader cross-org management remain future work.
 
 ---
 
