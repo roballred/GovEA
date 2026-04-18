@@ -1,5 +1,7 @@
 import { db } from '@/db/client'
 
+export type FederationVisibility = 'org' | 'connections' | 'instance'
+
 /**
  * Throws if the entity's org doesn't match the caller's org.
  * Use before any write to content fetched without an org filter.
@@ -23,4 +25,27 @@ export async function getConnectedOrgIds(organizationId: string): Promise<string
   return connections.map(c =>
     c.fromOrgId === organizationId ? c.toOrgId : c.fromOrgId
   )
+}
+
+export async function canReadFederatedEntity(
+  entityOrgId: string | null | undefined,
+  visibility: FederationVisibility | null | undefined,
+  callerOrgId: string,
+): Promise<boolean> {
+  if (!entityOrgId || !visibility) return false
+  if (entityOrgId === callerOrgId) return true
+  if (visibility === 'instance') return true
+  if (visibility !== 'connections') return false
+
+  const connectedOrgIds = await getConnectedOrgIds(callerOrgId)
+  return connectedOrgIds.includes(entityOrgId)
+}
+
+export function assertLocalRelationshipTarget(
+  targetOrgId: string | null | undefined,
+  callerOrgId: string,
+): void {
+  if (!targetOrgId || targetOrgId !== callerOrgId) {
+    throw new Error('Forbidden: cross-org relationships require the federation approval flow')
+  }
 }

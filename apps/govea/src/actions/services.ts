@@ -6,7 +6,7 @@ import {
   serviceApplications, serviceValueStreams,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -27,7 +27,10 @@ async function requireAdmin() {
 }
 
 export async function getService(id: string) {
-  return db.query.services.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const service = await db.query.services.findFirst({
     where: eq(services.id, id),
     with: {
       organization: true,
@@ -37,6 +40,10 @@ export async function getService(id: string) {
       serviceValueStreams: { with: { valueStream: true } },
     },
   })
+
+  if (!service) return null
+  const visible = await canReadFederatedEntity(service.organizationId, service.visibility, session.user.organizationId!)
+  return visible ? service : null
 }
 
 export async function getServices(organizationId: string) {

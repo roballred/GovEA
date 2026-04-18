@@ -54,6 +54,7 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
+  const canMutate = editor && adr.organizationId === orgId
 
   const [allCapabilities, allApplications, allInitiatives, allObjectives] = editor
     ? await Promise.all([
@@ -138,8 +139,8 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
             id: capability.id, name: capability.name,
             href: `/capabilities/${capability.id}`, meta: capability.domain,
           }))}
-          canEdit={editor}
-          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          canEdit={canMutate}
+          available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
           removeAction={removeCapability}
         />
@@ -152,8 +153,8 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
             id: application.id, name: application.name,
             href: `/applications/${application.id}`,
           }))}
-          canEdit={editor}
-          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          canEdit={canMutate}
+          available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
           addAction={addApplication}
           removeAction={removeApplication}
         />
@@ -166,8 +167,8 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
             id: initiative.id, name: initiative.name,
             href: `/initiatives/${initiative.id}`, meta: initiative.status,
           }))}
-          canEdit={editor}
-          available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+          canEdit={canMutate}
+          available={allInitiatives.filter(i => i.organizationId === orgId).map(i => ({ id: i.id, name: i.name }))}
           addAction={addInitiative}
           removeAction={removeInitiative}
         />
@@ -180,8 +181,8 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
             id: objective.id, name: objective.name,
             href: `/objectives/${objective.id}`,
           }))}
-          canEdit={editor}
-          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          canEdit={canMutate}
+          available={allObjectives.filter(o => o.organizationId === orgId).map(o => ({ id: o.id, name: o.name }))}
           addAction={addObjective}
           removeAction={removeObjective}
         />

@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -50,7 +50,10 @@ export async function getObjectives(organizationId: string) {
 }
 
 export async function getObjective(id: string) {
-  return db.query.strategicObjectives.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const objective = await db.query.strategicObjectives.findFirst({
     where: (o, { eq }) => eq(o.id, id),
     with: {
       objectiveCapabilities: { with: { capability: true } },
@@ -59,6 +62,10 @@ export async function getObjective(id: string) {
       initiativeObjectives: { with: { initiative: true } },
     },
   })
+
+  if (!objective) return null
+  const visible = await canReadFederatedEntity(objective.organizationId, objective.visibility, session.user.organizationId!)
+  return visible ? objective : null
 }
 
 export async function createObjective(formData: FormData) {

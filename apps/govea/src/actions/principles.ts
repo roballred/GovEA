@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { principles, principleAdrs, principleCapabilities } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -57,7 +57,10 @@ export async function getPrinciples(orgId: string) {
 }
 
 export async function getPrinciple(id: string) {
-  return db.query.principles.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const principle = await db.query.principles.findFirst({
     where: eq(principles.id, id),
     with: {
       organization: true,
@@ -65,6 +68,10 @@ export async function getPrinciple(id: string) {
       principleCapabilities: { with: { capability: true } },
     },
   })
+
+  if (!principle) return null
+  const visible = await canReadFederatedEntity(principle.organizationId, principle.visibility, session.user.organizationId!)
+  return visible ? principle : null
 }
 
 export async function createPrinciple(formData: FormData) {

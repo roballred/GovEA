@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { personas, personaTags } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -26,7 +26,10 @@ async function requireAdmin() {
 // ── Personas ──────────────────────────────────────────────────────────────────
 
 export async function getPersona(id: string) {
-  return db.query.personas.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const persona = await db.query.personas.findFirst({
     where: eq(personas.id, id),
     with: {
       organization: true,
@@ -35,6 +38,10 @@ export async function getPersona(id: string) {
       valueStreamPersonas: { with: { valueStream: true } },
     },
   })
+
+  if (!persona) return null
+  const visible = await canReadFederatedEntity(persona.organizationId, persona.visibility, session.user.organizationId!)
+  return visible ? persona : null
 }
 
 export async function getPersonas(organizationId: string) {

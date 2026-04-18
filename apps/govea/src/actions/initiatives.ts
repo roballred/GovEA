@@ -5,7 +5,7 @@ import {
   initiatives, initiativeCapabilities, initiativeObjectives,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -51,7 +51,10 @@ export async function getInitiatives(orgId: string) {
 }
 
 export async function getInitiative(id: string) {
-  return db.query.initiatives.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const initiative = await db.query.initiatives.findFirst({
     where: eq(initiatives.id, id),
     with: {
       initiativeCapabilities: { with: { capability: true } },
@@ -59,6 +62,10 @@ export async function getInitiative(id: string) {
       initiativeApplications: { with: { application: true } },
     },
   })
+
+  if (!initiative) return null
+  const visible = await canReadFederatedEntity(initiative.organizationId, initiative.visibility, session.user.organizationId!)
+  return visible ? initiative : null
 }
 
 export async function createInitiative(formData: FormData) {

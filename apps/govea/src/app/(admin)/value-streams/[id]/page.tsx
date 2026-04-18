@@ -48,6 +48,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
   ])
 
   if (!vs) notFound()
+  const canMutate = editor && vs.organizationId === orgId
 
   const addPersona = linkValueStreamPersona.bind(null, id)
   const removePersona = unlinkValueStreamPersona.bind(null, id)
@@ -103,7 +104,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
           </span>
         </div>
 
-        {vs.stages.length === 0 && !editor && (
+        {vs.stages.length === 0 && !canMutate && (
           <p className="text-sm text-muted-foreground py-4">No stages have been defined for this value stream yet.</p>
         )}
 
@@ -140,11 +141,11 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
         )}
 
         {/* Stage manager for editors */}
-        {editor && (
+        {canMutate && (
           <StageManager
             valueStreamId={vs.id}
             stages={vs.stages}
-            capabilities={capabilityList}
+            capabilities={capabilityList.filter(c => c.organizationId === orgId)}
           />
         )}
       </div>
@@ -156,8 +157,8 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
             id: persona.id, name: persona.name,
             href: `/personas/${persona.id}`,
           }))}
-          canEdit={editor}
-          available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+          canEdit={canMutate}
+          available={allPersonas.filter(p => p.organizationId === orgId).map(p => ({ id: p.id, name: p.name }))}
           addAction={addPersona}
           removeAction={removePersona}
         />

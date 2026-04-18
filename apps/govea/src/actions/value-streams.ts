@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -58,7 +58,10 @@ export async function getValueStreams(organizationId: string) {
 }
 
 export async function getValueStream(id: string) {
-  return db.query.valueStreams.findFirst({
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const valueStream = await db.query.valueStreams.findFirst({
     where: (vs, { eq }) => eq(vs.id, id),
     with: {
       stages: {
@@ -73,6 +76,10 @@ export async function getValueStream(id: string) {
       objectiveValueStreams: { with: { objective: true } },
     },
   })
+
+  if (!valueStream) return null
+  const visible = await canReadFederatedEntity(valueStream.organizationId, valueStream.visibility, session.user.organizationId!)
+  return visible ? valueStream : null
 }
 
 export async function createValueStream(formData: FormData) {
