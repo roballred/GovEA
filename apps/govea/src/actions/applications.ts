@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 async function requireContributor() {
   const session = await auth()
@@ -180,4 +181,29 @@ export async function deleteApplication(applicationId: string) {
     organizationId: orgId,
     before: { name: before?.name },
   })
+}
+
+export async function markApplicationReviewed(applicationId: string, _formData: FormData) {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const record = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
+  assertOwnership(record?.organizationId, orgId)
+
+  const now = new Date()
+  await db.update(applications).set({
+    lastReviewedBy: session.user.id,
+    lastReviewedAt: now,
+  }).where(and(eq(applications.id, applicationId), eq(applications.organizationId, orgId)))
+
+  await writeAuditLog({
+    action: 'application.reviewed',
+    entityType: 'application',
+    entityId: applicationId,
+    userId: session.user.id,
+    organizationId: orgId,
+    after: { lastReviewedAt: now.toISOString() },
+  })
+
+  revalidatePath(`/applications/${applicationId}`)
 }

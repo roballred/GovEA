@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getApplication } from '@/actions/applications'
+import { getApplication, markApplicationReviewed } from '@/actions/applications'
 import { getCapabilities } from '@/actions/capabilities'
 import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
@@ -182,8 +182,20 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         />
       )}
 
-      <div className="text-xs text-muted-foreground pt-4 border-t">
-        Created {new Date(application.createdAt).toLocaleDateString()} · Updated {new Date(application.updatedAt).toLocaleDateString()}
+      <div className="pt-4 border-t flex items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground">
+          Created {new Date(application.createdAt).toLocaleDateString()} · Modified {new Date(application.updatedAt).toLocaleDateString()}
+          {application.lastReviewedAt
+            ? ` · Reviewed ${new Date(application.lastReviewedAt).toLocaleDateString()}`
+            : ' · Never reviewed'}
+        </p>
+        {canMutate && (
+          <form action={markApplicationReviewed.bind(null, id)}>
+            <button type="submit" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+              Mark as reviewed
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
