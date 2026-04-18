@@ -93,7 +93,7 @@ describe('settings / setModuleEnabled', () => {
     const org = await findOrg(orgId)
     expect(org?.enabledModules?.['glossary']).toBeUndefined()
 
-    const before = await getAuditLogs(orgId, 'settings.module_toggled')
+    const _before = await getAuditLogs(orgId, 'settings.module_toggled')
     await setModuleEnabled('glossary', false)
     const after = await getAuditLogs(orgId, 'settings.module_toggled')
 

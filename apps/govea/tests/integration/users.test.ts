@@ -157,7 +157,7 @@ describe('user management actions', () => {
       await updateUserRole(viewer.id, 'contributor')
 
       const logs = await getAuditLogs(orgId, 'user.role_changed')
-      const entry = logs.find(l => l.entityId === viewer.id && (l.after as any)?.role === 'contributor')
+      const entry = logs.find(l => l.entityId === viewer.id && (l.after as Record<string, unknown>)?.role === 'contributor')
       expect(entry).toBeDefined()
       expect(entry!.before).toMatchObject({ role: 'viewer' })
       expect(entry!.after).toMatchObject({ role: 'contributor' })
