@@ -17,11 +17,17 @@ Debt that is named and tracked is manageable. Debt that is invisible becomes the
 
 - Create a debt item linked to one or more applications, capabilities, ADRs, or technology records, with a description, debt type, severity, and optional target resolution date
 - Debt types: `lifecycle-risk` (application approaching or past vendor support end), `capability-gap` (capability with no supporting application), `decision-drift` (ADR superseded by practice without formal revision), `known-shortcut` (deliberate technical or architectural compromise), `unreviewed` (object not updated in more than N months)
+- Severity tiers (defined once here; used by this capability and referenced by `rm-end-to-end-traceability` and `rm-repository-completeness`):
+  - `critical` — immediate operational or security risk: an application past end-of-life in active use with no remediation plan; a published capability with zero linked personas
+  - `high` — significant constraint on future options: application approaching end-of-life, ADR that contradicts current practice without a formal revision
+  - `medium` — known gap without immediate risk: weak application coverage for a capability, a deliberate shortcut without a resolution timeline
+  - `low` — documentation debt: outdated descriptions, missing optional relationships, stale content with no active delivery impact
 - Mark an application, capability, or ADR as carrying known debt directly from its edit form — without requiring a separate debt item to be created
 - View all debt items for the organization on a single screen, filterable by type, severity, and status
 - Link a debt item to an initiative as the resolution path
 - Track debt item status: `open`, `in-progress` (linked to an active initiative), `resolved`, `accepted` (acknowledged, no resolution planned, with a documented rationale)
 - Surface open debt count on the admin dashboard alongside repository completeness metrics
+- Surface a **unified priority signal summary** on the admin dashboard: a single ranked list combining open debt items, broken chain indicators (from `rm-end-to-end-traceability`), and staleness warnings (from `rm-repository-completeness`), sorted by severity tier (`critical` first, then `high`, `medium`, `low`). This replaces three separate signal lists — architects see one prioritised action queue, not three panels to check separately
 - Auto-flag applications where the lifecycle status is `end-of-life` or where technology records indicate an end-of-support date has passed
 
 ## Rules
@@ -31,6 +37,7 @@ Debt that is named and tracked is manageable. Debt that is invisible becomes the
 - `accepted` debt items require a written rationale; the system must not allow acceptance without documentation
 - Auto-flagged debt (lifecycle-based) appears in a separate "system-detected" queue, distinct from human-created debt items; the distinction must be visible
 - Resolving a debt item requires linking it to an initiative or explicitly marking it `accepted` with rationale; it cannot be closed without one or the other
+- When a user attempts to publish an architecture object that has one or more linked `critical` or `high` severity debt items in `open` status, the system must display a warning and require explicit acknowledgment before publishing proceeds — the publish action is not blocked, but the acknowledgment is mandatory and logged in the audit trail; this prevents silent publication of high-risk content without removing the architect's ability to communicate context alongside known problems
 - Debt items must be linked to at least one architecture object; unattached debt items are not permitted
 
 ## Federation Behavior
