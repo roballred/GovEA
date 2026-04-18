@@ -99,8 +99,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, and domain summaries
-- Multi-org federation prototype — connections, visibility controls, cross-org linking, and write-protection enforcement
-- Prototype multi-org federation — connection requests, visibility levels, shared content, cross-org linking
+- Multi-org federation prototype — connection requests, visibility controls, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
 - Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes × roles (Playwright)
 - Containerized local development plus Azure Container Apps dev deployment support
@@ -119,7 +118,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 **Near-term:**
 - Stakeholder-facing views and plain-language detail pages
 - Repository completeness signals and gap detection
-- Stronger multi-organization support
+- Deeper federation management UX, notifications, and broader cross-org verification coverage
 - Repository-wide search and consistent workflow behavior across all entity types
 
 **Longer-term:**

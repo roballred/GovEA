@@ -1,7 +1,7 @@
 # Capability: Multi-Organization Federation
 
 ## What It Does
-The system must allow multiple organizations to connect with each other, share appropriate content across organizational boundaries, and link local EA artifacts to enterprise-wide counterparts — while preserving each organization's autonomy and keeping single-org installs simple. In the current product this is a prototype capability: the core model and shared-read behaviors exist, while approval and hardening workflows remain in progress.
+The system must allow multiple organizations to connect with each other, share appropriate content across organizational boundaries, and link local EA artifacts to enterprise-wide counterparts — while preserving each organization's autonomy and keeping single-org installs simple. In the current product this is a prototype capability: connected-org visibility, approval-based cross-org links, and server-enforced ownership guardrails are shipped, while deeper management workflows and notification/history layers remain in progress.
 
 ## Personas
 - **Enterprise Architect (Central IT)** — publishes enterprise capabilities and personas at instance level; sees aggregated view of agency adoption across connected orgs
@@ -27,11 +27,13 @@ The system must allow multiple organizations to connect with each other, share a
 ## Implementation Status
 Prototype in the current product:
 - Org connection records and connection-aware visibility exist
-- Cross-org linking exists for supported content types
+- Cross-org link requests, approvals, rejections, and source-side withdrawal exist for capabilities and personas
+- Remote detail pages are read-only unless the current org owns the record
 - Write-protection guardrails are enforced on server-side mutations
+- Removing an org connection also removes dependent cross-org links
 
 Still maturing:
-- Incoming link approval workflows
+- Notification and approval-history surfaces
 - Broader test coverage across role and visibility combinations
 - Deeper cross-org management UX
 
