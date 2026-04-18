@@ -5,7 +5,7 @@ import {
   initiatives, initiativeCapabilities, initiativeObjectives,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -56,6 +56,7 @@ export async function getInitiative(id: string) {
     with: {
       initiativeCapabilities: { with: { capability: true } },
       initiativeObjectives: { with: { objective: true } },
+      initiativeApplications: { with: { application: true } },
     },
   })
 }
@@ -93,6 +94,10 @@ export async function createInitiative(formData: FormData) {
 
 export async function editInitiative(id: string, formData: FormData) {
   const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const existing = await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
+  assertOwnership(existing?.organizationId, orgId)
 
   const userId = session.user.id
 
@@ -125,7 +130,12 @@ export async function editInitiative(id: string, formData: FormData) {
 }
 
 export async function deleteInitiative(id: string) {
-  await requireAdmin()
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
+  const existing = await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
+  assertOwnership(existing?.organizationId, orgId)
+
   await db.delete(initiatives).where(eq(initiatives.id, id))
 }
 

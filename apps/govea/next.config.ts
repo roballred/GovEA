@@ -14,6 +14,7 @@ if (process.env.NEXT_PUBLIC_APP_URL) {
 }
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   experimental: {
     serverActions: {
       allowedOrigins,

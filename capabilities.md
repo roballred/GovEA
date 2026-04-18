@@ -131,11 +131,11 @@ Organization-level settings and administrative tools.
 
 | Capability | Status | Description |
 |---|---|---|
-| Organization Settings | Partially implemented | Theme selection and appearance controls are available today; broader org settings remain future work |
+| Organization Settings | Partially implemented | Theme selection is available today; broader org settings remain future work |
 | Persona Type Management | Implemented | Create and manage persona type categories |
 | Persona Tags | Implemented | Tag-based classification for personas |
 | Admin Dashboard | Implemented | Live practitioner dashboard with repository activity, coverage signals, and navigation shortcuts |
-| Feature Management | Partially implemented | Admins can enable or disable current product modules per organization; broader feature dependency management remains future work |
+| Feature Management | Not implemented | Enable/disable optional product features per org |
 | Email Configuration | Not implemented | SMTP setup for notifications and password reset |
 | Backup & Export | Not implemented | Data export and backup tooling |
 | Security Settings | Not implemented | Session timeouts, password policy, IP restrictions |

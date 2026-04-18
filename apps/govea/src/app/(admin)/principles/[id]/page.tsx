@@ -1,9 +1,18 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getPrinciple } from '@/actions/principles'
+import { getCapabilities } from '@/actions/capabilities'
+import { getADRs } from '@/actions/adrs'
+import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { LinkedItemCard } from '@/components/linked-item-card'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import {
+  linkPrincipleCapability, unlinkPrincipleCapability,
+  linkPrincipleAdr, unlinkPrincipleAdr,
+} from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -28,8 +37,23 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const principle = await getPrinciple(id)
+  const [principle, enabledModules] = await Promise.all([getPrinciple(id), getEnabledModules()])
   if (!principle) notFound()
+
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+
+  const [allCapabilities, allAdrs] = editor
+    ? await Promise.all([
+        getCapabilities(orgId),
+        getADRs(orgId),
+      ])
+    : [[], []]
+
+  const addCapability = linkPrincipleCapability.bind(null, id)
+  const removeCapability = unlinkPrincipleCapability.bind(null, id)
+  const addAdr = linkPrincipleAdr.bind(null, id)
+  const removeAdr = unlinkPrincipleAdr.bind(null, id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -76,36 +100,35 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
         )}
       </div>
 
-      {(principle.principleCapabilities.length > 0 || principle.principleAdrs.length > 0) && <hr />}
+      <hr />
 
-      {principle.principleCapabilities.length > 0 && (
-        <Section title="Capabilities">
-          <div className="space-y-2">
-            {principle.principleCapabilities.map(({ capability }) => (
-              <LinkedItemCard
-                key={capability.id}
-                href={`/capabilities/${capability.id}`}
-                name={capability.name}
-                meta={capability.domain ?? null}
-              />
-            ))}
-          </div>
-        </Section>
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={principle.principleCapabilities.map(({ capability }) => ({
+            id: capability.id, name: capability.name,
+            href: `/capabilities/${capability.id}`, meta: capability.domain,
+          }))}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
       )}
 
-      {principle.principleAdrs.length > 0 && (
-        <Section title="Architecture Decision Records">
-          <div className="space-y-2">
-            {principle.principleAdrs.map(({ adr }) => (
-              <LinkedItemCard
-                key={adr.id}
-                href={`/adrs/${adr.id}`}
-                name={adr.title}
-                meta={adr.number}
-              />
-            ))}
-          </div>
-        </Section>
+      {isModuleEnabled(enabledModules, 'adrs') && (
+        <RelationshipPanel
+          title="Architecture Decision Records"
+          items={principle.principleAdrs.map(({ adr }) => ({
+            id: adr.id, name: adr.title,
+            href: `/adrs/${adr.id}`,
+            meta: `ADR-${String(adr.number).padStart(3, '0')}`,
+          }))}
+          canEdit={editor}
+          available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+          addAction={addAdr}
+          removeAction={removeAdr}
+        />
       )}
 
       <div className="text-xs text-muted-foreground pt-4 border-t">

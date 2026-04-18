@@ -2,9 +2,17 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getValueStream } from '@/actions/value-streams'
 import { getCapabilities } from '@/actions/capabilities'
+import { getPersonas } from '@/actions/personas'
+import { canEdit } from '@/lib/rbac'
 import { StageManager } from './stage-manager'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import {
+  linkValueStreamPersona, unlinkValueStreamPersona,
+} from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -29,16 +37,20 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const role = session.user.role
+  const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
-  const canEdit = role === 'admin' || role === 'contributor'
 
-  const [vs, capabilityList] = await Promise.all([
+  const [vs, capabilityList, allPersonas, enabledModules] = await Promise.all([
     getValueStream(id),
     getCapabilities(orgId),
+    editor ? getPersonas(orgId) : Promise.resolve([]),
+    getEnabledModules(),
   ])
 
   if (!vs) notFound()
+
+  const addPersona = linkValueStreamPersona.bind(null, id)
+  const removePersona = unlinkValueStreamPersona.bind(null, id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -91,7 +103,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
           </span>
         </div>
 
-        {vs.stages.length === 0 && !canEdit && (
+        {vs.stages.length === 0 && !editor && (
           <p className="text-sm text-muted-foreground py-4">No stages have been defined for this value stream yet.</p>
         )}
 
@@ -109,7 +121,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
                 {stage.description && (
                   <p className="text-sm text-muted-foreground pl-9">{stage.description}</p>
                 )}
-                {stage.stageCapabilities.length > 0 && (
+                {isModuleEnabled(enabledModules, 'capabilities') && stage.stageCapabilities.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pl-9">
                     {stage.stageCapabilities.map(({ capability }) => (
                       <Link
@@ -128,13 +140,42 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
         )}
 
         {/* Stage manager for editors */}
-        {canEdit && (
+        {editor && (
           <StageManager
             valueStreamId={vs.id}
             stages={vs.stages}
             capabilities={capabilityList}
           />
         )}
+      </div>
+
+      {isModuleEnabled(enabledModules, 'personas') && (
+        <RelationshipPanel
+          title="Personas"
+          items={vs.valueStreamPersonas.map(({ persona }) => ({
+            id: persona.id, name: persona.name,
+            href: `/personas/${persona.id}`,
+          }))}
+          canEdit={editor}
+          available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+          addAction={addPersona}
+          removeAction={removePersona}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'objectives') && (
+        <RelationshipPanel
+          title="Strategic Objectives"
+          items={vs.objectiveValueStreams.map(({ objective }) => ({
+            id: objective.id, name: objective.name,
+            href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
+          }))}
+          canEdit={false}
+        />
+      )}
+
+      <div className="text-xs text-muted-foreground pt-4 border-t">
+        Created {new Date(vs.createdAt).toLocaleDateString()} · Updated {new Date(vs.updatedAt).toLocaleDateString()}
       </div>
     </div>
   )

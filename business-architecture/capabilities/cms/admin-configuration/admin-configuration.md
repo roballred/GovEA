@@ -43,8 +43,8 @@ GovEA follows a migration-based upgrade model. This section defines expectations
 - No Admin & Configuration function should require CLI or database access
 
 ## Current Scope
-- Implemented today: admin dashboard, user management, audit visibility, taxonomy and persona metadata management, org connections, theme selection, and per-org module toggles
-- Future work: broader site settings, email configuration, backup/export, and security policy controls
+- Implemented today: admin dashboard, user management, audit visibility, taxonomy and persona metadata management, org connections, and theme selection
+- Future work: broader site settings, feature toggles, email configuration, backup/export, and security policy controls
 
 ## Links
 - Depends on: IAM

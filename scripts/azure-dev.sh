@@ -25,7 +25,9 @@ LOCATION="eastus"
 ACR="goveadevacr"
 ACA_ENV="govea-dev-env"
 ACA_APP="govea-dev"
-IMAGE="${ACR}.azurecr.io/govea-dev:latest"
+# IMAGE is set at build time using a timestamp tag so Azure Container Apps
+# always sees a new image reference and pulls the updated image.
+IMAGE=""
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 log()  { echo ""; echo "==> $*"; }
@@ -60,11 +62,17 @@ auth_secret() {
 
 build_and_push() {
   # Build and push in Azure using ACR Tasks — no local Docker push needed.
-  # The image lands directly in ACR and build output is streamed live.
-  log "Building image in Azure (az acr build)..."
+  # Use a timestamp tag alongside :latest so ACA always sees a new image
+  # reference and is forced to pull the updated image (avoids :latest caching).
+  local tag
+  tag="$(date +%Y%m%d-%H%M%S)"
+  IMAGE="${ACR}.azurecr.io/govea-dev:${tag}"
+
+  log "Building image in Azure (az acr build) — tag: ${tag}..."
   az acr build \
     --registry "$ACR" \
-    --image govea-dev:latest \
+    --image "govea-dev:${tag}" \
+    --image "govea-dev:latest" \
     --file docker/Dockerfile.dev \
     .
 }
@@ -96,8 +104,8 @@ deploy_containerapp() {
       --registry-username "$ACR" \
       --registry-password "$acr_pass" \
       --command "/entrypoint.azure-dev.sh" \
-      --cpu 1.0 \
-      --memory 2Gi \
+      --cpu 2.0 \
+      --memory 4Gi \
       --env-vars \
         "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/govea" \
         "AUTH_SECRET=${secret}" \

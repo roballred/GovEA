@@ -1,52 +1,54 @@
 'use client'
 
 import { useState, useEffect, type ReactNode } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { DevToolbar } from '@/components/dev-toolbar'
+import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
-type NavItem = { href: string; label: string }
+type NavItem = { href: string; label: string; moduleKey?: string }
 type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean }
 
 const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Business Architecture',
     items: [
-      { href: '/personas', label: 'Personas' },
-      { href: '/value-streams', label: 'Value Streams' },
-      { href: '/capabilities', label: 'Capabilities' },
-      { href: '/glossary', label: 'Glossary' },
+      { href: '/personas',      label: 'Personas',      moduleKey: 'personas' },
+      { href: '/value-streams', label: 'Value Streams',  moduleKey: 'value-streams' },
+      { href: '/capabilities',  label: 'Capabilities',   moduleKey: 'capabilities' },
+      { href: '/glossary',      label: 'Glossary',       moduleKey: 'glossary' },
     ],
   },
   {
     label: 'Portfolio',
     items: [
-      { href: '/applications', label: 'Applications' },
-      { href: '/adrs', label: 'Decisions' },
-      { href: '/principles', label: 'Principles' },
+      { href: '/applications', label: 'Applications', moduleKey: 'applications' },
+      { href: '/adrs',         label: 'Decisions',    moduleKey: 'adrs' },
+      { href: '/principles',   label: 'Principles',   moduleKey: 'principles' },
     ],
   },
   {
     label: 'Strategy',
     items: [
-      { href: '/objectives', label: 'Objectives' },
-      { href: '/initiatives', label: 'Initiatives' },
-      { href: '/roadmap', label: 'Roadmap' },
+      { href: '/objectives',  label: 'Objectives',  moduleKey: 'objectives' },
+      { href: '/initiatives', label: 'Initiatives', moduleKey: 'initiatives' },
+      { href: '/roadmap',     label: 'Roadmap',     moduleKey: 'roadmap' },
     ],
   },
   {
     label: 'Configuration',
     adminOnly: true,
     items: [
-      { href: '/taxonomy', label: 'Taxonomy' },
-      { href: '/users', label: 'Users' },
+      { href: '/taxonomy',    label: 'Taxonomy' },
+      { href: '/users',       label: 'Users' },
       { href: '/connections', label: 'Connections' },
-      { href: '/audit', label: 'Audit Log' },
-      { href: '/settings', label: 'Settings' },
+      { href: '/audit',       label: 'Audit Log' },
+      { href: '/settings',    label: 'Settings' },
     ],
   },
 ]
@@ -56,10 +58,12 @@ const NAV_GROUPS: NavGroup[] = [
 function SidebarContent({
   role,
   pathname,
+  enabledModules,
   onClose,
 }: {
   role: Role
   pathname: string
+  enabledModules: Record<string, boolean>
   onClose?: () => void
 }) {
   const isAdmin = role === 'admin'
@@ -81,33 +85,39 @@ function SidebarContent({
       </Link>
 
       <div className="mt-2 space-y-4">
-        {NAV_GROUPS.filter(g => !g.adminOnly || isAdmin).map(group => (
-          <div key={group.label}>
-            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none">
-              {group.label}
-            </p>
-            <div className="mt-0.5 space-y-0.5">
-              {group.items.map(item => {
-                const active = pathname === item.href || pathname.startsWith(item.href + '/')
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      'block rounded-md px-3 py-2 text-sm transition-colors',
-                      active
-                        ? 'bg-white/15 text-white font-medium'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white'
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                )
-              })}
+        {NAV_GROUPS.filter(g => !g.adminOnly || isAdmin).map(group => {
+          const visibleItems = group.items.filter(
+            item => !item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])
+          )
+          if (visibleItems.length === 0) return null
+          return (
+            <div key={group.label}>
+              <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none">
+                {group.label}
+              </p>
+              <div className="mt-0.5 space-y-0.5">
+                {visibleItems.map(item => {
+                  const active = pathname === item.href || pathname.startsWith(item.href + '/')
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        'block rounded-md px-3 py-2 text-sm transition-colors',
+                        active
+                          ? 'bg-white/15 text-white font-medium'
+                          : 'text-white/70 hover:bg-white/10 hover:text-white'
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </nav>
   )
@@ -121,6 +131,7 @@ interface AppShellProps {
   roleBadgeClass: string
   themeStyle: string
   isDev: boolean
+  enabledModules: Record<string, boolean>
   signOutSlot: ReactNode
   children: ReactNode
 }
@@ -131,10 +142,12 @@ export function AppShell({
   roleBadgeClass,
   themeStyle,
   isDev,
+  enabledModules,
   signOutSlot,
   children,
 }: AppShellProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [prevPathname, setPrevPathname] = useState(pathname)
 
@@ -145,6 +158,14 @@ export function AppShell({
       setSidebarOpen(false)
     }
   }
+
+  // Redirect to dashboard if the current route's module has been disabled
+  useEffect(() => {
+    const mod = moduleForPath(pathname)
+    if (mod && !isModuleEnabled(enabledModules, mod.key)) {
+      router.replace('/dashboard')
+    }
+  }, [pathname, enabledModules, router])
 
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
@@ -180,7 +201,7 @@ export function AppShell({
             GovEA
           </Link>
         </div>
-        <SidebarContent role={role} pathname={pathname} />
+        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} />
       </aside>
 
       {/* ── Mobile overlay backdrop ── */}
@@ -217,7 +238,7 @@ export function AppShell({
             </svg>
           </button>
         </div>
-        <SidebarContent role={role} pathname={pathname} onClose={() => setSidebarOpen(false)} />
+        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} onClose={() => setSidebarOpen(false)} />
       </aside>
 
       {/* ── Main content area ── */}
@@ -259,6 +280,7 @@ export function AppShell({
             )}>
               {role}
             </span>
+            <DarkModeToggle />
             {signOutSlot}
           </div>
         </header>

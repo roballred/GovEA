@@ -1,9 +1,22 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getApplication } from '@/actions/applications'
+import { getCapabilities } from '@/actions/capabilities'
+import { getObjectives } from '@/actions/objectives'
+import { getInitiatives } from '@/actions/initiatives'
+import { getADRs } from '@/actions/adrs'
+import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { LinkedItemCard } from '@/components/linked-item-card'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import {
+  linkApplicationCapability, unlinkApplicationCapability,
+  linkApplicationObjective, unlinkApplicationObjective,
+  linkApplicationInitiative, unlinkApplicationInitiative,
+  linkApplicationAdr, unlinkApplicationAdr,
+} from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -25,9 +38,9 @@ const VISIBILITY_LABELS: Record<string, string> = {
 
 const LIFECYCLE_STYLES: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  deprecated: 'bg-amber-100 text-amber-800 border-amber-200',
+  sunset: 'bg-red-100 text-red-700 border-red-200',
   planned: 'bg-blue-100 text-blue-700 border-blue-200',
-  sunset: 'bg-amber-100 text-amber-800 border-amber-200',
-  decommissioned: 'bg-red-100 text-red-700 border-red-200',
 }
 
 export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,8 +48,29 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const application = await getApplication(id)
+  const [application, enabledModules] = await Promise.all([getApplication(id), getEnabledModules()])
   if (!application) notFound()
+
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+
+  const [allCapabilities, allObjectives, allInitiatives, allAdrs] = editor
+    ? await Promise.all([
+        getCapabilities(orgId),
+        getObjectives(orgId),
+        getInitiatives(orgId),
+        getADRs(orgId),
+      ])
+    : [[], [], [], []]
+
+  const addCapability = linkApplicationCapability.bind(null, id)
+  const removeCapability = unlinkApplicationCapability.bind(null, id)
+  const addObjective = linkApplicationObjective.bind(null, id)
+  const removeObjective = unlinkApplicationObjective.bind(null, id)
+  const addInitiative = linkApplicationInitiative.bind(null, id)
+  const removeInitiative = unlinkApplicationInitiative.bind(null, id)
+  const addAdr = linkApplicationAdr.bind(null, id)
+  const removeAdr = unlinkApplicationAdr.bind(null, id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -47,9 +81,9 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight">{application.name}</h1>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             {application.lifecycleStatus && (
-              <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LIFECYCLE_STYLES[application.lifecycleStatus])}>
+              <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LIFECYCLE_STYLES[application.lifecycleStatus] ?? 'bg-slate-100 text-slate-600 border-slate-200')}>
                 {application.lifecycleStatus.charAt(0).toUpperCase() + application.lifecycleStatus.slice(1)}
               </span>
             )}
@@ -67,47 +101,88 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         )}
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">
-          <div>
-            <span className="text-muted-foreground">Vendor: </span>
-            {application.vendor
-              ? <span className="font-medium">{application.vendor}</span>
-              : <span className="text-muted-foreground">—</span>
-            }
-          </div>
-          <div>
-            <span className="text-muted-foreground">Version: </span>
-            {application.version
-              ? <span className="font-medium">{application.version}</span>
-              : <span className="text-muted-foreground">—</span>
-            }
-          </div>
-          <div>
-            <span className="text-muted-foreground">Hosting: </span>
-            {application.hostingModel
-              ? <span className="font-medium">{application.hostingModel}</span>
-              : <span className="text-muted-foreground">—</span>
-            }
-          </div>
+          {application.vendor && (
+            <div>
+              <span className="text-muted-foreground">Vendor: </span>
+              <span className="font-medium">{application.vendor}</span>
+            </div>
+          )}
+          {application.version && (
+            <div>
+              <span className="text-muted-foreground">Version: </span>
+              <span className="font-medium">{application.version}</span>
+            </div>
+          )}
+          {application.hostingModel && (
+            <div>
+              <span className="text-muted-foreground">Hosting: </span>
+              <span className="font-medium">{application.hostingModel}</span>
+            </div>
+          )}
         </div>
       </div>
 
       <hr />
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Capabilities</h2>
-        {application.applicationCapabilities.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No capabilities linked to this application.</p>
-        ) : (
-          <div className="space-y-2">
-            {application.applicationCapabilities.map(({ capability }) => (
-              <LinkedItemCard
-                key={capability.id}
-                href={`/capabilities/${capability.id}`}
-                name={capability.name}
-              />
-            ))}
-          </div>
-        )}
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={application.applicationCapabilities.map(({ capability }) => ({
+            id: capability.id, name: capability.name,
+            href: `/capabilities/${capability.id}`, meta: capability.domain,
+          }))}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'objectives') && (
+        <RelationshipPanel
+          title="Strategic Objectives"
+          items={application.objectiveApplications.map(({ objective }) => ({
+            id: objective.id, name: objective.name,
+            href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
+          }))}
+          canEdit={editor}
+          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          addAction={addObjective}
+          removeAction={removeObjective}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'initiatives') && (
+        <RelationshipPanel
+          title="Initiatives"
+          items={application.initiativeApplications.map(({ initiative }) => ({
+            id: initiative.id, name: initiative.name,
+            href: `/initiatives/${initiative.id}`, meta: initiative.status,
+          }))}
+          canEdit={editor}
+          available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+          addAction={addInitiative}
+          removeAction={removeInitiative}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'adrs') && (
+        <RelationshipPanel
+          title="Architecture Decision Records"
+          items={application.adrApplications.map(({ adr }) => ({
+            id: adr.id, name: adr.title,
+            href: `/adrs/${adr.id}`,
+            meta: `ADR-${String(adr.number).padStart(3, '0')}`,
+          }))}
+          canEdit={editor}
+          available={allAdrs.map(a => ({ id: a.id, name: `ADR-${String(a.number).padStart(3, '0')} ${a.title}` }))}
+          addAction={addAdr}
+          removeAction={removeAdr}
+        />
+      )}
+
+      <div className="text-xs text-muted-foreground pt-4 border-t">
+        Created {new Date(application.createdAt).toLocaleDateString()} · Updated {new Date(application.updatedAt).toLocaleDateString()}
       </div>
     </div>
   )

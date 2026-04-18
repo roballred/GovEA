@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { glossaryTerms, glossaryTermSources } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -113,6 +113,7 @@ export async function editGlossaryTerm(termId: string, formData: FormData) {
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
 
   const before = await db.query.glossaryTerms.findFirst({ where: eq(glossaryTerms.id, termId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.update(glossaryTerms).set({
     term, definition, definitionSource, definitionSourceUrl,
@@ -149,6 +150,7 @@ export async function deleteGlossaryTerm(termId: string) {
   const orgId = session.user.organizationId!
 
   const before = await db.query.glossaryTerms.findFirst({ where: eq(glossaryTerms.id, termId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(glossaryTerms).where(
     and(eq(glossaryTerms.id, termId), eq(glossaryTerms.organizationId, orgId))

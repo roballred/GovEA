@@ -1,9 +1,22 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getADR } from '@/actions/adrs'
+import { getCapabilities } from '@/actions/capabilities'
+import { getApplications } from '@/actions/applications'
+import { getInitiatives } from '@/actions/initiatives'
+import { getObjectives } from '@/actions/objectives'
+import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { LinkedItemCard } from '@/components/linked-item-card'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import {
+  linkAdrCapability, unlinkAdrCapability,
+  linkAdrApplication, unlinkAdrApplication,
+  linkAdrInitiative, unlinkAdrInitiative,
+  linkAdrObjective, unlinkAdrObjective,
+} from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -36,8 +49,29 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const adr = await getADR(id)
+  const [adr, enabledModules] = await Promise.all([getADR(id), getEnabledModules()])
   if (!adr) notFound()
+
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+
+  const [allCapabilities, allApplications, allInitiatives, allObjectives] = editor
+    ? await Promise.all([
+        getCapabilities(orgId),
+        getApplications(orgId),
+        getInitiatives(orgId),
+        getObjectives(orgId),
+      ])
+    : [[], [], [], []]
+
+  const addCapability = linkAdrCapability.bind(null, id)
+  const removeCapability = unlinkAdrCapability.bind(null, id)
+  const addApplication = linkAdrApplication.bind(null, id)
+  const removeApplication = unlinkAdrApplication.bind(null, id)
+  const addInitiative = linkAdrInitiative.bind(null, id)
+  const removeInitiative = unlinkAdrInitiative.bind(null, id)
+  const addObjective = linkAdrObjective.bind(null, id)
+  const removeObjective = unlinkAdrObjective.bind(null, id)
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -97,76 +131,71 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
 
       <hr />
 
-      {/* Linked items */}
-      {adr.adrCapabilities.length > 0 && (
-        <Section title="Capabilities">
-          <div className="space-y-2">
-            {adr.adrCapabilities.map(({ capability }) => (
-              <LinkedItemCard
-                key={capability.id}
-                href={`/capabilities/${capability.id}`}
-                name={capability.name}
-                meta={capability.domain ?? null}
-              />
-            ))}
-          </div>
-        </Section>
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={adr.adrCapabilities.map(({ capability }) => ({
+            id: capability.id, name: capability.name,
+            href: `/capabilities/${capability.id}`, meta: capability.domain,
+          }))}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
       )}
 
-      {adr.adrApplications.length > 0 && (
-        <Section title="Applications">
-          <div className="space-y-2">
-            {adr.adrApplications.map(({ application }) => (
-              <LinkedItemCard
-                key={application.id}
-                href={`/applications/${application.id}`}
-                name={application.name}
-              />
-            ))}
-          </div>
-        </Section>
+      {isModuleEnabled(enabledModules, 'applications') && (
+        <RelationshipPanel
+          title="Applications"
+          items={adr.adrApplications.map(({ application }) => ({
+            id: application.id, name: application.name,
+            href: `/applications/${application.id}`,
+          }))}
+          canEdit={editor}
+          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          addAction={addApplication}
+          removeAction={removeApplication}
+        />
       )}
 
-      {adr.adrInitiatives.length > 0 && (
-        <Section title="Initiatives">
-          <div className="space-y-2">
-            {adr.adrInitiatives.map(({ initiative }) => (
-              <LinkedItemCard
-                key={initiative.id}
-                href={`/initiatives/${initiative.id}`}
-                name={initiative.name}
-              />
-            ))}
-          </div>
-        </Section>
+      {isModuleEnabled(enabledModules, 'initiatives') && (
+        <RelationshipPanel
+          title="Initiatives"
+          items={adr.adrInitiatives.map(({ initiative }) => ({
+            id: initiative.id, name: initiative.name,
+            href: `/initiatives/${initiative.id}`, meta: initiative.status,
+          }))}
+          canEdit={editor}
+          available={allInitiatives.map(i => ({ id: i.id, name: i.name }))}
+          addAction={addInitiative}
+          removeAction={removeInitiative}
+        />
       )}
 
-      {adr.adrObjectives.length > 0 && (
-        <Section title="Strategic Objectives">
-          <div className="space-y-2">
-            {adr.adrObjectives.map(({ objective }) => (
-              <LinkedItemCard
-                key={objective.id}
-                href={`/objectives/${objective.id}`}
-                name={objective.name}
-              />
-            ))}
-          </div>
-        </Section>
+      {isModuleEnabled(enabledModules, 'objectives') && (
+        <RelationshipPanel
+          title="Strategic Objectives"
+          items={adr.adrObjectives.map(({ objective }) => ({
+            id: objective.id, name: objective.name,
+            href: `/objectives/${objective.id}`,
+          }))}
+          canEdit={editor}
+          available={allObjectives.map(o => ({ id: o.id, name: o.name }))}
+          addAction={addObjective}
+          removeAction={removeObjective}
+        />
       )}
 
-      {adr.principleAdrs && adr.principleAdrs.length > 0 && (
-        <Section title="Principles">
-          <div className="space-y-2">
-            {adr.principleAdrs.map(({ principle }) => (
-              <LinkedItemCard
-                key={principle.id}
-                href={`/principles/${principle.id}`}
-                name={principle.name}
-              />
-            ))}
-          </div>
-        </Section>
+      {isModuleEnabled(enabledModules, 'principles') && adr.principleAdrs && adr.principleAdrs.length > 0 && (
+        <RelationshipPanel
+          title="Principles"
+          items={adr.principleAdrs.map(({ principle }) => ({
+            id: principle.id, name: principle.name,
+            href: `/principles/${principle.id}`,
+          }))}
+          canEdit={false}
+        />
       )}
 
       <div className="text-xs text-muted-foreground pt-4 border-t">

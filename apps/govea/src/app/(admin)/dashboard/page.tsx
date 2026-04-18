@@ -6,8 +6,9 @@ import {
   strategicObjectives, valueStreams, principles, glossaryTerms,
   auditLog, users,
 } from '@/db/schema'
-import { count, eq, desc } from 'drizzle-orm'
+import { count, eq, desc, asc } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DomainBadge } from '@/components/domain-badge'
 import Link from 'next/link'
 
 function pivotCounts(rows: { status: string; count: number | string }[]) {
@@ -50,6 +51,7 @@ export default async function DashboardPage() {
     personaRows, capabilityRows, applicationRows, adrRows,
     initiativeRows, objectiveRows, valueStreamRows, principleRows, glossaryRows,
     recentActivity,
+    capsByDomain,
   ] = await Promise.all([
     db.select({ status: personas.status,           count: count() }).from(personas)           .where(eq(personas.organizationId,           orgId)).groupBy(personas.status),
     db.select({ status: capabilities.status,       count: count() }).from(capabilities)       .where(eq(capabilities.organizationId,       orgId)).groupBy(capabilities.status),
@@ -67,6 +69,12 @@ export default async function DashboardPage() {
       .where(eq(auditLog.organizationId, orgId))
       .orderBy(desc(auditLog.createdAt))
       .limit(10),
+    db
+      .select({ domain: capabilities.domain, count: count() })
+      .from(capabilities)
+      .where(eq(capabilities.organizationId, orgId))
+      .groupBy(capabilities.domain)
+      .orderBy(asc(capabilities.domain)),
   ])
 
   const stats = {
@@ -119,6 +127,32 @@ export default async function DashboardPage() {
           })}
         </div>
       </div>
+
+      {/* Capabilities by Domain */}
+      {capsByDomain.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Capabilities by Domain</p>
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex flex-wrap gap-3">
+                {capsByDomain.map(row => (
+                  <Link
+                    key={row.domain ?? '__none__'}
+                    href={`/capabilities${row.domain ? `?domain=${encodeURIComponent(row.domain)}` : ''}`}
+                    className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 hover:bg-muted/50 transition-colors"
+                  >
+                    {row.domain
+                      ? <DomainBadge domain={row.domain} />
+                      : <span className="text-xs text-muted-foreground">Uncategorized</span>
+                    }
+                    <span className="text-sm font-semibold">{Number(row.count)}</span>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Needs Attention */}

@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { personas, personaTypes, personaTags, tags } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -139,6 +139,8 @@ export async function getPersona(id: string) {
     with: {
       organization: true,
       personaTags: { with: { tag: true } },
+      capabilityPersonas: { with: { capability: true } },
+      valueStreamPersonas: { with: { valueStream: true } },
     },
   })
 }
@@ -220,6 +222,7 @@ export async function editPersona(personaId: string, formData: FormData) {
   const tagIds = formData.getAll('tagIds') as string[]
 
   const before = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.update(personas).set({
     name,
@@ -255,6 +258,7 @@ export async function deletePersona(personaId: string) {
   const orgId = session.user.organizationId!
 
   const before = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(personas).where(
     and(eq(personas.id, personaId), eq(personas.organizationId, orgId))

@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -69,6 +69,8 @@ export async function getValueStream(id: string) {
           },
         },
       },
+      valueStreamPersonas: { with: { persona: true } },
+      objectiveValueStreams: { with: { objective: true } },
     },
   })
 }
@@ -183,8 +185,19 @@ export async function addStage(valueStreamId: string, name: string, description:
   })
 }
 
+async function requireStageOwnership(stageId: string, orgId: string) {
+  const stage = await db.query.valueStreamStages.findFirst({
+    where: eq(valueStreamStages.id, stageId),
+    with: { valueStream: true },
+  })
+  if (!stage) throw new Error('Stage not found')
+  assertOwnership(stage.valueStream.organizationId, orgId)
+  return stage
+}
+
 export async function editStage(stageId: string, name: string, description: string) {
-  await requireContributor()
+  const session = await requireContributor()
+  await requireStageOwnership(stageId, session.user.organizationId!)
 
   await db.update(valueStreamStages).set({
     name: name.trim(),
@@ -193,20 +206,23 @@ export async function editStage(stageId: string, name: string, description: stri
 }
 
 export async function deleteStage(stageId: string) {
-  await requireContributor()
+  const session = await requireContributor()
+  await requireStageOwnership(stageId, session.user.organizationId!)
   await db.delete(valueStreamStages).where(eq(valueStreamStages.id, stageId))
 }
 
 export async function moveStage(stageId: string, direction: 'up' | 'down') {
-  await requireContributor()
+  const session = await requireContributor()
 
   const stage = await db.query.valueStreamStages.findFirst({
     where: eq(valueStreamStages.id, stageId),
+    with: { valueStream: true },
   })
   if (!stage) return
+  assertOwnership(stage.valueStream.organizationId, session.user.organizationId!)
 
   const siblings = await db.query.valueStreamStages.findMany({
-    where: eq(valueStreamStages.valueStreamId, stage.valueStreamId),
+    where: eq(valueStreamStages.valueStreamId, stage.valueStream.id),
     orderBy: (s, { asc }) => [asc(s.order)],
   })
 
@@ -228,14 +244,16 @@ export async function moveStage(stageId: string, direction: 'up' | 'down') {
 // ── Stage Capabilities ────────────────────────────────────────────────────────
 
 export async function addCapabilityToStage(stageId: string, capabilityId: string) {
-  await requireContributor()
+  const session = await requireContributor()
+  await requireStageOwnership(stageId, session.user.organizationId!)
   await db.insert(valueStreamStageCapabilities)
     .values({ stageId, capabilityId })
     .onConflictDoNothing()
 }
 
 export async function removeCapabilityFromStage(stageId: string, capabilityId: string) {
-  await requireContributor()
+  const session = await requireContributor()
+  await requireStageOwnership(stageId, session.user.organizationId!)
   await db.delete(valueStreamStageCapabilities).where(
     and(
       eq(valueStreamStageCapabilities.stageId, stageId),

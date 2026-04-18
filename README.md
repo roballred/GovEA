@@ -89,28 +89,38 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 ## Current Status
 
 **Implemented:**
-- Full CRUD for the core EA object model: applications, capabilities, personas, value streams, strategic objectives, initiatives, ADRs, principles, and glossary terms
+- Full CRUD for the core EA object model: applications, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
+- Supporting reference content for principles and glossary terms
 - Mission-first traceability: Personas → Capabilities → Applications enforced at the application layer
-- Roadmap view — initiatives and objectives visualized on a timeline
-- Rich detail-page relationship panels across core entities, with inline link/unlink editing for contributors and persona inline editing from the detail page
+- Live dashboard for EA practitioners with repository activity and coverage signals
+- Roadmap view — initiatives and objectives visualized through planning-status columns
 - Audit trail — immutable before/after log of all changes
-- Taxonomy — hierarchical org-scoped classification for all content
+- Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, and domain-aware filtering
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
-- Organization-level module toggles — admins can hide optional modules per org without deleting data
-- Multi-org federation prototype — connection requests, visibility-aware listings, cross-org linking, and write-protection guardrails
+- Live admin dashboard with coverage, recent activity, and domain summaries
+- Multi-org federation prototype — connections, visibility controls, cross-org linking, and write-protection enforcement
+- Prototype multi-org federation — connection requests, visibility levels, shared content, cross-org linking
 - Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes × roles (Playwright)
+- Containerized local development plus Azure Container Apps dev deployment support
+
+**Partially implemented / still maturing:**
+- ADRs — schema and listing exist, but the full end-user authoring experience is not complete
+- Planning semantics and timeline presentation — useful for demos and early v1, but not fully settled
+- Admin configuration beyond core settings
+- Repository completeness, end-to-end traceability, and architecture debt tooling
 
 **Active work:**
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
+- Aligning product documentation with actual feature maturity
 
 **Near-term:**
 - Stakeholder-facing views and plain-language detail pages
 - Repository completeness signals and gap detection
 - Stronger multi-organization support
-- Broader server-action integration test coverage
+- Repository-wide search and consistent workflow behavior across all entity types
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking
