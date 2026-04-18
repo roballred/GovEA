@@ -213,7 +213,7 @@ cmd_stop() {
     --name "$ACA_APP" \
     --resource-group "$RG" \
     --min-replicas 0 \
-    --max-replicas 0 \
+    --max-replicas 1 \
     --output none
   echo "✓ Stopped."
 }
