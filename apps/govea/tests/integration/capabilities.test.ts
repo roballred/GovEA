@@ -148,11 +148,13 @@ describe('capabilities actions', () => {
       await editCapability(capId, capForm({ name: 'After State', status: 'published', visibility: 'org' }))
 
       const logs = await getAuditLogsForEntity(capId)
-      const editLogs = logs.filter(l => l.action === 'capability.edit')
-      const latest = editLogs[editLogs.length - 1]
-
-      expect(latest.before).toMatchObject({ name: 'Before State', status: 'draft' })
-      expect(latest.after).toMatchObject({ name: 'After State', status: 'published' })
+      // Find by known after value — avoids timestamp-ordering ambiguity
+      const entry = logs.find(
+        l => l.action === 'capability.edit' && (l.after as any)?.name === 'After State',
+      )
+      expect(entry).toBeDefined()
+      expect(entry!.before).toMatchObject({ name: 'Before State', status: 'draft' })
+      expect(entry!.after).toMatchObject({ name: 'After State', status: 'published' })
     })
   })
 
