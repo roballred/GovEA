@@ -12,6 +12,8 @@ The system must allow users to traverse the connections between content items �
 - Display the relationship type clearly so the viewer understands the connection
 - Allow navigation in both directions across any relationship
 - Show a summary count of related items when the full list is long (e.g. "12 Applications")
+- Support inline add/remove relationship management on shipped detail pages for Admin and Contributor users
+- Keep relationship panels read-only for Viewer users while preserving the same navigation affordances
 
 ## Core Navigable Relationships
 
@@ -21,11 +23,15 @@ The system must allow users to traverse the connections between content items �
 | Capability | Persona | Forward and reverse |
 | ADR | Capability | Forward and reverse |
 | ADR | Application | Forward and reverse |
+| Objective | Capability / Value Stream / Application | Forward and reverse |
+| Initiative | Capability / Objective / Application | Forward and reverse |
+| Principle | Capability / Decision | Forward and reverse |
 
 ## Rules
 - Only published related items are shown to Viewers — unpublished related items are hidden without error
-- Relationship navigation must work without JavaScript — links are standard anchor elements
+- Relationship navigation must work without JavaScript — links are standard anchor elements even where editor-only controls use client-side enhancement
 - Broken relationships (linked item deleted or unpublished) must not surface as errors to the Viewer — they are silently excluded
+- Inline relationship edits must respect role and ownership checks before persisting changes
 
 ## Links
 - Depends on: Content Display, Content Management — Content Relationships

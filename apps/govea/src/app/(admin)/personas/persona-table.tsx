@@ -1,12 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Persona, PersonaType, Tag } from '@/db/schema'
-import {
-  createPersona, editPersona, deletePersona,
-  createPersonaType, deletePersonaType,
-  createTag, deleteTag,
-} from '@/actions/personas'
+import type { Persona, TaxonomyTerm } from '@/db/schema'
+import { createPersona, editPersona, deletePersona } from '@/actions/personas'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -23,13 +19,13 @@ import type { Role } from '@/lib/rbac'
 
 type PersonaRow = Persona & {
   organization: { id: string; name: string } | null
-  personaTags: { tag: Tag }[]
+  personaTags: { tag: TaxonomyTerm }[]
 }
 
 interface Props {
   personas: PersonaRow[]
-  personaTypes: PersonaType[]
-  allTags: Tag[]
+  personaTypes: TaxonomyTerm[]
+  allTags: TaxonomyTerm[]
   role: Role
   currentOrgId: string
 }
@@ -69,10 +65,6 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<PersonaRow | null>(null)
-  const [manageTypesOpen, setManageTypesOpen] = useState(false)
-  const [manageTagsOpen, setManageTagsOpen] = useState(false)
-  const [newTypeName, setNewTypeName] = useState('')
-  const [newTagName, setNewTagName] = useState('')
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
@@ -110,38 +102,6 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
     startTransition(async () => {
       await deletePersona(deleteTarget.id)
       setDeleteTarget(null)
-      refresh()
-    })
-  }
-
-  async function handleAddType() {
-    if (!newTypeName.trim()) return
-    startTransition(async () => {
-      await createPersonaType(newTypeName.trim())
-      setNewTypeName('')
-      refresh()
-    })
-  }
-
-  async function handleDeleteType(typeId: string) {
-    startTransition(async () => {
-      await deletePersonaType(typeId)
-      refresh()
-    })
-  }
-
-  async function handleAddTag() {
-    if (!newTagName.trim()) return
-    startTransition(async () => {
-      await createTag(newTagName.trim())
-      setNewTagName('')
-      refresh()
-    })
-  }
-
-  async function handleDeleteTag(tagId: string) {
-    startTransition(async () => {
-      await deleteTag(tagId)
       refresh()
     })
   }
@@ -197,16 +157,6 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           </select>
         )}
         <div className="ml-auto flex items-center gap-2">
-          {canDelete && (
-            <>
-              <Button variant="outline" size="sm" onClick={() => setManageTagsOpen(true)}>
-                Manage tags
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setManageTypesOpen(true)}>
-                Manage types
-              </Button>
-            </>
-          )}
           {canEdit && (
             <Button onClick={() => setCreateOpen(true)} size="sm">
               + New persona
@@ -316,98 +266,6 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           </TableBody>
         </Table>
       </div>
-
-      {/* Manage Tags Dialog */}
-      <Dialog open={manageTagsOpen} onOpenChange={setManageTagsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Manage tags</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Tags are cross-cutting labels for filtering and search. Changes apply to your organization only.
-          </p>
-          <div className="space-y-2">
-            {allTags.length === 0 && (
-              <p className="text-sm text-muted-foreground py-2">No tags defined yet.</p>
-            )}
-            {allTags.map(t => (
-              <div key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {t.name}
-                </span>
-                <Button
-                  variant="ghost" size="sm"
-                  disabled={isPending}
-                  onClick={() => handleDeleteTag(t.id)}
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                >
-                  ×
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 pt-2">
-            <Input
-              placeholder="New tag name…"
-              value={newTagName}
-              onChange={e => setNewTagName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
-              disabled={isPending}
-            />
-            <Button onClick={handleAddTag} disabled={isPending || !newTagName.trim()} size="sm">
-              Add
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setManageTagsOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manage Types Dialog */}
-      <Dialog open={manageTypesOpen} onOpenChange={setManageTypesOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Manage persona types</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Types help categorize personas. Changes apply to your organization only.
-          </p>
-          <div className="space-y-2">
-            {personaTypes.length === 0 && (
-              <p className="text-sm text-muted-foreground py-2">No types defined yet.</p>
-            )}
-            {personaTypes.map(t => (
-              <div key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                <span className="text-sm">{t.name}</span>
-                <Button
-                  variant="ghost" size="sm"
-                  disabled={isPending}
-                  onClick={() => handleDeleteType(t.id)}
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                >
-                  ×
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 pt-2">
-            <Input
-              placeholder="New type name…"
-              value={newTypeName}
-              onChange={e => setNewTypeName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddType() } }}
-              disabled={isPending}
-            />
-            <Button onClick={handleAddType} disabled={isPending || !newTypeName.trim()} size="sm">
-              Add
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setManageTypesOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
