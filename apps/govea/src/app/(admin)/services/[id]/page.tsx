@@ -1,0 +1,189 @@
+import { auth } from '@/lib/auth'
+import { redirect, notFound } from 'next/navigation'
+import { getService } from '@/actions/services'
+import { getCapabilities } from '@/actions/capabilities'
+import { getApplications } from '@/actions/applications'
+import { getPersonas } from '@/actions/personas'
+import { getValueStreams } from '@/actions/value-streams'
+import { canEdit } from '@/lib/rbac'
+import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { RelationshipPanel } from '@/components/relationship-panel'
+import {
+  linkServiceCapability, unlinkServiceCapability,
+  linkServicePersona, unlinkServicePersona,
+  linkServiceApplication, unlinkServiceApplication,
+  linkServiceValueStream, unlinkServiceValueStream,
+} from '@/actions/links'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
+
+const CHANNEL_LABELS: Record<string, string> = {
+  online: 'Online',
+  'in-person': 'In-person',
+  phone: 'Phone',
+  mobile: 'Mobile',
+}
+
+const CHANNEL_STYLES: Record<string, string> = {
+  online: 'bg-blue-50 text-blue-700 border-blue-200',
+  'in-person': 'bg-green-50 text-green-700 border-green-200',
+  phone: 'bg-amber-50 text-amber-700 border-amber-200',
+  mobile: 'bg-violet-50 text-violet-700 border-violet-200',
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  draft: 'bg-slate-100 text-slate-700 border-slate-200',
+  published: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  archived: 'bg-amber-100 text-amber-800 border-amber-200',
+}
+
+const VISIBILITY_STYLES: Record<string, string> = {
+  org: 'bg-slate-100 text-slate-600 border-slate-200',
+  connections: 'bg-blue-100 text-blue-700 border-blue-200',
+  instance: 'bg-violet-100 text-violet-700 border-violet-200',
+}
+
+const VISIBILITY_LABELS: Record<string, string> = {
+  org: 'Org only',
+  connections: 'Connected orgs',
+  instance: 'Instance-wide',
+}
+
+export default async function ServiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const [service, enabledModules] = await Promise.all([getService(id), getEnabledModules()])
+  if (!service) notFound()
+
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+
+  const [allCapabilities, allPersonas, allApplications, allValueStreams] = editor
+    ? await Promise.all([
+        getCapabilities(orgId),
+        getPersonas(orgId),
+        getApplications(orgId),
+        getValueStreams(orgId),
+      ])
+    : [[], [], [], []]
+
+  const addCapability = linkServiceCapability.bind(null, id)
+  const removeCapability = unlinkServiceCapability.bind(null, id)
+  const addPersona = linkServicePersona.bind(null, id)
+  const removePersona = unlinkServicePersona.bind(null, id)
+  const addApplication = linkServiceApplication.bind(null, id)
+  const removeApplication = unlinkServiceApplication.bind(null, id)
+  const addValueStream = linkServiceValueStream.bind(null, id)
+  const removeValueStream = unlinkServiceValueStream.bind(null, id)
+
+  return (
+    <div className="space-y-8 max-w-3xl">
+      <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        ← Services
+      </Link>
+
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-bold tracking-tight">{service.name}</h1>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[service.status])}>
+              {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
+            </span>
+            <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', VISIBILITY_STYLES[service.visibility])}>
+              {VISIBILITY_LABELS[service.visibility]}
+            </span>
+          </div>
+        </div>
+
+        {service.description && (
+          <p className="text-muted-foreground">{service.description}</p>
+        )}
+
+        <div className="flex flex-wrap gap-3 pt-1">
+          {service.serviceOwner && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <span className="text-muted-foreground">Owner:</span>
+              <span className="font-medium">{service.serviceOwner}</span>
+            </div>
+          )}
+          {service.channels.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {service.channels.map(ch => (
+                <span key={ch} className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', CHANNEL_STYLES[ch] ?? 'bg-slate-50 text-slate-700 border-slate-200')}>
+                  {CHANNEL_LABELS[ch] ?? ch}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <hr />
+
+      {isModuleEnabled(enabledModules, 'personas') && (
+        <RelationshipPanel
+          title="Personas"
+          items={service.servicePersonas.map(({ persona }) => ({
+            id: persona.id, name: persona.name,
+            href: `/personas/${persona.id}`,
+          }))}
+          canEdit={editor}
+          available={allPersonas.map(p => ({ id: p.id, name: p.name }))}
+          addAction={addPersona}
+          removeAction={removePersona}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <RelationshipPanel
+          title="Capabilities"
+          items={service.serviceCapabilities.map(({ capability }) => ({
+            id: capability.id, name: capability.name,
+            href: `/capabilities/${capability.id}`,
+            meta: capability.domain ?? undefined,
+          }))}
+          canEdit={editor}
+          available={allCapabilities.map(c => ({ id: c.id, name: c.name }))}
+          addAction={addCapability}
+          removeAction={removeCapability}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'applications') && (
+        <RelationshipPanel
+          title="Applications"
+          items={service.serviceApplications.map(({ application }) => ({
+            id: application.id, name: application.name,
+            href: `/applications/${application.id}`,
+            meta: application.vendor,
+          }))}
+          canEdit={editor}
+          available={allApplications.map(a => ({ id: a.id, name: a.name }))}
+          addAction={addApplication}
+          removeAction={removeApplication}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'value-streams') && (
+        <RelationshipPanel
+          title="Value Streams"
+          items={service.serviceValueStreams.map(({ valueStream }) => ({
+            id: valueStream.id, name: valueStream.name,
+            href: `/value-streams/${valueStream.id}`,
+          }))}
+          canEdit={editor}
+          available={allValueStreams.map(vs => ({ id: vs.id, name: vs.name }))}
+          addAction={addValueStream}
+          removeAction={removeValueStream}
+        />
+      )}
+
+      <div className="text-xs text-muted-foreground pt-4 border-t">
+        Created {new Date(service.createdAt).toLocaleDateString()} · Updated {new Date(service.updatedAt).toLocaleDateString()}
+      </div>
+    </div>
+  )
+}

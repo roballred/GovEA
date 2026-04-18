@@ -10,6 +10,7 @@ import { initiatives, initiativeCapabilities, initiativeObjectives, initiativeAp
 import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives } from './adrs'
 import { principles, principleAdrs, principleCapabilities } from './principles'
 import { glossaryTerms, glossaryTermSources } from './glossary'
+import { services, serviceCapabilities, servicePersonas, serviceApplications, serviceValueStreams } from './services'
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
 
@@ -335,5 +336,62 @@ export const glossaryTermSourcesRelations = relations(glossaryTermSources, ({ on
   term: one(glossaryTerms, {
     fields: [glossaryTermSources.termId],
     references: [glossaryTerms.id],
+  }),
+}))
+
+// ─── Services ─────────────────────────────────────────────────────────────────
+
+export const servicesRelations = relations(services, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [services.organizationId],
+    references: [organizations.id],
+  }),
+  serviceCapabilities: many(serviceCapabilities),
+  servicePersonas: many(servicePersonas),
+  serviceApplications: many(serviceApplications),
+  serviceValueStreams: many(serviceValueStreams),
+}))
+
+export const serviceCapabilitiesRelations = relations(serviceCapabilities, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceCapabilities.serviceId],
+    references: [services.id],
+  }),
+  capability: one(capabilities, {
+    fields: [serviceCapabilities.capabilityId],
+    references: [capabilities.id],
+  }),
+}))
+
+export const servicePersonasRelations = relations(servicePersonas, ({ one }) => ({
+  service: one(services, {
+    fields: [servicePersonas.serviceId],
+    references: [services.id],
+  }),
+  persona: one(personas, {
+    fields: [servicePersonas.personaId],
+    references: [personas.id],
+  }),
+}))
+
+export const serviceApplicationsRelations = relations(serviceApplications, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceApplications.serviceId],
+    references: [services.id],
+  }),
+  application: one(applications, {
+    fields: [serviceApplications.applicationId],
+    references: [applications.id],
+  }),
+}))
+
+export const serviceValueStreamsRelations = relations(serviceValueStreams, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceValueStreams.serviceId],
+    references: [services.id],
+  }),
+  valueStream: one(valueStreams, {
+    fields: [serviceValueStreams.valueStreamId],
+    references: [valueStreams.id],
   }),
 }))

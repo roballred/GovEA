@@ -10,6 +10,7 @@ export type ModuleKey =
   | 'personas'
   | 'value-streams'
   | 'capabilities'
+  | 'services'
   | 'glossary'
   | 'applications'
   | 'adrs'
@@ -33,6 +34,7 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'personas',      label: 'Personas',           href: '/personas',      group: 'Business Architecture' },
   { key: 'value-streams', label: 'Value Streams',       href: '/value-streams', group: 'Business Architecture' },
   { key: 'capabilities',  label: 'Capabilities',        href: '/capabilities',  group: 'Business Architecture' },
+  { key: 'services',      label: 'Services',            href: '/services',      group: 'Business Architecture' },
   { key: 'glossary',      label: 'Glossary',            href: '/glossary',      group: 'Business Architecture' },
   // Portfolio
   { key: 'applications',  label: 'Applications',        href: '/applications',  group: 'Portfolio' },
