@@ -71,21 +71,14 @@ describe('checkSsoProvisioning', () => {
     }
   })
 
-  it('no_org_binding is returned when organizationId is null (safety net case)', async () => {
-    // Simulate a user that somehow has no org binding (e.g. adapter created
-    // the row before the NOT NULL migration was applied, or a manual DB edit).
-    // We patch directly because the normal create path always sets organizationId.
-    const boundUser = await createTestUser(orgId, 'viewer')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.update(users).set({ organizationId: null as any }).where(eq(users.id, boundUser.id))
-
-    const result = await checkSsoProvisioning(boundUser.email)
-    expect(result.status).toBe('no_org_binding')
-    if (result.status === 'no_org_binding') {
-      expect(result.userId).toBe(boundUser.id)
-    }
-
-    // Restore so cleanupOrg can cascade-delete without FK issues
-    await db.update(users).set({ organizationId: orgId }).where(eq(users.id, boundUser.id))
-  })
+  // NOTE: The `no_org_binding` branch in checkSsoProvisioning exists as
+  // defense-in-depth for a scenario the current schema makes impossible:
+  // `users.organization_id` is NOT NULL (enforced since migration 0009), so
+  // there is no way to insert or update a row to organizationId = null via
+  // Drizzle or PostgreSQL. The guard is kept in production code for forward
+  // compatibility (e.g. if the constraint is ever relaxed or a raw SQL import
+  // creates a null row), but the test case cannot be exercised against the
+  // current schema without violating the NOT NULL constraint.
+  //
+  // If the schema ever allows null org bindings again, re-enable this test.
 })
