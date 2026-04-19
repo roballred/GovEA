@@ -106,17 +106,20 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="all">All statuses</option>
-          <option value="proposed">Proposed</option>
-          <option value="accepted">Accepted</option>
-          <option value="deprecated">Deprecated</option>
-          <option value="superseded">Superseded</option>
-        </select>
+        {!canEdit && null /* viewers see pre-filtered results — no status filter needed */}
+        {canEdit && (
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All statuses</option>
+            <option value="proposed">Proposed</option>
+            <option value="accepted">Accepted</option>
+            <option value="deprecated">Deprecated</option>
+            <option value="superseded">Superseded</option>
+          </select>
+        )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New ADR

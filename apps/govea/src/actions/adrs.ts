@@ -25,22 +25,22 @@ async function requireAdmin() {
   return session
 }
 
-export async function getADRs(orgId: string) {
+// Viewer-visible ADR status — Option B decision from #202
+const VIEWER_ADR_STATUS = 'accepted' as const
+
+export async function getADRs(orgId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(orgId)
+  const isViewer = role === 'viewer'
 
   return db.query.adrs.findMany({
     where: (a, { eq, or, and, inArray }) => {
       const base = eq(a.organizationId, orgId)
       const instanceWide = eq(a.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(a.organizationId, connectedOrgIds),
-          inArray(a.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(a.status, VIEWER_ADR_STATUS) : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(a.organizationId, connectedOrgIds), inArray(a.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     with: {
       organization: true,

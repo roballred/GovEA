@@ -55,6 +55,10 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
   const [initiative, enabledModules] = await Promise.all([getInitiative(id), getEnabledModules()])
   if (!initiative) notFound()
 
+  // Viewers may only access active or complete initiatives (#202)
+  const isViewer = session.user.role === 'viewer'
+  if (isViewer && !['active', 'complete'].includes(initiative.status)) notFound()
+
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
   const canMutate = editor && initiative.organizationId === orgId
