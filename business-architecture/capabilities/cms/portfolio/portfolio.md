@@ -14,16 +14,24 @@ The system must allow contributors to maintain a structured inventory of the org
 | Capability | File | Description |
 |---|---|---|
 | Application Portfolio | [po-application-portfolio.md](./po-application-portfolio.md) | Manage applications with lifecycle status and capability links |
+| Services | [po-services.md](./po-services.md) | Manage government-facing services linked to personas, capabilities, applications, and value streams |
 | Capability Map | [po-capability-map.md](./po-capability-map.md) | Define business capabilities organized by domain, linked to applications and personas |
+| Personas | [po-personas.md](./po-personas.md) | Define the people the architecture exists to serve and connect them to capabilities and value streams |
 | Architecture Decision Records | [po-architecture-decisions.md](./po-architecture-decisions.md) | Record, track, and supersede architecture decisions |
 | Principles | [po-principles.md](./po-principles.md) | Capture architecture principles and link them to capabilities and decisions |
 | Glossary | [po-glossary.md](./po-glossary.md) | Maintain shared terminology to support consistent EA language across the repository |
+| Value Streams | [po-value-streams.md](./po-value-streams.md) | Define end-to-end value delivery flows with ordered stages and linked capabilities |
 
 ## Rules
 - Portfolio records follow the standard content workflow: draft → published → archived
 - Only published records are visible to Content Viewers and Department Directors
 - Every application must link to at least one capability — this is a data integrity rule enforced at the application layer
 - Visibility controls (org / connections / instance) apply to all portfolio record types
+
+## Current Maturity
+Portfolio Management is one of GovEA's strongest shipped areas. Applications, capabilities, personas, services, value streams, principles, and glossary content all have meaningful day-to-day product surface today.
+
+ADRs are real and usable, but they are not yet as mature as the rest of the portfolio layer. Schema support, linking, list/detail pages, and basic CRUD exist; richer authoring polish, analytics, and broader decision-support workflows still need work. For that reason this group should currently be described as partially implemented overall, not fully implemented.
 
 ## Links
 - Related: Frontend Display — Portfolio Views, Planning, Content Management

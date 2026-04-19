@@ -35,13 +35,14 @@ The system must allow contributors to record, track, and supersede architecture 
 - Only published ADRs appear in front-end portfolio views
 
 ## Implementation Status
-Implemented in early v1:
-- Schema and server actions support the full ADR lifecycle, including supersession links
+Partially implemented in early v1:
+- Schema and server actions support ADR creation, editing, deletion, and supersession links
 - Admin UI includes list, detail, create, edit, and delete flows
 - ADRs can link to capabilities, applications, initiatives, and objectives
 
 Remaining gaps:
-- richer ADR analytics and debt-oriented reporting are still future work
+- the ADR experience is still lighter and less polished than the core application, capability, persona, service, and value-stream surfaces
+- richer ADR analytics, debt-oriented reporting, and broader decision-support workflows are still future work
 
 ## Links
 - Depends on: IAM — Role-Based Access Control, Content Management — Content Workflow
