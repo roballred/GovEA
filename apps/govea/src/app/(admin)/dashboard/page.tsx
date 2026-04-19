@@ -6,7 +6,7 @@ import {
   strategicObjectives, valueStreams, principles, glossaryTerms,
   auditLog, users, crossOrgLinks,
 } from '@/db/schema'
-import { and, count, eq, gt, isNotNull, desc, asc, or, inArray } from 'drizzle-orm'
+import { and, count, eq, gt, isNotNull, desc, asc, inArray } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DomainBadge } from '@/components/domain-badge'
 import Link from 'next/link'
@@ -107,10 +107,10 @@ export default async function DashboardPage() {
       where: and(eq(crossOrgLinks.targetOrgId, orgId), eq(crossOrgLinks.status, 'pending')),
       orderBy: (l, { asc }) => [asc(l.createdAt)],
     }),
-    // Federation: all link status counts for this org (source or target)
+    // Federation: outbound link status counts (this org is the source)
     db.select({ status: crossOrgLinks.status, count: count() })
       .from(crossOrgLinks)
-      .where(or(eq(crossOrgLinks.sourceOrgId, orgId), eq(crossOrgLinks.targetOrgId, orgId)))
+      .where(eq(crossOrgLinks.sourceOrgId, orgId))
       .groupBy(crossOrgLinks.status),
   ])
 

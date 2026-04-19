@@ -4,7 +4,7 @@
     {
       "name": "govea-dev",
       "runtimeExecutable": "/opt/homebrew/bin/node",
-      "runtimeArgs": ["/opt/homebrew/lib/node_modules/pnpm/bin/pnpm.cjs", "--dir", "/Users/roballred/Repos/Claude/govea-app/.claude/worktrees/inspiring-murdock-60fcc9", "--filter", "govea", "dev"],
+      "runtimeArgs": ["/opt/homebrew/lib/node_modules/pnpm/bin/pnpm.cjs", "--dir", "/Users/roballred/Repos/Claude/govea-app", "--filter", "govea", "dev"],
       "port": 3000,
       "autoPort": false
     }
