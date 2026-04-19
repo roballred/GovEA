@@ -647,8 +647,12 @@ async function seed() {
         targetEntityType: 'capability',
         targetEntityId: targetCapId,
         linkType: link.linkType,
-        status: 'active',
+        status: 'pending',
       })
+    } else if (existingLink.status !== 'pending' || existingLink.linkType !== link.linkType) {
+      await db.update(crossOrgLinks)
+        .set({ status: 'pending', linkType: link.linkType })
+        .where(eq(crossOrgLinks.id, existingLink.id))
     }
     console.log(`  ✓ Cross-org link (${link.linkType}): "${link.sourceCapabilityName}" → "${link.targetCapabilityName}"`)
   }

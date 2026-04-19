@@ -19,6 +19,7 @@ import {
   getCrossOrgLinkContext,
   rejectCrossOrgLink,
   requestCrossOrgLink,
+  revokeCrossOrgLink,
   withdrawCrossOrgLink,
 } from '@/actions/cross-org-links'
 
@@ -176,6 +177,7 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
         approveAction={approveCrossOrgLink}
         rejectAction={rejectCrossOrgLink}
         withdrawAction={withdrawCrossOrgLink}
+        revokeAction={revokeCrossOrgLink}
       />
 
       <div className="text-xs text-muted-foreground pt-4 border-t">

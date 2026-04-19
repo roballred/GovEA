@@ -180,7 +180,11 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
     if (!peer) continue
 
     const visible = canReadWithContext(peer.organizationId, peer.visibility)
-    if (!visible && peer.organizationId !== callerOrgId) continue
+    // Always show inbound pending links regardless of source visibility —
+    // the target org needs to see who is requesting approval even if the
+    // source entity is not yet shared with them.
+    const isInboundPending = link.status === 'pending' && !outbound
+    if (!visible && peer.organizationId !== callerOrgId && !isInboundPending) continue
 
     const item: CrossOrgLinkItem = {
       id: link.id,
@@ -316,13 +320,6 @@ export async function approveCrossOrgLink(linkId: string) {
   if (!link) throw new Error('Cross-org link not found or not authorized')
   if (link.status !== 'pending') throw new Error('Only pending links can be approved')
 
-  const source = await getEntity(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId)
-  const target = await getEntity(link.targetEntityType as CrossOrgEntityType, link.targetEntityId)
-  if (!source || !target) throw new Error('Cross-org link points to missing content')
-
-  const sourceVisible = await canReadFederatedEntity(source.organizationId, source.visibility, session.user.organizationId!)
-  if (!sourceVisible) throw new Error('Source content is no longer visible under the current federation rules')
-
   await db.update(crossOrgLinks).set({
     status: 'active',
     rejectionReason: null,
@@ -383,6 +380,28 @@ export async function withdrawCrossOrgLink(linkId: string) {
     userId: session.user.id,
     organizationId: session.user.organizationId!,
     before: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, status: link.status },
+  })
+
+  await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
+}
+
+export async function revokeCrossOrgLink(linkId: string) {
+  const session = await requireAdmin()
+  const link = await db.query.crossOrgLinks.findFirst({
+    where: and(eq(crossOrgLinks.id, linkId), eq(crossOrgLinks.targetOrgId, session.user.organizationId!)),
+  })
+  if (!link) throw new Error('Cross-org link not found or not authorized')
+  if (link.status !== 'active') throw new Error('Only active links can be revoked')
+
+  await db.delete(crossOrgLinks).where(eq(crossOrgLinks.id, linkId))
+
+  await writeAuditLog({
+    action: 'cross_org_link.revoke',
+    entityType: 'cross_org_link',
+    entityId: linkId,
+    userId: session.user.id,
+    organizationId: session.user.organizationId!,
+    before: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, status: link.status, type: link.sourceEntityType },
   })
 
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)

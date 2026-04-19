@@ -4,9 +4,9 @@ import { db } from '@/db/client'
 import {
   personas, capabilities, applications, adrs, initiatives,
   strategicObjectives, valueStreams, principles, glossaryTerms,
-  auditLog, users,
+  auditLog, users, crossOrgLinks,
 } from '@/db/schema'
-import { and, count, eq, gt, isNotNull, desc, asc } from 'drizzle-orm'
+import { and, count, eq, gt, isNotNull, desc, asc, inArray } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DomainBadge } from '@/components/domain-badge'
 import Link from 'next/link'
@@ -66,6 +66,7 @@ export default async function DashboardPage() {
     capTotal, capModified, capReviewed,
     appTotal, appModified, appReviewed,
     personaTotal, personaModified, personaReviewed,
+    fedInboundLinks, fedOutboundRows,
   ] = await Promise.all([
     db.select({ status: personas.status,           count: count() }).from(personas)           .where(eq(personas.organizationId,           orgId)).groupBy(personas.status),
     db.select({ status: capabilities.status,       count: count() }).from(capabilities)       .where(eq(capabilities.organizationId,       orgId)).groupBy(capabilities.status),
@@ -101,6 +102,16 @@ export default async function DashboardPage() {
     db.select({ count: count() }).from(personas).where(eq(personas.organizationId, orgId)),
     db.select({ count: count() }).from(personas).where(and(eq(personas.organizationId, orgId), gt(personas.updatedAt, staleThreshold))),
     db.select({ count: count() }).from(personas).where(and(eq(personas.organizationId, orgId), isNotNull(personas.lastReviewedAt), gt(personas.lastReviewedAt, staleThreshold))),
+    // Federation: inbound pending links targeting this org (needs approval)
+    db.query.crossOrgLinks.findMany({
+      where: and(eq(crossOrgLinks.targetOrgId, orgId), eq(crossOrgLinks.status, 'pending')),
+      orderBy: (l, { asc }) => [asc(l.createdAt)],
+    }),
+    // Federation: outbound link status counts (this org is the source)
+    db.select({ status: crossOrgLinks.status, count: count() })
+      .from(crossOrgLinks)
+      .where(eq(crossOrgLinks.sourceOrgId, orgId))
+      .groupBy(crossOrgLinks.status),
   ])
 
   const stats = {
@@ -124,6 +135,33 @@ export default async function DashboardPage() {
   const needsAttention = COVERAGE_ENTITIES
     .map(e => ({ ...e, draftCount: stats[e.key].byStatus[e.draftKey] ?? 0 }))
     .filter(e => e.draftCount > 0)
+
+  // Resolve target entity names for inbound pending links
+  const fedCapIds = fedInboundLinks.filter(l => l.targetEntityType === 'capability').map(l => l.targetEntityId)
+  const fedPersonaIds = fedInboundLinks.filter(l => l.targetEntityType === 'persona').map(l => l.targetEntityId)
+  const [fedCaps, fedPersonas] = await Promise.all([
+    fedCapIds.length ? db.query.capabilities.findMany({ where: inArray(capabilities.id, fedCapIds) }) : Promise.resolve([]),
+    fedPersonaIds.length ? db.query.personas.findMany({ where: inArray(personas.id, fedPersonaIds) }) : Promise.resolve([]),
+  ])
+  const fedEntityMap = new Map<string, { name: string; href: string }>([
+    ...fedCaps.map(c => [c.id, { name: c.name, href: `/capabilities/${c.id}` }] as const),
+    ...fedPersonas.map(p => [p.id, { name: p.name, href: `/personas/${p.id}` }] as const),
+  ])
+
+  const fedByStatus: Record<string, number> = {}
+  for (const row of fedOutboundRows) fedByStatus[row.status] = (fedByStatus[row.status] ?? 0) + Number(row.count)
+
+  const federation = {
+    inboundPending: fedInboundLinks.map(l => ({
+      id: l.id,
+      linkType: l.linkType,
+      entity: fedEntityMap.get(l.targetEntityId) ?? null,
+    })),
+    outboundPending:  fedByStatus['pending']  ?? 0,
+    outboundRejected: fedByStatus['rejected'] ?? 0,
+    totalActive:      fedByStatus['active']   ?? 0,
+    hasAny: Object.values(fedByStatus).some(n => n > 0) || fedInboundLinks.length > 0,
+  }
 
   return (
     <div className="space-y-6">
@@ -159,6 +197,61 @@ export default async function DashboardPage() {
           })}
         </div>
       </div>
+
+      {/* Federation Activity */}
+      {federation.hasAny && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Federation Activity</p>
+          <Card>
+            <CardContent className="pt-4 pb-4 space-y-3">
+              {federation.inboundPending.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-amber-600">
+                    {federation.inboundPending.length} link request{federation.inboundPending.length !== 1 ? 's' : ''} awaiting your approval
+                  </p>
+                  <ul className="space-y-1">
+                    {federation.inboundPending.map(link => (
+                      <li key={link.id}>
+                        {link.entity ? (
+                          <Link
+                            href={link.entity.href}
+                            className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span className="font-medium">{link.entity.name}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">{link.linkType.replaceAll('_', ' ')} →</span>
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-muted-foreground px-2">Unknown entity</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {(federation.outboundPending > 0 || federation.outboundRejected > 0) && (
+                <div className="space-y-1 border-t pt-3">
+                  {federation.outboundRejected > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="text-destructive font-medium">{federation.outboundRejected}</span> outbound request{federation.outboundRejected !== 1 ? 's' : ''} rejected by the target org
+                    </p>
+                  )}
+                  {federation.outboundPending > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">{federation.outboundPending}</span> outbound request{federation.outboundPending !== 1 ? 's' : ''} pending the target org&apos;s approval
+                    </p>
+                  )}
+                </div>
+              )}
+              {federation.inboundPending.length === 0 && federation.outboundPending === 0 && federation.outboundRejected === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {federation.totalActive} active cross-org link{federation.totalActive !== 1 ? 's' : ''} — no pending actions.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Review Health */}
       <div>
