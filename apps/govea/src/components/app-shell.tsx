@@ -273,9 +273,9 @@ export function AppShell({
           </Link>
 
           {/* Search */}
-          <div className="flex-1 flex items-center lg:max-w-sm">
+          <div className="flex-1 flex items-center">
             {/* Desktop: visible input */}
-            <form action="/search" method="get" className="hidden lg:flex w-full">
+            <form action="/search" method="get" className="hidden lg:flex w-full max-w-sm">
               <input
                 name="q"
                 type="search"

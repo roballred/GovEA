@@ -37,21 +37,33 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Search</h1>
-        {hasQuery && (
-          <p className="text-muted-foreground mt-1">
-            {totalCount === 0
-              ? `No results for "${query}"`
-              : `${totalCount} result${totalCount === 1 ? '' : 's'} for "${query}"`}
-          </p>
-        )}
-        {!hasQuery && (
-          <p className="text-muted-foreground mt-1">
-            Use the search bar above to find content across the repository.
-          </p>
-        )}
-      </div>
+      <h1 className="text-2xl font-bold tracking-tight">Search</h1>
+
+      {/* Search input — always visible; primary entry point on mobile */}
+      <form action="/search" method="get" className="flex gap-2">
+        <input
+          name="q"
+          type="search"
+          defaultValue={query}
+          placeholder="Search the repository…"
+          autoFocus
+          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button
+          type="submit"
+          className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+        >
+          Search
+        </button>
+      </form>
+
+      {hasQuery && (
+        <p className="text-sm text-muted-foreground">
+          {totalCount === 0
+            ? `No results for "${query}"`
+            : `${totalCount} result${totalCount === 1 ? '' : 's'} for "${query}"`}
+        </p>
+      )}
 
       {hasQuery && totalCount === 0 && (
         <Card>
