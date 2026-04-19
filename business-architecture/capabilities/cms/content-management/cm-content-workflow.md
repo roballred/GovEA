@@ -27,6 +27,7 @@ The system must manage the lifecycle state of each content item through a define
 - Core content cannot skip states — Draft must precede Published; Published must precede Archived
 - Archived content cannot be edited — it must be moved back to Draft first
 - Deleting a content item is separate from archiving — archive first, delete only when certain
+- Planning entities use domain-specific lifecycle states rather than the core `draft / published / archived` workflow. For Viewer access, the following mappings apply: initiatives in `active` or `complete` are visible; `proposed`, `on-hold`, and `cancelled` are not. ADRs with status `accepted` are visible; `proposed`, `deprecated`, and `superseded` are not. Strategic objectives follow the standard `workflowStatusEnum` (published only for Viewers). (Decision: #202)
 
 ## Links
 - Depends on: Content Authoring, IAM — Role-Based Access Control

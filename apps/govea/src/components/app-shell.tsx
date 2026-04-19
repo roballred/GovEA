@@ -272,8 +272,31 @@ export function AppShell({
             GovEA
           </Link>
 
+          {/* Search */}
+          <div className="flex-1 flex items-center lg:max-w-sm">
+            {/* Desktop: visible input */}
+            <form action="/search" method="get" className="hidden lg:flex w-full">
+              <input
+                name="q"
+                type="search"
+                placeholder="Search…"
+                className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-white/40"
+              />
+            </form>
+            {/* Mobile: icon link to search page */}
+            <Link
+              href="/search"
+              className="lg:hidden rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Search"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+            </Link>
+          </div>
+
           {/* User info */}
-          <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <span className="hidden sm:block text-sm text-white/70">{email}</span>
             <span className={cn(
               'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
