@@ -14,13 +14,10 @@ The system must allow contributors to maintain a structured inventory of the org
 | Capability | File | Description |
 |---|---|---|
 | Application Portfolio | [po-application-portfolio.md](./po-application-portfolio.md) | Manage applications with lifecycle status and capability links |
-| Services | [po-services.md](./po-services.md) | Manage government-facing services linked to personas, capabilities, applications, and value streams |
 | Capability Map | [po-capability-map.md](./po-capability-map.md) | Define business capabilities organized by domain, linked to applications and personas |
-| Personas | [po-personas.md](./po-personas.md) | Define the people the architecture exists to serve and connect them to capabilities and value streams |
 | Architecture Decision Records | [po-architecture-decisions.md](./po-architecture-decisions.md) | Record, track, and supersede architecture decisions |
 | Principles | [po-principles.md](./po-principles.md) | Capture architecture principles and link them to capabilities and decisions |
 | Glossary | [po-glossary.md](./po-glossary.md) | Maintain shared terminology to support consistent EA language across the repository |
-| Value Streams | [po-value-streams.md](./po-value-streams.md) | Define end-to-end value delivery flows with ordered stages and linked capabilities |
 
 ## Rules
 - Portfolio records follow the standard content workflow: draft → published → archived
