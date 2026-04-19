@@ -36,8 +36,8 @@ Personas -> Capabilities -> Applications
 - **Services** model the government-facing delivery layer and can link to personas, capabilities, applications, and value streams.
 - **Persona Type** and **Persona Tag** values are managed through **Taxonomy**, not through persona-specific admin tables.
 - **Organization** is the top-level tenant boundary.
-- Additional core entities include **Architecture Decision Record (ADR)** and **Technology Lifecycle**.
-- v1 is single-organization, but the data model must preserve a path to v2 multi-tenancy by scoping users, roles, content types, and taxonomies to an organization.
+- Additional core entities include **Architecture Decision Records (ADRs)**, **Strategic Objectives**, **Initiatives**, **Principles**, and the **Glossary**.
+- Single-org use is still the default operating mode, but GovEA now also ships a prototype multi-organization model with org-scoped visibility and approval-based cross-org links.
 
 For the implementation-level schema reference — including field metadata, enums, and junction tables — see [`docs/data-model.md`](./docs/data-model.md).
 
@@ -96,14 +96,14 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Mission-first traceability: Personas → Capabilities → Applications enforced at the application layer
 - Service catalogue: first-class service records linked to personas, capabilities, applications, and value streams
 - Contributor-friendly relationship panels across detail pages, including in-context persona editing
-- Live dashboard for EA practitioners with repository activity and coverage signals
+- Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
 - Demo-ready planning module — strategic objectives plus initiatives with a roadmap view grouped by planning status
 - Audit trail — immutable before/after log of all changes
 - Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
-- Live admin dashboard with coverage, recent activity, and domain summaries
-- Prototype multi-org federation — connection requests, visibility levels, shared content, cross-org linking
+- Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
+- Prototype multi-org federation — connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
 - Reusable `@govea/core` package — RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes × roles (Playwright)
 - Containerized local development plus Azure Container Apps dev deployment support
@@ -121,7 +121,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 **Near-term:**
 - Stakeholder-facing views and plain-language detail pages
 - Repository completeness signals and gap detection
-- Stronger multi-organization support
+- Deeper federation management UX, notifications, and broader cross-org verification coverage
 - Repository-wide search and broader workflow consistency across all entity types
 
 **Longer-term:**
