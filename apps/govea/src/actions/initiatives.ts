@@ -25,7 +25,7 @@ async function requireAdmin() {
 }
 
 // Viewer-visible initiative statuses — Option B decision from #202
-const VIEWER_INITIATIVE_STATUSES = ['active', 'complete'] as const
+const VIEWER_INITIATIVE_STATUSES: Array<'active' | 'proposed' | 'on-hold' | 'complete' | 'cancelled'> = ['active', 'complete']
 
 export async function getInitiatives(orgId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(orgId)
