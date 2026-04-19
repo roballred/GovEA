@@ -5,10 +5,12 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
 import { ModuleToggles } from '@/components/module-toggles'
+import { isAdmin } from '@/lib/rbac'
 
 export default async function SettingsPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  if (!isAdmin(session.user)) redirect('/dashboard')
 
   const org = session.user.organizationId
     ? await db.query.organizations.findFirst({
