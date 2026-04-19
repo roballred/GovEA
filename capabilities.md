@@ -12,7 +12,7 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 |---|---|---|
 | 1 | [Identity & Access Management](#1-identity--access-management) | Implemented |
 | 2 | [Content Management](#2-content-management) | Partially implemented |
-| 3 | [Portfolio Management](#3-portfolio-management) | Implemented |
+| 3 | [Portfolio Management](#3-portfolio-management) | Partially implemented |
 | 4 | [Planning & Roadmap](#4-planning--roadmap) | Implemented |
 | 5 | [Frontend Display](#5-frontend-display) | Partially implemented |
 | 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
@@ -75,7 +75,7 @@ The structured inventory of the organization's architecture objects.
 | Services | Implemented | Manage government-facing services linked to personas, capabilities, applications, and value streams |
 | Capability Map | Implemented | Define business capabilities organized by domain; linked to applications, personas, principles, and decisions |
 | Personas | Implemented | Define the people GovEA serves; linked to capabilities and value streams |
-| Architecture Decision Records (ADRs) | Implemented | Record, track, supersede, and link architecture decisions to capabilities, applications, initiatives, and objectives |
+| Architecture Decision Records (ADRs) | Partially implemented | Basic ADR CRUD, detail pages, supersession, and cross-linking exist, but the overall authoring experience is still maturing relative to the stronger core portfolio records |
 | Principles | Implemented | Capture architecture principles and link them to capabilities and decisions |
 | Glossary | Implemented | Maintain shared terminology to support consistent EA language across the repository |
 | Value Streams | Implemented | Define value streams with ordered stages; link to capabilities and personas |
@@ -91,6 +91,8 @@ ADRs → Capabilities, Applications, Initiatives, Objectives
 Principles → Capabilities, ADRs
 Glossary → Shared reference terms across all content
 ```
+
+This is still one of GovEA's strongest product areas, but it should be described as partially implemented overall until ADRs reach the same maturity as applications, capabilities, personas, services, and value streams.
 
 ---
 

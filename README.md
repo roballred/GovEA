@@ -109,7 +109,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Containerized local development plus Azure Container Apps dev deployment support
 
 **Partially implemented / still maturing:**
-- ADRs — schema and listing exist, but the full end-user authoring experience is not complete
+- ADRs — basic CRUD, detail pages, and linkage exist, but the authoring experience is still maturing relative to the core portfolio records
 - Planning semantics and timeline presentation — useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
 - Admin configuration beyond core settings
 - Repository completeness, end-to-end traceability, and architecture debt tooling

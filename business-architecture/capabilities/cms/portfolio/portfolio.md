@@ -25,5 +25,10 @@ The system must allow contributors to maintain a structured inventory of the org
 - Every application must link to at least one capability — this is a data integrity rule enforced at the application layer
 - Visibility controls (org / connections / instance) apply to all portfolio record types
 
+## Current Maturity
+Portfolio Management is one of GovEA's strongest shipped areas. Applications, capabilities, personas, services, value streams, principles, and glossary content all have meaningful day-to-day product surface today.
+
+ADRs are real and usable, but they are not yet as mature as the rest of the portfolio layer. Schema support, linking, list/detail pages, and basic CRUD exist; richer authoring polish, analytics, and broader decision-support workflows still need work. For that reason this group should currently be described as partially implemented overall, not fully implemented.
+
 ## Links
 - Related: Frontend Display — Portfolio Views, Planning, Content Management
