@@ -86,9 +86,17 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/capabilities" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Capabilities
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/capabilities" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Capabilities
+        </Link>
+        <Link
+          href={`/traceability?from=capability&id=${id}`}
+          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          View traceability →
+        </Link>
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
