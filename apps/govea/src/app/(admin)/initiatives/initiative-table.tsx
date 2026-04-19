@@ -116,18 +116,21 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="all">All statuses</option>
-          <option value="proposed">Proposed</option>
-          <option value="active">Active</option>
-          <option value="on-hold">On Hold</option>
-          <option value="complete">Complete</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+        {!canEdit && null /* viewers see pre-filtered results — no status filter needed */}
+        {canEdit && (
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All statuses</option>
+            <option value="proposed">Proposed</option>
+            <option value="active">Active</option>
+            <option value="on-hold">On Hold</option>
+            <option value="complete">Complete</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        )}
         {orgOptions.length > 1 && (
           <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All organizations</option>

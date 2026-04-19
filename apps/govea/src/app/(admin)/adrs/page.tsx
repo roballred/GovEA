@@ -15,7 +15,7 @@ export default async function ADRsPage() {
   const role = session.user.role
 
   const [adrList, capabilityList, applicationList, initiativeList, objectiveList] = await Promise.all([
-    getADRs(orgId),
+    getADRs(orgId, role),
     getCapabilities(orgId),
     getApplications(orgId),
     getInitiatives(orgId),

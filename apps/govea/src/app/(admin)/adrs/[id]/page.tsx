@@ -52,6 +52,10 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
   const [adr, enabledModules] = await Promise.all([getADR(id), getEnabledModules()])
   if (!adr) notFound()
 
+  // Viewers may only access accepted ADRs (#202)
+  const isViewer = session.user.role === 'viewer'
+  if (isViewer && adr.status !== 'accepted') notFound()
+
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
   const canMutate = editor && adr.organizationId === orgId
