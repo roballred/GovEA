@@ -340,4 +340,35 @@ test.describe('authorization', () => {
     await expect(page).toHaveURL(/\/dashboard/)
     await ctx.close()
   })
+
+  // /settings — admin-only route (#207)
+  test('admin can access /settings', async ({ browser }) => {
+    const ctx = await browser.newContext({
+      storageState: 'tests/e2e/.auth/admin.json',
+    })
+    const page = await ctx.newPage()
+    await page.goto('/settings')
+    await expect(page).toHaveURL(/\/settings/)
+    await ctx.close()
+  })
+
+  test('contributor is redirected from /settings to /dashboard', async ({ browser }) => {
+    const ctx = await browser.newContext({
+      storageState: 'tests/e2e/.auth/contributor.json',
+    })
+    const page = await ctx.newPage()
+    await page.goto('/settings')
+    await expect(page).toHaveURL(/\/dashboard/)
+    await ctx.close()
+  })
+
+  test('viewer is redirected from /settings to /dashboard', async ({ browser }) => {
+    const ctx = await browser.newContext({
+      storageState: 'tests/e2e/.auth/viewer.json',
+    })
+    const page = await ctx.newPage()
+    await page.goto('/settings')
+    await expect(page).toHaveURL(/\/dashboard/)
+    await ctx.close()
+  })
 })
