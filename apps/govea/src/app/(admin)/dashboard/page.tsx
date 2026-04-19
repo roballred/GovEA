@@ -143,7 +143,7 @@ export default async function DashboardPage() {
     fedCapIds.length ? db.query.capabilities.findMany({ where: inArray(capabilities.id, fedCapIds) }) : Promise.resolve([]),
     fedPersonaIds.length ? db.query.personas.findMany({ where: inArray(personas.id, fedPersonaIds) }) : Promise.resolve([]),
   ])
-  const fedEntityMap = new Map([
+  const fedEntityMap = new Map<string, { name: string; href: string }>([
     ...fedCaps.map(c => [c.id, { name: c.name, href: `/capabilities/${c.id}` }] as const),
     ...fedPersonas.map(p => [p.id, { name: p.name, href: `/personas/${p.id}` }] as const),
   ])
