@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { getObjectiveTrace, getCapabilityTrace, getServiceTrace } from '@/actions/traceability'
 import type { ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp, TraceCapability } from '@/actions/traceability'
+import { dedupeById } from '@/lib/dedup'
 
 // ── Status colours ────────────────────────────────────────────────────────────
 
@@ -104,15 +105,10 @@ function TraceRow({
   )
 }
 
-// ── Application list (deduplicated, used in both objective and service traces) ─
-
-function dedupeApps(apps: TraceApp[]): TraceApp[] {
-  const seen = new Set<string>()
-  return apps.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true })
-}
+// ── Application list (deduplicated — see src/lib/dedup.ts for product rule) ───
 
 function AppLayer({ apps }: { apps: TraceApp[] }) {
-  const deduped = dedupeApps(apps)
+  const deduped = dedupeById(apps)
   if (deduped.length === 0) {
     return <Gap message="No applications linked — the technology platform for this area is not yet mapped." />
   }
@@ -136,7 +132,7 @@ function AppLayer({ apps }: { apps: TraceApp[] }) {
 
 function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
   // Merge applications: direct links + via capabilities, deduplicated
-  const allApps = dedupeApps([
+  const allApps = dedupeById([
     ...trace.directApplications,
     ...trace.capabilities.flatMap(c => c.applications),
   ])
@@ -322,7 +318,7 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
 // ── Service trace view ────────────────────────────────────────────────────────
 
 function ServiceTraceView({ trace }: { trace: ServiceTrace }) {
-  const allApps = dedupeApps([
+  const allApps = dedupeById([
     ...trace.directApplications,
     ...trace.capabilities.flatMap(c => c.applications),
   ])
