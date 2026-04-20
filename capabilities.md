@@ -57,7 +57,7 @@ Foundational content authoring and lifecycle capabilities shared across all EA c
 | Content Workflow | Partially implemented | Draft → Published → Archived is established for core content types, but planning entities still use their own lifecycle states |
 | Taxonomy Management | Implemented | Hierarchical org-scoped taxonomy terms for domains, persona types, persona tags, and other controlled vocabularies |
 | Content Relationships | Implemented | Link content items; enforce GovEA traceability rules at publish time |
-| Content Search & Filtering | Partially implemented | Per-entity filtering and taxonomy-driven browsing exist; repository-wide search is still future work |
+| Content Search & Filtering | Partially implemented | Per-entity filtering, taxonomy-driven browsing, and embedded repository-wide search are shipped; search relevance and workflow consistency are still maturing |
 | Content Types | Partially implemented | Configurable schemas for content; v1 types are fixed in the data model |
 | Content Versioning | Not implemented | Change history, diffs, and version restore |
 

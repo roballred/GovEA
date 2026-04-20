@@ -6,6 +6,7 @@ import { count } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
 import { writeAuditLog } from '@/lib/audit'
+import { validatePassword } from '@/lib/password'
 
 export async function isSetupComplete(): Promise<boolean> {
   const [result] = await db.select({ count: count() }).from(users)
@@ -24,6 +25,9 @@ export async function runSetup(formData: FormData) {
   if (!name || !email || !password || !orgName) {
     throw new Error('All fields are required')
   }
+
+  const pwValidation = validatePassword(password)
+  if (!pwValidation.valid) throw new Error(pwValidation.message)
 
   const passwordHash = await bcrypt.hash(password, 12)
 

@@ -132,6 +132,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             id: capability.id, name: capability.name,
             href: `/capabilities/${capability.id}`, meta: capability.domain,
           }))}
+          gapMessage="Not linked to any capability — what this application enables is undocumented."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}

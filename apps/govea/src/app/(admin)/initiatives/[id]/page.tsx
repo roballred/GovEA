@@ -135,6 +135,7 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         <RelationshipPanel
           title="Capabilities"
           items={capabilityItems}
+          gapMessage="No capabilities linked — the delivery scope of this initiative is unclear."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}

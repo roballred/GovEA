@@ -12,10 +12,14 @@ The system must present EA content to users in a way that is clear, navigable, a
 | Capability | File | Description |
 |---|---|---|
 | Content Display | [fd-content-display.md](./fd-content-display.md) | Render published content in plain-language, readable layouts |
-| Mission-to-Technology Traceability Views | [fd-traceability-views.md](./fd-traceability-views.md) | Read-only layered trace views from objectives, capabilities, and services to supporting technology |
+| Mission-to-Technology Traceability Views | [fd-traceability-views.md](./fd-traceability-views.md) | Stakeholder-friendly visual chains from objectives and services down to supporting technology |
 | Navigation | [fd-navigation.md](./fd-navigation.md) | Menus, breadcrumbs, and consistent site structure |
 | Relationship Navigation | [fd-relationship-navigation.md](./fd-relationship-navigation.md) | Traverse links between applications, capabilities, and personas |
 | Portfolio Views | [fd-portfolio-views.md](./fd-portfolio-views.md) | Curated overviews: capability map, application portfolio, persona directory, ADR list |
+| Application Risk Portfolio View | [fd-application-risk-portfolio.md](./fd-application-risk-portfolio.md) | Visualize application lifecycle and dependency risk for leadership audiences |
+| Executive Roadmap Timeline | [fd-executive-roadmap-timeline.md](./fd-executive-roadmap-timeline.md) | Leadership-friendly timeline of technology change and business impact |
+| Repository Confidence Summary | [fd-repository-confidence-summary.md](./fd-repository-confidence-summary.md) | Plain-language confidence cue for how trustworthy the published repository is |
+| Guided Answer Views | [fd-guided-answer-views.md](./fd-guided-answer-views.md) | Direct answer pages for stakeholder questions assembled from linked repository content |
 | Responsive Layout | [fd-responsive-layout.md](./fd-responsive-layout.md) | Works on any device without horizontal scrolling or zooming |
 | Public & Authenticated Views | [fd-public-authenticated-views.md](./fd-public-authenticated-views.md) | Control what requires login vs. what is publicly accessible |
 | Theming | [fd-theming.md](./fd-theming.md) | Theme selection, agency branding, and content rendering customization |

@@ -123,7 +123,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Additional stakeholder-facing views and plain-language detail pages
 - Repository completeness signals and gap detection
 - Deeper federation management UX, notifications, and broader cross-org verification coverage
-- Repository-wide search and broader workflow consistency across all entity types
+- Broader workflow consistency across all entity types and continued search refinement
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking

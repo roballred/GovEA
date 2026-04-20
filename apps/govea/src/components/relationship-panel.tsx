@@ -21,6 +21,13 @@ interface RelationshipPanelProps {
   title: string
   items: RelationshipItem[]
   emptyMessage?: string
+  /**
+   * Shown as an amber gap card when items is empty and canEdit is false.
+   * Use for architecturally-significant panels where an empty state has
+   * meaning (e.g. "No capabilities linked — delivery scope is unclear.").
+   * Falls back to the plain emptyMessage text when not provided.
+   */
+  gapMessage?: string
   /** Contributor+ only — when false, add/remove controls are hidden */
   canEdit: boolean
   /** Items available to add (caller should already exclude already-linked ones) */
@@ -37,6 +44,7 @@ export function RelationshipPanel({
   title,
   items: initialItems,
   emptyMessage,
+  gapMessage,
   canEdit,
   available = [],
   addAction,
@@ -127,7 +135,14 @@ export function RelationshipPanel({
       )}
 
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{empty}</p>
+        !canEdit && gapMessage ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+            <span className="shrink-0 mt-0.5">⚠</span>
+            <span>{gapMessage}</span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{empty}</p>
+        )
       ) : (
         <div className={cn('space-y-2', isPending && 'opacity-60')}>
           {items.map(item => (

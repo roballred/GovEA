@@ -1129,6 +1129,248 @@ export const DEV_GLOSSARY = [
     status: 'published' as const,
     visibility: 'org' as const,
   },
+
+  // ── EA terms with multiple sources — authoritative source already selected ──
+
+  {
+    term: 'Enterprise Architecture',
+    definition: 'A strategic information asset base that defines the mission; the information necessary to perform the mission; the technologies necessary to perform the mission; and the transitional processes for implementing new technologies in response to changing mission needs.',
+    definitionSource: 'FEAF v2 (Federal Enterprise Architecture Framework)',
+    definitionSourceUrl: 'https://www.cio.gov/policies-and-instructions/federal-enterprise-architecture-framework/',
+    domain: 'Enterprise Architecture',
+    notes: 'City adopted the FEAF v2 definition in 2023 as it aligns with federal reporting requirements and the state CIO guidance. TOGAF and Gartner definitions are retained as reference sources.',
+    status: 'published' as const,
+    visibility: 'instance' as const,
+    sources: [
+      {
+        name: 'FEAF v2 (Federal Enterprise Architecture Framework)',
+        url: 'https://www.cio.gov/policies-and-instructions/federal-enterprise-architecture-framework/',
+        definition: 'A strategic information asset base that defines the mission; the information necessary to perform the mission; the technologies necessary to perform the mission; and the transitional processes for implementing new technologies in response to changing mission needs.',
+      },
+      {
+        name: 'TOGAF 10 (The Open Group Architecture Framework)',
+        url: 'https://www.opengroup.org/togaf',
+        definition: 'A coherent whole of principles, methods, and models that are used in the design and realization of an enterprise\'s organizational structure, business processes, information systems, and infrastructure.',
+      },
+      {
+        name: 'Gartner Glossary',
+        url: 'https://www.gartner.com/en/information-technology/glossary/enterprise-architecture-ea',
+        definition: 'A discipline for proactively and holistically leading enterprise responses to disruptive forces by identifying and analyzing the execution of change toward desired business vision and outcomes.',
+      },
+    ],
+  },
+
+  {
+    term: 'Zero Trust Architecture',
+    definition: 'An enterprise cybersecurity plan that utilizes zero trust concepts and encompasses component relationships, workflow planning, and access policies — treating every request as untrusted regardless of network location.',
+    definitionSource: 'NIST SP 800-207',
+    definitionSourceUrl: 'https://doi.org/10.6028/NIST.SP.800-207',
+    domain: 'Information Security',
+    notes: 'NIST SP 800-207 is the federal standard adopted by the city\'s cybersecurity policy. The CISA maturity model is used for implementation assessment; the Gartner definition is vendor-neutral and useful for executive briefings.',
+    status: 'published' as const,
+    visibility: 'connections' as const,
+    sources: [
+      {
+        name: 'NIST SP 800-207',
+        url: 'https://doi.org/10.6028/NIST.SP.800-207',
+        definition: 'A zero trust architecture (ZTA) is an enterprise\'s cybersecurity plan that utilizes zero trust concepts and encompasses component relationships, workflow planning, and access policies. Therefore, a zero trust enterprise is the network infrastructure (physical and virtual) and operational policies that are in place for an enterprise as a product of a zero trust architecture plan.',
+      },
+      {
+        name: 'CISA Zero Trust Maturity Model',
+        url: 'https://www.cisa.gov/zero-trust-maturity-model',
+        definition: 'Zero trust is a security model, a set of system design principles, and a coordinated cybersecurity and system management strategy based on an acknowledgement that threats exist both inside and outside traditional network boundaries.',
+      },
+      {
+        name: 'Gartner Glossary',
+        url: 'https://www.gartner.com/en/information-technology/glossary/zero-trust-network-access-ztna',
+        definition: 'Zero trust is a security paradigm that explicitly identifies users and devices and grants them just-enough access to minimize risk while enabling productivity.',
+      },
+    ],
+  },
+
+  // ── EA terms with multiple sources — authoritative source not yet selected ──
+
+  {
+    term: 'Technical Debt',
+    definition: 'The implied cost of future rework caused by choosing an expedient solution now instead of a better approach that would take longer. Like financial debt, it accumulates interest over time.',
+    domain: 'Information Technology',
+    notes: 'Three communities define this term with different scopes: Ward Cunningham\'s original metaphor focuses on code quality decisions, Martin Fowler broadened it to any knowingly deferred best practice, and CISQ provides a quantitative measurement lens. Authoritative source not yet selected — review against state CIO standards before publishing.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    sources: [
+      {
+        name: 'Ward Cunningham (original metaphor, 1992)',
+        url: 'https://wiki.c2.com/?WardExplainsDebtMetaphor',
+        definition: 'Shipping first-time code is like going into debt. A little debt speeds development so long as it is paid back promptly with a rewrite. The danger occurs when the debt is not repaid — every minute spent on not-quite-right code counts as interest on that debt.',
+      },
+      {
+        name: 'Martin Fowler — Refactoring (2009)',
+        url: 'https://martinfowler.com/bliki/TechnicalDebt.html',
+        definition: 'Technical Debt is a metaphor for the work we avoid doing now that makes things more difficult in the future. Like financial debt, technical debt is not necessarily a bad thing, but it should be managed carefully. Reckless debt is the kind to avoid; prudent debt taken on deliberately and repaid promptly can accelerate delivery.',
+      },
+      {
+        name: 'CISQ — Technical Debt Report',
+        url: 'https://www.it-cisq.org/the-cost-of-poor-quality-software-in-the-us-a-2022-report/',
+        definition: 'Technical debt is the cost of additional rework caused by choosing an easy, limited solution now instead of using a better approach that would take longer. It accumulates when development teams take shortcuts or skip best practices to meet deadlines, and is measurable in hours of remediation effort.',
+      },
+    ],
+  },
+
+  {
+    term: 'Digital Transformation',
+    definition: 'The integration of digital technology into all areas of an organization, fundamentally changing how it operates and delivers value to stakeholders.',
+    domain: 'Enterprise Architecture',
+    notes: 'Definitions vary significantly by source. Gartner emphasizes business model change; MIT CISR emphasizes operating model and ecosystem shifts; TOGAF 10 provides the most implementable definition for architecture practice. Pending alignment with the state Digital Strategy before selecting an authoritative source.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    sources: [
+      {
+        name: 'Gartner Glossary',
+        url: 'https://www.gartner.com/en/information-technology/glossary/digitalization',
+        definition: 'Digital transformation can refer to anything from IT modernization (for example, cloud computing), to digital optimization, to the invention of new digital business models. The term is widely used in public-sector organizations to mean migrating to cloud or modernizing legacy applications.',
+      },
+      {
+        name: 'MIT CISR (Center for Information Systems Research)',
+        url: 'https://cisr.mit.edu/publication/2018_0101_DigitalTransformation_WeillWoerner',
+        definition: 'Digital transformation requires changes to operating model, enterprise architecture, and technology capabilities. It is not just a technology challenge — it demands simultaneous shifts in strategy, structure, processes, people, and culture in response to digital and physical integration.',
+      },
+      {
+        name: 'TOGAF 10',
+        url: 'https://www.opengroup.org/togaf',
+        definition: 'The use of digital technology to create or modify business processes, culture, and customer experiences to meet changing business and market requirements. This digital transformation journey begins with the customer experience and works backward to the technology.',
+      },
+    ],
+  },
+
+  {
+    term: 'Reference Architecture',
+    definition: 'A template architecture for a class of systems that captures reusable design decisions and constraints. Used to accelerate solution design and ensure consistency across projects.',
+    domain: 'Enterprise Architecture',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    sources: [
+      {
+        name: 'TOGAF 10',
+        url: 'https://www.opengroup.org/togaf',
+        definition: 'A template architecture that can be used to solve a class of problems. It captures architectural experience in a form that can be reused across projects and organizations, providing a common vocabulary and set of patterns.',
+      },
+      {
+        name: 'NIST SP 500-292 (Cloud Computing Reference Architecture)',
+        url: 'https://doi.org/10.6028/NIST.SP.500-292',
+        definition: 'A reference architecture in the context of IT is an authoritative source of information about a specific subject area that guides and constrains the instantiations of multiple architectures and solutions. Reference architectures represent proven architectures based on documented experience.',
+      },
+    ],
+  },
+
+  {
+    term: 'Business Architecture',
+    definition: 'A blueprint of the enterprise that provides a common understanding of the organization and is used to align strategic objectives and tactical demands.',
+    domain: 'Enterprise Architecture',
+    notes: 'The TOGAF and OMG definitions are substantively similar but use different taxonomies. The OMG BIZBOK is more widely used in standalone business architecture practices; TOGAF is more common in integrated EA programs.',
+    status: 'published' as const,
+    visibility: 'connections' as const,
+    sources: [
+      {
+        name: 'TOGAF 10',
+        url: 'https://www.opengroup.org/togaf',
+        definition: 'A representation of holistic, multi-dimensional business views of capabilities, end-to-end value delivery, information, and organizational structure; and the relationships among these business views and strategies, products, policies, initiatives, and stakeholders.',
+      },
+      {
+        name: 'OMG Business Architecture Working Group (BIZBOK)',
+        url: 'https://www.businessarchitectureguild.org/',
+        definition: 'Business architecture defines the structure of an enterprise in terms of its governance structure, business processes, and business information. It defines the nature of the enterprise through measures that are independent of how the enterprise implements itself.',
+      },
+    ],
+  },
+]
+
+// ─── Services (City of Riverdale) ────────────────────────────────────────────
+
+export const DEV_SERVICES = [
+  {
+    name: 'Online Permit Application',
+    description: 'Residents and businesses apply for building, electrical, and plumbing permits online without visiting City Hall. Applications are routed for review, inspection scheduling, and digital issuance.',
+    serviceOwner: 'Community Development',
+    channels: ['online', 'in-person'],
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Online Permitting'],
+    personas: ['Resident', 'Small Business Owner', 'Field Inspector'],
+    applications: ['Accela', 'Microsoft Entra ID'],
+    valueStreams: ['Permit to Certificate'],
+  },
+  {
+    name: 'Business License & Registration',
+    description: 'New and renewing businesses register with the city, pay fees, and receive a digital license. Includes zoning verification and compliance checks.',
+    serviceOwner: 'Finance & Revenue',
+    channels: ['online', 'in-person', 'phone'],
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Business License Management', 'Online Permitting'],
+    personas: ['Small Business Owner', 'Department Director'],
+    applications: ['Accela'],
+    valueStreams: ['Business Registration'],
+  },
+  {
+    name: '311 Resident Request',
+    description: 'Residents report non-emergency issues — potholes, graffiti, missed collections — via web or mobile. Requests are triaged, dispatched, and tracked to resolution.',
+    serviceOwner: 'Office of Citizen Engagement',
+    channels: ['online', 'mobile', 'phone'],
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Service Request Management'],
+    personas: ['Resident'],
+    applications: ['CityWorks'],
+    valueStreams: ['Service Request to Resolution'],
+  },
+  {
+    name: 'City Maps & GIS Portal',
+    description: 'Public-facing mapping portal providing parcel information, zoning layers, utility infrastructure, and neighbourhood planning data.',
+    serviceOwner: 'GIS Division',
+    channels: ['online'],
+    status: 'published' as const,
+    visibility: 'instance' as const,
+    capabilities: ['GIS Mapping'],
+    personas: ['Resident', 'Small Business Owner', 'Field Inspector'],
+    applications: ['ArcGIS Online'],
+    valueStreams: [],
+  },
+  {
+    name: 'Staff Self-Service Portal',
+    description: 'Internal portal for city employees to manage HR, payroll, leave requests, and benefits without involving HR staff for routine transactions.',
+    serviceOwner: 'Human Resources',
+    channels: ['online'],
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['HR Self-Service'],
+    personas: ['IT Staff', 'Department Director'],
+    applications: ['Workday', 'Microsoft Entra ID'],
+    valueStreams: [],
+  },
+  {
+    name: 'Budget & Performance Dashboard',
+    description: 'Executive and council-facing dashboard showing department budgets, expenditure tracking, and performance metrics against strategic objectives.',
+    serviceOwner: 'Office of Budget & Management',
+    channels: ['online'],
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    capabilities: ['Budget Reporting'],
+    personas: ['Department Director', 'City Council Member'],
+    applications: ['OpenGov'],
+    valueStreams: [],
+  },
+  {
+    name: 'Resident Identity & Login',
+    description: 'Single sign-on for residents accessing any city digital service. Supports local password accounts and optional SSO. Required before online permitting, 311, and license applications.',
+    serviceOwner: 'Office of Digital Services',
+    channels: ['online', 'mobile'],
+    status: 'published' as const,
+    visibility: 'connections' as const,
+    capabilities: ['Digital Identity & Authentication'],
+    personas: ['Resident', 'Small Business Owner'],
+    applications: ['Microsoft Entra ID'],
+    valueStreams: [],
+  },
 ]
 
 // ─── Cross-org links ──────────────────────────────────────────────────────────

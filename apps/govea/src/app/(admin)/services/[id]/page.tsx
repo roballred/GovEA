@@ -82,9 +82,17 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Services
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Services
+        </Link>
+        <Link
+          href={`/traceability?from=service&id=${id}`}
+          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          View traceability →
+        </Link>
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
@@ -146,6 +154,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             href: `/capabilities/${capability.id}`,
             meta: capability.domain ?? undefined,
           }))}
+          gapMessage="No capabilities linked — what makes this service possible is not mapped."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}

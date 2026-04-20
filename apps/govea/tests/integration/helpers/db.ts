@@ -9,7 +9,7 @@
  * Isolation is by organizationId; tests never touch the dev seed orgs.
  */
 import { db } from '@/db/client'
-import { organizations, users, capabilities, auditLog } from '@/db/schema'
+import { organizations, users, capabilities, initiatives, auditLog } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
@@ -126,6 +126,10 @@ export async function getAuditLogs(orgId: string, action?: string) {
 /** Returns all audit log entries for a specific entity (e.g. a capability id). */
 export async function getAuditLogsForEntity(entityId: string) {
   return db.select().from(auditLog).where(eq(auditLog.entityId, entityId))
+}
+
+export async function getInitiativesForOrg(orgId: string) {
+  return db.select().from(initiatives).where(eq(initiatives.organizationId, orgId))
 }
 
 /** Convenience: insert a capability row directly for cross-org / setup scenarios. */

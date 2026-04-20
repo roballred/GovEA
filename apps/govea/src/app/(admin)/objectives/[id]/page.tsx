@@ -63,9 +63,17 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/objectives" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Strategic Objectives
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/objectives" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Strategic Objectives
+        </Link>
+        <Link
+          href={`/traceability?from=objective&id=${id}`}
+          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          View traceability →
+        </Link>
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
@@ -109,6 +117,7 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
             id: capability.id, name: capability.name,
             href: `/capabilities/${capability.id}`, meta: capability.domain,
           }))}
+          gapMessage="No capabilities linked — this objective has no organisational foundation mapped."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}

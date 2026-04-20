@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { validatePassword } from '@/lib/password'
 import { redirect } from 'next/navigation'
 
 async function requireAdmin() {
@@ -31,6 +32,9 @@ export async function createUser(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const role = formData.get('role') as 'admin' | 'contributor' | 'viewer'
+
+  const pwValidation = validatePassword(password)
+  if (!pwValidation.valid) throw new Error(pwValidation.message)
 
   const passwordHash = await bcrypt.hash(password, 12)
   const [user] = await db.insert(users).values({
@@ -161,7 +165,9 @@ export async function editUser(userId: string, formData: FormData) {
     updatedAt: new Date(),
   }
 
-  if (newPassword && newPassword.length >= 8) {
+  if (newPassword) {
+    const pwValidation = validatePassword(newPassword)
+    if (!pwValidation.valid) throw new Error(pwValidation.message)
     updates.passwordHash = await bcrypt.hash(newPassword, 12)
   }
 
