@@ -66,7 +66,10 @@ export async function getInitiative(id: string) {
 
   if (!initiative) return null
   const visible = await canReadFederatedEntity(initiative.organizationId, initiative.visibility, session.user.organizationId!)
-  return visible ? initiative : null
+  if (!visible) return null
+  // Viewer status gate — enforced in the action so all callers inherit the rule (#208)
+  if (session.user.role === 'viewer' && !VIEWER_INITIATIVE_STATUSES.includes(initiative.status)) return null
+  return initiative
 }
 
 export async function createInitiative(formData: FormData) {

@@ -9,7 +9,7 @@
  * Isolation is by organizationId; tests never touch the dev seed orgs.
  */
 import { db } from '@/db/client'
-import { organizations, users, capabilities, initiatives, auditLog } from '@/db/schema'
+import { organizations, users, capabilities, initiatives, adrs, auditLog } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
@@ -139,4 +139,50 @@ export async function insertCapability(orgId: string, name = 'Test Capability') 
     .values({ name, organizationId: orgId, status: 'draft', visibility: 'org' })
     .returning()
   return cap
+}
+
+/** Insert an ADR directly — used by viewer-visibility tests to seed specific statuses. */
+export async function insertAdr(
+  orgId: string,
+  overrides: {
+    number?: string
+    title?: string
+    status?: 'proposed' | 'accepted' | 'deprecated' | 'superseded'
+    visibility?: 'org' | 'connections' | 'instance'
+  } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(adrs)
+    .values({
+      organizationId: orgId,
+      number: overrides.number ?? `ADR-T-${suffix}`,
+      title: overrides.title ?? `Test ADR ${suffix}`,
+      status: overrides.status ?? 'proposed',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert an initiative directly — used by viewer-visibility tests to seed specific statuses. */
+export async function insertInitiative(
+  orgId: string,
+  overrides: {
+    name?: string
+    status?: 'proposed' | 'active' | 'on-hold' | 'complete' | 'cancelled'
+    visibility?: 'org' | 'connections' | 'instance'
+  } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(initiatives)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Initiative ${suffix}`,
+      status: overrides.status ?? 'proposed',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
 }
