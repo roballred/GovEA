@@ -154,6 +154,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             href: `/capabilities/${capability.id}`,
             meta: capability.domain ?? undefined,
           }))}
+          gapMessage="No capabilities linked — what makes this service possible is not mapped."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}

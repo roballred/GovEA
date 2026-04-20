@@ -117,6 +117,7 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
             id: capability.id, name: capability.name,
             href: `/capabilities/${capability.id}`, meta: capability.domain,
           }))}
+          gapMessage="No capabilities linked — this objective has no organisational foundation mapped."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}

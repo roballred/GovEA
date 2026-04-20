@@ -176,6 +176,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             id: application.id, name: application.name,
             href: `/applications/${application.id}`, meta: application.vendor,
           }))}
+          gapMessage="No applications linked — the technology platform for this capability is unknown."
           canEdit={canMutate}
           available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
           addAction={addApplication}
@@ -190,6 +191,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             id: objective.id, name: objective.name,
             href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
           }))}
+          gapMessage="Not linked to any objective — the mission justification for this capability is undocumented."
           canEdit={canMutate}
           available={allObjectives.filter(o => o.organizationId === orgId).map(o => ({ id: o.id, name: o.name }))}
           addAction={addObjective}
