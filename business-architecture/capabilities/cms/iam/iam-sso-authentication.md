@@ -9,14 +9,16 @@ The system must allow users to sign in using their agency's identity provider vi
 
 ## Behaviors
 - Sign in via OpenID Connect with a configured identity provider
-- Automatically provision a user account on first SSO login
-- Assign the Viewer role to all SSO-provisioned users by default
-- Allow an Admin to promote an SSO user to Contributor or Admin after provisioning
+- Require a matching pre-created GovEA user account before SSO sign-in is allowed
+- Preserve the role and organization binding assigned by the Admin on that pre-created account
+- Block non-provisioned SSO identities rather than auto-creating a GovEA account at first login
+- Allow an Admin to pre-provision a user as Viewer, Contributor, or Admin before the first SSO sign-in
 - SSO configuration is enabled by providing credentials in environment variables — no code changes required
 - Disable SSO by removing the environment variables — local authentication remains available
 
 ## Rules
 - SSO is additive — local authentication always remains available alongside it
+- SSO access is invite-based in v1 — a matching active GovEA user record with an organization binding must exist before sign-in
 - SSO users cannot change their password in the system — password management is handled by the identity provider
 - If an SSO user is deactivated in the identity provider, their next login attempt must fail
 - Only one SSO provider is supported in v1
