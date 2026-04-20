@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server'
 // Use the edge-safe config so middleware never touches Node.js built-ins (net, etc.)
 const { auth } = NextAuth(authConfig)
 
-const PUBLIC_PATHS = ['/login', '/setup', '/error', '/api/auth']
+const PUBLIC_PATHS = ['/login', '/setup', '/error', '/api/auth', '/maintenance']
+
+const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true'
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
@@ -17,6 +19,10 @@ export default auth((req) => {
 
   if (!req.auth) {
     return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  if (MAINTENANCE_MODE && req.auth.user?.role !== 'admin') {
+    return NextResponse.redirect(new URL('/maintenance', req.url))
   }
 
   return NextResponse.next()
