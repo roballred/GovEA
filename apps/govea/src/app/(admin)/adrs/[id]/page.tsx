@@ -50,11 +50,7 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
   if (!session?.user) redirect('/login')
 
   const [adr, enabledModules] = await Promise.all([getADR(id), getEnabledModules()])
-  if (!adr) notFound()
-
-  // Viewers may only access accepted ADRs (#202)
-  const isViewer = session.user.role === 'viewer'
-  if (isViewer && adr.status !== 'accepted') notFound()
+  if (!adr) notFound() // also catches viewer status gate enforced in getADR (#208)
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
