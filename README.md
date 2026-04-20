@@ -14,7 +14,7 @@ Free. Open source. Runs on-prem or as a hosted service.
 - **Language:** TypeScript
 - **Database:** PostgreSQL
 - **ORM:** Drizzle
-- **Authentication:** Auth.js with Microsoft Entra ID via OIDC first; SAML support can be added later through BoxyHQ SAML Jackson
+- **Authentication:** Auth.js with Microsoft Entra ID via OIDC first, using admin-managed pre-provisioned SSO access; SAML support can be added later through BoxyHQ SAML Jackson
 - **UI:** Tailwind CSS + shadcn/ui
 - **Deployment:** Docker and web-hosted deployments, with containers available for on-prem installs
 - **Product architecture:** build toward a reusable `@govea/core` package for CMS-pattern primitives such as content types, field validation, taxonomy, RBAC, audit trail, workflow, and recipe-based seeding
@@ -94,13 +94,14 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Full CRUD for the core EA object model: applications, services, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
 - Supporting reference content for principles and glossary terms
 - Mission-first traceability: Personas → Capabilities → Applications enforced at the application layer
+- Stakeholder-friendly traceability views: read-only objective, capability, and service traces that show how mission context connects to applications, initiatives, and related architecture records
 - Service catalogue: first-class service records linked to personas, capabilities, applications, and value streams
 - Contributor-friendly relationship panels across detail pages, including in-context persona editing
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
 - Demo-ready planning module — strategic objectives plus initiatives with a roadmap view grouped by planning status
 - Audit trail — immutable before/after log of all changes
 - Taxonomy management — org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
-- Identity & access management — SSO via Microsoft Entra ID (OIDC), local auth fallback, Admin/Contributor/Viewer roles
+- Identity & access management — SSO via Microsoft Entra ID (OIDC) with admin-managed pre-provisioned access, local auth fallback, Admin/Contributor/Viewer roles
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
 - Prototype multi-org federation — connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
@@ -112,14 +113,14 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - ADRs — basic CRUD, detail pages, and linkage exist, but the authoring experience is still maturing relative to the core portfolio records
 - Planning semantics and timeline presentation — useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
 - Admin configuration beyond core settings
-- Repository completeness, end-to-end traceability, and architecture debt tooling
+- Repository completeness, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
 
 **Near-term:**
-- Stakeholder-facing views and plain-language detail pages
+- Additional stakeholder-facing views and plain-language detail pages
 - Repository completeness signals and gap detection
 - Deeper federation management UX, notifications, and broader cross-org verification coverage
 - Broader workflow consistency across all entity types and continued search refinement
