@@ -134,6 +134,13 @@
       "when": 1776528000000,
       "tag": "0018_violet_mikhail_rasputin",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1776794990078,
+      "tag": "0019_rainy_moonstone",
+      "breakpoints": true
     }
   ]
 }
