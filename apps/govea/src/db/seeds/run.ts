@@ -16,14 +16,14 @@ import {
   users, organizations,
   personas, personaTags, capabilities, applications,
   capabilityPersonas, applicationCapabilities,
-  strategicObjectives, objectiveCapabilities, objectiveApplications, objectiveValueStreams,
+  strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleAdrs, principleCapabilities,
   glossaryTerms, glossaryTermSources,
   taxonomyTerms,
-  services, serviceCapabilities, servicePersonas, serviceApplications, serviceValueStreams,
+  services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
 } from '../schema'
 import bcrypt from 'bcryptjs'
@@ -360,16 +360,6 @@ async function seed() {
       if (!exists) await db.insert(objectiveCapabilities).values({ objectiveId: objId, capabilityId: capId })
     }
 
-    // objectiveApplications
-    for (const appName of o.applications) {
-      const appId = devApplicationIds[appName]
-      if (!appId) continue
-      const exists = await db.query.objectiveApplications.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.applicationId, appId)),
-      })
-      if (!exists) await db.insert(objectiveApplications).values({ objectiveId: objId, applicationId: appId })
-    }
-
     // objectiveValueStreams
     for (const vsName of o.valueStreams) {
       const vsId = devValueStreamIds[vsName]
@@ -607,15 +597,6 @@ async function seed() {
       if (!exists) await db.insert(servicePersonas).values({ serviceId: svcId, personaId })
     }
 
-    for (const appName of svc.applications) {
-      const appId = devApplicationIds[appName]
-      if (!appId) continue
-      const exists = await db.query.serviceApplications.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.applicationId, appId)),
-      })
-      if (!exists) await db.insert(serviceApplications).values({ serviceId: svcId, applicationId: appId })
-    }
-
     for (const vsName of svc.valueStreams) {
       const vsId = devValueStreamIds[vsName]
       if (!vsId) continue
@@ -625,7 +606,7 @@ async function seed() {
       if (!exists) await db.insert(serviceValueStreams).values({ serviceId: svcId, valueStreamId: vsId })
     }
   }
-  console.log(`  ✓ ${DEV_SERVICES.length} services with capability, persona, application, and value stream links`)
+  console.log(`  ✓ ${DEV_SERVICES.length} services with capability, persona, and value stream links`)
 
   // ── Org 2: Office of Digital Services ────────────────────────────────────
 
