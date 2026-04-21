@@ -2,12 +2,13 @@
 // All dev users use the password 'dev-password' (hashed at seed time).
 // Dev login shortcuts on the login page bypass password entry in development.
 //
-// Two organizations are seeded:
+// Three organizations are seeded:
 //   - City of Riverdale (primary dev org) — full EA content, three user roles
 //   - Office of Digital Services (state agency) — second org for multi-org scenario
+//   - GovEA Platform (system org, isSystemOrg=true) — operator org for instance admin
 //
-// An active org connection between them and multiple cross-org capability links are
-// created to exercise the federation/visibility use case.
+// An active org connection between City of Riverdale and Office of Digital Services
+// and multiple cross-org capability links are created to exercise the federation/visibility use case.
 
 // ─── Orgs ────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,11 @@ export const STATE_ORG = {
   slug: 'office-of-digital-services',
 }
 
+export const SYSTEM_ORG = {
+  name: 'GovEA Platform',
+  slug: 'govea-platform',
+}
+
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export const DEV_USERS = [
@@ -31,6 +37,10 @@ export const DEV_USERS = [
 
 export const STATE_USERS = [
   { name: 'Sam StateAdmin',    email: 'sam@state.govea.dev',   role: 'admin'       as const },
+]
+
+export const SYSTEM_USERS = [
+  { name: 'Ivan InstanceAdmin', email: 'ivan@govea.dev', role: 'admin' as const, instanceRole: 'instance_admin' as const },
 ]
 
 // ─── Persona types & tags (taxonomy-backed) ──────────────────────────────────
@@ -113,6 +123,13 @@ export const DEV_PERSONAS = [
     type: 'External Partner',
     status: 'draft' as const,
     visibility: 'connections' as const,
+  },
+  {
+    name: 'CMS Administrator',
+    description: 'The IT staff member responsible for configuring and maintaining GovEA — managing user accounts, roles, SSO integration, org connections, and system-level settings. Not a developer, but technically capable. Accountable for data integrity and access security.',
+    type: 'Staff',
+    status: 'published' as const,
+    visibility: 'org' as const,
   },
   // archived + instance — exercises both missing enum values
   {
@@ -217,6 +234,47 @@ export const DEV_CAPABILITIES = [
     status: 'archived' as const,
     visibility: 'instance' as const,
     personas: ['IT Staff'],
+  },
+  // ── IAM / instance-admin capabilities ──────────────────────────────────────
+  {
+    name: 'User and Role Management',
+    description: 'Create, edit, deactivate, and manage user accounts across the organization. Assign and modify roles (Admin, Contributor, Viewer). Control who has access to what without requiring developer involvement.',
+    domain: 'Information Technology',
+    behaviors: 'Create a new user account with an assigned role and organization binding\nEdit a user\'s name, email, or role assignment\nDeactivate a user account to immediately revoke access\nSearch and filter users by role or status\nView the full user roster for the organization',
+    rules: 'Only Admins can create, edit, or deactivate user accounts\nA user must belong to exactly one organization\nDeactivating a user does not delete their audit history\nThe last Admin in an org cannot be deactivated',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['CMS Administrator'],
+  },
+  {
+    name: 'Role-Based Access Control',
+    description: 'Enforce differentiated access across Admin, Contributor, and Viewer roles. Viewers see only published content; Contributors can create and edit; Admins have full control including user management and settings.',
+    domain: 'Information Technology',
+    behaviors: 'Gate content creation and editing to Contributor role and above\nRestrict user management and org settings to Admins only\nLimit Viewer sessions to published content across all catalog sections\nEnforce org-scoping so users never see content from other organizations without an explicit connection',
+    rules: 'Role checks are enforced server-side on every action — never client-only\nViewers can never access draft or archived content regardless of URL\nRole escalation requires an Admin action; users cannot self-promote',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['CMS Administrator'],
+  },
+  {
+    name: 'SSO and Local Authentication',
+    description: 'Authenticate staff via Microsoft Entra ID (OIDC/SSO) or local email-and-password credentials. SSO users must be pre-provisioned by an Admin. Local authentication remains available as a fallback even when SSO is configured.',
+    domain: 'Information Technology',
+    behaviors: 'Sign in via Microsoft Entra ID using an existing agency account\nSign in with a local email and password when SSO is unavailable\nBlock SSO sign-in for any identity not pre-provisioned by an Admin\nEnforce a 24-hour session lifetime with periodic re-validation\nRe-validate active-user status every 5 minutes to honor deactivations without waiting for session expiry',
+    rules: 'SSO sign-in is allowed only for active pre-provisioned users with an organization binding\nNew SSO identities with no pre-provisioned record are silently rejected\nLocal authentication is always available regardless of SSO configuration\nAll login and logout events are written to the audit log',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['CMS Administrator', 'IT Staff'],
+  },
+  {
+    name: 'IAM Audit Trail',
+    description: 'Immutable log of all identity and access events — logins, logouts, failed attempts, user creation, role changes, and deactivations. Enables accountability and supports compliance requirements.',
+    domain: 'Information Technology',
+    behaviors: 'Record every login success, login failure, and logout with timestamp and user identity\nRecord all user account creation, role changes, and deactivations\nFilter audit log by action type, user, or date range\nExport audit records for compliance reporting',
+    rules: 'Audit records are immutable — no user including Admins can edit or delete them\nAll IAM events are logged regardless of whether they succeed or fail\nAudit data is retained for a minimum of 12 months',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['CMS Administrator'],
   },
 ]
 

@@ -9,7 +9,7 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     setupFiles: ['./tests/integration/setup.ts'],
-    include: ['tests/integration/**/*.test.ts'],
+    include: ['tests/**/*.test.ts'],
     testTimeout: 15_000,
     // Serialize across files: tests share the dev DB and factories use unique orgs
     // for isolation, but serial execution avoids any cross-file race conditions.

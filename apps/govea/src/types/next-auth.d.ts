@@ -7,6 +7,7 @@ declare module 'next-auth' {
       id: string
       role: Role
       organizationId: string | null
+      instanceRole: 'instance_admin' | null
     } & DefaultSession['user']
   }
 }

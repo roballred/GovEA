@@ -34,3 +34,7 @@ export function canEdit(user: Pick<User, 'role'>): boolean {
 export function isAdmin(user: Pick<User, 'role'>): boolean {
   return user.role === 'admin'
 }
+
+export function isInstanceAdmin(user: { instanceRole?: string | null }): boolean {
+  return user.instanceRole === 'instance_admin'
+}

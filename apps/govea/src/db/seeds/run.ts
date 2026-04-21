@@ -1,8 +1,8 @@
 import { eq, isNull } from 'drizzle-orm'
 import { GOV_TAXONOMY } from './gov-taxonomy'
 import {
-  DEV_ORG, STATE_ORG,
-  DEV_USERS, STATE_USERS,
+  DEV_ORG, STATE_ORG, SYSTEM_ORG,
+  DEV_USERS, STATE_USERS, SYSTEM_USERS,
   DEFAULT_PERSONA_TYPES, DEFAULT_PERSONA_TAGS,
   DEV_PERSONA_TAG_ASSIGNMENTS,
   DEV_PERSONAS, DEV_CAPABILITIES, DEV_APPLICATIONS,
@@ -34,12 +34,17 @@ function toSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-async function findOrCreateOrg(slug: string, name: string) {
+async function findOrCreateOrg(slug: string, name: string, overrides?: { isSystemOrg?: boolean }) {
   const existing = await db.query.organizations.findFirst({
     where: (t, { eq: e }) => e(t.slug, slug),
   })
-  if (existing) return existing.id
-  const [org] = await db.insert(organizations).values({ name, slug }).returning()
+  if (existing) {
+    if (overrides?.isSystemOrg && !existing.isSystemOrg) {
+      await db.update(organizations).set({ isSystemOrg: true }).where(eq(organizations.id, existing.id))
+    }
+    return existing.id
+  }
+  const [org] = await db.insert(organizations).values({ name, slug, isSystemOrg: overrides?.isSystemOrg ?? false }).returning()
   return org.id
 }
 
@@ -697,6 +702,30 @@ async function seed() {
     }
     console.log(`  ✓ Cross-org link (${link.linkType}): "${link.sourceCapabilityName}" → "${link.targetCapabilityName}"`)
   }
+
+  // ── Org 3: GovEA Platform (system org) ───────────────────────────────────
+
+  console.log('\n[Org 3] GovEA Platform (system org)')
+  const systemOrgId = await findOrCreateOrg(SYSTEM_ORG.slug, SYSTEM_ORG.name, { isSystemOrg: true })
+
+  for (const u of SYSTEM_USERS) {
+    const existing = await db.query.users.findFirst({
+      where: (t, { eq: e }) => e(t.email, u.email),
+    })
+    if (existing) {
+      await db.update(users)
+        .set({ instanceRole: u.instanceRole })
+        .where(eq(users.id, existing.id))
+    } else {
+      await db.insert(users).values({
+        ...u,
+        passwordHash,
+        organizationId: systemOrgId,
+        isActive: 'true',
+      })
+    }
+  }
+  console.log(`  ✓ ${SYSTEM_USERS.length} users (ivan@govea.dev / dev-password, instanceRole=instance_admin)`)
 
   console.log('\nSeed complete.')
   process.exit(0)

@@ -25,6 +25,10 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/maintenance', req.url))
   }
 
+  if (pathname.startsWith('/instance') && req.auth.user?.instanceRole !== 'instance_admin') {
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
   return NextResponse.next()
 })
 

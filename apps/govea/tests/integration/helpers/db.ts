@@ -82,7 +82,7 @@ export async function cleanupOrg(orgId: string): Promise<void> {
 // ── Session builder ───────────────────────────────────────────────────────────
 
 /** Build the session shape that auth() returns, matching the JWT payload. */
-export function makeSession(user: TestUser) {
+export function makeSession(user: TestUser, overrides?: { instanceRole?: 'instance_admin' | null }) {
   return {
     user: {
       id: user.id,
@@ -90,6 +90,7 @@ export function makeSession(user: TestUser) {
       name: user.name,
       role: user.role,
       organizationId: user.organizationId,
+      instanceRole: overrides?.instanceRole ?? null,
     },
     expires: new Date(Date.now() + 86_400_000).toISOString(),
   }
