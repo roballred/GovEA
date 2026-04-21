@@ -46,25 +46,24 @@ export async function getService(id: string) {
 
   if (!service) return null
   const visible = await canReadFederatedEntity(service.organizationId, service.visibility, session.user.organizationId!)
-  return visible ? service : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && service.status !== 'published') return null
+  return service
 }
 
-export async function getServices(organizationId: string) {
+export async function getServices(organizationId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const isViewer = role === 'viewer'
 
   return db.query.services.findMany({
     where: (s, { eq, or, and, inArray }) => {
       const base = eq(s.organizationId, organizationId)
       const instanceWide = eq(s.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(s.organizationId, connectedOrgIds),
-          inArray(s.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(s.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(s.organizationId, connectedOrgIds), inArray(s.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     with: {
       organization: true,

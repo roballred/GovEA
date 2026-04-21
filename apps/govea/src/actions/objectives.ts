@@ -23,22 +23,19 @@ async function requireAdmin() {
   return session
 }
 
-export async function getObjectives(organizationId: string) {
+export async function getObjectives(organizationId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const isViewer = role === 'viewer'
 
   return db.query.strategicObjectives.findMany({
     where: (o, { eq, or, and, inArray }) => {
       const base = eq(o.organizationId, organizationId)
       const instanceWide = eq(o.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(o.organizationId, connectedOrgIds),
-          inArray(o.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(o.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(o.organizationId, connectedOrgIds), inArray(o.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     orderBy: (o, { asc }) => [asc(o.name)],
     with: {
@@ -68,7 +65,9 @@ export async function getObjective(id: string) {
 
   if (!objective) return null
   const visible = await canReadFederatedEntity(objective.organizationId, objective.visibility, session.user.organizationId!)
-  return visible ? objective : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && objective.status !== 'published') return null
+  return objective
 }
 
 export async function createObjective(formData: FormData) {

@@ -43,25 +43,24 @@ export async function getCapability(id: string) {
 
   if (!capability) return null
   const visible = await canReadFederatedEntity(capability.organizationId, capability.visibility, session.user.organizationId!)
-  return visible ? capability : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && capability.status !== 'published') return null
+  return capability
 }
 
-export async function getCapabilities(organizationId: string) {
+export async function getCapabilities(organizationId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const isViewer = role === 'viewer'
 
   return db.query.capabilities.findMany({
     where: (c, { eq, or, and, inArray }) => {
       const base = eq(c.organizationId, organizationId)
       const instanceWide = eq(c.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(c.organizationId, connectedOrgIds),
-          inArray(c.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(c.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(c.organizationId, connectedOrgIds), inArray(c.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     with: {
       organization: true,

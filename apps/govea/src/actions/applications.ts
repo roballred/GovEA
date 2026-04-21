@@ -44,25 +44,24 @@ export async function getApplication(id: string) {
 
   if (!application) return null
   const visible = await canReadFederatedEntity(application.organizationId, application.visibility, session.user.organizationId!)
-  return visible ? application : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && application.status !== 'published') return null
+  return application
 }
 
-export async function getApplications(organizationId: string) {
+export async function getApplications(organizationId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const isViewer = role === 'viewer'
 
   return db.query.applications.findMany({
     where: (a, { eq, or, and, inArray }) => {
       const base = eq(a.organizationId, organizationId)
       const instanceWide = eq(a.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(a.organizationId, connectedOrgIds),
-          inArray(a.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(a.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(a.organizationId, connectedOrgIds), inArray(a.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     with: {
       organization: true,

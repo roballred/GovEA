@@ -11,8 +11,8 @@ export default async function ApplicationsPage() {
   const role = session.user.role
 
   const [applicationList, capabilityList] = await Promise.all([
-    getApplications(orgId),
-    getCapabilities(orgId),
+    getApplications(orgId, role),
+    getCapabilities(orgId, role),
   ])
 
   return (

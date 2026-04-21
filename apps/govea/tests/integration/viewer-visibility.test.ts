@@ -18,9 +18,11 @@
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { getADRs, getADR } from '@/actions/adrs'
 import { getInitiatives, getInitiative } from '@/actions/initiatives'
+import { getCapabilities, getCapability } from '@/actions/capabilities'
+import { getPersonas, getPersona } from '@/actions/personas'
 import {
   createTestOrg, createTestUser, cleanupOrg,
-  makeSession, insertAdr, insertInitiative,
+  makeSession, insertAdr, insertInitiative, insertCapability, insertPersona,
   type TestUser,
 } from './helpers/db'
 
@@ -249,6 +251,190 @@ describe('viewer visibility — Initiatives', () => {
     it('admin can access any initiative status by ID', async () => {
       mockAuth.mockResolvedValue(makeSession(admin))
       expect(await getInitiative(proposedId)).not.toBeNull()
+    })
+  })
+})
+
+// ── Capability visibility ──────────────────────────────────────────────────────
+
+describe('viewer visibility — Capabilities', () => {
+  let orgId: string
+  let admin: TestUser
+  let contributor: TestUser
+  let viewer: TestUser
+
+  let publishedId: string
+  let draftId: string
+  let archivedId: string
+
+  beforeAll(async () => {
+    const org = await createTestOrg()
+    orgId = org.id
+    ;[admin, contributor, viewer] = await Promise.all([
+      createTestUser(orgId, 'admin'),
+      createTestUser(orgId, 'contributor'),
+      createTestUser(orgId, 'viewer'),
+    ])
+    ;[publishedId, draftId, archivedId] = await Promise.all([
+      insertCapability(orgId, { status: 'published' }).then(c => c.id),
+      insertCapability(orgId, { status: 'draft'     }).then(c => c.id),
+      insertCapability(orgId, { status: 'archived'  }).then(c => c.id),
+    ])
+  })
+
+  afterAll(() => cleanupOrg(orgId))
+
+  describe('getCapabilities — list', () => {
+    it('viewer sees only published capabilities', async () => {
+      const result = await getCapabilities(orgId, 'viewer')
+      const ids = result.map(c => c.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).not.toContain(draftId)
+      expect(ids).not.toContain(archivedId)
+    })
+
+    it('contributor sees all statuses', async () => {
+      const result = await getCapabilities(orgId, 'contributor')
+      const ids = result.map(c => c.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).toContain(draftId)
+      expect(ids).toContain(archivedId)
+    })
+
+    it('admin sees all statuses', async () => {
+      const result = await getCapabilities(orgId, 'admin')
+      const ids = result.map(c => c.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).toContain(draftId)
+      expect(ids).toContain(archivedId)
+    })
+  })
+
+  describe('getCapability — detail', () => {
+    it('viewer can access a published capability by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getCapability(publishedId)
+      expect(result).not.toBeNull()
+      expect(result!.id).toBe(publishedId)
+    })
+
+    it('viewer gets null for a draft capability', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      expect(await getCapability(draftId)).toBeNull()
+    })
+
+    it('viewer gets null for an archived capability', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      expect(await getCapability(archivedId)).toBeNull()
+    })
+
+    it('contributor can access any status by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const [a, b, c] = await Promise.all([
+        getCapability(publishedId),
+        getCapability(draftId),
+        getCapability(archivedId),
+      ])
+      expect(a).not.toBeNull()
+      expect(b).not.toBeNull()
+      expect(c).not.toBeNull()
+    })
+
+    it('admin can access any status by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(admin))
+      expect(await getCapability(draftId)).not.toBeNull()
+    })
+  })
+})
+
+// ── Persona visibility ─────────────────────────────────────────────────────────
+
+describe('viewer visibility — Personas', () => {
+  let orgId: string
+  let admin: TestUser
+  let contributor: TestUser
+  let viewer: TestUser
+
+  let publishedId: string
+  let draftId: string
+  let archivedId: string
+
+  beforeAll(async () => {
+    const org = await createTestOrg()
+    orgId = org.id
+    ;[admin, contributor, viewer] = await Promise.all([
+      createTestUser(orgId, 'admin'),
+      createTestUser(orgId, 'contributor'),
+      createTestUser(orgId, 'viewer'),
+    ])
+    ;[publishedId, draftId, archivedId] = await Promise.all([
+      insertPersona(orgId, { status: 'published' }).then(p => p.id),
+      insertPersona(orgId, { status: 'draft'     }).then(p => p.id),
+      insertPersona(orgId, { status: 'archived'  }).then(p => p.id),
+    ])
+  })
+
+  afterAll(() => cleanupOrg(orgId))
+
+  describe('getPersonas — list', () => {
+    it('viewer sees only published personas', async () => {
+      const result = await getPersonas(orgId, 'viewer')
+      const ids = result.map(p => p.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).not.toContain(draftId)
+      expect(ids).not.toContain(archivedId)
+    })
+
+    it('contributor sees all statuses', async () => {
+      const result = await getPersonas(orgId, 'contributor')
+      const ids = result.map(p => p.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).toContain(draftId)
+      expect(ids).toContain(archivedId)
+    })
+
+    it('admin sees all statuses', async () => {
+      const result = await getPersonas(orgId, 'admin')
+      const ids = result.map(p => p.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).toContain(draftId)
+      expect(ids).toContain(archivedId)
+    })
+  })
+
+  describe('getPersona — detail', () => {
+    it('viewer can access a published persona by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getPersona(publishedId)
+      expect(result).not.toBeNull()
+      expect(result!.id).toBe(publishedId)
+    })
+
+    it('viewer gets null for a draft persona', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      expect(await getPersona(draftId)).toBeNull()
+    })
+
+    it('viewer gets null for an archived persona', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      expect(await getPersona(archivedId)).toBeNull()
+    })
+
+    it('contributor can access any status by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const [a, b, c] = await Promise.all([
+        getPersona(publishedId),
+        getPersona(draftId),
+        getPersona(archivedId),
+      ])
+      expect(a).not.toBeNull()
+      expect(b).not.toBeNull()
+      expect(c).not.toBeNull()
+    })
+
+    it('admin can access any status by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(admin))
+      expect(await getPersona(draftId)).not.toBeNull()
     })
   })
 })
