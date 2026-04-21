@@ -12,6 +12,7 @@ export const users = pgTable('users', {
   image: text('image'),
   passwordHash: text('password_hash'),
   role: userRoleEnum('role').notNull().default('viewer'),
+  instanceRole: text('instance_role'),
   isActive: text('is_active').notNull().default('true'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

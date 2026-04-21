@@ -24,6 +24,7 @@ export const authConfig: NextAuthConfig = {
       session.user.id = token.id as string
       session.user.role = token.role as Role
       session.user.organizationId = token.organizationId as string | null
+      session.user.instanceRole = (token.instanceRole as 'instance_admin' | null) ?? null
       return session
     },
   },

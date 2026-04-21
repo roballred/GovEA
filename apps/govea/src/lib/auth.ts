@@ -18,6 +18,7 @@ interface AppUser {
   name: string | null
   role: Role
   organizationId: string | null
+  instanceRole: 'instance_admin' | null
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -100,6 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id
         token.role = dbUser?.role ?? 'viewer'
         token.organizationId = dbUser?.organizationId ?? null
+        token.instanceRole = (dbUser?.instanceRole as 'instance_admin' | null) ?? null
         token.checkedAt = Date.now()
       } else if (token.id) {
         // Subsequent requests — re-validate isActive every 5 minutes so that
@@ -112,6 +114,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: eq(users.id, token.id as string),
           })
           if (!dbUser || dbUser.isActive !== 'true') return null
+          token.instanceRole = (dbUser?.instanceRole as 'instance_admin' | null) ?? null
           token.checkedAt = Date.now()
         }
       }
@@ -121,6 +124,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = token.id as string
       session.user.role = token.role as Role
       session.user.organizationId = token.organizationId as string | null
+      session.user.instanceRole = (token.instanceRole as 'instance_admin' | null) ?? null
       return session
     },
   },
