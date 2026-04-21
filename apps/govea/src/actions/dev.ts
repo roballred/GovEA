@@ -10,7 +10,7 @@ import {
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleAdrs, principleCapabilities,
   glossaryTerms, glossaryTermSources,
-  services, serviceCapabilities, servicePersonas, serviceApplications, serviceValueStreams,
+  services, serviceCapabilities, servicePersonas, serviceValueStreams,
 } from '@/db/schema'
 import { eq, isNull } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -392,15 +392,13 @@ export async function resetToDataset(datasetKey: string) {
 
   // ── Insert services ───────────────────────────────────────────────────────
   // Re-query name→id maps so we're not relying on variables from early-return branches
-  const [svcPersonaRows, svcCapRows, svcAppRows, svcVsRows] = await Promise.all([
+  const [svcPersonaRows, svcCapRows, svcVsRows] = await Promise.all([
     db.select({ id: personas.id, name: personas.name }).from(personas).where(eq(personas.organizationId, orgId)),
     db.select({ id: capabilities.id, name: capabilities.name }).from(capabilities).where(eq(capabilities.organizationId, orgId)),
-    db.select({ id: applications.id, name: applications.name }).from(applications).where(eq(applications.organizationId, orgId)),
     db.select({ id: valueStreams.id, name: valueStreams.name }).from(valueStreams).where(eq(valueStreams.organizationId, orgId)),
   ])
   const svcPersonaByName = Object.fromEntries(svcPersonaRows.map(r => [r.name, r.id]))
   const svcCapByName = Object.fromEntries(svcCapRows.map(r => [r.name, r.id]))
-  const svcAppByName = Object.fromEntries(svcAppRows.map(r => [r.name, r.id]))
   const svcVsByName = Object.fromEntries(svcVsRows.map(r => [r.name, r.id]))
 
   for (const svcDef of dataset.services) {
@@ -425,13 +423,6 @@ export async function resetToDataset(datasetKey: string) {
       .map(n => ({ serviceId: svcRow.id, capabilityId: svcCapByName[n] }))
     if (svcCapJoins.length > 0) {
       await db.insert(serviceCapabilities).values(svcCapJoins).onConflictDoNothing()
-    }
-
-    const svcAppJoins = svcDef.applications
-      .filter(n => svcAppByName[n])
-      .map(n => ({ serviceId: svcRow.id, applicationId: svcAppByName[n] }))
-    if (svcAppJoins.length > 0) {
-      await db.insert(serviceApplications).values(svcAppJoins).onConflictDoNothing()
     }
 
     const svcVsJoins = svcDef.valueStreams
