@@ -3,7 +3,6 @@ import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
 import { capabilities } from './capabilities'
-import { applications } from './applications'
 import { valueStreams } from './value-streams'
 
 export const strategicObjectives = pgTable('strategic_objectives', {
@@ -37,10 +36,3 @@ export const objectiveValueStreams = pgTable('objective_value_streams', {
 
 export type ObjectiveValueStream = typeof objectiveValueStreams.$inferSelect
 
-// Junction: strategic objective ↔ application
-export const objectiveApplications = pgTable('objective_applications', {
-  objectiveId: uuid('objective_id').notNull().references(() => strategicObjectives.id, { onDelete: 'cascade' }),
-  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
-})
-
-export type ObjectiveApplication = typeof objectiveApplications.$inferSelect

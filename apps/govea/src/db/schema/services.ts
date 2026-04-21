@@ -4,7 +4,6 @@ import { users } from './users'
 import { workflowStatusEnum } from './personas'
 import { capabilities } from './capabilities'
 import { personas } from './personas'
-import { applications } from './applications'
 import { valueStreams } from './value-streams'
 
 export const services = pgTable('services', {
@@ -32,12 +31,6 @@ export const serviceCapabilities = pgTable('service_capabilities', {
 export const servicePersonas = pgTable('service_personas', {
   serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
   personaId: uuid('persona_id').notNull().references(() => personas.id, { onDelete: 'cascade' }),
-})
-
-// Junction table: services ↔ applications (many-to-many)
-export const serviceApplications = pgTable('service_applications', {
-  serviceId: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
-  applicationId: uuid('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
 })
 
 // Junction table: services ↔ value streams (many-to-many)

@@ -30,7 +30,7 @@ Controls authentication, authorization, and all identity events.
 |---|---|---|
 | User Management | Implemented | Create, edit, deactivate, and assign roles to user accounts |
 | Role-Based Access Control | Implemented | Enforce Admin / Contributor / Viewer roles across all content and actions |
-| SSO Authentication | Implemented | Microsoft Entra ID sign-in via OpenID Connect (OIDC) |
+| SSO Authentication | Implemented | Microsoft Entra ID sign-in via OpenID Connect (OIDC) with admin-managed pre-provisioned access |
 | Local Authentication | Implemented | Email and password login; always available as SSO fallback |
 | IAM Audit Trail | Implemented | Immutable log of all identity and access events |
 | First-Run Setup | Implemented | Bootstrap the initial Admin account on first launch |
@@ -58,7 +58,7 @@ Foundational content authoring and lifecycle capabilities shared across all EA c
 | Content Workflow | Partially implemented | Draft → Published → Archived is established for core content types, but planning entities still use their own lifecycle states |
 | Taxonomy Management | Implemented | Hierarchical org-scoped taxonomy terms for domains, persona types, persona tags, and other controlled vocabularies |
 | Content Relationships | Implemented | Link content items; enforce GovEA traceability rules at publish time |
-| Content Search & Filtering | Partially implemented | Per-entity filtering and taxonomy-driven browsing exist; repository-wide search is still future work |
+| Content Search & Filtering | Partially implemented | Per-entity filtering, taxonomy-driven browsing, and embedded repository-wide search are shipped; search relevance and workflow consistency are still maturing |
 | Content Types | Partially implemented | Configurable schemas for content; v1 types are fixed in the data model |
 | Content Versioning | Not implemented | Change history, diffs, and version restore |
 
@@ -123,6 +123,7 @@ How content is presented to authenticated users and, optionally, the public.
 |---|---|---|
 | Navigation | Implemented | App shell with role-aware sidebar navigation |
 | Portfolio Views | Implemented | List and detail pages for all EA entity types |
+| Mission-to-Technology Traceability Views | Implemented | Read-only layered trace views from strategic objectives, capabilities, and services to supporting applications and related records |
 | Relationship Navigation | Implemented | Navigate between linked entities (capability ↔ application ↔ persona) |
 | Value Stream Display | Implemented | Visualize value stream stages with linked capabilities |
 | Content Display | Implemented | Detail pages with status badges, metadata, linked records, and contributor-friendly edit affordances on shipped surfaces |
@@ -182,7 +183,7 @@ Reliability, navigability, and self-auditing of the architecture store.
 |---|---|---|
 | Audit Trail | Implemented | Immutable log of all create/update/delete events with before/after JSON |
 | Repository Completeness | Scaffolded | Early coverage signals exist, but this is not yet a dedicated repository-quality workflow |
-| End-to-End Traceability | Not implemented | Cross-layer impact analysis from strategic goals through capabilities to applications |
+| End-to-End Traceability | Partially implemented | Read-only traceability views exist for strategic objectives, capabilities, and services, but broader repository-wide impact analysis remains future work |
 | Architecture Debt Tracking | Not implemented | Surface and track decisions and conditions that constrain future options |
 
 This group is strategically important, but today it is still mostly documented direction plus a small amount of shipped dashboarding rather than a mature product surface.

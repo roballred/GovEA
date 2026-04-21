@@ -3,7 +3,6 @@ import { redirect, notFound } from 'next/navigation'
 import { getObjective } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
-import { getApplications } from '@/actions/applications'
 import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -11,10 +10,10 @@ import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkObjectiveCapability, unlinkObjectiveCapability,
   linkObjectiveValueStream, unlinkObjectiveValueStream,
-  linkObjectiveApplication, unlinkObjectiveApplication,
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { dedupeById } from '@/lib/dedup'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -46,26 +45,42 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
   const orgId = session.user.organizationId!
   const canMutate = editor && objective.organizationId === orgId
 
-  const [allCapabilities, allValueStreams, allApplications] = editor
+  const [allCapabilities, allValueStreams] = editor
     ? await Promise.all([
         getCapabilities(orgId),
         getValueStreams(orgId),
-        getApplications(orgId),
       ])
-    : [[], [], []]
+    : [[], []]
 
   const addCapability = linkObjectiveCapability.bind(null, id)
   const removeCapability = unlinkObjectiveCapability.bind(null, id)
   const addValueStream = linkObjectiveValueStream.bind(null, id)
   const removeValueStream = unlinkObjectiveValueStream.bind(null, id)
-  const addApplication = linkObjectiveApplication.bind(null, id)
-  const removeApplication = unlinkObjectiveApplication.bind(null, id)
+
+  const capabilityApps = dedupeById(
+    objective.objectiveCapabilities.flatMap(({ capability }) =>
+      capability.applicationCapabilities.map(({ application }) => ({
+        id: application.id,
+        name: application.name,
+        href: `/applications/${application.id}`,
+        meta: application.vendor ?? undefined,
+      }))
+    )
+  )
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/objectives" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Strategic Objectives
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/objectives" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Strategic Objectives
+        </Link>
+        <Link
+          href={`/traceability?from=objective&id=${id}`}
+          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          View traceability →
+        </Link>
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
@@ -109,6 +124,7 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
             id: capability.id, name: capability.name,
             href: `/capabilities/${capability.id}`, meta: capability.domain,
           }))}
+          gapMessage="No capabilities linked — this objective has no organisational foundation mapped."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
@@ -133,14 +149,9 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
       {isModuleEnabled(enabledModules, 'applications') && (
         <RelationshipPanel
           title="Applications"
-          items={objective.objectiveApplications.map(({ application }) => ({
-            id: application.id, name: application.name,
-            href: `/applications/${application.id}`, meta: application.vendor,
-          }))}
-          canEdit={canMutate}
-          available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
-          addAction={addApplication}
-          removeAction={removeApplication}
+          items={capabilityApps}
+          gapMessage="Applications appear here through capabilities — link capabilities above to map your application landscape."
+          canEdit={false}
         />
       )}
 

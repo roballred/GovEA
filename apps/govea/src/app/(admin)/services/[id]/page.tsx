@@ -2,7 +2,6 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getService } from '@/actions/services'
 import { getCapabilities } from '@/actions/capabilities'
-import { getApplications } from '@/actions/applications'
 import { getPersonas } from '@/actions/personas'
 import { getValueStreams } from '@/actions/value-streams'
 import { canEdit } from '@/lib/rbac'
@@ -12,11 +11,11 @@ import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkServiceCapability, unlinkServiceCapability,
   linkServicePersona, unlinkServicePersona,
-  linkServiceApplication, unlinkServiceApplication,
   linkServiceValueStream, unlinkServiceValueStream,
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { dedupeById } from '@/lib/dedup'
 
 const CHANNEL_LABELS: Record<string, string> = {
   online: 'Online',
@@ -62,29 +61,45 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
   const orgId = session.user.organizationId!
   const canMutate = editor && service.organizationId === orgId
 
-  const [allCapabilities, allPersonas, allApplications, allValueStreams] = editor
+  const [allCapabilities, allPersonas, allValueStreams] = editor
     ? await Promise.all([
         getCapabilities(orgId),
         getPersonas(orgId),
-        getApplications(orgId),
         getValueStreams(orgId),
       ])
-    : [[], [], [], []]
+    : [[], [], []]
 
   const addCapability = linkServiceCapability.bind(null, id)
   const removeCapability = unlinkServiceCapability.bind(null, id)
   const addPersona = linkServicePersona.bind(null, id)
   const removePersona = unlinkServicePersona.bind(null, id)
-  const addApplication = linkServiceApplication.bind(null, id)
-  const removeApplication = unlinkServiceApplication.bind(null, id)
   const addValueStream = linkServiceValueStream.bind(null, id)
   const removeValueStream = unlinkServiceValueStream.bind(null, id)
 
+  const capabilityApps = dedupeById(
+    service.serviceCapabilities.flatMap(({ capability }) =>
+      capability.applicationCapabilities.map(({ application }) => ({
+        id: application.id,
+        name: application.name,
+        href: `/applications/${application.id}`,
+        meta: application.vendor ?? undefined,
+      }))
+    )
+  )
+
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Services
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Services
+        </Link>
+        <Link
+          href={`/traceability?from=service&id=${id}`}
+          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          View traceability →
+        </Link>
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
@@ -146,6 +161,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             href: `/capabilities/${capability.id}`,
             meta: capability.domain ?? undefined,
           }))}
+          gapMessage="No capabilities linked — what makes this service possible is not mapped."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
@@ -156,15 +172,9 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       {isModuleEnabled(enabledModules, 'applications') && (
         <RelationshipPanel
           title="Applications"
-          items={service.serviceApplications.map(({ application }) => ({
-            id: application.id, name: application.name,
-            href: `/applications/${application.id}`,
-            meta: application.vendor,
-          }))}
-          canEdit={canMutate}
-          available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
-          addAction={addApplication}
-          removeAction={removeApplication}
+          items={capabilityApps}
+          gapMessage="Applications appear here through capabilities — link capabilities above to map your application landscape."
+          canEdit={false}
         />
       )}
 

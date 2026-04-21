@@ -8,7 +8,7 @@
  *  - Audit log written with correct before/after for each mutation
  */
 import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { createUser, updateUserRole, deactivateUser, deleteUser } from '@/actions/users'
+import { createUser, updateUserRole, deactivateUser, deleteUser, editUser } from '@/actions/users'
 import { db } from '@/db/client'
 import { users } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -21,12 +21,21 @@ import {
 const mockAuth = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/auth', () => ({ auth: mockAuth }))
 
-function userForm(name: string, email: string, role: string): FormData {
+function userForm(name: string, email: string, role: string, password = 'TestPassword123!'): FormData {
   const fd = new FormData()
   fd.set('name', name)
   fd.set('email', email)
-  fd.set('password', 'TestPassword123!')
+  fd.set('password', password)
   fd.set('role', role)
+  return fd
+}
+
+function editForm(name: string, email: string, role: string, password?: string): FormData {
+  const fd = new FormData()
+  fd.set('name', name)
+  fd.set('email', email)
+  fd.set('role', role)
+  if (password !== undefined) fd.set('password', password)
   return fd
 }
 
@@ -112,6 +121,113 @@ describe('user management actions', () => {
       const entry = after[after.length - 1]
       expect(entry.userId).toBe(admin.id)
       expect(entry.after).toMatchObject({ email, role: 'contributor' })
+    })
+
+    // ── password strength (#215) ────────────────────────────────────────────
+
+    describe('password strength enforcement', () => {
+      it('rejects an empty password → throws validation error', async () => {
+        await expect(
+          createUser(userForm('Bad User', `empty-pw-${Date.now()}@test.example`, 'viewer', '')),
+        ).rejects.toThrow('Password is required')
+      })
+
+      it('rejects a whitespace-only password → throws validation error', async () => {
+        await expect(
+          createUser(userForm('Bad User', `space-pw-${Date.now()}@test.example`, 'viewer', '        ')),
+        ).rejects.toThrow('Password is required')
+      })
+
+      it('rejects a password shorter than 8 characters → throws validation error', async () => {
+        await expect(
+          createUser(userForm('Short Pw', `short-pw-${Date.now()}@test.example`, 'viewer', 'abc123')),
+        ).rejects.toThrow(/at least 8 characters/i)
+      })
+
+      it('accepts a password of exactly 8 characters', async () => {
+        const email = `exact8-${Date.now()}@test.example`
+        await expect(
+          createUser(userForm('Exact Eight', email, 'viewer', 'Abcd1234')),
+        ).resolves.not.toThrow()
+
+        const created = await db.query.users.findFirst({
+          where: and(eq(users.email, email), eq(users.organizationId, orgId)),
+        })
+        expect(created).toBeDefined()
+
+        // Cleanup
+        if (created) await db.delete(users).where(eq(users.id, created.id))
+      })
+
+      it('rejected password leaves no user row in the database', async () => {
+        const email = `no-row-${Date.now()}@test.example`
+        await expect(
+          createUser(userForm('Ghost', email, 'viewer', 'short')),
+        ).rejects.toThrow()
+
+        const row = await db.query.users.findFirst({
+          where: and(eq(users.email, email), eq(users.organizationId, orgId)),
+        })
+        expect(row).toBeUndefined()
+      })
+    })
+  })
+
+  // ── editUser ───────────────────────────────────────────────────────────────
+
+  describe('editUser', () => {
+    it('admin can update a user name and role', async () => {
+      const target = await createTestUser(orgId, 'viewer')
+      await editUser(target.id, editForm('Updated Name', target.email, 'contributor'))
+
+      const updated = await findUser(target.id)
+      expect(updated?.name).toBe('Updated Name')
+      expect(updated?.role).toBe('contributor')
+
+      // Cleanup
+      await db.delete(users).where(eq(users.id, target.id))
+    })
+
+    it('omitting password field leaves the existing hash unchanged', async () => {
+      const target = await createTestUser(orgId, 'viewer')
+      const before = await findUser(target.id)
+
+      await editUser(target.id, editForm('Same Name', target.email, 'viewer'))
+
+      const after = await findUser(target.id)
+      expect(after?.passwordHash).toBe(before?.passwordHash)
+
+      // Cleanup
+      await db.delete(users).where(eq(users.id, target.id))
+    })
+
+    it('rejects a new password shorter than 8 characters → throws validation error', async () => {
+      const target = await createTestUser(orgId, 'viewer')
+      const before = await findUser(target.id)
+
+      await expect(
+        editUser(target.id, editForm(target.name ?? 'U', target.email, 'viewer', 'short')),
+      ).rejects.toThrow(/at least 8 characters/i)
+
+      // Hash must be unchanged — the short password was never applied
+      const after = await findUser(target.id)
+      expect(after?.passwordHash).toBe(before?.passwordHash)
+
+      // Cleanup
+      await db.delete(users).where(eq(users.id, target.id))
+    })
+
+    it('accepts a new password of 8+ characters and updates the hash', async () => {
+      const target = await createTestUser(orgId, 'viewer')
+      const before = await findUser(target.id)
+
+      await editUser(target.id, editForm(target.name ?? 'U', target.email, 'viewer', 'NewPass99'))
+
+      const after = await findUser(target.id)
+      expect(after?.passwordHash).not.toBe(before?.passwordHash)
+
+      // Cleanup
+      await db.delete(users).where(eq(users.id, target.id))
     })
   })
 

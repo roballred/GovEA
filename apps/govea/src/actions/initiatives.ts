@@ -9,6 +9,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canEdit, isAdmin } from '@/lib/rbac'
+import { writeAuditLog } from '@/lib/audit'
 
 async function requireContributor() {
   const session = await auth()
@@ -65,7 +66,10 @@ export async function getInitiative(id: string) {
 
   if (!initiative) return null
   const visible = await canReadFederatedEntity(initiative.organizationId, initiative.visibility, session.user.organizationId!)
-  return visible ? initiative : null
+  if (!visible) return null
+  // Viewer status gate — enforced in the action so all callers inherit the rule (#208)
+  if (session.user.role === 'viewer' && !VIEWER_INITIATIVE_STATUSES.includes(initiative.status)) return null
+  return initiative
 }
 
 export async function createInitiative(formData: FormData) {
@@ -97,24 +101,36 @@ export async function createInitiative(formData: FormData) {
       .values(objectiveIds.map(objectiveId => ({ initiativeId: row.id, objectiveId })))
       .onConflictDoNothing()
   }
+
+  await writeAuditLog({
+    action: 'initiative.create',
+    entityType: 'initiative',
+    entityId: row.id,
+    userId,
+    organizationId: orgId,
+    after: { name: row.name, status: row.status, visibility: row.visibility },
+  })
 }
 
 export async function editInitiative(id: string, formData: FormData) {
   const session = await requireContributor()
   const orgId = session.user.organizationId!
 
-  const existing = await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
-  assertOwnership(existing?.organizationId, orgId)
+  const before = await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
+  assertOwnership(before?.organizationId, orgId)
 
   const userId = session.user.id
+  const name = formData.get('name') as string
+  const status = (formData.get('status') as 'proposed' | 'active' | 'on-hold' | 'complete' | 'cancelled') || 'proposed'
+  const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') || 'org'
 
   await db.update(initiatives).set({
-    name: formData.get('name') as string,
+    name,
     description: (formData.get('description') as string) || null,
-    status: (formData.get('status') as 'proposed' | 'active' | 'on-hold' | 'complete' | 'cancelled') || 'proposed',
+    status,
     startDate: (formData.get('startDate') as string) || null,
     endDate: (formData.get('endDate') as string) || null,
-    visibility: (formData.get('visibility') as 'org' | 'connections' | 'instance') || 'org',
+    visibility,
     updatedBy: userId,
     updatedAt: new Date(),
   }).where(eq(initiatives.id, id))
@@ -134,16 +150,35 @@ export async function editInitiative(id: string, formData: FormData) {
       .values(objectiveIds.map(objectiveId => ({ initiativeId: id, objectiveId })))
       .onConflictDoNothing()
   }
+
+  await writeAuditLog({
+    action: 'initiative.edit',
+    entityType: 'initiative',
+    entityId: id,
+    userId,
+    organizationId: orgId,
+    before: { name: before?.name, status: before?.status },
+    after: { name, status, visibility },
+  })
 }
 
 export async function deleteInitiative(id: string) {
   const session = await requireAdmin()
   const orgId = session.user.organizationId!
 
-  const existing = await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
-  assertOwnership(existing?.organizationId, orgId)
+  const before = await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
+  assertOwnership(before?.organizationId, orgId)
 
   await db.delete(initiatives).where(eq(initiatives.id, id))
+
+  await writeAuditLog({
+    action: 'initiative.delete',
+    entityType: 'initiative',
+    entityId: id,
+    userId: session.user.id,
+    organizationId: orgId,
+    before: { name: before?.name, status: before?.status },
+  })
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

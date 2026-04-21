@@ -7,7 +7,7 @@ import {
   DEV_PERSONA_TAG_ASSIGNMENTS,
   DEV_PERSONAS, DEV_CAPABILITIES, DEV_APPLICATIONS,
   DEV_OBJECTIVES, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
-  DEV_PRINCIPLES, DEV_GLOSSARY,
+  DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
   DEV_CROSS_ORG_LINKS,
 } from './dev-fixtures'
@@ -16,13 +16,14 @@ import {
   users, organizations,
   personas, personaTags, capabilities, applications,
   capabilityPersonas, applicationCapabilities,
-  strategicObjectives, objectiveCapabilities, objectiveApplications, objectiveValueStreams,
+  strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleAdrs, principleCapabilities,
   glossaryTerms, glossaryTermSources,
   taxonomyTerms,
+  services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
 } from '../schema'
 import bcrypt from 'bcryptjs'
@@ -359,16 +360,6 @@ async function seed() {
       if (!exists) await db.insert(objectiveCapabilities).values({ objectiveId: objId, capabilityId: capId })
     }
 
-    // objectiveApplications
-    for (const appName of o.applications) {
-      const appId = devApplicationIds[appName]
-      if (!appId) continue
-      const exists = await db.query.objectiveApplications.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.applicationId, appId)),
-      })
-      if (!exists) await db.insert(objectiveApplications).values({ objectiveId: objId, applicationId: appId })
-    }
-
     // objectiveValueStreams
     for (const vsName of o.valueStreams) {
       const vsId = devValueStreamIds[vsName]
@@ -566,6 +557,56 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${DEV_GLOSSARY.length} glossary terms`)
+
+  // Services + junction links
+  for (const svc of DEV_SERVICES) {
+    const existing = await db.query.services.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, svc.name)),
+    })
+    let svcId: string
+    if (existing) {
+      svcId = existing.id
+    } else {
+      const [inserted] = await db.insert(services).values({
+        organizationId: devOrgId,
+        name: svc.name,
+        description: svc.description,
+        serviceOwner: svc.serviceOwner,
+        channels: svc.channels,
+        status: svc.status,
+        visibility: svc.visibility,
+      }).returning()
+      svcId = inserted.id
+    }
+
+    for (const capName of svc.capabilities) {
+      const capId = devCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.serviceCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(serviceCapabilities).values({ serviceId: svcId, capabilityId: capId })
+    }
+
+    for (const personaName of svc.personas) {
+      const personaId = devPersonaIds[personaName]
+      if (!personaId) continue
+      const exists = await db.query.servicePersonas.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.personaId, personaId)),
+      })
+      if (!exists) await db.insert(servicePersonas).values({ serviceId: svcId, personaId })
+    }
+
+    for (const vsName of svc.valueStreams) {
+      const vsId = devValueStreamIds[vsName]
+      if (!vsId) continue
+      const exists = await db.query.serviceValueStreams.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.valueStreamId, vsId)),
+      })
+      if (!exists) await db.insert(serviceValueStreams).values({ serviceId: svcId, valueStreamId: vsId })
+    }
+  }
+  console.log(`  ✓ ${DEV_SERVICES.length} services with capability, persona, and value stream links`)
 
   // ── Org 2: Office of Digital Services ────────────────────────────────────
 

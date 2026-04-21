@@ -5,12 +5,12 @@ import { personas, personaTags } from './personas'
 import { taxonomyTerms } from './taxonomy'
 import { organizations } from './organizations'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas } from './value-streams'
-import { strategicObjectives, objectiveCapabilities, objectiveValueStreams, objectiveApplications } from './objectives'
+import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from './objectives'
 import { initiatives, initiativeCapabilities, initiativeObjectives, initiativeApplications } from './initiatives'
 import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives } from './adrs'
 import { principles, principleAdrs, principleCapabilities } from './principles'
 import { glossaryTerms, glossaryTermSources } from './glossary'
-import { services, serviceCapabilities, servicePersonas, serviceApplications, serviceValueStreams } from './services'
+import { services, serviceCapabilities, servicePersonas, serviceValueStreams } from './services'
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
 
@@ -113,7 +113,6 @@ export const strategicObjectivesRelations = relations(strategicObjectives, ({ on
   }),
   objectiveCapabilities: many(objectiveCapabilities),
   objectiveValueStreams: many(objectiveValueStreams),
-  objectiveApplications: many(objectiveApplications),
   initiativeObjectives: many(initiativeObjectives),
   adrObjectives: many(adrObjectives),
 }))
@@ -137,17 +136,6 @@ export const objectiveValueStreamsRelations = relations(objectiveValueStreams, (
   valueStream: one(valueStreams, {
     fields: [objectiveValueStreams.valueStreamId],
     references: [valueStreams.id],
-  }),
-}))
-
-export const objectiveApplicationsRelations = relations(objectiveApplications, ({ one }) => ({
-  objective: one(strategicObjectives, {
-    fields: [objectiveApplications.objectiveId],
-    references: [strategicObjectives.id],
-  }),
-  application: one(applications, {
-    fields: [objectiveApplications.applicationId],
-    references: [applications.id],
   }),
 }))
 
@@ -206,7 +194,6 @@ export const applicationsRelations = relations(applications, ({ one, many }) => 
   }),
   applicationCapabilities: many(applicationCapabilities),
   initiativeApplications: many(initiativeApplications),
-  objectiveApplications: many(objectiveApplications),
   adrApplications: many(adrApplications),
 }))
 
@@ -348,7 +335,6 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
   }),
   serviceCapabilities: many(serviceCapabilities),
   servicePersonas: many(servicePersonas),
-  serviceApplications: many(serviceApplications),
   serviceValueStreams: many(serviceValueStreams),
 }))
 
@@ -371,17 +357,6 @@ export const servicePersonasRelations = relations(servicePersonas, ({ one }) => 
   persona: one(personas, {
     fields: [servicePersonas.personaId],
     references: [personas.id],
-  }),
-}))
-
-export const serviceApplicationsRelations = relations(serviceApplications, ({ one }) => ({
-  service: one(services, {
-    fields: [serviceApplications.serviceId],
-    references: [services.id],
-  }),
-  application: one(applications, {
-    fields: [serviceApplications.applicationId],
-    references: [applications.id],
   }),
 }))
 

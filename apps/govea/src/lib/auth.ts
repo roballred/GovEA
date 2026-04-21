@@ -3,12 +3,13 @@ import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
 import Credentials from 'next-auth/providers/credentials'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
 import { db } from '@/db/client'
-import { users, accounts, sessions, verificationTokens, organizations } from '@/db/schema'
+import { users, accounts, sessions, verificationTokens } from '@/db/schema'
 import bcrypt from 'bcryptjs'
-import { asc, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { writeAuditLog } from '@/lib/audit'
 import type { Role } from '@/lib/rbac'
 import { authConfig } from '@/lib/auth.config'
+import { checkSsoProvisioning } from '@/lib/sso-guard'
 
 // Extended user type that includes our custom fields returned from the credentials provider
 interface AppUser {
@@ -74,26 +75,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       // Credentials provider already checks isActive before returning the user
-      // object (see authorize above). For SSO providers we must check here
-      // because the adapter finds/creates the user without consulting isActive.
+      // object (see authorize above). For SSO providers we enforce invite-based
+      // binding here (#213): the identity must map to a pre-provisioned, active
+      // user with an explicit org assignment. New SSO identities are blocked
+      // until an admin creates a matching account in /users.
       if (account?.provider !== 'credentials') {
         if (!user.email) return false
-        const dbUser = await db.query.users.findFirst({
-          where: eq(users.email, user.email),
-        })
-        // Allow new SSO users (not yet in DB — adapter will create them with
-        // isActive defaulting to 'true'). Block only explicitly deactivated users.
-        if (dbUser && dbUser.isActive !== 'true') return false
+        const check = await checkSsoProvisioning(user.email)
+        if (check.status !== 'allowed') return false
       }
       return true
     },
     async jwt({ token, user }) {
       if (user) {
-        // Initial sign-in — populate token from the authenticated user object.
-        const appUser = user as unknown as AppUser
-        token.id = appUser.id
-        token.role = appUser.role
-        token.organizationId = appUser.organizationId
+        // Initial sign-in — always fetch role and org from the DB regardless
+        // of provider. The credentials provider returns these fields directly,
+        // but SSO providers (Entra) do not — the DrizzleAdapter only returns
+        // standard NextAuth fields (id, name, email, image, emailVerified).
+        // Using the DB as the single source of truth also prevents token
+        // inflation: we never trust what the provider claims about our roles.
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, user.id!),
+        })
+        token.id = user.id
+        token.role = dbUser?.role ?? 'viewer'
+        token.organizationId = dbUser?.organizationId ?? null
         token.checkedAt = Date.now()
       } else if (token.id) {
         // Subsequent requests — re-validate isActive every 5 minutes so that
@@ -120,13 +126,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   events: {
     async createUser({ user }) {
-      const [firstOrg] = await db
-        .select()
-        .from(organizations)
-        .orderBy(asc(organizations.createdAt))
-        .limit(1)
-      if (firstOrg) {
-        await db.update(users).set({ organizationId: firstOrg.id }).where(eq(users.id, user.id!))
+      // First-org-wins auto-provisioning removed (#213). The signIn callback
+      // now blocks SSO identities that have no pre-provisioned DB record, so
+      // the adapter should only reach createUser for edge cases (e.g. a setup
+      // flow that pre-creates the record outside of normal /users admin flow).
+      //
+      // Safety net: if somehow an unbound user was created, deactivate
+      // immediately and emit an audit event so the anomaly is visible.
+      const dbUser = await db.query.users.findFirst({
+        where: eq(users.id, user.id!),
+      })
+      if (dbUser && !dbUser.organizationId) {
+        await db.update(users).set({ isActive: 'false' }).where(eq(users.id, user.id!))
+        await writeAuditLog({
+          action: 'auth.sso_org_binding_failed',
+          entityType: 'user',
+          entityId: user.id,
+          metadata: { email: user.email, reason: 'no_organization_binding' },
+        })
       }
     },
     async signIn({ user }) {

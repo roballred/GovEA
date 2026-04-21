@@ -53,11 +53,7 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
   if (!session?.user) redirect('/login')
 
   const [initiative, enabledModules] = await Promise.all([getInitiative(id), getEnabledModules()])
-  if (!initiative) notFound()
-
-  // Viewers may only access active or complete initiatives (#202)
-  const isViewer = session.user.role === 'viewer'
-  if (isViewer && !['active', 'complete'].includes(initiative.status)) notFound()
+  if (!initiative) notFound() // also catches viewer status gate enforced in getInitiative (#208)
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
@@ -135,6 +131,7 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         <RelationshipPanel
           title="Capabilities"
           items={capabilityItems}
+          gapMessage="No capabilities linked — the delivery scope of this initiative is unclear."
           canEdit={canMutate}
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}

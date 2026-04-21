@@ -73,7 +73,10 @@ export async function getADR(id: string) {
 
   if (!adr) return null
   const visible = await canReadFederatedEntity(adr.organizationId, adr.visibility, session.user.organizationId!)
-  return visible ? adr : null
+  if (!visible) return null
+  // Viewer status gate — enforced in the action so all callers inherit the rule (#208)
+  if (session.user.role === 'viewer' && adr.status !== VIEWER_ADR_STATUS) return null
+  return adr
 }
 
 export async function createADR(formData: FormData) {
