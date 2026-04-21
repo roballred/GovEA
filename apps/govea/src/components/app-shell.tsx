@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { DevToolbar } from '@/components/dev-toolbar'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ function SidebarContent({
       <Link
         href="/dashboard"
         onClick={onClose}
+        data-tour="dashboard"
         className={cn(
           'rounded-md px-3 py-2 text-sm font-medium transition-colors',
           pathname === '/dashboard' || pathname.startsWith('/dashboard/')
@@ -93,7 +95,10 @@ function SidebarContent({
           if (visibleItems.length === 0) return null
           return (
             <div key={group.label}>
-              <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none">
+              <p
+                data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : undefined}
+                className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none"
+              >
                 {group.label}
               </p>
               <div className="mt-0.5 space-y-0.5">
@@ -104,6 +109,16 @@ function SidebarContent({
                       key={item.href}
                       href={item.href}
                       onClick={onClose}
+                      data-tour={
+                        item.href === '/personas'      ? 'nav-personas'      :
+                        item.href === '/value-streams' ? 'nav-value-streams' :
+                        item.href === '/capabilities'  ? 'nav-capabilities'  :
+                        item.href === '/services'      ? 'nav-services'      :
+                        item.href === '/applications'  ? 'nav-applications'  :
+                        item.href === '/adrs'          ? 'nav-adrs'          :
+                        item.href === '/roadmap'       ? 'nav-roadmap'       :
+                        undefined
+                      }
                       className={cn(
                         'block rounded-md px-3 py-2 text-sm transition-colors',
                         active
@@ -280,6 +295,7 @@ export function AppShell({
                 name="q"
                 type="search"
                 placeholder="Search…"
+                data-tour="search"
                 className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-white/40"
               />
             </form>
@@ -298,12 +314,16 @@ export function AppShell({
           {/* User info */}
           <div className="flex items-center gap-3">
             <span className="hidden sm:block text-sm text-white/70">{email}</span>
-            <span className={cn(
-              'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
-              roleBadgeClass
-            )}>
+            <span
+              data-tour="role-badge"
+              className={cn(
+                'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+                roleBadgeClass
+              )}
+            >
               {role}
             </span>
+            <TourButton role={role} />
             <DarkModeToggle />
             {signOutSlot}
           </div>
