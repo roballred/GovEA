@@ -32,9 +32,12 @@ export async function getApplication(id: string) {
     where: eq(applications.id, id),
     with: {
       organization: true,
-      applicationCapabilities: { with: { capability: true } },
+      applicationCapabilities: {
+        with: {
+          capability: { with: { objectiveCapabilities: { with: { objective: true } } } },
+        },
+      },
       initiativeApplications: { with: { initiative: true } },
-      objectiveApplications: { with: { objective: true } },
       adrApplications: { with: { adr: true } },
     },
   })

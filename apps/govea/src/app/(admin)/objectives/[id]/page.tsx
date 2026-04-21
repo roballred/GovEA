@@ -3,7 +3,6 @@ import { redirect, notFound } from 'next/navigation'
 import { getObjective } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
-import { getApplications } from '@/actions/applications'
 import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -11,10 +10,10 @@ import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkObjectiveCapability, unlinkObjectiveCapability,
   linkObjectiveValueStream, unlinkObjectiveValueStream,
-  linkObjectiveApplication, unlinkObjectiveApplication,
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { dedupeById } from '@/lib/dedup'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -46,20 +45,28 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
   const orgId = session.user.organizationId!
   const canMutate = editor && objective.organizationId === orgId
 
-  const [allCapabilities, allValueStreams, allApplications] = editor
+  const [allCapabilities, allValueStreams] = editor
     ? await Promise.all([
         getCapabilities(orgId),
         getValueStreams(orgId),
-        getApplications(orgId),
       ])
-    : [[], [], []]
+    : [[], []]
 
   const addCapability = linkObjectiveCapability.bind(null, id)
   const removeCapability = unlinkObjectiveCapability.bind(null, id)
   const addValueStream = linkObjectiveValueStream.bind(null, id)
   const removeValueStream = unlinkObjectiveValueStream.bind(null, id)
-  const addApplication = linkObjectiveApplication.bind(null, id)
-  const removeApplication = unlinkObjectiveApplication.bind(null, id)
+
+  const capabilityApps = dedupeById(
+    objective.objectiveCapabilities.flatMap(({ capability }) =>
+      capability.applicationCapabilities.map(({ application }) => ({
+        id: application.id,
+        name: application.name,
+        href: `/applications/${application.id}`,
+        meta: application.vendor ?? undefined,
+      }))
+    )
+  )
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -142,14 +149,9 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
       {isModuleEnabled(enabledModules, 'applications') && (
         <RelationshipPanel
           title="Applications"
-          items={objective.objectiveApplications.map(({ application }) => ({
-            id: application.id, name: application.name,
-            href: `/applications/${application.id}`, meta: application.vendor,
-          }))}
-          canEdit={canMutate}
-          available={allApplications.filter(a => a.organizationId === orgId).map(a => ({ id: a.id, name: a.name }))}
-          addAction={addApplication}
-          removeAction={removeApplication}
+          items={capabilityApps}
+          gapMessage="Applications appear here through capabilities — link capabilities above to map your application landscape."
+          canEdit={false}
         />
       )}
 

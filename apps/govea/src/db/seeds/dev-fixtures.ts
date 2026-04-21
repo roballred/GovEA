@@ -326,7 +326,6 @@ export const DEV_OBJECTIVES = [
     status: 'published' as const,
     visibility: 'org' as const,
     capabilities: ['Online Permitting', 'Service Request Management', 'Digital Identity & Authentication'],
-    applications: ['Accela', 'Microsoft Entra ID'],
     valueStreams: ['Permit to Certificate', 'Service Request to Resolution'],
   },
   {
@@ -337,7 +336,6 @@ export const DEV_OBJECTIVES = [
     status: 'published' as const,
     visibility: 'org' as const,
     capabilities: ['GIS Mapping', 'Service Request Management'],
-    applications: ['CityWorks', 'Legacy Permitting System'],
     valueStreams: ['Permit to Certificate'],
   },
   {
@@ -348,7 +346,6 @@ export const DEV_OBJECTIVES = [
     status: 'draft' as const,
     visibility: 'connections' as const,
     capabilities: ['Cross-Agency Data Sharing', 'Digital Identity & Authentication'],
-    applications: [] as string[],
     valueStreams: [] as string[],
   },
   // archived + instance — exercises both missing enum values
@@ -360,7 +357,6 @@ export const DEV_OBJECTIVES = [
     status: 'archived' as const,
     visibility: 'instance' as const,
     capabilities: ['Digital Identity & Authentication'],
-    applications: [] as string[],
     valueStreams: [] as string[],
   },
 ]
@@ -1296,7 +1292,6 @@ export const DEV_SERVICES = [
     visibility: 'org' as const,
     capabilities: ['Online Permitting'],
     personas: ['Resident', 'Small Business Owner', 'Field Inspector'],
-    applications: ['Accela', 'Microsoft Entra ID'],
     valueStreams: ['Permit to Certificate'],
   },
   {
@@ -1308,7 +1303,6 @@ export const DEV_SERVICES = [
     visibility: 'org' as const,
     capabilities: ['Business License Management', 'Online Permitting'],
     personas: ['Small Business Owner', 'Department Director'],
-    applications: ['Accela'],
     valueStreams: ['Business Registration'],
   },
   {
@@ -1320,7 +1314,6 @@ export const DEV_SERVICES = [
     visibility: 'org' as const,
     capabilities: ['Service Request Management'],
     personas: ['Resident'],
-    applications: ['CityWorks'],
     valueStreams: ['Service Request to Resolution'],
   },
   {
@@ -1332,7 +1325,6 @@ export const DEV_SERVICES = [
     visibility: 'instance' as const,
     capabilities: ['GIS Mapping'],
     personas: ['Resident', 'Small Business Owner', 'Field Inspector'],
-    applications: ['ArcGIS Online'],
     valueStreams: [],
   },
   {
@@ -1344,7 +1336,6 @@ export const DEV_SERVICES = [
     visibility: 'org' as const,
     capabilities: ['HR Self-Service'],
     personas: ['IT Staff', 'Department Director'],
-    applications: ['Workday', 'Microsoft Entra ID'],
     valueStreams: [],
   },
   {
@@ -1356,7 +1347,6 @@ export const DEV_SERVICES = [
     visibility: 'org' as const,
     capabilities: ['Budget Reporting'],
     personas: ['Department Director', 'City Council Member'],
-    applications: ['OpenGov'],
     valueStreams: [],
   },
   {
@@ -1368,7 +1358,6 @@ export const DEV_SERVICES = [
     visibility: 'connections' as const,
     capabilities: ['Digital Identity & Authentication'],
     personas: ['Resident', 'Small Business Owner'],
-    applications: ['Microsoft Entra ID'],
     valueStreams: [],
   },
 ]

@@ -22,7 +22,6 @@ import {
   strategicObjectives,
   objectiveCapabilities,
   objectiveValueStreams,
-  objectiveApplications,
   initiatives,
   initiativeCapabilities,
   initiativeObjectives,
@@ -38,7 +37,6 @@ import {
   services,
   serviceCapabilities,
   servicePersonas,
-  serviceApplications,
   serviceValueStreams,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -171,26 +169,6 @@ export async function unlinkApplicationCapability(applicationId: string, capabil
   assertOwnership(app?.organizationId, user.organizationId!)
   await db.delete(applicationCapabilities).where(
     and(eq(applicationCapabilities.applicationId, applicationId), eq(applicationCapabilities.capabilityId, capabilityId))
-  )
-  revalidatePath(`/applications/${applicationId}`)
-}
-
-// ── Application ↔ Objective ─────────────────────────────────────────────────
-
-export async function linkApplicationObjective(applicationId: string, objectiveId: string) {
-  const { user } = await requireContributor()
-  const app = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
-  assertOwnership(app?.organizationId, user.organizationId!)
-  await db.insert(objectiveApplications).values({ applicationId, objectiveId }).onConflictDoNothing()
-  revalidatePath(`/applications/${applicationId}`)
-}
-
-export async function unlinkApplicationObjective(applicationId: string, objectiveId: string) {
-  const { user } = await requireContributor()
-  const app = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
-  assertOwnership(app?.organizationId, user.organizationId!)
-  await db.delete(objectiveApplications).where(
-    and(eq(objectiveApplications.applicationId, applicationId), eq(objectiveApplications.objectiveId, objectiveId))
   )
   revalidatePath(`/applications/${applicationId}`)
 }
@@ -331,26 +309,6 @@ export async function unlinkObjectiveValueStream(objectiveId: string, valueStrea
   assertOwnership(obj?.organizationId, user.organizationId!)
   await db.delete(objectiveValueStreams).where(
     and(eq(objectiveValueStreams.objectiveId, objectiveId), eq(objectiveValueStreams.valueStreamId, valueStreamId))
-  )
-  revalidatePath(`/objectives/${objectiveId}`)
-}
-
-// ── Objective ↔ Application ─────────────────────────────────────────────────
-
-export async function linkObjectiveApplication(objectiveId: string, applicationId: string) {
-  const { user } = await requireContributor()
-  const obj = await db.query.strategicObjectives.findFirst({ where: eq(strategicObjectives.id, objectiveId) })
-  assertOwnership(obj?.organizationId, user.organizationId!)
-  await db.insert(objectiveApplications).values({ objectiveId, applicationId }).onConflictDoNothing()
-  revalidatePath(`/objectives/${objectiveId}`)
-}
-
-export async function unlinkObjectiveApplication(objectiveId: string, applicationId: string) {
-  const { user } = await requireContributor()
-  const obj = await db.query.strategicObjectives.findFirst({ where: eq(strategicObjectives.id, objectiveId) })
-  assertOwnership(obj?.organizationId, user.organizationId!)
-  await db.delete(objectiveApplications).where(
-    and(eq(objectiveApplications.objectiveId, objectiveId), eq(objectiveApplications.applicationId, applicationId))
   )
   revalidatePath(`/objectives/${objectiveId}`)
 }
@@ -571,26 +529,6 @@ export async function unlinkServicePersona(serviceId: string, personaId: string)
   assertOwnership(svc?.organizationId, user.organizationId!)
   await db.delete(servicePersonas).where(
     and(eq(servicePersonas.serviceId, serviceId), eq(servicePersonas.personaId, personaId))
-  )
-  revalidatePath(`/services/${serviceId}`)
-}
-
-// ── Service ↔ Application ───────────────────────────────────────────────────
-
-export async function linkServiceApplication(serviceId: string, applicationId: string) {
-  const { user } = await requireContributor()
-  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
-  assertOwnership(svc?.organizationId, user.organizationId!)
-  await db.insert(serviceApplications).values({ serviceId, applicationId }).onConflictDoNothing()
-  revalidatePath(`/services/${serviceId}`)
-}
-
-export async function unlinkServiceApplication(serviceId: string, applicationId: string) {
-  const { user } = await requireContributor()
-  const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
-  assertOwnership(svc?.organizationId, user.organizationId!)
-  await db.delete(serviceApplications).where(
-    and(eq(serviceApplications.serviceId, serviceId), eq(serviceApplications.applicationId, applicationId))
   )
   revalidatePath(`/services/${serviceId}`)
 }

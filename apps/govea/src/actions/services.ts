@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import {
   services, serviceCapabilities, servicePersonas,
-  serviceApplications, serviceValueStreams,
+  serviceValueStreams,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
@@ -34,9 +34,12 @@ export async function getService(id: string) {
     where: eq(services.id, id),
     with: {
       organization: true,
-      serviceCapabilities: { with: { capability: true } },
+      serviceCapabilities: {
+        with: {
+          capability: { with: { applicationCapabilities: { with: { application: true } } } },
+        },
+      },
       servicePersonas: { with: { persona: true } },
-      serviceApplications: { with: { application: true } },
       serviceValueStreams: { with: { valueStream: true } },
     },
   })

@@ -131,11 +131,7 @@ function AppLayer({ apps }: { apps: TraceApp[] }) {
 // ── Objective trace view ──────────────────────────────────────────────────────
 
 function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
-  // Merge applications: direct links + via capabilities, deduplicated
-  const allApps = dedupeById([
-    ...trace.directApplications,
-    ...trace.capabilities.flatMap(c => c.applications),
-  ])
+  const allApps = dedupeById(trace.capabilities.flatMap(c => c.applications))
 
   return (
     <div className="space-y-1 max-w-2xl">
@@ -318,10 +314,7 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
 // ── Service trace view ────────────────────────────────────────────────────────
 
 function ServiceTraceView({ trace }: { trace: ServiceTrace }) {
-  const allApps = dedupeById([
-    ...trace.directApplications,
-    ...trace.capabilities.flatMap(c => c.applications),
-  ])
+  const allApps = dedupeById(trace.capabilities.flatMap(c => c.applications))
 
   return (
     <div className="space-y-1 max-w-2xl">

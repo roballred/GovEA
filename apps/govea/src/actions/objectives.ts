@@ -56,9 +56,12 @@ export async function getObjective(id: string) {
   const objective = await db.query.strategicObjectives.findFirst({
     where: (o, { eq }) => eq(o.id, id),
     with: {
-      objectiveCapabilities: { with: { capability: true } },
+      objectiveCapabilities: {
+        with: {
+          capability: { with: { applicationCapabilities: { with: { application: true } } } },
+        },
+      },
       objectiveValueStreams: { with: { valueStream: true } },
-      objectiveApplications: { with: { application: true } },
       initiativeObjectives: { with: { initiative: true } },
     },
   })

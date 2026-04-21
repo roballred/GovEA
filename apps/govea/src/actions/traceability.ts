@@ -41,7 +41,6 @@ export interface ObjectiveTrace {
   id: string; name: string; description: string | null
   successMetric: string | null; timeHorizon: string | null; status: string
   capabilities: TraceCapability[]
-  directApplications: TraceApp[]
   initiatives: TraceInitiative[]
 }
 
@@ -61,7 +60,6 @@ export interface ServiceTrace {
   id: string; name: string; description: string | null; channels: string[]; status: string
   personas: TracePersona[]
   capabilities: TraceCapability[]
-  directApplications: TraceApp[]
 }
 
 export type TraceData = ObjectiveTrace | CapabilityTrace | ServiceTrace
@@ -84,7 +82,6 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
           },
         },
       },
-      objectiveApplications: { with: { application: true } },
       initiativeObjectives: { with: { initiative: true } },
     },
   })
@@ -108,9 +105,6 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
       applications: c.applicationCapabilities.map(({ application: a }) => ({
         id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
       })),
-    })),
-    directApplications: row.objectiveApplications.map(({ application: a }) => ({
-      id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
     })),
     initiatives: row.initiativeObjectives.map(({ initiative: i }) => ({
       id: i.id, name: i.name, status: i.status,
@@ -187,7 +181,6 @@ export async function getServiceTrace(id: string): Promise<ServiceTrace | null> 
           },
         },
       },
-      serviceApplications: { with: { application: true } },
     },
   })
 
@@ -212,9 +205,6 @@ export async function getServiceTrace(id: string): Promise<ServiceTrace | null> 
       applications: c.applicationCapabilities.map(({ application: a }) => ({
         id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
       })),
-    })),
-    directApplications: row.serviceApplications.map(({ application: a }) => ({
-      id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
     })),
   }
 }

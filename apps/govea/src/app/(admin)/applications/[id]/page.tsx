@@ -2,7 +2,6 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getApplication, markApplicationReviewed } from '@/actions/applications'
 import { getCapabilities } from '@/actions/capabilities'
-import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
 import { getADRs } from '@/actions/adrs'
 import { canEdit } from '@/lib/rbac'
@@ -11,12 +10,12 @@ import Link from 'next/link'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkApplicationCapability, unlinkApplicationCapability,
-  linkApplicationObjective, unlinkApplicationObjective,
   linkApplicationInitiative, unlinkApplicationInitiative,
   linkApplicationAdr, unlinkApplicationAdr,
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { dedupeById } from '@/lib/dedup'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -55,23 +54,31 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const orgId = session.user.organizationId!
   const canMutate = editor && application.organizationId === orgId
 
-  const [allCapabilities, allObjectives, allInitiatives, allAdrs] = editor
+  const [allCapabilities, allInitiatives, allAdrs] = editor
     ? await Promise.all([
         getCapabilities(orgId),
-        getObjectives(orgId),
         getInitiatives(orgId),
         getADRs(orgId),
       ])
-    : [[], [], [], []]
+    : [[], [], []]
 
   const addCapability = linkApplicationCapability.bind(null, id)
   const removeCapability = unlinkApplicationCapability.bind(null, id)
-  const addObjective = linkApplicationObjective.bind(null, id)
-  const removeObjective = unlinkApplicationObjective.bind(null, id)
   const addInitiative = linkApplicationInitiative.bind(null, id)
   const removeInitiative = unlinkApplicationInitiative.bind(null, id)
   const addAdr = linkApplicationAdr.bind(null, id)
   const removeAdr = unlinkApplicationAdr.bind(null, id)
+
+  const linkedObjectives = dedupeById(
+    application.applicationCapabilities.flatMap(({ capability }) =>
+      capability.objectiveCapabilities.map(({ objective }) => ({
+        id: objective.id,
+        name: objective.name,
+        href: `/objectives/${objective.id}`,
+        meta: objective.timeHorizon ?? undefined,
+      }))
+    )
+  )
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -143,14 +150,9 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       {isModuleEnabled(enabledModules, 'objectives') && (
         <RelationshipPanel
           title="Strategic Objectives"
-          items={application.objectiveApplications.map(({ objective }) => ({
-            id: objective.id, name: objective.name,
-            href: `/objectives/${objective.id}`, meta: objective.timeHorizon,
-          }))}
-          canEdit={canMutate}
-          available={allObjectives.filter(o => o.organizationId === orgId).map(o => ({ id: o.id, name: o.name }))}
-          addAction={addObjective}
-          removeAction={removeObjective}
+          items={linkedObjectives}
+          gapMessage="Objectives appear here through capabilities — link capabilities above to see strategic alignment."
+          canEdit={false}
         />
       )}
 
