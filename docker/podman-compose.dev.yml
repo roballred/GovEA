@@ -1,18 +1,8 @@
 services:
-  app:
-    build:
-      context: ..
-      dockerfile: docker/Containerfile
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/govea
-    depends_on:
-      db:
-        condition: service_healthy
-
   db:
     image: postgres:16-alpine
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: govea
       POSTGRES_USER: postgres
