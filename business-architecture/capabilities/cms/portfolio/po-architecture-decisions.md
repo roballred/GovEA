@@ -6,7 +6,7 @@ The system must allow contributors to record, track, and supersede architecture 
 ## Personas
 - **CMS Contributor** — creates and maintains ADR records
 - **CMS Administrator** — has all Contributor permissions; can delete records
-- **Content Viewer** — reads published ADRs through the front-end ADR list view
+- **Content Viewer** — reads accepted ADRs through the front-end ADR list and detail views
 - **Department Director** — reads significant decisions to understand technical direction and constraints
 
 ## Behaviors
@@ -32,7 +32,7 @@ The system must allow contributors to record, track, and supersede architecture 
 - Deletion is Admin-only
 - All create, edit, and delete actions are written to the audit log
 - Visibility defaults to `org`
-- Only published ADRs appear in front-end portfolio views
+- For Viewers, only ADRs with status `accepted` appear in front-end portfolio views and detail pages
 
 ## Implementation Status
 Partially implemented in early v1:

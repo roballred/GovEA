@@ -11,7 +11,7 @@ The system must present EA content to users in a way that is clear, navigable, a
 
 | Capability | File | Description |
 |---|---|---|
-| Content Display | [fd-content-display.md](./fd-content-display.md) | Render published content in plain-language, readable layouts |
+| Content Display | [fd-content-display.md](./fd-content-display.md) | Render viewer-visible content in plain-language, readable layouts |
 | Navigation | [fd-navigation.md](./fd-navigation.md) | Menus, breadcrumbs, and consistent site structure |
 | Relationship Navigation | [fd-relationship-navigation.md](./fd-relationship-navigation.md) | Traverse links between applications, capabilities, and personas |
 | Portfolio Views | [fd-portfolio-views.md](./fd-portfolio-views.md) | Curated overviews: capability map, application portfolio, persona directory, ADR list |
@@ -31,7 +31,7 @@ The following outcomes indicate Front-end Display is working well for a 1–3 pe
 - The front end loads and is fully readable without JavaScript enabled
 
 ## Rules
-- Only published content is ever visible to Viewers — workflow state is the gate
+- Viewer-visible content follows the published-content rule for core workflow-governed records, plus the explicit ADR and initiative visibility mappings defined in Content Workflow
 - Core content must render without JavaScript — progressive enhancement only
 - Front-end display must be usable by non-technical users without training
 

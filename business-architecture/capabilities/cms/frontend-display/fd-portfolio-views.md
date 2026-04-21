@@ -39,7 +39,7 @@ The system must provide curated, structured views of the EA repository that give
 - Detail pages are the primary place to understand and, where permitted, maintain cross-entity relationships
 
 ## Rules
-- Portfolio views show published content only
+- Portfolio views show viewer-visible content only: published core content plus ADR and initiative records allowed by the Content Workflow visibility mappings
 - Views must be useful without EA training — labels, groupings, and filters use plain language
 - Navigation into portfolio views must be accessible without JavaScript
 
