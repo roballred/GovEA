@@ -12,8 +12,8 @@ export default async function ServicesPage() {
   const role = session.user.role
 
   const [services, personas] = await Promise.all([
-    getServices(orgId),
-    getPersonas(orgId),
+    getServices(orgId, role),
+    getPersonas(orgId, role),
   ])
 
   return (

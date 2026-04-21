@@ -12,9 +12,9 @@ export default async function ObjectivesPage() {
   const role = session.user.role
 
   const [objectiveList, capabilityList, valueStreamList] = await Promise.all([
-    getObjectives(orgId),
-    getCapabilities(orgId),
-    getValueStreams(orgId),
+    getObjectives(orgId, role),
+    getCapabilities(orgId, role),
+    getValueStreams(orgId, role),
   ])
 
   return (

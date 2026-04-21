@@ -9,7 +9,10 @@
  * Isolation is by organizationId; tests never touch the dev seed orgs.
  */
 import { db } from '@/db/client'
-import { organizations, users, capabilities, initiatives, adrs, auditLog } from '@/db/schema'
+import {
+  organizations, users, capabilities, initiatives, adrs, auditLog,
+  personas, applications, strategicObjectives, principles, valueStreams, services,
+} from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
@@ -133,10 +136,21 @@ export async function getInitiativesForOrg(orgId: string) {
 }
 
 /** Convenience: insert a capability row directly for cross-org / setup scenarios. */
-export async function insertCapability(orgId: string, name = 'Test Capability') {
+export async function insertCapability(
+  orgId: string,
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived'; visibility?: 'org' | 'connections' | 'instance' } | string = {},
+) {
+  // Accept legacy string signature for backward compat
+  const opts = typeof overrides === 'string' ? { name: overrides } : overrides
+  const suffix = randomUUID().slice(0, 8)
   const [cap] = await db
     .insert(capabilities)
-    .values({ name, organizationId: orgId, status: 'draft', visibility: 'org' })
+    .values({
+      name: opts.name ?? `Test Capability ${suffix}`,
+      organizationId: orgId,
+      status: opts.status ?? 'draft',
+      visibility: opts.visibility ?? 'org',
+    })
     .returning()
   return cap
 }
@@ -159,6 +173,117 @@ export async function insertAdr(
       number: overrides.number ?? `ADR-T-${suffix}`,
       title: overrides.title ?? `Test ADR ${suffix}`,
       status: overrides.status ?? 'proposed',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert a persona row directly — used by viewer-visibility tests. */
+export async function insertPersona(
+  orgId: string,
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived'; visibility?: 'org' | 'connections' | 'instance' } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(personas)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Persona ${suffix}`,
+      status: overrides.status ?? 'draft',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert an application row directly — used by viewer-visibility tests. */
+export async function insertApplication(
+  orgId: string,
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived'; visibility?: 'org' | 'connections' | 'instance' } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(applications)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Application ${suffix}`,
+      status: overrides.status ?? 'draft',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert a strategic objective row directly — used by viewer-visibility tests. */
+export async function insertObjective(
+  orgId: string,
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived'; visibility?: 'org' | 'connections' | 'instance' } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(strategicObjectives)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Objective ${suffix}`,
+      status: overrides.status ?? 'draft',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert a principle row directly — used by viewer-visibility tests. */
+export async function insertPrinciple(
+  orgId: string,
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived'; visibility?: 'org' | 'connections' | 'instance' } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(principles)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Principle ${suffix}`,
+      rationale: '',
+      implications: '',
+      status: overrides.status ?? 'draft',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert a value stream row directly — used by viewer-visibility tests. */
+export async function insertValueStream(
+  orgId: string,
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived'; visibility?: 'org' | 'connections' | 'instance' } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(valueStreams)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Value Stream ${suffix}`,
+      status: overrides.status ?? 'draft',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert a service row directly — used by viewer-visibility tests. */
+export async function insertService(
+  orgId: string,
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived'; visibility?: 'org' | 'connections' | 'instance' } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(services)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Service ${suffix}`,
+      channels: [],
+      status: overrides.status ?? 'draft',
       visibility: overrides.visibility ?? 'org',
     })
     .returning()

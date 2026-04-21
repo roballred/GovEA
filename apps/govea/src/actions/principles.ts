@@ -30,22 +30,19 @@ async function insertJunctions(principleId: string, adrIds: string[], capability
     await db.insert(principleCapabilities).values(capabilityIds.map(capabilityId => ({ principleId, capabilityId }))).onConflictDoNothing()
 }
 
-export async function getPrinciples(orgId: string) {
+export async function getPrinciples(orgId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(orgId)
+  const isViewer = role === 'viewer'
 
   return db.query.principles.findMany({
     where: (p, { eq, or, and, inArray }) => {
       const base = eq(p.organizationId, orgId)
       const instanceWide = eq(p.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(p.organizationId, connectedOrgIds),
-          inArray(p.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(p.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(p.organizationId, connectedOrgIds), inArray(p.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     with: {
       organization: true,
@@ -71,7 +68,9 @@ export async function getPrinciple(id: string) {
 
   if (!principle) return null
   const visible = await canReadFederatedEntity(principle.organizationId, principle.visibility, session.user.organizationId!)
-  return visible ? principle : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && principle.status !== 'published') return null
+  return principle
 }
 
 export async function createPrinciple(formData: FormData) {

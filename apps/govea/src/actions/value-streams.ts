@@ -25,22 +25,19 @@ async function requireAdmin() {
 
 // ── Value Streams ─────────────────────────────────────────────────────────────
 
-export async function getValueStreams(organizationId: string) {
+export async function getValueStreams(organizationId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const isViewer = role === 'viewer'
 
   return db.query.valueStreams.findMany({
     where: (vs, { eq, or, and, inArray }) => {
       const base = eq(vs.organizationId, organizationId)
       const instanceWide = eq(vs.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(vs.organizationId, connectedOrgIds),
-          inArray(vs.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(vs.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(vs.organizationId, connectedOrgIds), inArray(vs.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     orderBy: (vs, { asc }) => [asc(vs.name)],
     with: {
@@ -79,7 +76,9 @@ export async function getValueStream(id: string) {
 
   if (!valueStream) return null
   const visible = await canReadFederatedEntity(valueStream.organizationId, valueStream.visibility, session.user.organizationId!)
-  return visible ? valueStream : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && valueStream.status !== 'published') return null
+  return valueStream
 }
 
 export async function createValueStream(formData: FormData) {

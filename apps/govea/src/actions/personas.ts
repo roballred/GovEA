@@ -42,25 +42,24 @@ export async function getPersona(id: string) {
 
   if (!persona) return null
   const visible = await canReadFederatedEntity(persona.organizationId, persona.visibility, session.user.organizationId!)
-  return visible ? persona : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && persona.status !== 'published') return null
+  return persona
 }
 
-export async function getPersonas(organizationId: string) {
+export async function getPersonas(organizationId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const isViewer = role === 'viewer'
 
   return db.query.personas.findMany({
     where: (p, { eq, or, and, inArray }) => {
       const base = eq(p.organizationId, organizationId)
       const instanceWide = eq(p.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(p.organizationId, connectedOrgIds),
-          inArray(p.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(p.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(p.organizationId, connectedOrgIds), inArray(p.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     orderBy: (p, { asc }) => [asc(p.name)],
     with: {
