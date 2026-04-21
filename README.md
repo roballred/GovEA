@@ -69,7 +69,7 @@ Both must pass before merge.
 
 ## Capabilities
 
-GovEA's capability surface spans 8 groups, each driven by validated government EA practitioner personas:
+GovEA's capability surface spans 9 groups, each driven by government EA practitioner personas and validated through the EasyEA workflow:
 
 | Group | Description |
 |---|---|
@@ -81,10 +81,11 @@ GovEA's capability surface spans 8 groups, each driven by validated government E
 | Integration | ITSM, CMDB, DevOps, cloud, and business system connectors |
 | Collaboration & Stakeholder Engagement | Role-based access, stakeholder views, change notifications |
 | Reporting & Documentation | Plain-language outputs, configurable reports, KPI tracking |
+| Framework Alignment | Optional TOGAF/SAFe-style overlays, mappings, and framework-aware reports |
 
 For the full capability inventory — including implementation status — see [`capabilities.md`](./capabilities.md).
 
-Capabilities are defined one at a time through the EasyEA workflow: persona validation → capability definition → ARB review → implementation issues.
+Capabilities are defined one at a time through the EasyEA workflow: persona validation → capability definition → ARB review → implementation issues. Framework alignment is treated as an optional overlay: it may map GovEA content to TOGAF or other frameworks, but it does not replace the core GovEA model.
 
 ---
 

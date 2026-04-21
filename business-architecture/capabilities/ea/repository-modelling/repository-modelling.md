@@ -31,7 +31,7 @@ The following market research capabilities in this group are substantively addre
 
 | Market Capability | Rationale |
 |---|---|
-| Multi-Framework Modelling (ArchiMate, BPMN, UML, SysML, Zachman) | GovEA uses plain-language descriptions and enforced relationship chains, not formal modelling notations. Adding notation frameworks would increase complexity without serving the state and local government audience, where most EA practitioners are not modelling-certified. |
+| Multi-Framework Modelling (ArchiMate, BPMN, UML, SysML, Zachman) | GovEA uses plain-language descriptions and enforced relationship chains, not formal modelling notations. Adding notation frameworks would increase complexity without serving the state and local government audience, where most EA practitioners are not modelling-certified. Optional framework alignment, such as mapping GovEA records to TOGAF concepts, is covered separately by `ea/framework-alignment`. |
 | Meta-Model Customisation | The GovEA meta-model (Organization → Personas, Capabilities, Applications, ADRs, Technology) is fixed in v1. Custom content types are available via `cm-content-types` for extensions. Full meta-model modification is deferred beyond v1. |
 
 ## Deferred

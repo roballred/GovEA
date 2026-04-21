@@ -18,6 +18,7 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 | 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
 | 7 | [Multi-Organization Federation](#7-multi-organization-federation) | Prototype |
 | 8 | [Repository & Modelling](#8-repository--modelling) | Scaffolded |
+| 9 | [Framework Alignment](#9-framework-alignment) | Not implemented |
 
 ---
 
@@ -41,9 +42,9 @@ Controls authentication, authorization, and all identity events.
 |---|---|
 | Admin | Full access — users, org settings, all content |
 | Contributor | Create and edit EA content — no user management, no delete |
-| Viewer | Read-only, published content only |
+| Viewer | Read-only access to viewer-visible content: published core content, accepted ADRs, and active/complete initiatives |
 
-SSO users default to Viewer. Admins promote as needed.
+SSO users must be pre-provisioned by an Admin. They sign in with the role already assigned to their account.
 
 ---
 
@@ -193,9 +194,27 @@ This group is strategically important, but today it is still mostly documented d
 
 ---
 
+## 9. Framework Alignment
+
+Optional alignment to external architecture frameworks such as TOGAF without replacing GovEA's EasyEA-based model.
+
+| Capability | Status | Description |
+|---|---|---|
+| Framework Reference Management | Not implemented | Store external framework references separately from GovEA's authoritative capability definitions |
+| Framework Mapping | Not implemented | Map GovEA records to framework concepts, domains, content types, or reference categories |
+| ADM Phase Alignment | Not implemented | Optionally tag architecture work to TOGAF ADM phases for TOGAF-aware teams |
+| TOGAF-Aligned Reporting | Not implemented | Generate TOGAF-friendly outputs from existing GovEA content and mappings |
+| Framework Overlay Configuration | Not implemented | Enable, disable, and configure optional framework overlays per organization |
+
+**Design principle:** Framework support should increase credibility without increasing friction. TOGAF-aware architects should be able to recognize familiar concepts and reporting structures, while ordinary GovEA users continue working with plain-language personas, capabilities, services, applications, objectives, initiatives, principles, and decisions.
+
+Framework alignment is distinct from formal modelling notation. GovEA can map content to TOGAF concepts and produce TOGAF-friendly reports without adding mandatory ADM workflow, ArchiMate modelling, or meta-model customization.
+
+---
+
 ## Capability Target Surface
 
-GovEA's long-term capability surface spans 8 groups, each defined through the EasyEA workflow: persona validation → capability definition → ARB review → implementation issues.
+GovEA's long-term capability surface spans 9 groups, each defined through the EasyEA workflow: persona validation → capability definition → ARB review → implementation issues.
 
 | Group | Near-term priorities |
 |---|---|
@@ -207,5 +226,6 @@ GovEA's long-term capability surface spans 8 groups, each defined through the Ea
 | Integration | ITSM/CMDB connectors, DevOps pipeline links |
 | Collaboration & Stakeholder Engagement | Change notifications, stakeholder-facing plain-language views |
 | Reporting & Documentation | Configurable reports, KPI tracking, elected-official summaries |
+| Framework Alignment | Optional TOGAF mapping, ADM phase alignment, and framework-aware reporting |
 
 Capabilities are added one at a time as personas are validated and pain points confirmed. The roadmap is driven by real government EA practitioner needs, not feature parity with commercial tools.

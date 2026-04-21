@@ -20,7 +20,7 @@ The system must allow users to sign in using their agency's identity provider vi
 - SSO is additive — local authentication always remains available alongside it
 - SSO access is invite-based in v1 — a matching active GovEA user record with an organization binding must exist before sign-in
 - SSO users cannot change their password in the system — password management is handled by the identity provider
-- If an SSO user is deactivated in the identity provider, their next login attempt must fail
+- If an SSO user is deactivated in GovEA or is not pre-provisioned, sign-in must fail
 - Only one SSO provider is supported in v1
 
 ## Session Invalidation

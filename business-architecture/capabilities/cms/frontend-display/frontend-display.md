@@ -37,7 +37,7 @@ The following outcomes indicate Front-end Display is working well for a 1–3 pe
 - The front end loads and is fully readable without JavaScript enabled
 
 ## Rules
-- Only published content is ever visible to Viewers — workflow state is the gate
+- Viewer-visible content follows the published-content rule for core workflow-governed records, plus the explicit ADR and initiative visibility mappings defined in Content Workflow
 - Core content must render without JavaScript — progressive enhancement only
 - Front-end display must be usable by non-technical users without training
 
