@@ -10,6 +10,10 @@ import {
   DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
   DEV_CROSS_ORG_LINKS,
+  LAKESIDE_ORG, LAKESIDE_USERS,
+  LAKESIDE_PERSONAS, LAKESIDE_CAPABILITIES, LAKESIDE_APPLICATIONS,
+  LAKESIDE_VALUE_STREAMS, LAKESIDE_OBJECTIVES, LAKESIDE_INITIATIVES,
+  LAKESIDE_ADRS, LAKESIDE_PRINCIPLES, LAKESIDE_GLOSSARY, LAKESIDE_SERVICES,
 } from './dev-fixtures'
 import { db } from '../client'
 import {
@@ -613,7 +617,7 @@ async function seed() {
   }
   console.log(`  ✓ ${DEV_SERVICES.length} services with capability, persona, and value stream links`)
 
-  // ── Org 2: Office of Digital Services ────────────────────────────────────
+  // ── Org 2: Office of Digital Services (state agency) ────────────────────
 
   console.log('\n[Org 2] Office of Digital Services')
   const stateOrgId = await findOrCreateOrg(STATE_ORG.slug, STATE_ORG.name)
@@ -664,6 +668,351 @@ async function seed() {
   }
   console.log(`  ✓ ${STATE_APPLICATIONS.length} applications`)
 
+  // ── Org 3: City of Lakeside ──────────────────────────────────────────────
+
+  console.log('\n[Org 3] City of Lakeside')
+  const lakesideOrgId = await findOrCreateOrg(LAKESIDE_ORG.slug, LAKESIDE_ORG.name)
+
+  for (const u of LAKESIDE_USERS) {
+    await db.insert(users).values({ ...u, passwordHash, organizationId: lakesideOrgId, isActive: 'true' }).onConflictDoNothing()
+  }
+  console.log(`  ✓ ${LAKESIDE_USERS.length} users (password: dev-password)`)
+
+  const lakesidePersonaIds: Record<string, string> = {}
+  for (const p of LAKESIDE_PERSONAS) {
+    lakesidePersonaIds[p.name] = await findOrCreatePersona(lakesideOrgId, p.name, {
+      description: p.description, type: p.type, status: p.status, visibility: p.visibility,
+    })
+  }
+  console.log(`  ✓ ${LAKESIDE_PERSONAS.length} personas`)
+
+  const lakesideCapabilityIds: Record<string, string> = {}
+  for (const c of LAKESIDE_CAPABILITIES) {
+    const capId = await findOrCreateCapability(lakesideOrgId, c.name, {
+      description: c.description, domain: c.domain,
+      behaviors: (c as { behaviors?: string }).behaviors,
+      rules: (c as { rules?: string }).rules,
+      status: c.status, visibility: c.visibility,
+    })
+    lakesideCapabilityIds[c.name] = capId
+    for (const personaName of c.personas) {
+      const personaId = lakesidePersonaIds[personaName]
+      if (!personaId) continue
+      const exists = await db.query.capabilityPersonas.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.capabilityId, capId), e(t.personaId, personaId)),
+      })
+      if (!exists) await db.insert(capabilityPersonas).values({ capabilityId: capId, personaId })
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_CAPABILITIES.length} capabilities`)
+
+  const lakesideApplicationIds: Record<string, string> = {}
+  for (const a of LAKESIDE_APPLICATIONS) {
+    const appId = await findOrCreateApplication(lakesideOrgId, a.name, {
+      description: a.description, vendor: a.vendor, hostingModel: a.hostingModel,
+      lifecycleStatus: a.lifecycleStatus, status: a.status,
+    })
+    lakesideApplicationIds[a.name] = appId
+    for (const capName of a.capabilities) {
+      const capId = lakesideCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.applicationCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.applicationId, appId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(applicationCapabilities).values({ applicationId: appId, capabilityId: capId })
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_APPLICATIONS.length} applications`)
+
+  // Value Streams + stages + stage capability links + persona links
+  const lakesideValueStreamIds: Record<string, string> = {}
+  for (const vs of LAKESIDE_VALUE_STREAMS) {
+    const existingVs = await db.query.valueStreams.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, vs.name)),
+    })
+    let vsId: string
+    if (existingVs) {
+      vsId = existingVs.id
+    } else {
+      const [inserted] = await db.insert(valueStreams).values({
+        organizationId: lakesideOrgId,
+        name: vs.name, description: vs.description, valueItem: vs.valueItem,
+        status: vs.status, visibility: vs.visibility,
+      }).returning()
+      vsId = inserted.id
+    }
+    lakesideValueStreamIds[vs.name] = vsId
+
+    for (const personaName of vs.stakeholderPersonas) {
+      const personaId = lakesidePersonaIds[personaName]
+      if (!personaId) continue
+      const exists = await db.query.valueStreamPersonas.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.valueStreamId, vsId), e(t.personaId, personaId)),
+      })
+      if (!exists) await db.insert(valueStreamPersonas).values({ valueStreamId: vsId, personaId })
+    }
+
+    for (const stage of vs.stages) {
+      const existingStage = await db.query.valueStreamStages.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.valueStreamId, vsId), e(t.name, stage.name)),
+      })
+      let stageId: string
+      if (existingStage) {
+        stageId = existingStage.id
+      } else {
+        const [insertedStage] = await db.insert(valueStreamStages).values({
+          valueStreamId: vsId, name: stage.name, description: stage.description, order: stage.order,
+        }).returning()
+        stageId = insertedStage.id
+      }
+      for (const capName of stage.capabilities) {
+        const capId = lakesideCapabilityIds[capName]
+        if (!capId) continue
+        const exists = await db.query.valueStreamStageCapabilities.findFirst({
+          where: (t, { eq: e, and }) => and(e(t.stageId, stageId), e(t.capabilityId, capId)),
+        })
+        if (!exists) await db.insert(valueStreamStageCapabilities).values({ stageId, capabilityId: capId })
+      }
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_VALUE_STREAMS.length} value streams with stages and persona links`)
+
+  // Strategic Objectives + capability / value stream links
+  const lakesideObjectiveIds: Record<string, string> = {}
+  for (const o of LAKESIDE_OBJECTIVES) {
+    const existing = await db.query.strategicObjectives.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, o.name)),
+    })
+    let objId: string
+    if (existing) {
+      objId = existing.id
+    } else {
+      const [inserted] = await db.insert(strategicObjectives).values({
+        organizationId: lakesideOrgId,
+        name: o.name, description: o.description,
+        successMetric: o.successMetric, timeHorizon: o.timeHorizon,
+        status: o.status, visibility: o.visibility,
+      }).returning()
+      objId = inserted.id
+    }
+    lakesideObjectiveIds[o.name] = objId
+
+    for (const capName of o.capabilities) {
+      const capId = lakesideCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.objectiveCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(objectiveCapabilities).values({ objectiveId: objId, capabilityId: capId })
+    }
+
+    for (const vsName of o.valueStreams) {
+      const vsId = lakesideValueStreamIds[vsName]
+      if (!vsId) continue
+      const exists = await db.query.objectiveValueStreams.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.valueStreamId, vsId)),
+      })
+      if (!exists) await db.insert(objectiveValueStreams).values({ objectiveId: objId, valueStreamId: vsId })
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_OBJECTIVES.length} strategic objectives`)
+
+  // Initiatives + capability / application / objective links
+  const lakesideInitiativeIds: Record<string, string> = {}
+  for (const ini of LAKESIDE_INITIATIVES) {
+    const existingIni = await db.query.initiatives.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, ini.name)),
+    })
+    let iniId: string
+    if (existingIni) {
+      iniId = existingIni.id
+    } else {
+      const [inserted] = await db.insert(initiatives).values({
+        organizationId: lakesideOrgId,
+        name: ini.name, description: ini.description,
+        status: ini.status, startDate: ini.startDate, endDate: ini.endDate ?? undefined,
+      }).returning()
+      iniId = inserted.id
+    }
+    lakesideInitiativeIds[ini.name] = iniId
+
+    for (const { name: capName, impact } of ini.capabilities) {
+      const capId = lakesideCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.initiativeCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(initiativeCapabilities).values({ initiativeId: iniId, capabilityId: capId, impact })
+    }
+
+    for (const { name: appName, impact } of ini.applications) {
+      const appId = lakesideApplicationIds[appName]
+      if (!appId) continue
+      const exists = await db.query.initiativeApplications.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.applicationId, appId)),
+      })
+      if (!exists) await db.insert(initiativeApplications).values({ initiativeId: iniId, applicationId: appId, impact })
+    }
+
+    for (const objName of ini.objectives) {
+      const objId = lakesideObjectiveIds[objName]
+      if (!objId) continue
+      const exists = await db.query.initiativeObjectives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.objectiveId, objId)),
+      })
+      if (!exists) await db.insert(initiativeObjectives).values({ initiativeId: iniId, objectiveId: objId })
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_INITIATIVES.length} initiatives`)
+
+  // ADRs — insert all records first (without supersededBy), then resolve self-references
+  const lakesideAdrIds: Record<string, string> = {}
+  for (const adr of LAKESIDE_ADRS) {
+    const existingAdr = await db.query.adrs.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.number, adr.number)),
+    })
+    let adrId: string
+    if (existingAdr) {
+      adrId = existingAdr.id
+    } else {
+      const [inserted] = await db.insert(adrs).values({
+        organizationId: lakesideOrgId,
+        number: adr.number, title: adr.title, context: adr.context,
+        decision: adr.decision, consequences: adr.consequences, status: adr.status,
+      }).returning()
+      adrId = inserted.id
+    }
+    lakesideAdrIds[adr.number] = adrId
+  }
+
+  for (const adr of LAKESIDE_ADRS) {
+    if (!adr.supersededByNumber) continue
+    const adrId = lakesideAdrIds[adr.number]
+    const supersedingId = lakesideAdrIds[adr.supersededByNumber]
+    if (adrId && supersedingId) {
+      await db.update(adrs).set({ supersededBy: supersedingId }).where(eq(adrs.id, adrId))
+    }
+  }
+
+  for (const adr of LAKESIDE_ADRS) {
+    const adrId = lakesideAdrIds[adr.number]
+    if (!adrId) continue
+
+    for (const capName of adr.capabilities) {
+      const capId = lakesideCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.adrCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(adrCapabilities).values({ adrId, capabilityId: capId })
+    }
+
+    for (const iniName of adr.initiatives) {
+      const iniId = lakesideInitiativeIds[iniName]
+      if (!iniId) continue
+      const exists = await db.query.adrInitiatives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.initiativeId, iniId)),
+      })
+      if (!exists) await db.insert(adrInitiatives).values({ adrId, initiativeId: iniId })
+    }
+
+    for (const objName of adr.objectives) {
+      const objId = lakesideObjectiveIds[objName]
+      if (!objId) continue
+      const exists = await db.query.adrObjectives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.objectiveId, objId)),
+      })
+      if (!exists) await db.insert(adrObjectives).values({ adrId, objectiveId: objId })
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_ADRS.length} ADRs with junction links and supersededBy chain`)
+
+  // Principles + capability links
+  for (const p of LAKESIDE_PRINCIPLES) {
+    const existing = await db.query.principles.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, p.name)),
+    })
+    if (existing) continue
+    const [pRow] = await db.insert(principles).values({
+      name: p.name, description: p.description ?? null, title: p.title ?? null,
+      rationale: p.rationale, implications: p.implications,
+      status: p.status, visibility: p.visibility, organizationId: lakesideOrgId,
+    }).returning()
+    for (const capName of p.capabilities) {
+      const capId = lakesideCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.principleCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.principleId, pRow.id), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow.id, capabilityId: capId })
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_PRINCIPLES.length} principles`)
+
+  // Glossary
+  for (const g of LAKESIDE_GLOSSARY) {
+    const existing = await db.query.glossaryTerms.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.term, g.term)),
+    })
+    if (existing) continue
+    await db.insert(glossaryTerms).values({
+      term: g.term, definition: g.definition,
+      definitionSource: (g as { definitionSource?: string }).definitionSource ?? null,
+      definitionSourceUrl: null,
+      domain: g.domain ?? null,
+      notes: (g as { notes?: string }).notes ?? null,
+      status: g.status, visibility: g.visibility, organizationId: lakesideOrgId,
+    })
+  }
+  console.log(`  ✓ ${LAKESIDE_GLOSSARY.length} glossary terms`)
+
+  // Services + junction links
+  for (const svc of LAKESIDE_SERVICES) {
+    const existing = await db.query.services.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, svc.name)),
+    })
+    let svcId: string
+    if (existing) {
+      svcId = existing.id
+    } else {
+      const [inserted] = await db.insert(services).values({
+        organizationId: lakesideOrgId,
+        name: svc.name, description: svc.description,
+        serviceOwner: svc.serviceOwner, channels: svc.channels,
+        status: svc.status, visibility: svc.visibility,
+      }).returning()
+      svcId = inserted.id
+    }
+
+    for (const capName of svc.capabilities) {
+      const capId = lakesideCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.serviceCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(serviceCapabilities).values({ serviceId: svcId, capabilityId: capId })
+    }
+
+    for (const personaName of svc.personas) {
+      const personaId = lakesidePersonaIds[personaName]
+      if (!personaId) continue
+      const exists = await db.query.servicePersonas.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.personaId, personaId)),
+      })
+      if (!exists) await db.insert(servicePersonas).values({ serviceId: svcId, personaId })
+    }
+
+    for (const vsName of svc.valueStreams) {
+      const vsId = lakesideValueStreamIds[vsName]
+      if (!vsId) continue
+      const exists = await db.query.serviceValueStreams.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.valueStreamId, vsId)),
+      })
+      if (!exists) await db.insert(serviceValueStreams).values({ serviceId: svcId, valueStreamId: vsId })
+    }
+  }
+  console.log(`  ✓ ${LAKESIDE_SERVICES.length} services with capability, persona, and value stream links`)
+
   // ── Multi-org: connection + cross-org capability links ────────────────────
 
   console.log('\n[Multi-org]')
@@ -703,9 +1052,9 @@ async function seed() {
     console.log(`  ✓ Cross-org link (${link.linkType}): "${link.sourceCapabilityName}" → "${link.targetCapabilityName}"`)
   }
 
-  // ── Org 3: GovEA Platform (system org) ───────────────────────────────────
+  // ── Org 4: GovEA Platform (system org) ───────────────────────────────────
 
-  console.log('\n[Org 3] GovEA Platform (system org)')
+  console.log('\n[Org 4] GovEA Platform (system org)')
   const systemOrgId = await findOrCreateOrg(SYSTEM_ORG.slug, SYSTEM_ORG.name, { isSystemOrg: true })
 
   for (const u of SYSTEM_USERS) {

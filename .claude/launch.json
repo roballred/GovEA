@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "govea-dev",
-      "runtimeExecutable": "/opt/homebrew/bin/node",
-      "runtimeArgs": ["/opt/homebrew/lib/node_modules/pnpm/bin/pnpm.cjs", "--dir", "/Users/roballred/Repos/Claude/govea-app", "--filter", "govea", "dev"],
+      "runtimeExecutable": "/Users/roballred/Repos/Claude/govea-app/.claude/start-worktree-dev.sh",
+      "runtimeArgs": [],
       "port": 3000,
       "autoPort": false
     }

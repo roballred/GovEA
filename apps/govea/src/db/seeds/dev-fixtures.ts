@@ -2,13 +2,24 @@
 // All dev users use the password 'dev-password' (hashed at seed time).
 // Dev login shortcuts on the login page bypass password entry in development.
 //
-// Three organizations are seeded:
-//   - City of Riverdale (primary dev org) — full EA content, three user roles
+// Four organizations are seeded:
+//   - City of Riverdale (primary dev org) — full EA content, admin + contributor shortcuts
+//   - City of Lakeside — second municipal demo org, comparable EA content, admin role
 //   - Office of Digital Services (state agency) — second org for multi-org scenario
 //   - GovEA Platform (system org, isSystemOrg=true) — operator org for instance admin
 //
 // An active org connection between City of Riverdale and Office of Digital Services
 // and multiple cross-org capability links are created to exercise the federation/visibility use case.
+//
+// Dev login roster:
+//   alice@govea.dev          — City of Riverdale, Admin
+//   carol@govea.dev          — City of Riverdale, Contributor
+//   luke@lakeside.govea.dev  — City of Lakeside, Admin
+//   sam@state.govea.dev      — Office of Digital Services, Admin
+//   ivan@govea.dev           — GovEA Platform, Instance Admin (dev tools only)
+//
+// victor@govea.dev remains seeded as a Riverdale Viewer for automated role
+// coverage, but is intentionally not shown as a dev login shortcut.
 
 // ─── Orgs ────────────────────────────────────────────────────────────────────
 
@@ -30,9 +41,9 @@ export const SYSTEM_ORG = {
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export const DEV_USERS = [
-  { name: 'Alice Admin',       email: 'alice@govea.dev',       role: 'admin'       as const },
-  { name: 'Carol Contributor', email: 'carol@govea.dev',       role: 'contributor' as const },
-  { name: 'Victor Viewer',     email: 'victor@govea.dev',      role: 'viewer'      as const },
+  { name: 'Alice Admin',       email: 'alice@govea.dev',  role: 'admin'       as const },
+  { name: 'Carol Contributor', email: 'carol@govea.dev',  role: 'contributor' as const },
+  { name: 'Victor Viewer',     email: 'victor@govea.dev', role: 'viewer'      as const },
 ]
 
 export const STATE_USERS = [
@@ -41,6 +52,17 @@ export const STATE_USERS = [
 
 export const SYSTEM_USERS = [
   { name: 'Ivan InstanceAdmin', email: 'ivan@govea.dev', role: 'admin' as const, instanceRole: 'instance_admin' as const },
+]
+
+// ─── City of Lakeside ─────────────────────────────────────────────────────────
+
+export const LAKESIDE_ORG = {
+  name: 'City of Lakeside',
+  slug: 'city-of-lakeside',
+}
+
+export const LAKESIDE_USERS = [
+  { name: 'Luke Admin', email: 'luke@lakeside.govea.dev', role: 'admin' as const },
 ]
 
 // ─── Persona types & tags (taxonomy-backed) ──────────────────────────────────
@@ -1437,5 +1459,549 @@ export const DEV_CROSS_ORG_LINKS = [
     sourceCapabilityName: 'Budget Reporting',
     targetCapabilityName: 'State Grants Management',
     linkType: 'maps_to' as const,
+  },
+]
+
+// ─── Personas (City of Lakeside) ─────────────────────────────────────────────
+// Coverage: status = draft ✓, published ✓, archived ✓
+//           visibility = org ✓, connections ✓, instance ✓
+
+export const LAKESIDE_PERSONAS = [
+  {
+    name: 'Resident',
+    description: 'A Lakeside resident who accesses city parks, waterfront facilities, and reporting tools. Primarily uses the city website and mobile app.',
+    type: 'Citizen',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'Marina Operator',
+    description: 'Owner or manager of a marina slip or waterfront commercial business requiring annual waterfront permits and safety inspections.',
+    type: 'External Partner',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'Parks & Recreation Staff',
+    description: 'Front-line parks department employee managing facility bookings, maintenance requests, and recreation program delivery.',
+    type: 'Staff',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'Environmental Compliance Officer',
+    description: 'City staff responsible for stormwater monitoring, permit compliance, and environmental reporting to state agencies.',
+    type: 'Staff',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'Department Director',
+    description: 'Senior city manager overseeing a department\'s budget, strategic objectives, and cross-departmental coordination.',
+    type: 'Staff',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'City Council Member',
+    description: 'Elected official who votes on budgets, policies, and major capital projects affecting parks, waterfront, and city services.',
+    type: 'Elected Official',
+    status: 'published' as const,
+    visibility: 'connections' as const,
+  },
+  {
+    name: 'Seasonal Visitor',
+    description: 'Summer-season visitor to Lakeside who uses the marina, parks, and visitor services. Peak demand runs May through September.',
+    type: 'Citizen',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+  },
+  // archived + instance — exercises both missing enum values
+  {
+    name: 'Waterfront Event Coordinator',
+    description: 'External event organiser who previously held a direct permit relationship with the city. Role retired when waterfront events were contracted to a dedicated events management firm.',
+    type: 'External Partner',
+    status: 'archived' as const,
+    visibility: 'instance' as const,
+  },
+]
+
+// ─── Capabilities (City of Lakeside) ─────────────────────────────────────────
+// Coverage: status = draft ✓, published ✓, archived ✓
+//           visibility = org ✓, connections ✓, instance ✓
+
+export const LAKESIDE_CAPABILITIES = [
+  {
+    name: 'Parks & Facility Reservation',
+    description: 'Manage bookings for parks, pavilions, athletic fields, and recreation centres. Includes availability calendars, online payment, and confirmation workflows.',
+    domain: 'Community Services',
+    behaviors: 'Search available facilities by date, location, and type\nBook a facility online and pay required fees\nReceive a digital confirmation with access instructions\nCancel or modify a booking within the allowed window\nView and manage all active bookings from a resident account',
+    rules: 'Bookings require payment at time of reservation\nCancellations within 48 hours of the booking start are non-refundable\nFacilities may only be booked by verified resident accounts',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Resident', 'Parks & Recreation Staff'],
+  },
+  {
+    name: 'Waterfront Permit & Licensing',
+    description: 'Issue and renew annual waterfront operation permits for marinas, boat rentals, and commercial waterfront businesses. Includes safety inspections and fee collection.',
+    domain: 'Regulatory Compliance',
+    behaviors: 'Submit a new or renewal waterfront permit application with supporting documents\nSchedule and record a safety inspection tied to the application\nIssue a digital permit certificate upon approval\nSend renewal reminders 60 days before permit expiry\nRevoke or suspend a permit for non-compliance',
+    rules: 'A permit may only be issued after a satisfactory safety inspection\nAll waterfront commercial operators must hold a current permit\nRenewal applications must be submitted at least 30 days before expiry',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Marina Operator', 'Parks & Recreation Staff'],
+  },
+  {
+    name: 'Stormwater Management',
+    description: 'Plan, inspect, and maintain the city\'s stormwater infrastructure. Track outfall monitoring, maintenance schedules, and regulatory compliance reporting.',
+    domain: 'Infrastructure & Operations',
+    behaviors: 'Log and schedule stormwater infrastructure inspections\nRecord maintenance activities against specific assets\nGenerate compliance reports for state NPDES permit submissions\nTrack outfall monitoring data over time',
+    rules: 'NPDES compliance reports must be filed on state-mandated schedules\nAll outfall monitoring data must be retained for a minimum of 5 years',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Environmental Compliance Officer', 'Department Director'],
+  },
+  {
+    name: 'Recreation Program Registration',
+    description: 'Register residents and seasonal visitors for city-run recreation programs including classes, sports leagues, camps, and fitness programs.',
+    domain: 'Community Services',
+    behaviors: 'Browse and search available recreation programs by type, age group, and season\nRegister participants and pay program fees online\nView registration confirmation and program schedule\nJoin a waitlist for programs at capacity\nReceive notifications for program changes or cancellations',
+    rules: 'Programs with age or residency restrictions must validate eligibility at registration\nRefunds are only available for cancellations made at least 5 business days before the program start date',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Resident', 'Seasonal Visitor'],
+  },
+  {
+    name: 'Asset & Work Order Management',
+    description: 'Track, schedule, and dispatch maintenance work orders for parks assets, waterfront structures, and green space infrastructure.',
+    domain: 'Infrastructure & Operations',
+    behaviors: 'Create and assign maintenance work orders for parks and waterfront assets\nTrack work order status from open to closed\nRecord labour, materials, and cost against each work order\nLink assets to inspection histories and maintenance schedules\nGenerate asset condition reports for capital planning',
+    rules: 'All maintenance activity against city assets must be recorded as a work order\nClosed work orders are read-only and cannot be modified',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Parks & Recreation Staff'],
+  },
+  {
+    name: 'Environmental Monitoring & Reporting',
+    description: 'Collect and report water quality and environmental data from lake monitoring stations and stormwater outfalls. Supports state permit compliance.',
+    domain: 'Infrastructure & Operations',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    personas: ['Environmental Compliance Officer'],
+  },
+  {
+    name: 'Community Engagement & Notifications',
+    description: 'Push targeted notifications, alerts, and community updates to residents via email, SMS, and the city website. Includes emergency alert integration.',
+    domain: 'Public Engagement',
+    behaviors: 'Send targeted notifications to resident segments by geography or subscription topic\nPublish community updates to the city website and resident app\nIntegrate with the statewide emergency alert system for urgent notifications\nTrack notification delivery and open rates',
+    rules: 'Residents must opt in to non-emergency notifications\nEmergency alerts bypass opt-in consent\nNotification content must be reviewed by the communications team before distribution',
+    status: 'published' as const,
+    visibility: 'connections' as const,
+    personas: ['Resident', 'City Council Member'],
+  },
+  {
+    name: 'Financial Management',
+    description: 'General ledger, accounts payable, procurement, and budget management for city departments.',
+    domain: 'Finance & Revenue',
+    behaviors: 'Post journal entries to the general ledger\nProcess accounts payable invoices and generate payment runs\nTrack departmental budgets and expenditures in real time\nGenerate financial reports for audit and council review',
+    rules: 'All expenditures must be approved by an authorised budget holder before payment\nFinancial records must be retained for 7 years',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Department Director'],
+  },
+  {
+    name: 'Document Management',
+    description: 'Centralised repository for city documents, permits, and records. Supports retention schedules and public records requests.',
+    domain: 'Administrative Services',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    personas: ['Parks & Recreation Staff', 'Environmental Compliance Officer'],
+  },
+  // archived + instance — exercises both missing enum values
+  {
+    name: 'Legacy Booking System',
+    description: 'Self-hosted facility booking application replaced by ActiveNet. Archived following successful data migration in Q4 FY2026.',
+    domain: 'Community Services',
+    status: 'archived' as const,
+    visibility: 'instance' as const,
+    personas: [] as string[],
+  },
+]
+
+// ─── Applications (City of Lakeside) ─────────────────────────────────────────
+
+export const LAKESIDE_APPLICATIONS = [
+  {
+    name: 'ActiveNet',
+    description: 'Parks and recreation management platform for facility reservations, program registration, and activity management.',
+    vendor: 'Perfect Mind / ActiveNetwork',
+    hostingModel: 'saas',
+    lifecycleStatus: 'active' as const,
+    status: 'published' as const,
+    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration'],
+  },
+  {
+    name: 'Tyler Munis',
+    description: 'Enterprise resource planning system for financial management, purchasing, and budget tracking.',
+    vendor: 'Tyler Technologies',
+    hostingModel: 'saas',
+    lifecycleStatus: 'active' as const,
+    status: 'published' as const,
+    capabilities: ['Financial Management'],
+  },
+  {
+    name: 'Laserfiche',
+    description: 'Enterprise content management and document services platform for city records and permit documentation.',
+    vendor: 'Laserfiche',
+    hostingModel: 'saas',
+    lifecycleStatus: 'active' as const,
+    status: 'published' as const,
+    capabilities: ['Document Management'],
+  },
+  {
+    name: 'Brightly Asset Essentials',
+    description: 'Cloud-based work order and asset management system for parks facilities, trails, and waterfront infrastructure.',
+    vendor: 'Brightly (formerly Dude Solutions)',
+    hostingModel: 'saas',
+    lifecycleStatus: 'active' as const,
+    status: 'published' as const,
+    capabilities: ['Asset & Work Order Management'],
+  },
+  {
+    name: 'Cartegraph OMS',
+    description: 'Legacy on-premises operations management system used for work orders and asset tracking. Being phased out in favour of Brightly Asset Essentials.',
+    vendor: 'Cartegraph',
+    hostingModel: 'on-prem',
+    lifecycleStatus: 'sunset' as const,
+    status: 'published' as const,
+    capabilities: ['Asset & Work Order Management'],
+  },
+]
+
+// ─── Value Streams (City of Lakeside) ────────────────────────────────────────
+
+export const LAKESIDE_VALUE_STREAMS = [
+  {
+    name: 'Facility Booking to Confirmation',
+    description: 'End-to-end journey from a resident or visitor searching for an available facility through to receiving a booking confirmation.',
+    valueItem: 'Confirmed facility booking with digital access instructions',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    stakeholderPersonas: ['Resident', 'Seasonal Visitor'],
+    stages: [
+      {
+        name: 'Availability Search',
+        description: 'Resident searches for available facilities by date, type, and location.',
+        order: 1,
+        capabilities: ['Parks & Facility Reservation'],
+      },
+      {
+        name: 'Booking & Payment',
+        description: 'Resident selects a facility, reviews terms, and completes payment.',
+        order: 2,
+        capabilities: ['Parks & Facility Reservation'],
+      },
+      {
+        name: 'Confirmation & Access',
+        description: 'Booking is confirmed and resident receives a digital confirmation with access instructions.',
+        order: 3,
+        capabilities: ['Parks & Facility Reservation', 'Community Engagement & Notifications'],
+      },
+    ],
+  },
+  {
+    name: 'Permit Application to Approval',
+    description: 'Journey from a marina operator submitting a waterfront permit application through to receiving an approved permit certificate.',
+    valueItem: 'Approved waterfront permit certificate enabling legal operation',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    stakeholderPersonas: ['Marina Operator'],
+    stages: [
+      {
+        name: 'Application Submission',
+        description: 'Operator submits permit application with required documentation and pays the application fee.',
+        order: 1,
+        capabilities: ['Waterfront Permit & Licensing'],
+      },
+      {
+        name: 'Review & Inspection',
+        description: 'Staff review the application and conduct a safety inspection of the waterfront operation.',
+        order: 2,
+        capabilities: ['Waterfront Permit & Licensing'],
+      },
+      {
+        name: 'Approval & Issuance',
+        description: 'Permit is approved and a digital permit certificate is issued to the operator.',
+        order: 3,
+        capabilities: ['Waterfront Permit & Licensing'],
+      },
+    ],
+  },
+]
+
+// ─── Strategic Objectives (City of Lakeside) ──────────────────────────────────
+
+export const LAKESIDE_OBJECTIVES = [
+  {
+    name: 'Modernise Parks & Recreation Digital Services',
+    description: 'Replace disconnected booking spreadsheets and phone-based registration with a unified online platform that residents and seasonal visitors can access at any time.',
+    successMetric: '90% of facility bookings and program registrations completed online by end of FY2027',
+    timeHorizon: 'FY2027',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration', 'Community Engagement & Notifications'],
+    valueStreams: ['Facility Booking to Confirmation'],
+  },
+  {
+    name: 'Strengthen Environmental Compliance & Reporting',
+    description: 'Improve stormwater monitoring data quality and automate compliance report generation to eliminate manual data assembly and reduce risk of late or deficient submissions.',
+    successMetric: '100% on-time stormwater compliance reports filed with no deficiencies by FY2026',
+    timeHorizon: 'FY2026',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
+    valueStreams: [] as string[],
+  },
+  {
+    name: 'Replace Legacy Asset Management System',
+    description: 'Retire the ageing Cartegraph OMS system and migrate all parks and waterfront asset and work order management to a modern cloud-hosted platform.',
+    successMetric: 'Cartegraph OMS decommissioned and Brightly Asset Essentials fully operational across all work order categories by Q2 FY2027',
+    timeHorizon: 'FY2027',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Asset & Work Order Management'],
+    valueStreams: [] as string[],
+  },
+]
+
+// ─── Initiatives (City of Lakeside) ──────────────────────────────────────────
+// Coverage: status = active ✓, proposed ✓, on-hold ✓, complete ✓
+
+export const LAKESIDE_INITIATIVES = [
+  {
+    name: 'ActiveNet Implementation',
+    description: 'Implement ActiveNet as the city\'s unified parks and recreation management platform, replacing disconnected booking spreadsheets and the phone-based registration process.',
+    status: 'active' as const,
+    startDate: 'Q2 FY2026',
+    endDate: 'Q4 FY2026',
+    capabilities: [
+      { name: 'Parks & Facility Reservation',  impact: 'build' },
+      { name: 'Recreation Program Registration', impact: 'build' },
+    ],
+    applications: [
+      { name: 'ActiveNet', impact: 'build' },
+    ],
+    objectives: ['Modernise Parks & Recreation Digital Services'],
+  },
+  {
+    name: 'Asset Management Platform Replacement',
+    description: 'Retire the legacy Cartegraph OMS system and migrate work order and asset management to Brightly Asset Essentials. Includes data migration, staff training, and a parallel-run period.',
+    status: 'proposed' as const,
+    startDate: 'Q1 FY2027',
+    endDate: 'Q4 FY2027',
+    capabilities: [
+      { name: 'Asset & Work Order Management', impact: 'improve' },
+    ],
+    applications: [
+      { name: 'Cartegraph OMS',         impact: 'retire' },
+      { name: 'Brightly Asset Essentials', impact: 'build'  },
+    ],
+    objectives: ['Replace Legacy Asset Management System'],
+  },
+  {
+    name: 'Waterfront Digital Permitting Pilot',
+    description: 'Pilot a digital permit application and inspection workflow for marina operators and waterfront businesses. On hold pending selection of a permitting platform compatible with the city\'s Tyler Munis integration.',
+    status: 'on-hold' as const,
+    startDate: 'Q3 FY2026',
+    endDate: 'Q2 FY2027',
+    capabilities: [
+      { name: 'Waterfront Permit & Licensing', impact: 'improve' },
+    ],
+    applications: [] as { name: string; impact: string }[],
+    objectives: [] as string[],
+  },
+  {
+    name: 'Stormwater Compliance Reporting Upgrade',
+    description: 'Upgrade stormwater monitoring data collection and reporting workflows to meet updated state NPDES permit requirements. Completed Q2 FY2025.',
+    status: 'complete' as const,
+    startDate: 'Q3 FY2024',
+    endDate: 'Q2 FY2025',
+    capabilities: [
+      { name: 'Stormwater Management',              impact: 'improve' },
+      { name: 'Environmental Monitoring & Reporting', impact: 'build'  },
+    ],
+    applications: [] as { name: string; impact: string }[],
+    objectives: ['Strengthen Environmental Compliance & Reporting'],
+  },
+]
+
+// ─── ADRs (City of Lakeside) ──────────────────────────────────────────────────
+// Coverage: status = accepted ✓, superseded ✓ (ADR-002 → ADR-003)
+//           supersededByNumber — self-reference chain resolved in run.ts
+
+export const LAKESIDE_ADRS = [
+  {
+    number: 'ADR-001',
+    title: 'Adopt SaaS-first for parks and recreation technology acquisitions',
+    context: 'The parks department relied on a mix of paper forms, spreadsheets, and a legacy self-hosted booking system that required dedicated server maintenance and was inaccessible outside of business hours. The existing approach could not support resident self-service or seasonal demand spikes.',
+    decision: 'All new parks and recreation technology acquisitions will default to vendor-hosted SaaS platforms. On-premises deployment requires Director-level approval and a documented justification.',
+    consequences: 'Reduces infrastructure burden on IT. Enables 24/7 resident self-service. Increases reliance on vendor uptime and internet access. Requires updated data agreements to cover resident data processed by SaaS vendors.',
+    status: 'accepted' as const,
+    supersededByNumber: null as string | null,
+    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration'],
+    applications: ['ActiveNet'],
+    initiatives: ['ActiveNet Implementation'],
+    objectives: ['Modernise Parks & Recreation Digital Services'],
+  },
+  {
+    number: 'ADR-002',
+    title: 'Retain on-premises hosting for all environmental monitoring data',
+    context: 'Environmental monitoring data is subject to state retention requirements and chain-of-custody obligations for NPDES permit submissions. In 2021, city legal counsel advised that cloud-hosted storage created ambiguity about data custody for regulatory compliance.',
+    decision: 'Environmental monitoring and stormwater compliance data will be stored exclusively on city-managed on-premises infrastructure.',
+    consequences: 'Ensured regulatory compliance under the 2021 legal interpretation. Restricted cloud adoption for environmental systems and increased infrastructure maintenance costs. Superseded by updated state cloud data guidance issued in 2024.',
+    status: 'superseded' as const,
+    supersededByNumber: 'ADR-003',
+    capabilities: ['Environmental Monitoring & Reporting'],
+    applications: [] as string[],
+    initiatives: [] as string[],
+    objectives: [] as string[],
+  },
+  {
+    number: 'ADR-003',
+    title: 'Permit cloud hosting for environmental data with state-approved data residency controls',
+    context: 'The state issued updated cloud hosting guidance in 2024 permitting cloud storage of environmental monitoring data provided vendors hold state-approved data residency agreements. This resolves the legal ambiguity that motivated ADR-002.',
+    decision: 'Environmental monitoring and stormwater compliance data may be hosted in cloud platforms that hold state-approved data residency agreements. Vendor data residency documentation must be reviewed by city legal counsel before onboarding.',
+    consequences: 'Opens the market for cloud-hosted environmental monitoring solutions. Requires vendor due diligence on data residency agreements. Supersedes ADR-002.',
+    status: 'accepted' as const,
+    supersededByNumber: null as string | null,
+    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
+    applications: [] as string[],
+    initiatives: ['Stormwater Compliance Reporting Upgrade'],
+    objectives: ['Strengthen Environmental Compliance & Reporting'],
+  },
+]
+
+// ─── Principles (City of Lakeside) ───────────────────────────────────────────
+
+export const LAKESIDE_PRINCIPLES = [
+  {
+    name: 'Accessible by Default',
+    description: 'Design all resident-facing parks and recreation services for maximum accessibility — physical, digital, and linguistic.',
+    title: 'Design for accessibility first in all parks and recreation services',
+    rationale: 'Parks and recreation services are used by residents of all abilities, ages, and language backgrounds. Designing for the most constrained users ensures the service works well for everyone, including those with disabilities, low digital literacy, or limited English proficiency.',
+    implications: 'All online booking and registration flows must meet WCAG 2.1 AA standards. Multilingual support is required for all resident-facing parks services. Staff-facing interfaces require accessibility review before launch.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration', 'Community Engagement & Notifications'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'Environmental Stewardship Through Data',
+    description: 'Base environmental policy decisions on monitored data rather than estimates, and publish compliance data openly where permissible.',
+    title: 'Ground environmental decisions in monitored, verifiable data',
+    rationale: 'The lake and waterfront are the city\'s most valuable natural assets. Environmental decisions made without reliable monitoring data risk both ecological damage and regulatory non-compliance. Data-grounded decisions are also more defensible in regulatory and public contexts.',
+    implications: 'Capital investments in environmental monitoring infrastructure are prioritised. Stormwater and water quality data must be collected at defined intervals and stored with full chain-of-custody metadata. Compliance reports must include source data references.',
+    status: 'draft' as const,
+    visibility: 'connections' as const,
+    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
+    adrs: [] as string[],
+  },
+]
+
+// ─── Glossary (City of Lakeside) ─────────────────────────────────────────────
+
+export const LAKESIDE_GLOSSARY = [
+  {
+    term: 'Asset Management',
+    definition: 'The systematic process of developing, operating, maintaining, and disposing of physical assets in the most cost-effective manner. In local government, covers infrastructure, buildings, equipment, and fleet.',
+    domain: 'Infrastructure & Operations',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Work Order',
+    definition: 'A formal record of a maintenance, repair, or improvement task assigned to a staff member or crew. Work orders track the scope of work, assigned resources, priority, status, and completion details.',
+    domain: 'Infrastructure & Operations',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Waterfront Permit',
+    definition: 'An annual operating permit issued by the city to commercial operators conducting business on or adjacent to the waterfront, including marinas, boat rentals, and event organisers.',
+    domain: 'Regulatory Compliance',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Stormwater Management',
+    definition: 'The collection, treatment, and controlled release of rainwater and snowmelt runoff to prevent flooding and protect water quality. Local governments are typically responsible for stormwater infrastructure under their NPDES permit.',
+    domain: 'Infrastructure & Operations',
+    notes: 'City of Lakeside holds an NPDES Phase II Small MS4 permit from the state. All stormwater-related system decisions must align with permit obligations and the approved Stormwater Management Plan.',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Recreation Program',
+    definition: 'A structured activity or class offered by the parks and recreation department for residents, including fitness, arts, sports leagues, summer camps, and senior programming.',
+    domain: 'Community Services',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'NPDES Permit',
+    definition: 'National Pollutant Discharge Elimination System permit — a federal permit administered by states that regulates the discharge of pollutants into waters of the United States. Local governments operating stormwater systems hold Phase II MS4 permits.',
+    definitionSource: 'US EPA Clean Water Act Section 402',
+    domain: 'Infrastructure & Operations',
+    status: 'published' as const,
+    visibility: 'connections' as const,
+  },
+]
+
+// ─── Services (City of Lakeside) ─────────────────────────────────────────────
+
+export const LAKESIDE_SERVICES = [
+  {
+    name: 'Parks & Facility Booking',
+    description: 'Residents and seasonal visitors book parks pavilions, athletic fields, and recreation centres online, select dates, pay fees, and receive a digital confirmation with access instructions.',
+    serviceOwner: 'Parks & Recreation',
+    channels: ['online', 'in-person'],
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Parks & Facility Reservation'],
+    personas: ['Resident', 'Parks & Recreation Staff'],
+    valueStreams: ['Facility Booking to Confirmation'],
+  },
+  {
+    name: 'Waterfront Permit Application',
+    description: 'Marina operators and waterfront commercial businesses apply for and renew their annual waterfront operating permits, upload required documents, pay fees, and track inspection scheduling.',
+    serviceOwner: 'Waterfront Management Office',
+    channels: ['online', 'in-person'],
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Waterfront Permit & Licensing'],
+    personas: ['Marina Operator'],
+    valueStreams: ['Permit Application to Approval'],
+  },
+  {
+    name: 'Recreation Program Registration',
+    description: 'Residents and seasonal visitors browse and register for city-run recreation programs — fitness classes, sports leagues, summer camps, and senior activities — and pay online.',
+    serviceOwner: 'Parks & Recreation',
+    channels: ['online', 'mobile'],
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Recreation Program Registration'],
+    personas: ['Resident', 'Seasonal Visitor'],
+    valueStreams: ['Facility Booking to Confirmation'],
+  },
+  {
+    name: 'Report Environmental Concern',
+    description: 'Residents report suspected stormwater, lake water quality, or waterfront environmental issues. Reports are triaged by the Environmental Services Division and tracked to resolution.',
+    serviceOwner: 'Environmental Services Division',
+    channels: ['online', 'phone'],
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
+    personas: ['Resident', 'Environmental Compliance Officer'],
+    valueStreams: [] as string[],
   },
 ]

@@ -20,6 +20,7 @@ import type { Role } from '@/lib/rbac'
 
 type GlossaryRow = GlossaryTerm & {
   organization: { id: string; name: string } | null
+  sources: GlossaryTermSource[]
 }
 
 interface Props {
@@ -275,7 +276,7 @@ function TermForm({
   submitLabel,
   pendingLabel,
 }: {
-  term?: GlossaryRow & { sources?: GlossaryTermSource[] }
+  term?: GlossaryRow
   domainTerms: { id: string; name: string }[]
   isPending: boolean
   onSubmit: (fd: FormData) => void
