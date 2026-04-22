@@ -73,7 +73,7 @@ build_and_push() {
     --registry "$ACR" \
     --image "govea-dev:${tag}" \
     --image "govea-dev:latest" \
-    --file docker/Dockerfile.dev \
+    --file docker/Containerfile.dev \
     .
 }
 
