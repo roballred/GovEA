@@ -18,7 +18,7 @@ import {
 } from '@/actions/instance'
 import { db } from '@/db/client'
 import { breakGlassSessions, auditLog } from '@/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, or } from 'drizzle-orm'
 import {
   createTestOrg, createTestUser, cleanupOrg, makeSession, findOrg, findUser,
   type TestUser,
@@ -52,6 +52,14 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  // Break-glass sessions FK (instance_admin_id → users, ON DELETE no action) blocks
+  // cascade-delete of users when cleanupOrg runs, so purge sessions first.
+  await db.delete(breakGlassSessions).where(
+    or(
+      eq(breakGlassSessions.targetOrgId, targetOrgId),
+      eq(breakGlassSessions.targetOrgId, orgId),
+    )
+  )
   await cleanupOrg(orgId)
   await cleanupOrg(targetOrgId)
 })
