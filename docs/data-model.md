@@ -12,7 +12,7 @@ Recent product-shape changes reflected here:
 - `services` is a first-class entity in the portfolio model
 - persona types and persona tags are taxonomy-backed, not separate vocabulary tables
 - applications are surfaced for services and strategic objectives through capabilities, not through direct service/objective application joins
-- instance-admin schema primitives now exist, including `users.instance_role`, `organizations.is_system_org`, and `break_glass_sessions`
+- instance-admin schema and console primitives now exist, including `users.instance_role`, `organizations.is_system_org`, org suspension fields, and `break_glass_sessions`
 
 For product intent, personas, and capability definitions, see `business-architecture/`.
 
@@ -90,6 +90,8 @@ Represents the tenant boundary for almost all business data.
 | `enabled_modules` | JSONB | Yes | Feature/module flags; defaults to `{}` |
 | `is_system_org` | boolean | Yes | Marks the operator/system organization for instance administration; defaults to `false` |
 | `parent_id` | UUID | No | Self-reference for hierarchy; `SET NULL` on delete |
+| `suspended_at` | timestamp | No | Set when an instance admin suspends the organization |
+| `suspended_reason` | text | No | Audit-facing reason for suspension |
 | `created_at` | timestamp | Yes | Defaults to `now()` |
 | `updated_at` | timestamp | Yes | Defaults to `now()` |
 
@@ -195,7 +197,7 @@ Time-bound support sessions that let an instance admin request audited access to
 | `revoked_at` | timestamp | No | Manual revocation timestamp |
 | `revoked_by` | UUID | No | FK to the user who revoked the session |
 
-The schema exists before the full break-glass UI/workflow. Instance-admin access boundaries are enforced in application code, not by this table alone.
+Break-glass sessions are exposed through the instance-admin console and should be treated as audited support access, not normal tenant ownership.
 
 ## Audit Table
 
@@ -206,10 +208,10 @@ Immutable event log for content and security-relevant actions.
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | No | Set null if org is deleted |
+| `organization_id` | UUID | No | Set null if org is deleted; instance-level events use `null` |
 | `user_id` | UUID | No | Set null if user is deleted |
-| `action` | text | Yes | Event name like `create`, `update`, `delete`, `login` |
-| `entity_type` | text | Yes | Entity category such as `persona` or `application` |
+| `action` | text | Yes | Event name like `create`, `update`, `delete`, `login`, or `instance.org.suspend` |
+| `entity_type` | text | Yes | Entity category such as `persona`, `application`, `organization`, or `break_glass_session` |
 | `entity_id` | UUID | No | Changed record id |
 | `before` | JSONB | No | Snapshot before change |
 | `after` | JSONB | No | Snapshot after change |
