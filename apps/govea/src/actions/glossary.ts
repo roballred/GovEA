@@ -40,7 +40,10 @@ export async function getGlossaryTerms(orgId: string) {
         )
       )
     },
-    with: { organization: true },
+    with: {
+      organization: true,
+      sources: { orderBy: (s, { asc }) => [asc(s.name)] },
+    },
     orderBy: (g, { asc }) => [asc(g.term)],
   })
 }
