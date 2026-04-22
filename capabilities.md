@@ -30,10 +30,10 @@ Controls authentication, authorization, and all identity events.
 |---|---|---|
 | User Management | Implemented | Create, edit, deactivate, and assign org-scoped roles to user accounts |
 | Role-Based Access Control | Implemented | Enforce Admin / Contributor / Viewer roles across all content and actions |
-| Instance Admin Foundation | Partially implemented | Instance-scoped admin schema, session claim, RBAC helper, server guard, `/instance` route gate, system org, and dev seed user exist; the operating console and workflows are still future work |
+| Instance Administration | Implemented | Instance-scoped admin role, `/instance` console, org inventory, user view, audit view, org suspension, instance-admin promotion/demotion, and audited break-glass sessions |
 | SSO Authentication | Implemented | Microsoft Entra ID sign-in via OpenID Connect (OIDC) with admin-managed pre-provisioned access |
 | Local Authentication | Implemented | Email and password login; always available as SSO fallback |
-| IAM Audit Trail | Implemented | Immutable log of all identity and access events |
+| IAM Audit Trail | Implemented | Immutable log of all identity and access events, including instance-scoped platform events |
 | First-Run Setup | Implemented | Bootstrap the initial Admin account on first launch |
 | API Auth Decision | Implemented | Auth strategy for API routes (session-based, not token-based in v1) |
 
@@ -126,7 +126,7 @@ How content is presented to authenticated users and, optionally, the public.
 
 | Capability | Status | Description |
 |---|---|---|
-| Navigation | Implemented | App shell with role-aware sidebar navigation |
+| Navigation | Implemented | App shell with role-aware sidebar navigation plus a distinct instance-admin console shell |
 | Portfolio Views | Implemented | List and detail pages for all EA entity types |
 | Mission-to-Technology Traceability Views | Implemented | Read-only layered trace views from strategic objectives, capabilities, and services to supporting applications and related records |
 | Relationship Navigation | Implemented | Navigate between linked entities (capability <-> application <-> persona) |
@@ -224,7 +224,7 @@ GovEA's long-term capability surface spans 9 groups, each defined through the Ea
 
 | Group | Near-term priorities |
 |---|---|
-| Identity & Access Management | Instance admin console, audited break-glass workflows, tenant-boundary tests |
+| Identity & Access Management | Tenant-boundary tests, production hardening for instance-admin operations |
 | Repository & Modelling | End-to-end traceability, architecture debt tracking |
 | Application & IT Portfolio | Technology lifecycle tracking, rationalization views |
 | Business & Capability Architecture | Capability heat maps, operating model views |
