@@ -10,6 +10,8 @@ export const organizations = pgTable('organizations', {
   enabledModules: jsonb('enabled_modules').$type<Record<string, boolean>>().notNull().default({}),
   isSystemOrg: boolean('is_system_org').notNull().default(false),
   parentId: uuid('parent_id').references((): AnyPgColumn => organizations.id, { onDelete: 'set null' }),
+  suspendedAt: timestamp('suspended_at'),
+  suspendedReason: text('suspended_reason'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
