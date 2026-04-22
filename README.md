@@ -107,7 +107,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Audit trail: immutable before/after log of all changes
 - Taxonomy management: org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Identity & access management: SSO via Microsoft Entra ID (OIDC) with admin-managed pre-provisioned access, local auth fallback, Admin/Contributor/Viewer roles
-- Instance-admin foundation: schema, session claim, RBAC helper, server guard, `/instance` route gate, system org, and dev seed user
+- Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, and audited break-glass sessions
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
 - Prototype multi-org federation: connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
@@ -119,7 +119,6 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - ADRs: basic CRUD, detail pages, and linkage exist, but the authoring experience is still maturing relative to the core portfolio records
 - Planning semantics and timeline presentation: useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
 - Admin configuration beyond core settings
-- Instance-admin operations: the foundation exists, but the dedicated console, org inventory, break-glass workflow, and tenant-boundary test expansion are still next
 - Repository completeness, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
@@ -128,9 +127,9 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
-- Instance admin console and audited break-glass operations
 - Second demo city dataset and updated dev/demo login roster
 - Additional stakeholder-facing answer views and leadership-ready visuals
+- Executive roadmap timeline for briefings and demos
 - TOGAF overlay demo dataset and first framework-mapping implementation slice
 - UX consistency cleanup across create/edit dialogs and tooltip labels
 
