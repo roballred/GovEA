@@ -2,7 +2,9 @@
 // All dev users use the password 'dev-password' (hashed at seed time).
 // Dev login shortcuts on the login page bypass password entry in development.
 //
-// Four organizations are seeded:
+// Four organizations are seeded here; a fifth (City of Hartfield, TOGAF overlay
+// demo) is defined in togaf-demo-fixtures.ts and seeded by run.ts as Org 5.
+//
 //   - City of Riverdale (primary dev org) — full EA content, admin + contributor shortcuts
 //   - City of Lakeside — second municipal demo org, comparable EA content, admin role
 //   - Office of Digital Services (state agency) — second org for multi-org scenario
@@ -12,11 +14,12 @@
 // and multiple cross-org capability links are created to exercise the federation/visibility use case.
 //
 // Dev login roster:
-//   alice@govea.dev          — City of Riverdale, Admin
-//   carol@govea.dev          — City of Riverdale, Contributor
-//   luke@lakeside.govea.dev  — City of Lakeside, Admin
-//   sam@state.govea.dev      — Office of Digital Services, Admin
-//   ivan@govea.dev           — GovEA Platform, Instance Admin (dev tools only)
+//   alice@govea.dev               — City of Riverdale, Admin
+//   carol@govea.dev               — City of Riverdale, Contributor
+//   luke@lakeside.govea.dev       — City of Lakeside, Admin
+//   sam@state.govea.dev           — Office of Digital Services, Admin
+//   maya@hartfield.govea.dev      — City of Hartfield (TOGAF demo), Admin
+//   ivan@govea.dev                — GovEA Platform, Instance Admin (dev tools only)
 //
 // victor@govea.dev remains seeded as a Riverdale Viewer for automated role
 // coverage, but is intentionally not shown as a dev login shortcut.

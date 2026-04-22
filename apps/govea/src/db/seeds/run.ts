@@ -15,6 +15,12 @@ import {
   LAKESIDE_VALUE_STREAMS, LAKESIDE_OBJECTIVES, LAKESIDE_INITIATIVES,
   LAKESIDE_ADRS, LAKESIDE_PRINCIPLES, LAKESIDE_GLOSSARY, LAKESIDE_SERVICES,
 } from './dev-fixtures'
+import {
+  TOGAF_ORG, TOGAF_USERS,
+  TOGAF_PERSONAS, TOGAF_CAPABILITIES, TOGAF_APPLICATIONS,
+  TOGAF_VALUE_STREAMS, TOGAF_OBJECTIVES, TOGAF_INITIATIVES,
+  TOGAF_ADRS, TOGAF_PRINCIPLES, TOGAF_GLOSSARY, TOGAF_SERVICES,
+} from './togaf-demo-fixtures'
 import { db } from '../client'
 import {
   users, organizations,
@@ -1052,9 +1058,373 @@ async function seed() {
     console.log(`  ✓ Cross-org link (${link.linkType}): "${link.sourceCapabilityName}" → "${link.targetCapabilityName}"`)
   }
 
-  // ── Org 4: GovEA Platform (system org) ───────────────────────────────────
+  // ── Org 5: City of Hartfield (TOGAF overlay demo) ───────────────────────
 
-  console.log('\n[Org 4] GovEA Platform (system org)')
+  console.log('\n[Org 5] City of Hartfield (TOGAF overlay demo)')
+  const togafOrgId = await findOrCreateOrg(TOGAF_ORG.slug, TOGAF_ORG.name)
+
+  for (const u of TOGAF_USERS) {
+    await db.insert(users).values({ ...u, passwordHash, organizationId: togafOrgId, isActive: 'true' }).onConflictDoNothing()
+  }
+  console.log(`  ✓ ${TOGAF_USERS.length} users (password: dev-password)`)
+
+  const togafPersonaIds: Record<string, string> = {}
+  for (const p of TOGAF_PERSONAS) {
+    togafPersonaIds[p.name] = await findOrCreatePersona(togafOrgId, p.name, {
+      description: p.description, type: p.type, status: p.status, visibility: p.visibility,
+    })
+  }
+  console.log(`  ✓ ${TOGAF_PERSONAS.length} personas`)
+
+  const togafCapabilityIds: Record<string, string> = {}
+  for (const c of TOGAF_CAPABILITIES) {
+    const capId = await findOrCreateCapability(togafOrgId, c.name, {
+      description: c.description, domain: c.domain,
+      behaviors: (c as { behaviors?: string }).behaviors,
+      rules: (c as { rules?: string }).rules,
+      status: c.status, visibility: c.visibility,
+    })
+    togafCapabilityIds[c.name] = capId
+    for (const personaName of c.personas) {
+      const personaId = togafPersonaIds[personaName]
+      if (!personaId) continue
+      const exists = await db.query.capabilityPersonas.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.capabilityId, capId), e(t.personaId, personaId)),
+      })
+      if (!exists) await db.insert(capabilityPersonas).values({ capabilityId: capId, personaId })
+    }
+  }
+  console.log(`  ✓ ${TOGAF_CAPABILITIES.length} capabilities`)
+
+  const togafApplicationIds: Record<string, string> = {}
+  for (const a of TOGAF_APPLICATIONS) {
+    const appId = await findOrCreateApplication(togafOrgId, a.name, {
+      description: a.description, vendor: a.vendor, hostingModel: a.hostingModel,
+      lifecycleStatus: a.lifecycleStatus, status: a.status,
+    })
+    togafApplicationIds[a.name] = appId
+    for (const capName of a.capabilities) {
+      const capId = togafCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.applicationCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.applicationId, appId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(applicationCapabilities).values({ applicationId: appId, capabilityId: capId })
+    }
+  }
+  console.log(`  ✓ ${TOGAF_APPLICATIONS.length} applications (Laserfiche intentionally unlinked — see ADR-004)`)
+
+  // Value Streams + stages + stage capability links + persona links
+  const togafValueStreamIds: Record<string, string> = {}
+  for (const vs of TOGAF_VALUE_STREAMS) {
+    const existingVs = await db.query.valueStreams.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.name, vs.name)),
+    })
+    let vsId: string
+    if (existingVs) {
+      vsId = existingVs.id
+    } else {
+      const [inserted] = await db.insert(valueStreams).values({
+        organizationId: togafOrgId,
+        name: vs.name, description: vs.description, valueItem: vs.valueItem,
+        status: vs.status, visibility: vs.visibility,
+      }).returning()
+      vsId = inserted.id
+    }
+    togafValueStreamIds[vs.name] = vsId
+
+    for (const personaName of vs.stakeholderPersonas) {
+      const personaId = togafPersonaIds[personaName]
+      if (!personaId) continue
+      const exists = await db.query.valueStreamPersonas.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.valueStreamId, vsId), e(t.personaId, personaId)),
+      })
+      if (!exists) await db.insert(valueStreamPersonas).values({ valueStreamId: vsId, personaId })
+    }
+
+    for (const stage of vs.stages) {
+      const existingStage = await db.query.valueStreamStages.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.valueStreamId, vsId), e(t.name, stage.name)),
+      })
+      let stageId: string
+      if (existingStage) {
+        stageId = existingStage.id
+      } else {
+        const [insertedStage] = await db.insert(valueStreamStages).values({
+          valueStreamId: vsId, name: stage.name, description: stage.description, order: stage.order,
+        }).returning()
+        stageId = insertedStage.id
+      }
+      for (const capName of stage.capabilities) {
+        const capId = togafCapabilityIds[capName]
+        if (!capId) continue
+        const exists = await db.query.valueStreamStageCapabilities.findFirst({
+          where: (t, { eq: e, and }) => and(e(t.stageId, stageId), e(t.capabilityId, capId)),
+        })
+        if (!exists) await db.insert(valueStreamStageCapabilities).values({ stageId, capabilityId: capId })
+      }
+    }
+  }
+  console.log(`  ✓ ${TOGAF_VALUE_STREAMS.length} value streams with stages and persona links`)
+
+  // Strategic Objectives + capability / value stream links
+  const togafObjectiveIds: Record<string, string> = {}
+  for (const o of TOGAF_OBJECTIVES) {
+    const existing = await db.query.strategicObjectives.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.name, o.name)),
+    })
+    let objId: string
+    if (existing) {
+      objId = existing.id
+    } else {
+      const [inserted] = await db.insert(strategicObjectives).values({
+        organizationId: togafOrgId,
+        name: o.name, description: o.description,
+        successMetric: o.successMetric, timeHorizon: o.timeHorizon,
+        status: o.status, visibility: o.visibility,
+      }).returning()
+      objId = inserted.id
+    }
+    togafObjectiveIds[o.name] = objId
+
+    for (const capName of o.capabilities) {
+      const capId = togafCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.objectiveCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(objectiveCapabilities).values({ objectiveId: objId, capabilityId: capId })
+    }
+
+    for (const vsName of o.valueStreams) {
+      const vsId = togafValueStreamIds[vsName]
+      if (!vsId) continue
+      const exists = await db.query.objectiveValueStreams.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.valueStreamId, vsId)),
+      })
+      if (!exists) await db.insert(objectiveValueStreams).values({ objectiveId: objId, valueStreamId: vsId })
+    }
+  }
+  console.log(`  ✓ ${TOGAF_OBJECTIVES.length} strategic objectives`)
+
+  // Initiatives + capability / application / objective links
+  const togafInitiativeIds: Record<string, string> = {}
+  for (const ini of TOGAF_INITIATIVES) {
+    const existingIni = await db.query.initiatives.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.name, ini.name)),
+    })
+    let iniId: string
+    if (existingIni) {
+      iniId = existingIni.id
+    } else {
+      const [inserted] = await db.insert(initiatives).values({
+        organizationId: togafOrgId,
+        name: ini.name, description: ini.description,
+        status: ini.status, startDate: ini.startDate, endDate: ini.endDate ?? undefined,
+      }).returning()
+      iniId = inserted.id
+    }
+    togafInitiativeIds[ini.name] = iniId
+
+    for (const { name: capName, impact } of ini.capabilities) {
+      const capId = togafCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.initiativeCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(initiativeCapabilities).values({ initiativeId: iniId, capabilityId: capId, impact })
+    }
+
+    for (const { name: appName, impact } of ini.applications) {
+      const appId = togafApplicationIds[appName]
+      if (!appId) continue
+      const exists = await db.query.initiativeApplications.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.applicationId, appId)),
+      })
+      if (!exists) await db.insert(initiativeApplications).values({ initiativeId: iniId, applicationId: appId, impact })
+    }
+
+    for (const objName of ini.objectives) {
+      const objId = togafObjectiveIds[objName]
+      if (!objId) continue
+      const exists = await db.query.initiativeObjectives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.objectiveId, objId)),
+      })
+      if (!exists) await db.insert(initiativeObjectives).values({ initiativeId: iniId, objectiveId: objId })
+    }
+  }
+  console.log(`  ✓ ${TOGAF_INITIATIVES.length} initiatives`)
+
+  // ADRs — insert all records first, then resolve supersededBy
+  const togafAdrIds: Record<string, string> = {}
+  for (const adr of TOGAF_ADRS) {
+    const existingAdr = await db.query.adrs.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.number, adr.number)),
+    })
+    let adrId: string
+    if (existingAdr) {
+      adrId = existingAdr.id
+    } else {
+      const [inserted] = await db.insert(adrs).values({
+        organizationId: togafOrgId,
+        number: adr.number, title: adr.title, context: adr.context,
+        decision: adr.decision, consequences: adr.consequences, status: adr.status,
+      }).returning()
+      adrId = inserted.id
+    }
+    togafAdrIds[adr.number] = adrId
+  }
+
+  for (const adr of TOGAF_ADRS) {
+    if (!adr.supersededByNumber) continue
+    const adrId = togafAdrIds[adr.number]
+    const supersedingId = togafAdrIds[adr.supersededByNumber]
+    if (adrId && supersedingId) {
+      await db.update(adrs).set({ supersededBy: supersedingId }).where(eq(adrs.id, adrId))
+    }
+  }
+
+  for (const adr of TOGAF_ADRS) {
+    const adrId = togafAdrIds[adr.number]
+    if (!adrId) continue
+
+    for (const capName of adr.capabilities) {
+      const capId = togafCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.adrCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(adrCapabilities).values({ adrId, capabilityId: capId })
+    }
+
+    for (const appName of adr.applications) {
+      const appId = togafApplicationIds[appName]
+      if (!appId) continue
+      const exists = await db.query.adrApplications.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.applicationId, appId)),
+      })
+      if (!exists) await db.insert(adrApplications).values({ adrId, applicationId: appId })
+    }
+
+    for (const iniName of adr.initiatives) {
+      const iniId = togafInitiativeIds[iniName]
+      if (!iniId) continue
+      const exists = await db.query.adrInitiatives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.initiativeId, iniId)),
+      })
+      if (!exists) await db.insert(adrInitiatives).values({ adrId, initiativeId: iniId })
+    }
+
+    for (const objName of adr.objectives) {
+      const objId = togafObjectiveIds[objName]
+      if (!objId) continue
+      const exists = await db.query.adrObjectives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.objectiveId, objId)),
+      })
+      if (!exists) await db.insert(adrObjectives).values({ adrId, objectiveId: objId })
+    }
+  }
+  console.log(`  ✓ ${TOGAF_ADRS.length} ADRs (ADR-004 documents intentional records gap)`)
+
+  // Principles + capability links
+  for (const p of TOGAF_PRINCIPLES) {
+    const existing = await db.query.principles.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.name, p.name)),
+    })
+    if (existing) continue
+    const [pRow] = await db.insert(principles).values({
+      name: p.name, description: p.description ?? null, title: p.title ?? null,
+      rationale: p.rationale, implications: p.implications,
+      status: p.status, visibility: p.visibility, organizationId: togafOrgId,
+    }).returning()
+    for (const capName of p.capabilities) {
+      const capId = togafCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.principleCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.principleId, pRow.id), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow.id, capabilityId: capId })
+    }
+  }
+  console.log(`  ✓ ${TOGAF_PRINCIPLES.length} principles`)
+
+  // Glossary
+  for (const g of TOGAF_GLOSSARY) {
+    const existing = await db.query.glossaryTerms.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.term, g.term)),
+    })
+    if (existing) continue
+    const [termRow] = await db.insert(glossaryTerms).values({
+      term: g.term,
+      definition: g.definition,
+      definitionSource: (g as { definitionSource?: string }).definitionSource ?? null,
+      definitionSourceUrl: (g as { definitionSourceUrl?: string }).definitionSourceUrl ?? null,
+      domain: g.domain ?? null,
+      notes: (g as { notes?: string }).notes ?? null,
+      status: g.status,
+      visibility: g.visibility,
+      organizationId: togafOrgId,
+    }).returning()
+    const gSources = (g as { sources?: { name: string; url?: string; definition: string }[] }).sources
+    if (gSources && gSources.length > 0) {
+      await db.insert(glossaryTermSources).values(
+        gSources.map(s => ({ termId: termRow.id, name: s.name, url: s.url ?? null, definition: s.definition }))
+      )
+    }
+  }
+  console.log(`  ✓ ${TOGAF_GLOSSARY.length} glossary terms (TOGAF multi-source definitions)`)
+
+  // Services + junction links
+  const togafValueStreamIdsForSvc = togafValueStreamIds
+  for (const svc of TOGAF_SERVICES) {
+    const existing = await db.query.services.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.name, svc.name)),
+    })
+    let svcId: string
+    if (existing) {
+      svcId = existing.id
+    } else {
+      const [inserted] = await db.insert(services).values({
+        organizationId: togafOrgId,
+        name: svc.name, description: svc.description,
+        serviceOwner: svc.serviceOwner, channels: [...svc.channels],
+        status: svc.status, visibility: svc.visibility,
+      }).returning()
+      svcId = inserted.id
+    }
+
+    for (const capName of svc.capabilities) {
+      const capId = togafCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.serviceCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(serviceCapabilities).values({ serviceId: svcId, capabilityId: capId })
+    }
+
+    for (const personaName of svc.personas) {
+      const personaId = togafPersonaIds[personaName]
+      if (!personaId) continue
+      const exists = await db.query.servicePersonas.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.personaId, personaId)),
+      })
+      if (!exists) await db.insert(servicePersonas).values({ serviceId: svcId, personaId })
+    }
+
+    for (const vsName of svc.valueStreams) {
+      const vsId = togafValueStreamIdsForSvc[vsName]
+      if (!vsId) continue
+      const exists = await db.query.serviceValueStreams.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.valueStreamId, vsId)),
+      })
+      if (!exists) await db.insert(serviceValueStreams).values({ serviceId: svcId, valueStreamId: vsId })
+    }
+  }
+  console.log(`  ✓ ${TOGAF_SERVICES.length} services with capability, persona, and value stream links`)
+
+  // ── Org 6: GovEA Platform (system org) ───────────────────────────────────
+
+  console.log('\n[Org 6] GovEA Platform (system org)')
   const systemOrgId = await findOrCreateOrg(SYSTEM_ORG.slug, SYSTEM_ORG.name, { isSystemOrg: true })
 
   for (const u of SYSTEM_USERS) {

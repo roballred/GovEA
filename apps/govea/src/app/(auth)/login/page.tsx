@@ -73,11 +73,12 @@ export default async function LoginPage({
               <Separator />
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Dev shortcuts</p>
               {([
-                { label: 'Riverdale Admin',       email: 'alice@govea.dev',          cls: 'bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100' },
-                { label: 'Riverdale Contributor', email: 'carol@govea.dev',          cls: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' },
-                { label: 'Lakeside Admin',        email: 'luke@lakeside.govea.dev',  cls: 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100' },
-                { label: 'State Admin',           email: 'sam@state.govea.dev',      cls: 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' },
-                { label: 'Instance Admin (dev)',  email: 'ivan@govea.dev',           cls: 'bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100' },
+                { label: 'Riverdale Admin',       email: 'alice@govea.dev',               cls: 'bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100' },
+                { label: 'Riverdale Contributor', email: 'carol@govea.dev',               cls: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' },
+                { label: 'Lakeside Admin',        email: 'luke@lakeside.govea.dev',       cls: 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100' },
+                { label: 'State Admin',           email: 'sam@state.govea.dev',           cls: 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' },
+                { label: 'Hartfield EA Admin',    email: 'maya@hartfield.govea.dev',      cls: 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100' },
+                { label: 'Instance Admin (dev)',  email: 'ivan@govea.dev',                cls: 'bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100' },
               ] as const).map(({ label, email, cls }) => (
                 <form key={email} action={devSignIn}>
                   <input type="hidden" name="email" value={email} />
