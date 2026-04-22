@@ -9,8 +9,10 @@ It is intentionally implementation-focused:
 - how the major many-to-many relationships are modeled
 
 Recent product-shape changes reflected here:
-- `services` is now a first-class entity in the portfolio model
+- `services` is a first-class entity in the portfolio model
 - persona types and persona tags are taxonomy-backed, not separate vocabulary tables
+- applications are surfaced for services and strategic objectives through capabilities, not through direct service/objective application joins
+- instance-admin schema primitives now exist, including `users.instance_role`, `organizations.is_system_org`, and `break_glass_sessions`
 
 For product intent, personas, and capability definitions, see `business-architecture/`.
 
@@ -33,7 +35,7 @@ Shared enum semantics:
 |---|---|---|
 | `visibility` | `org`, `connections`, `instance` | Most publishable content |
 | `workflow_status` | `draft`, `published`, `archived` | Personas, capabilities, applications, services, value streams, objectives, principles, glossary |
-| `user_role` | `admin`, `contributor`, `viewer` | Users |
+| `user_role` | `admin`, `contributor`, `viewer` | Org-scoped user authorization |
 
 ## Top-Level Model
 
@@ -51,18 +53,17 @@ erDiagram
   ORGANIZATIONS ||--o{ PRINCIPLES : owns
   ORGANIZATIONS ||--o{ GLOSSARY_TERMS : owns
   ORGANIZATIONS ||--o{ TAXONOMY_TERMS : owns
+  ORGANIZATIONS ||--o{ BREAK_GLASS_SESSIONS : target
 
   PERSONAS }o--o{ CAPABILITIES : supports
   CAPABILITIES }o--o{ APPLICATIONS : implemented_by
   SERVICES }o--o{ PERSONAS : serves
   SERVICES }o--o{ CAPABILITIES : enabled_by
-  SERVICES }o--o{ APPLICATIONS : delivered_through
   SERVICES }o--o{ VALUE_STREAMS : participates_in
   VALUE_STREAMS }o--o{ PERSONAS : serves
   VALUE_STREAM_STAGES }o--o{ CAPABILITIES : uses
   STRATEGIC_OBJECTIVES }o--o{ CAPABILITIES : advances
   STRATEGIC_OBJECTIVES }o--o{ VALUE_STREAMS : shapes
-  STRATEGIC_OBJECTIVES }o--o{ APPLICATIONS : depends_on
   INITIATIVES }o--o{ CAPABILITIES : impacts
   INITIATIVES }o--o{ STRATEGIC_OBJECTIVES : supports
   INITIATIVES }o--o{ APPLICATIONS : changes
@@ -86,13 +87,15 @@ Represents the tenant boundary for almost all business data.
 | `name` | text | Yes | Display name |
 | `slug` | text | Yes | Unique tenant slug |
 | `theme` | text | Yes | Theme id; defaults to `govea` |
+| `enabled_modules` | JSONB | Yes | Feature/module flags; defaults to `{}` |
+| `is_system_org` | boolean | Yes | Marks the operator/system organization for instance administration; defaults to `false` |
 | `parent_id` | UUID | No | Self-reference for hierarchy; `SET NULL` on delete |
 | `created_at` | timestamp | Yes | Defaults to `now()` |
 | `updated_at` | timestamp | Yes | Defaults to `now()` |
 
 ### `users`
 
-Authenticated users scoped to an organization.
+Authenticated users. Users remain organization-scoped even when they also carry an instance-scoped operating role.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
@@ -103,7 +106,8 @@ Authenticated users scoped to an organization.
 | `email_verified` | timestamp | No | Auth.js-compatible email verification field |
 | `image` | text | No | Profile image URL |
 | `password_hash` | text | No | Present for local auth users |
-| `role` | `user_role` enum | Yes | Defaults to `viewer` |
+| `role` | `user_role` enum | Yes | Org-scoped role; defaults to `viewer` |
+| `instance_role` | text | No | Instance-scoped role; currently used for `instance_admin` |
 | `is_active` | text | Yes | Stored as text; defaults to `'true'` |
 | `created_at` | timestamp | Yes | Defaults to `now()` |
 | `updated_at` | timestamp | Yes | Defaults to `now()` |
@@ -113,274 +117,27 @@ Additional Auth.js support tables:
 - `sessions`: persisted login sessions
 - `verification_tokens`: email/token verification records
 
-### `personas`
+### Portfolio and Planning Content
 
-People-centered anchor objects representing who the organization serves.
+| Table | Purpose | Key relationship notes |
+|---|---|---|
+| `personas` | People-centered anchor objects representing who the organization serves | Tags are stored through `persona_tags`; selected persona type is stored as text from taxonomy |
+| `capabilities` | Business capabilities linked to personas and applications | Applications must link to at least one capability at the application layer |
+| `applications` | Technology/application portfolio records | Linked to capabilities, initiatives, and ADRs |
+| `services` | Government-facing service records | Linked to personas, capabilities, and value streams; supporting applications are derived through linked capabilities |
+| `strategic_objectives` | Strategy records | Linked to capabilities and value streams; supporting applications are derived through linked capabilities |
+| `initiatives` | Change initiatives | Linked to capabilities, objectives, and applications; capability/application links can carry free-text impact labels |
+| `adrs` | Architecture Decision Records | Linked to capabilities, applications, initiatives, and objectives; can supersede another ADR |
+| `principles` | Architecture principles | Linked to capabilities and ADRs |
+| `glossary_terms` | Shared terminology with optional source attribution | Source definitions live in `glossary_term_sources` |
+| `value_streams` | End-to-end value delivery flows | Linked to personas; stages link to capabilities |
+| `taxonomy_terms` | Org-scoped controlled vocabulary hierarchy | Used for capability domains, persona types, persona tags, and other controlled terms |
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Persona label |
-| `description` | text | No | Narrative description |
-| `type` | text | No | Current selected persona type label; value is chosen from taxonomy |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
+Most portfolio tables include `organization_id`, optional `created_by`/`updated_by`, timestamps, `status`, and `visibility`.
 
-Related tables:
-- `persona_tags`: join table between personas and taxonomy-backed persona tags
-
-### `capabilities`
-
-Business capabilities linked to personas and applications.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Capability name |
-| `description` | text | No | Summary text |
-| `domain` | text | No | Top-level domain grouping |
-| `behaviors` | text | No | One behavior per line; stored as newline-delimited text |
-| `rules` | text | No | Constraints/invariants; stored as newline-delimited text |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related tables:
-- `capability_personas`: join table between capabilities and personas
-
-### `applications`
-
-Technology/application portfolio records.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Application name |
-| `description` | text | No | Summary text |
-| `vendor` | text | No | Vendor or provider |
-| `version` | text | No | Version string |
-| `hosting_model` | text | No | Free-text values like `on-prem`, `saas`, `hybrid` |
-| `lifecycle_status` | enum | Yes | `active`, `sunset`, `decommissioned`, `planned` |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related tables:
-- `application_capabilities`: join table between applications and capabilities
-
-Implementation rule:
-- every application is expected to link to at least one capability at the application layer
-
-### `services`
-
-Government-facing service records that connect user-facing delivery to the underlying architecture.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Service name |
-| `description` | text | No | Summary text |
-| `service_owner` | text | No | Free-text owner name or team |
-| `channels` | `text[]` | Yes | Delivery channels such as `online`, `in-person`, `phone`, `mobile` |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related tables:
-- `service_personas`
-- `service_capabilities`
-- `service_applications`
-- `service_value_streams`
-
-### `adrs`
-
-Architecture Decision Records.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `number` | text | Yes | Display identifier like `ADR-001` |
-| `title` | text | Yes | Decision title |
-| `context` | text | No | Problem/context section |
-| `decision` | text | No | Decision section |
-| `consequences` | text | No | Consequences section |
-| `status` | `adr_status` enum | Yes | `proposed`, `accepted`, `deprecated`, `superseded` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `superseded_by` | UUID | No | Self-reference to another ADR; `SET NULL` on delete |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related tables:
-- `adr_capabilities`
-- `adr_applications`
-- `adr_initiatives`
-- `adr_objectives`
-
-### `value_streams`
-
-End-to-end value delivery flows with ordered stages.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Value stream name |
-| `description` | text | No | Summary text |
-| `value_item` | text | No | What is delivered to the stakeholder |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Child and related tables:
-- `value_stream_stages`: ordered stages within a value stream
-- `value_stream_stage_capabilities`: capabilities linked to a stage
-- `value_stream_personas`: personas served by the value stream
-
-### `strategic_objectives`
-
-Strategy records linked to capabilities, applications, and value streams.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Objective name |
-| `description` | text | No | Summary text |
-| `success_metric` | text | No | How achievement is measured |
-| `time_horizon` | text | No | Free text such as `FY2026` or `3-year` |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related tables:
-- `objective_capabilities`
-- `objective_value_streams`
-- `objective_applications`
-
-### `initiatives`
-
-Change initiatives with planning-specific status and impact labels.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Initiative name |
-| `description` | text | No | Summary text |
-| `status` | `initiative_status` enum | Yes | `proposed`, `active`, `on-hold`, `complete`, `cancelled` |
-| `start_date` | text | No | Free-text planning date, not a native SQL date |
-| `end_date` | text | No | Free-text planning date |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related tables:
-- `initiative_capabilities`: includes optional `impact`
-- `initiative_objectives`
-- `initiative_applications`: includes optional `impact`
-
-Impact metadata:
-- capability impact is stored as free text and currently used for values like `build`, `improve`, `retire`
-- application impact is stored as free text and currently used for values like `build`, `improve`, `retire`, `migrate`
-
-### `principles`
-
-Architecture principles linked to capabilities and ADRs.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `name` | text | Yes | Short display label |
-| `description` | text | No | One-sentence summary |
-| `title` | text | No | Full principle statement |
-| `rationale` | text | No | Why the principle exists |
-| `implications` | text | No | Operational implications |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related tables:
-- `principle_adrs`
-- `principle_capabilities`
-
-### `glossary_terms`
-
-Shared terminology records with optional source attribution.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `term` | text | Yes | The glossary term |
-| `definition` | text | Yes | Active definition text |
-| `definition_source` | text | No | Name of the selected source |
-| `definition_source_url` | text | No | URL for the selected source |
-| `domain` | text | No | Domain grouping |
-| `notes` | text | No | Editorial notes |
-| `status` | `workflow_status` enum | Yes | Defaults to `draft` |
-| `visibility` | `visibility` enum | Yes | Defaults to `org` |
-| `created_by` | UUID | No | FK to user |
-| `updated_by` | UUID | No | FK to user |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Related table:
-- `glossary_term_sources`: authoritative source definitions attached to a term
-
-### `taxonomy_terms`
-
-Org-scoped taxonomy hierarchy used for controlled vocabularies.
-
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `id` | UUID | Yes | Primary key |
-| `organization_id` | UUID | Yes | FK to organization |
-| `parent_id` | UUID | No | Hierarchy parent; stored without explicit FK in this schema file |
-| `name` | text | Yes | Term label |
-| `slug` | text | Yes | Slugified value |
-| `description` | text | No | Explanatory text |
-| `domain` | text | No | Top-level domain grouping |
-| `sort_order` | text | No | Ordering hint stored as text |
-| `created_at` | timestamp | Yes | Defaults to `now()` |
-| `updated_at` | timestamp | Yes | Defaults to `now()` |
-
-Usage notes:
-- capability domains are stored as taxonomy terms
-- persona types are taxonomy terms under the `Persona Type` branch
-- persona tags are taxonomy terms under the `Persona Tag` branch and linked through `persona_tags`
-- personas store the selected type label as text rather than a FK, so removing a taxonomy value does not rewrite existing persona records
+Status details that are not shared workflow:
+- `adrs.status`: `proposed`, `accepted`, `deprecated`, `superseded`
+- `initiatives.status`: `proposed`, `active`, `on-hold`, `complete`, `cancelled`
 
 ## Federation and Visibility Tables
 
@@ -421,6 +178,25 @@ Cross-org relationships between content items. These intentionally avoid FKs on 
 | `created_at` | timestamp | Yes | Defaults to `now()` |
 | `updated_at` | timestamp | Yes | Defaults to `now()` |
 
+## Instance Administration Tables
+
+### `break_glass_sessions`
+
+Time-bound support sessions that let an instance admin request audited access to a target organization.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `id` | UUID | Yes | Primary key |
+| `instance_admin_id` | UUID | Yes | FK to the instance-admin user who granted the session |
+| `target_org_id` | UUID | Yes | FK to the target organization |
+| `reason` | text | Yes | Mandatory support reason |
+| `granted_at` | timestamp | Yes | Defaults to `now()` |
+| `expires_at` | timestamp | Yes | Time-bound expiry |
+| `revoked_at` | timestamp | No | Manual revocation timestamp |
+| `revoked_by` | UUID | No | FK to the user who revoked the session |
+
+The schema exists before the full break-glass UI/workflow. Instance-admin access boundaries are enforced in application code, not by this table alone.
+
 ## Audit Table
 
 ### `audit_log`
@@ -446,27 +222,31 @@ GovEA uses explicit many-to-many join tables rather than arrays or JSON relation
 
 | Table | Connects | Extra metadata |
 |---|---|---|
-| `persona_tags` | personas ↔ taxonomy terms | None |
-| `capability_personas` | capabilities ↔ personas | None |
-| `application_capabilities` | applications ↔ capabilities | None |
-| `service_personas` | services ↔ personas | None |
-| `service_capabilities` | services ↔ capabilities | None |
-| `service_applications` | services ↔ applications | None |
-| `service_value_streams` | services ↔ value streams | None |
-| `value_stream_personas` | value streams ↔ personas | None |
-| `value_stream_stage_capabilities` | value stream stages ↔ capabilities | None |
-| `objective_capabilities` | objectives ↔ capabilities | None |
-| `objective_value_streams` | objectives ↔ value streams | None |
-| `objective_applications` | objectives ↔ applications | None |
-| `initiative_capabilities` | initiatives ↔ capabilities | `impact` |
-| `initiative_objectives` | initiatives ↔ objectives | None |
-| `initiative_applications` | initiatives ↔ applications | `impact` |
-| `adr_capabilities` | ADRs ↔ capabilities | None |
-| `adr_applications` | ADRs ↔ applications | None |
-| `adr_initiatives` | ADRs ↔ initiatives | None |
-| `adr_objectives` | ADRs ↔ objectives | None |
-| `principle_adrs` | principles ↔ ADRs | None |
-| `principle_capabilities` | principles ↔ capabilities | None |
+| `persona_tags` | personas <-> taxonomy terms | None |
+| `capability_personas` | capabilities <-> personas | None |
+| `application_capabilities` | applications <-> capabilities | None |
+| `service_personas` | services <-> personas | None |
+| `service_capabilities` | services <-> capabilities | None |
+| `service_value_streams` | services <-> value streams | None |
+| `value_stream_personas` | value streams <-> personas | None |
+| `value_stream_stage_capabilities` | value stream stages <-> capabilities | None |
+| `objective_capabilities` | objectives <-> capabilities | None |
+| `objective_value_streams` | objectives <-> value streams | None |
+| `initiative_capabilities` | initiatives <-> capabilities | `impact` |
+| `initiative_objectives` | initiatives <-> objectives | None |
+| `initiative_applications` | initiatives <-> applications | `impact` |
+| `adr_capabilities` | ADRs <-> capabilities | None |
+| `adr_applications` | ADRs <-> applications | None |
+| `adr_initiatives` | ADRs <-> initiatives | None |
+| `adr_objectives` | ADRs <-> objectives | None |
+| `principle_adrs` | principles <-> ADRs | None |
+| `principle_capabilities` | principles <-> capabilities | None |
+
+Removed direct joins:
+- `service_applications`
+- `objective_applications`
+
+Application context for services and objectives is resolved through the capability bridge.
 
 ## Field Metadata Notes
 
@@ -474,18 +254,15 @@ These details matter when writing migrations, actions, tests, or exports:
 
 1. `visibility` is a publication scope, not an authorization role. Access still depends on application logic and federation state.
 2. `status` is not uniform across all tables. Most content uses `workflow_status`, but initiatives and ADRs have their own enums.
-   Planning is intentionally split today: `strategic_objectives` use `workflow_status`, while `initiatives` use `initiative_status`.
-3. Several planning and display fields are stored as free text instead of stricter types:
-   - `initiatives.start_date`
-   - `initiatives.end_date`
-   - `strategic_objectives.time_horizon`
-   - `applications.hosting_model`
-4. `capabilities.behaviors` and `capabilities.rules` are stored as newline-delimited text rather than structured child records.
-5. `personas.type` stores the selected taxonomy-backed type label as text, not a foreign key to `taxonomy_terms`.
-6. `taxonomy_terms.parent_id` is hierarchical metadata, but it is not declared with an explicit FK in the schema file.
-7. `users.is_active` is currently stored as text with values like `'true'`, not a native boolean column.
-8. `cross_org_links` intentionally avoids direct FKs to business entity tables because those links cross tenant boundaries and are enforced in application code.
-9. `audit_log.before`, `audit_log.after`, and `audit_log.metadata` are JSONB and should be treated as schemaless event payloads.
+3. Planning is intentionally split today: `strategic_objectives` use `workflow_status`, while `initiatives` use `initiative_status`.
+4. Several planning and display fields are stored as free text instead of stricter types: `initiatives.start_date`, `initiatives.end_date`, `strategic_objectives.time_horizon`, and `applications.hosting_model`.
+5. `capabilities.behaviors` and `capabilities.rules` are stored as newline-delimited text rather than structured child records.
+6. `personas.type` stores the selected taxonomy-backed type label as text, not a foreign key to `taxonomy_terms`.
+7. `taxonomy_terms.parent_id` is hierarchical metadata, but it is not declared with an explicit FK in the schema file.
+8. `users.is_active` is currently stored as text with values like `'true'`, not a native boolean column.
+9. `users.instance_role` is intentionally separate from org-scoped `users.role`.
+10. `cross_org_links` intentionally avoids direct FKs to business entity tables because those links cross tenant boundaries and are enforced in application code.
+11. `audit_log.before`, `audit_log.after`, and `audit_log.metadata` are JSONB and should be treated as schemaless event payloads.
 
 ## Source of Truth
 

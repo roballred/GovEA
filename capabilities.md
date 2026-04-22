@@ -2,7 +2,7 @@
 
 This document describes GovEA's implemented and planned capabilities, organized by group. It is the authoritative summary of what the product does and where it is headed.
 
-Capability definitions live in [`business-architecture/capabilities/`](./business-architecture/capabilities/). That folder is the authoritative source — this document summarizes it.
+Capability definitions live in [`business-architecture/capabilities/`](./business-architecture/capabilities/). That folder is the authoritative source; this document summarizes it.
 
 ---
 
@@ -28,23 +28,26 @@ Controls authentication, authorization, and all identity events.
 
 | Capability | Status | Description |
 |---|---|---|
-| User Management | Implemented | Create, edit, deactivate, and assign roles to user accounts |
+| User Management | Implemented | Create, edit, deactivate, and assign org-scoped roles to user accounts |
 | Role-Based Access Control | Implemented | Enforce Admin / Contributor / Viewer roles across all content and actions |
+| Instance Admin Foundation | Partially implemented | Instance-scoped admin schema, session claim, RBAC helper, server guard, `/instance` route gate, system org, and dev seed user exist; the operating console and workflows are still future work |
 | SSO Authentication | Implemented | Microsoft Entra ID sign-in via OpenID Connect (OIDC) with admin-managed pre-provisioned access |
 | Local Authentication | Implemented | Email and password login; always available as SSO fallback |
 | IAM Audit Trail | Implemented | Immutable log of all identity and access events |
 | First-Run Setup | Implemented | Bootstrap the initial Admin account on first launch |
 | API Auth Decision | Implemented | Auth strategy for API routes (session-based, not token-based in v1) |
 
-**Roles:**
+**Org-scoped roles:**
 
 | Role | Access |
 |---|---|
-| Admin | Full access — users, org settings, all content |
-| Contributor | Create and edit EA content — no user management, no delete |
+| Admin | Full access within the user's organization: users, org settings, and all local content |
+| Contributor | Create and edit EA content within the user's organization; no user management and no delete |
 | Viewer | Read-only access to viewer-visible content: published core content, accepted ADRs, and active/complete initiatives |
 
 SSO users must be pre-provisioned by an Admin. They sign in with the role already assigned to their account.
+
+**Instance admin:** `instance_admin` is an instance-scoped operating role stored separately from the org-scoped `user_role`. It is for platform administration, not automatic ownership of every tenant's EA content.
 
 ---
 
@@ -55,7 +58,7 @@ Foundational content authoring and lifecycle capabilities shared across all EA c
 | Capability | Status | Description |
 |---|---|---|
 | Content Authoring | Implemented | Create, edit, and save content items |
-| Content Workflow | Partially implemented | Draft → Published → Archived is established for core content types, but planning entities still use their own lifecycle states |
+| Content Workflow | Partially implemented | Draft -> Published -> Archived is established for core content types, but planning entities still use their own lifecycle states |
 | Taxonomy Management | Implemented | Hierarchical org-scoped taxonomy terms for domains, persona types, persona tags, and other controlled vocabularies |
 | Content Relationships | Implemented | Link content items; enforce GovEA traceability rules at publish time |
 | Content Search & Filtering | Partially implemented | Per-entity filtering, taxonomy-driven browsing, and embedded repository-wide search are shipped; search relevance and workflow consistency are still maturing |
@@ -73,7 +76,7 @@ The structured inventory of the organization's architecture objects.
 | Capability | Status | Description |
 |---|---|---|
 | Application Portfolio | Implemented | Manage applications with lifecycle status, capability links, and metadata |
-| Services | Implemented | Manage government-facing services linked to personas, capabilities, applications, and value streams |
+| Services | Implemented | Manage government-facing services linked to personas, capabilities, and value streams; supporting applications are derived through capabilities |
 | Capability Map | Implemented | Define business capabilities organized by domain; linked to applications, personas, principles, and decisions |
 | Personas | Implemented | Define the people GovEA serves; linked to capabilities and value streams |
 | Architecture Decision Records (ADRs) | Partially implemented | Basic ADR CRUD, detail pages, supersession, and cross-linking exist, but the overall authoring experience is still maturing relative to the stronger core portfolio records |
@@ -83,15 +86,17 @@ The structured inventory of the organization's architecture objects.
 
 **Data model relationships:**
 
+```text
+Personas -> Capabilities -> Applications
+Personas -> Services -> Capabilities, Value Streams
+Strategic Objectives -> Capabilities, Value Streams
+Initiatives -> Capabilities, Objectives, Applications
+ADRs -> Capabilities, Applications, Initiatives, Objectives
+Principles -> Capabilities, ADRs
+Glossary -> Shared reference terms across all content
 ```
-Personas → Capabilities → Applications
-Personas → Services → Applications, Capabilities, Value Streams
-Strategic Objectives → Capabilities, Value Streams, Applications
-Initiatives → Capabilities, Objectives, Applications
-ADRs → Capabilities, Applications, Initiatives, Objectives
-Principles → Capabilities, ADRs
-Glossary → Shared reference terms across all content
-```
+
+Applications are intentionally surfaced for Services and Strategic Objectives through linked Capabilities. GovEA no longer maintains direct `service_applications` or `objective_applications` joins.
 
 This is still one of GovEA's strongest product areas, but it should be described as partially implemented overall until ADRs reach the same maturity as applications, capabilities, personas, services, and value streams.
 
@@ -124,9 +129,10 @@ How content is presented to authenticated users and, optionally, the public.
 | Navigation | Implemented | App shell with role-aware sidebar navigation |
 | Portfolio Views | Implemented | List and detail pages for all EA entity types |
 | Mission-to-Technology Traceability Views | Implemented | Read-only layered trace views from strategic objectives, capabilities, and services to supporting applications and related records |
-| Relationship Navigation | Implemented | Navigate between linked entities (capability ↔ application ↔ persona) |
+| Relationship Navigation | Implemented | Navigate between linked entities (capability <-> application <-> persona) |
 | Value Stream Display | Implemented | Visualize value stream stages with linked capabilities |
 | Content Display | Implemented | Detail pages with status badges, metadata, linked records, and contributor-friendly edit affordances on shipped surfaces |
+| Product Tour | Implemented | Role-aware guided tour covering the main dashboard, architecture, portfolio, strategy, search, and role-specific workflows |
 | Public / Authenticated Views | Not implemented | Opt-in public access to published content without login |
 | Responsive Layout | Partially implemented | Desktop-first; mobile not a v1 priority |
 | Theming | Implemented | Organization-selected predefined themes applied through settings |
@@ -169,7 +175,7 @@ Allows organizations to connect, share content, and link local EA artifacts to e
 | `connections` | This org and all directly connected orgs |
 | `instance` | All orgs on the same GovEA instance |
 
-**Design principle:** Single-org installs work identically without federation UI or complexity. Federation is opt-in from the agency side — no org can be forced into a connection. Content ownership never transfers across org boundaries.
+**Design principle:** Single-org installs work identically without federation UI or complexity. Federation is opt-in from the agency side; no org can be forced into a connection. Content ownership never transfers across org boundaries.
 
 Current reality: federation is a working prototype, not just schema groundwork. Connection-aware visibility, approval-based cross-org linking, read-only remote detail pages, connection cleanup, and write-protection guardrails are shipped. Notifications, richer history, and broader cross-org management remain future work.
 
@@ -189,8 +195,8 @@ Reliability, navigability, and self-auditing of the architecture store.
 This group is strategically important, but today it is still mostly documented direction plus a small amount of shipped dashboarding rather than a mature product surface.
 
 **Out of scope for v1:**
-- Multi-framework modelling (ArchiMate, BPMN, UML) — GovEA uses enforced relationship chains and plain-language descriptions, not formal notation
-- Meta-model customization — the GovEA meta-model is fixed in v1; custom content types extend it without changing the core
+- Multi-framework modelling (ArchiMate, BPMN, UML): GovEA uses enforced relationship chains and plain-language descriptions, not formal notation
+- Meta-model customization: the GovEA meta-model is fixed in v1; custom content types extend it without changing the core
 
 ---
 
@@ -214,17 +220,18 @@ Framework alignment is distinct from formal modelling notation. GovEA can map co
 
 ## Capability Target Surface
 
-GovEA's long-term capability surface spans 9 groups, each defined through the EasyEA workflow: persona validation → capability definition → ARB review → implementation issues.
+GovEA's long-term capability surface spans 9 groups, each defined through the EasyEA workflow: persona validation -> capability definition -> ARB review -> implementation issues.
 
 | Group | Near-term priorities |
 |---|---|
+| Identity & Access Management | Instance admin console, audited break-glass workflows, tenant-boundary tests |
 | Repository & Modelling | End-to-end traceability, architecture debt tracking |
 | Application & IT Portfolio | Technology lifecycle tracking, rationalization views |
 | Business & Capability Architecture | Capability heat maps, operating model views |
-| Planning & Analysis | Scenario planning, value stream analytics |
+| Planning & Analysis | Executive roadmap timeline, scenario planning, value stream analytics |
 | Governance & Compliance | ARB review workflow, regulatory mapping |
 | Integration | ITSM/CMDB connectors, DevOps pipeline links |
-| Collaboration & Stakeholder Engagement | Change notifications, stakeholder-facing plain-language views |
+| Collaboration & Stakeholder Engagement | Guided answer views, repository confidence summaries, stakeholder-facing plain-language views |
 | Reporting & Documentation | Configurable reports, KPI tracking, elected-official summaries |
 | Framework Alignment | Optional TOGAF mapping, ADM phase alignment, and framework-aware reporting |
 
