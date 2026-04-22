@@ -58,11 +58,21 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       </form>
 
       {hasQuery && (
-        <p className="text-sm text-muted-foreground">
-          {totalCount === 0
-            ? `No results for "${query}"`
-            : `${totalCount} result${totalCount === 1 ? '' : 's'} for "${query}"`}
-        </p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            {totalCount === 0
+              ? `No results for "${query}"`
+              : `${totalCount} result${totalCount === 1 ? '' : 's'} for "${query}"`}
+          </p>
+          {totalCount > 0 && (
+            <Link
+              href={`/answers?q=${encodeURIComponent(query)}`}
+              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors shrink-0"
+            >
+              Get guided answer →
+            </Link>
+          )}
+        </div>
       )}
 
       {hasQuery && totalCount === 0 && (
