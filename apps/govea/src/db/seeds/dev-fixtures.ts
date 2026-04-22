@@ -3,7 +3,7 @@
 // Dev login shortcuts on the login page bypass password entry in development.
 //
 // Four organizations are seeded:
-//   - City of Riverdale (primary dev org) — full EA content, admin + contributor roles
+//   - City of Riverdale (primary dev org) — full EA content, admin + contributor shortcuts
 //   - City of Lakeside — second municipal demo org, comparable EA content, admin role
 //   - Office of Digital Services (state agency) — second org for multi-org scenario
 //   - GovEA Platform (system org, isSystemOrg=true) — operator org for instance admin
@@ -17,6 +17,9 @@
 //   luke@lakeside.govea.dev  — City of Lakeside, Admin
 //   sam@state.govea.dev      — Office of Digital Services, Admin
 //   ivan@govea.dev           — GovEA Platform, Instance Admin (dev tools only)
+//
+// victor@govea.dev remains seeded as a Riverdale Viewer for automated role
+// coverage, but is intentionally not shown as a dev login shortcut.
 
 // ─── Orgs ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +43,7 @@ export const SYSTEM_ORG = {
 export const DEV_USERS = [
   { name: 'Alice Admin',       email: 'alice@govea.dev',  role: 'admin'       as const },
   { name: 'Carol Contributor', email: 'carol@govea.dev',  role: 'contributor' as const },
+  { name: 'Victor Viewer',     email: 'victor@govea.dev', role: 'viewer'      as const },
 ]
 
 export const STATE_USERS = [
