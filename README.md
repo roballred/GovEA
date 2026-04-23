@@ -98,10 +98,11 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Supporting reference content for principles and glossary terms
 - Mission-first traceability: Personas -> Capabilities -> Applications enforced at the application layer
 - Stakeholder-friendly traceability views: read-only objective, capability, and service traces that show how mission context connects to applications, initiatives, and related architecture records
+- Guided stakeholder answer view: `/answers?q=` turns repository search context into a briefing-style answer with capabilities, services, technology, initiatives, and objectives
 - Service catalogue: first-class service records linked to personas, capabilities, and value streams, with supporting applications derived through capabilities
 - Contributor-friendly relationship panels across detail pages, including in-context persona editing
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
-- Demo-ready planning module: strategic objectives plus initiatives with a roadmap view grouped by planning status
+- Demo-ready planning module: strategic objectives plus initiatives with roadmap grid and executive timeline views
 - Repository-wide search across the core content model
 - Guided product tour with role-aware coach marks for the main application areas
 - Audit trail: immutable before/after log of all changes
@@ -111,27 +112,29 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
 - Prototype multi-org federation: connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
+- Two-city demo seed data and dev login roster for Riverdale, Lakeside, state admin, and dev-only instance-admin scenarios
 - Reusable `@govea/core` package: RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes x roles (Playwright)
 - Containerized local development plus Azure Container Apps dev deployment support
 
 **Partially implemented / still maturing:**
 - ADRs: basic CRUD, detail pages, and linkage exist, but the authoring experience is still maturing relative to the core portfolio records
-- Planning semantics and timeline presentation: useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
+- Planning semantics: useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
 - Admin configuration beyond core settings
-- Repository completeness, deeper end-to-end traceability analysis, and architecture debt tooling
+- Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
+- Reviewing create/edit dialog naming and tooltip consistency
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
-- Second demo city dataset and updated dev/demo login roster
-- Additional stakeholder-facing answer views and leadership-ready visuals
-- Executive roadmap timeline for briefings and demos
 - TOGAF overlay demo dataset and first framework-mapping implementation slice
-- UX consistency cleanup across create/edit dialogs and tooltip labels
+- Typed principle sets for Architecture, Data, Security, Integration, and similar principle families
+- Stakeholder validation for demo/adoption-facing visuals
+- Repository confidence summary for leadership and public-facing trust cues
+- Application risk portfolio view for investment and modernization conversations
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking
