@@ -80,7 +80,7 @@ The structured inventory of the organization's architecture objects.
 | Capability Map | Implemented | Define business capabilities organized by domain; linked to applications, personas, principles, and decisions |
 | Personas | Implemented | Define the people GovEA serves; linked to capabilities and value streams |
 | Architecture Decision Records (ADRs) | Partially implemented | Basic ADR CRUD, detail pages, supersession, and cross-linking exist, but the overall authoring experience is still maturing relative to the stronger core portfolio records |
-| Principles | Implemented | Capture architecture principles and link them to capabilities and decisions |
+| Principles | Implemented | Capture architecture principles and link them to capabilities and decisions; typed principle sets such as Architecture and Data are planned but not yet modeled |
 | Glossary | Implemented | Maintain shared terminology to support consistent EA language across the repository |
 | Value Streams | Implemented | Define value streams with ordered stages; link to capabilities and personas |
 
@@ -110,11 +110,11 @@ Strategic direction, change initiatives, and timeline visualization.
 |---|---|---|
 | Strategic Objectives | Implemented | Define and track business goals; link to capabilities and value streams |
 | Initiatives | Implemented | Track change programmes with planning lifecycle statuses; link to capabilities and objectives with impact labels (build / improve / retire / migrate) |
-| Roadmap View | Implemented | Visualize initiatives grouped by planning status with linked objectives and capability context |
+| Roadmap View | Implemented | Visualize initiatives in an executive timeline or planning grid, with linked objectives, date ranges, capability impact labels, and role-aware viewer filtering |
 
 **Design principle:** Planning capabilities are a lens on existing architecture content. Strategic objectives trace to capabilities. Initiatives trace to objectives and capabilities. Nothing here is meaningful unless the underlying capability and persona content is maintained.
 
-**Current semantic model:** Strategic objectives follow the standard content workflow (`draft`, `published`, `archived`). Initiatives do not. They use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates. The roadmap is a read-only view over initiative records grouped by that planning status.
+**Current semantic model:** Strategic objectives follow the standard content workflow (`draft`, `published`, `archived`). Initiatives do not. They use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates. The roadmap is a read-only view over initiative records, shown either as an executive timeline or grouped planning grid.
 
 This area is strong enough for demos and early v1 use, but the planning model should still be treated as evolving rather than fully settled.
 
@@ -129,11 +129,14 @@ How content is presented to authenticated users and, optionally, the public.
 | Navigation | Implemented | App shell with role-aware sidebar navigation plus a distinct instance-admin console shell |
 | Portfolio Views | Implemented | List and detail pages for all EA entity types |
 | Mission-to-Technology Traceability Views | Implemented | Read-only layered trace views from strategic objectives, capabilities, and services to supporting applications and related records |
+| Guided Answer Views | Implemented | `/answers?q=` assembles capabilities, services, technology, active initiatives, and strategic objectives into a plain-language stakeholder answer with relevance explanations |
 | Relationship Navigation | Implemented | Navigate between linked entities (capability <-> application <-> persona) |
 | Value Stream Display | Implemented | Visualize value stream stages with linked capabilities |
 | Content Display | Implemented | Detail pages with status badges, metadata, linked records, and contributor-friendly edit affordances on shipped surfaces |
 | Product Tour | Implemented | Role-aware guided tour covering the main dashboard, architecture, portfolio, strategy, search, and role-specific workflows |
 | Public / Authenticated Views | Not implemented | Opt-in public access to published content without login |
+| Repository Confidence Summary | Not implemented | Plain-language freshness and trust cue for stakeholder-facing views |
+| Application Risk Portfolio | Not implemented | Leadership-oriented view of lifecycle, dependency, duplication, and modernization risk across applications |
 | Responsive Layout | Partially implemented | Desktop-first; mobile not a v1 priority |
 | Theming | Implemented | Organization-selected predefined themes applied through settings |
 
@@ -225,13 +228,13 @@ GovEA's long-term capability surface spans 9 groups, each defined through the Ea
 | Group | Near-term priorities |
 |---|---|
 | Identity & Access Management | Tenant-boundary tests, production hardening for instance-admin operations |
-| Repository & Modelling | End-to-end traceability, architecture debt tracking |
-| Application & IT Portfolio | Technology lifecycle tracking, rationalization views |
-| Business & Capability Architecture | Capability heat maps, operating model views |
-| Planning & Analysis | Executive roadmap timeline, scenario planning, value stream analytics |
+| Repository & Modelling | End-to-end traceability, architecture debt tracking, repository confidence summary |
+| Application & IT Portfolio | Technology lifecycle tracking, rationalization views, application risk portfolio |
+| Business & Capability Architecture | Capability heat maps, operating model views, typed principle sets |
+| Planning & Analysis | Scenario planning, value stream analytics |
 | Governance & Compliance | ARB review workflow, regulatory mapping |
 | Integration | ITSM/CMDB connectors, DevOps pipeline links |
-| Collaboration & Stakeholder Engagement | Guided answer views, repository confidence summaries, stakeholder-facing plain-language views |
+| Collaboration & Stakeholder Engagement | Stakeholder validation, repository confidence summaries, stakeholder-facing plain-language views |
 | Reporting & Documentation | Configurable reports, KPI tracking, elected-official summaries |
 | Framework Alignment | Optional TOGAF mapping, ADM phase alignment, and framework-aware reporting |
 
