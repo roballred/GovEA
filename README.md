@@ -95,12 +95,13 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 
 **Implemented:**
 - Full CRUD for the core EA object model: applications, services, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
-- Supporting reference content for principles and glossary terms
+- Supporting reference content for principles and glossary terms, including taxonomy-backed principle sets
 - Mission-first traceability: Personas -> Capabilities -> Applications enforced at the application layer
 - Stakeholder-friendly traceability views: read-only objective, capability, and service traces that show how mission context connects to applications, initiatives, and related architecture records
 - Guided stakeholder answer view: `/answers?q=` turns repository search context into a briefing-style answer with capabilities, services, technology, initiatives, and objectives
 - Service catalogue: first-class service records linked to personas, capabilities, and value streams, with supporting applications derived through capabilities
 - Contributor-friendly relationship panels across detail pages, including in-context persona editing
+- Markdown-rendered long-form detail pages across the portfolio model, with shared prose styling for descriptions and other narrative fields
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
 - Demo-ready planning module: strategic objectives plus initiatives with roadmap grid and executive timeline views
 - Repository-wide search across the core content model
@@ -120,21 +121,23 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 **Partially implemented / still maturing:**
 - ADRs: basic CRUD, detail pages, and linkage exist, but the authoring experience is still maturing relative to the core portfolio records
 - Planning semantics: useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
+- Long-form authoring: markdown now renders on detail pages, but editing still uses plain textareas rather than a richer toolbar/preview workflow
 - Admin configuration beyond core settings
 - Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
-- Reviewing taxonomy-backed typed principle sets and the related taxonomy delete safety follow-up
+- Hardening multi-org auth, viewer visibility, and glossary-link safety after the latest security findings
+- Closing the taxonomy delete-safety gap for in-use principle types
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
-- TOGAF overlay demo dataset and first framework-mapping implementation slice
-- Typed principle sets for Architecture, Data, Security, Integration, and similar principle families
-- Stakeholder validation for demo/adoption-facing visuals
-- Repository confidence summary for leadership and public-facing trust cues
-- Application risk portfolio view for investment and modernization conversations
+- Resolve the multi-org auth identity model and duplicate-email tenant-boundary risk
+- Fix glossary viewer-publishing and URL-validation gaps
+- Upgrade Next.js to the patched App Router security release
+- Add taxonomy delete safety for in-use principle types
+- Add a markdown editor with preview for long-text fields
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking

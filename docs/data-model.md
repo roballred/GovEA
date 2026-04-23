@@ -11,6 +11,7 @@ It is intentionally implementation-focused:
 Recent product-shape changes reflected here:
 - `services` is a first-class entity in the portfolio model
 - persona types and persona tags are taxonomy-backed, not separate vocabulary tables
+- `principles.principle_type` is now taxonomy-backed text rather than a fixed enum
 - applications are surfaced for services and strategic objectives through capabilities, not through direct service/objective application joins
 - instance-admin schema and console primitives now exist, including `users.instance_role`, `organizations.is_system_org`, org suspension fields, and `break_glass_sessions`
 
@@ -130,7 +131,7 @@ Additional Auth.js support tables:
 | `strategic_objectives` | Strategy records | Linked to capabilities and value streams; supporting applications are derived through linked capabilities |
 | `initiatives` | Change initiatives | Linked to capabilities, objectives, and applications; capability/application links can carry free-text impact labels |
 | `adrs` | Architecture Decision Records | Linked to capabilities, applications, initiatives, and objectives; can supersede another ADR |
-| `principles` | Architecture principles | Linked to capabilities and ADRs |
+| `principles` | Architecture principles | Linked to capabilities and ADRs; `principle_type` stores the taxonomy term slug |
 | `glossary_terms` | Shared terminology with optional source attribution | Source definitions live in `glossary_term_sources` |
 | `value_streams` | End-to-end value delivery flows | Linked to personas; stages link to capabilities |
 | `taxonomy_terms` | Org-scoped controlled vocabulary hierarchy | Used for capability domains, persona types, persona tags, and other controlled terms |
@@ -264,7 +265,8 @@ These details matter when writing migrations, actions, tests, or exports:
 8. `users.is_active` is currently stored as text with values like `'true'`, not a native boolean column.
 9. `users.instance_role` is intentionally separate from org-scoped `users.role`.
 10. `cross_org_links` intentionally avoids direct FKs to business entity tables because those links cross tenant boundaries and are enforced in application code.
-11. `audit_log.before`, `audit_log.after`, and `audit_log.metadata` are JSONB and should be treated as schemaless event payloads.
+11. `principles.principle_type` stores a taxonomy-backed slug as text, not a foreign key or enum, so term lifecycle safety must be enforced in application logic.
+12. `audit_log.before`, `audit_log.after`, and `audit_log.metadata` are JSONB and should be treated as schemaless event payloads.
 
 ## Source of Truth
 
