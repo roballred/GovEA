@@ -12,7 +12,7 @@ export default async function GlossaryPage() {
   const role = session.user.role
 
   const [terms, domainTerms] = await Promise.all([
-    getGlossaryTerms(orgId),
+    getGlossaryTerms(orgId, role),
     getTaxonomyDomains(orgId),
   ])
 
