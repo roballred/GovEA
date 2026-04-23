@@ -120,7 +120,7 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
         )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
-            + New value stream
+            + New Value Stream
           </Button>
         )}
       </div>
@@ -212,7 +212,7 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New value stream</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New Value Stream</DialogTitle></DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
             <div className="space-y-1.5">
@@ -250,7 +250,7 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Edit value stream</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit Value Stream</DialogTitle></DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
@@ -288,7 +288,7 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete value stream</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Value Stream</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Permanently delete <strong>{deleteTarget?.name}</strong> and all its stages? This cannot be undone.
           </p>

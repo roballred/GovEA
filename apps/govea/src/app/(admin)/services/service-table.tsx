@@ -144,7 +144,7 @@ export function ServiceTable({ services, personas, role }: Props) {
         </select>
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
-            + New service
+            + New Service
           </Button>
         )}
       </div>
@@ -236,7 +236,7 @@ export function ServiceTable({ services, personas, role }: Props) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New service</DialogTitle>
+            <DialogTitle>New Service</DialogTitle>
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
@@ -260,7 +260,7 @@ export function ServiceTable({ services, personas, role }: Props) {
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit service</DialogTitle>
+            <DialogTitle>Edit Service</DialogTitle>
           </DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
@@ -283,7 +283,7 @@ export function ServiceTable({ services, personas, role }: Props) {
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete service</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Service</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
           </p>

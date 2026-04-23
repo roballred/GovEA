@@ -122,7 +122,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
         )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
-            + New ADR
+            + New Architecture Decision Record
           </Button>
         )}
       </div>
@@ -226,7 +226,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
       <Dialog open={createOpen} onOpenChange={open => { if (!open) setCreateOpen(false) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New ADR</DialogTitle>
+            <DialogTitle>New Architecture Decision Record</DialogTitle>
           </DialogHeader>
           <form action={handleCreate} className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
@@ -267,7 +267,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit ADR</DialogTitle>
+            <DialogTitle>Edit Architecture Decision Record</DialogTitle>
           </DialogHeader>
           <form action={handleEdit} className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
@@ -307,7 +307,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete ADR</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Architecture Decision Record</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Permanently delete <strong>{deleteTarget?.number} — {deleteTarget?.title}</strong>? This cannot be undone.
           </p>

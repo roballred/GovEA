@@ -142,7 +142,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
         )}
         {canEdit && (
           <Button onClick={openCreate} size="sm" className="ml-auto">
-            + New initiative
+            + New Initiative
           </Button>
         )}
       </div>
@@ -245,7 +245,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={open => { if (!open) { setCreateOpen(false); setSelectedCaps([]) } }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New initiative</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New Initiative</DialogTitle></DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required placeholder="e.g. Replace OpenText Livelink" />
             <div className="space-y-1.5">
@@ -288,7 +288,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) { setEditTarget(null); setSelectedCaps([]) } }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Edit initiative</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit Initiative</DialogTitle></DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
@@ -334,7 +334,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete initiative</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Initiative</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
           </p>

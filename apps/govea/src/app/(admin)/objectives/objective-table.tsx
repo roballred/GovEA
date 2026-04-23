@@ -209,7 +209,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New strategic objective</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New Objective</DialogTitle></DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required placeholder="e.g. Reduce permit processing time by 40%" />
             <div className="space-y-1.5">
@@ -275,7 +275,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Edit objective</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit Objective</DialogTitle></DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
@@ -343,7 +343,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete objective</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Objective</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
           </p>

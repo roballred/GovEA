@@ -117,7 +117,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
         )}
         {canEditRole && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
-            + New Term
+            + New Glossary Term
           </Button>
         )}
       </div>
@@ -212,7 +212,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
       <Dialog open={createOpen} onOpenChange={open => { if (!open) setCreateOpen(false) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Term</DialogTitle>
+            <DialogTitle>New Glossary Term</DialogTitle>
           </DialogHeader>
           <TermForm
             domainTerms={domainTerms}
@@ -229,7 +229,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Term</DialogTitle>
+            <DialogTitle>Edit Glossary Term</DialogTitle>
           </DialogHeader>
           <TermForm
             key={editTarget?.id}
@@ -247,7 +247,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete Term</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Glossary Term</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Permanently delete <strong>{deleteTarget?.term}</strong>? This cannot be undone.
           </p>
