@@ -13,11 +13,9 @@
  * - Invite-based binding is the most conservative model and matches the
  *   expectation admins already have from creating users in /users.
  *
- * Known limitation: users.email uniqueness is scoped per-org (see migration
- * 0009). If the same email exists in two organizations, checkSsoProvisioning
- * returns whichever record was inserted first. The long-term fix is a global
- * unique constraint on users.email, but that is a schema change deferred until
- * first real-tenant migration.
+ * Identity model: users.email is globally unique across all organizations (#269).
+ * A lookup by bare email is therefore unambiguous and always resolves to exactly
+ * one user record (or none).
  */
 
 import { db } from '@/db/client'

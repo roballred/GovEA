@@ -36,6 +36,10 @@ export async function createUser(formData: FormData) {
   const pwValidation = validatePassword(password)
   if (!pwValidation.valid) throw new Error(pwValidation.message)
 
+  // Guard against duplicate email across orgs (users.email is globally unique, #269)
+  const existing = await db.query.users.findFirst({ where: eq(users.email, email) })
+  if (existing) throw new Error('A user with that email address already exists.')
+
   const passwordHash = await bcrypt.hash(password, 12)
   const [user] = await db.insert(users).values({
     name, email, passwordHash, role,
@@ -149,6 +153,12 @@ export async function editUser(userId: string, formData: FormData) {
   const newPassword = formData.get('password') as string | null
 
   const before = await db.query.users.findFirst({ where: eq(users.id, userId) })
+
+  // Guard against duplicate email across orgs when email is being changed (#269)
+  if (email !== before?.email) {
+    const existing = await db.query.users.findFirst({ where: eq(users.email, email) })
+    if (existing) throw new Error('A user with that email address already exists.')
+  }
 
   // Last-admin guard for role demotion
   if (before?.role === 'admin' && role !== 'admin') {

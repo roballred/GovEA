@@ -17,7 +17,12 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => [
-  uniqueIndex('users_org_email_unique').on(table.organizationId, table.email),
+  // Global unique constraint: one identity per email address across all orgs.
+  // GovEA's identity model is one-user-one-org; a person who needs access to
+  // multiple orgs must use separate email addresses. This makes auth and SSO
+  // lookups by bare email unambiguous and prevents cross-tenant identity binding
+  // bugs. See issue #269.
+  uniqueIndex('users_email_unique').on(table.email),
 ])
 
 export const accounts = pgTable('accounts', {
