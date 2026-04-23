@@ -14,6 +14,7 @@ export const principles = pgTable('principles', {
   title: text('title'),                  // full principle statement e.g. "Prefer SaaS for..."
   rationale: text('rationale'),
   implications: text('implications'),
+  principleType: text('principle_type').notNull().default('architecture'), // taxonomy-backed: slug of principle type term
   status: workflowStatusEnum('status').notNull().default('draft'),
   visibility: visibilityEnum('visibility').notNull().default('org'),
   createdBy: uuid('created_by').references(() => users.id),

@@ -13,6 +13,7 @@ import {
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { getPrincipleTypes } from '@/actions/taxonomy'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -32,16 +33,29 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
+// Stable colour palette matching principle-table.tsx
+const TYPE_PALETTE = [
+  'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'bg-teal-50 text-teal-700 border-teal-200',
+  'bg-violet-50 text-violet-700 border-violet-200',
+  'bg-orange-50 text-orange-700 border-orange-200',
+  'bg-pink-50 text-pink-700 border-pink-200',
+]
+
 export default async function PrincipleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const [principle, enabledModules] = await Promise.all([getPrinciple(id), getEnabledModules()])
+  const orgId = session.user.organizationId!
+  const [principle, enabledModules, principleTypes] = await Promise.all([
+    getPrinciple(id),
+    getEnabledModules(),
+    getPrincipleTypes(orgId),
+  ])
   if (!principle) notFound()
 
   const editor = canEdit(session.user)
-  const orgId = session.user.organizationId!
   const canMutate = editor && principle.organizationId === orgId
 
   const [allCapabilities, allAdrs] = editor
@@ -71,6 +85,16 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {(() => {
+              const idx = principleTypes.findIndex(t => t.slug === principle.principleType)
+              const label = idx >= 0 ? principleTypes[idx].name : principle.principleType
+              const style = idx >= 0 ? TYPE_PALETTE[idx % TYPE_PALETTE.length] : 'bg-slate-100 text-slate-600 border-slate-200'
+              return (
+                <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', style)}>
+                  {label}
+                </span>
+              )
+            })()}
             <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[principle.status])}>
               {principle.status.charAt(0).toUpperCase() + principle.status.slice(1)}
             </span>

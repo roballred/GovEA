@@ -82,13 +82,14 @@ export async function createPrinciple(formData: FormData) {
   const title = (formData.get('title') as string) || null
   const rationale = (formData.get('rationale') as string) || null
   const implications = (formData.get('implications') as string) || null
+  const principleType = (formData.get('principleType') as 'architecture' | 'data') ?? 'architecture'
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const adrIds = formData.getAll('adrIds') as string[]
   const capabilityIds = formData.getAll('capabilityIds') as string[]
 
   const [principle] = await db.insert(principles).values({
-    name, description, title, rationale, implications, status, visibility,
+    name, description, title, rationale, implications, principleType, status, visibility,
     organizationId: orgId,
     createdBy: session.user.id,
     updatedBy: session.user.id,
@@ -115,6 +116,7 @@ export async function editPrinciple(principleId: string, formData: FormData) {
   const title = (formData.get('title') as string) || null
   const rationale = (formData.get('rationale') as string) || null
   const implications = (formData.get('implications') as string) || null
+  const principleType = formData.get('principleType') as 'architecture' | 'data'
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const adrIds = formData.getAll('adrIds') as string[]
@@ -124,7 +126,7 @@ export async function editPrinciple(principleId: string, formData: FormData) {
   assertOwnership(before?.organizationId, orgId)
 
   await db.update(principles).set({
-    name, description, title, rationale, implications, status, visibility,
+    name, description, title, rationale, implications, principleType, status, visibility,
     updatedBy: session.user.id,
     updatedAt: new Date(),
   }).where(and(eq(principles.id, principleId), eq(principles.organizationId, orgId)))

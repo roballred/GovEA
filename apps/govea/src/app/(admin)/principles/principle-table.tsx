@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import type { TaxonomyTerm } from '@/db/schema'
 
 type PrincipleRow = Principle & {
   organization: { id: string; name: string } | null
@@ -27,9 +28,27 @@ interface Props {
   principles: PrincipleRow[]
   adrs: Pick<ADR, 'id' | 'number' | 'title'>[]
   capabilities: Pick<Capability, 'id' | 'name' | 'domain'>[]
+  principleTypes: Pick<TaxonomyTerm, 'id' | 'name' | 'slug'>[]
   role: Role
   currentOrgId: string
 }
+
+// Stable colour palette — cycles through when more than 2 types exist
+const TYPE_PALETTE = [
+  'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'bg-teal-50 text-teal-700 border-teal-200',
+  'bg-violet-50 text-violet-700 border-violet-200',
+  'bg-orange-50 text-orange-700 border-orange-200',
+  'bg-pink-50 text-pink-700 border-pink-200',
+]
+
+const TYPE_ACTIVE_PALETTE = [
+  'bg-indigo-600 text-white',
+  'bg-teal-600 text-white',
+  'bg-violet-600 text-white',
+  'bg-orange-600 text-white',
+  'bg-pink-600 text-white',
+]
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -49,10 +68,11 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function PrincipleTable({ principles, adrs, capabilities, role, currentOrgId }: Props) {
+export function PrincipleTable({ principles, adrs, capabilities, principleTypes, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PrincipleRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<PrincipleRow | null>(null)
@@ -61,7 +81,10 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
-  const filtered = principles.filter(p => statusFilter === 'all' || p.status === statusFilter)
+  const filtered = principles.filter(p =>
+    (statusFilter === 'all' || p.status === statusFilter) &&
+    (typeFilter === 'all' || p.principleType === typeFilter)
+  )
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -93,6 +116,28 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
+        {principleTypes.length > 0 && (
+          <div className="flex items-center rounded-md border border-input overflow-hidden text-sm">
+            <button
+              onClick={() => setTypeFilter('all')}
+              className={cn('px-3 h-9 transition-colors', typeFilter === 'all' ? 'bg-foreground text-background' : 'hover:bg-muted text-muted-foreground')}
+            >
+              All types
+            </button>
+            {principleTypes.map((t, i) => (
+              <button
+                key={t.id}
+                onClick={() => setTypeFilter(t.slug)}
+                className={cn(
+                  'px-3 h-9 transition-colors',
+                  typeFilter === t.slug ? TYPE_ACTIVE_PALETTE[i % TYPE_ACTIVE_PALETTE.length] : 'hover:bg-muted text-muted-foreground',
+                )}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        )}
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
@@ -116,6 +161,7 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Capabilities</TableHead>
               <TableHead>ADRs</TableHead>
@@ -127,7 +173,7 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-8">
                   {principles.length === 0
                     ? 'No principles yet. Add one to get started.'
                     : 'No principles match the current filters.'}
@@ -147,6 +193,18 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
                       </span>
                     )}
                   </div>
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const idx = principleTypes.findIndex(t => t.slug === principle.principleType)
+                    const label = idx >= 0 ? principleTypes[idx].name : principle.principleType
+                    const style = idx >= 0 ? TYPE_PALETTE[idx % TYPE_PALETTE.length] : 'bg-slate-100 text-slate-600 border-slate-200'
+                    return (
+                      <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', style)}>
+                        {label}
+                      </span>
+                    )
+                  })()}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground max-w-xs">
                   <p className="line-clamp-2">{principle.description ?? '—'}</p>
@@ -231,6 +289,7 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
               selectedAdrIds={[]}
               selectedCapabilityIds={[]}
             />
+            <PrincipleTypeField defaultType="architecture" types={principleTypes} />
             <StatusVisibilityFields defaultStatus="draft" defaultVisibility="org" />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
@@ -258,6 +317,7 @@ export function PrincipleTable({ principles, adrs, capabilities, role, currentOr
               selectedAdrIds={editTarget?.principleAdrs.map(pa => pa.adr.id) ?? []}
               selectedCapabilityIds={editTarget?.principleCapabilities.map(pc => pc.capability.id) ?? []}
             />
+            <PrincipleTypeField defaultType={editTarget?.principleType ?? 'architecture'} types={principleTypes} />
             <StatusVisibilityFields
               defaultStatus={editTarget?.status ?? 'draft'}
               defaultVisibility={editTarget?.visibility ?? 'org'}
@@ -372,6 +432,31 @@ function LinkedItemsFields({
       {adrs.length > 0 && (
         <CheckboxList label="ADRs" name="adrIds" items={adrItems} selectedIds={selectedAdrIds} />
       )}
+    </div>
+  )
+}
+
+function PrincipleTypeField({
+  defaultType,
+  types,
+}: {
+  defaultType: string
+  types: Pick<TaxonomyTerm, 'id' | 'name' | 'slug'>[]
+}) {
+  if (types.length === 0) return null
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="principle-principleType">Principle Set</Label>
+      <select
+        id="principle-principleType"
+        name="principleType"
+        defaultValue={defaultType}
+        className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      >
+        {types.map(t => (
+          <option key={t.id} value={t.slug}>{t.name}</option>
+        ))}
+      </select>
     </div>
   )
 }

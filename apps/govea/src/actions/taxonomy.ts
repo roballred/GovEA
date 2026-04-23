@@ -155,6 +155,20 @@ export async function deleteTaxonomyTerm(termId: string) {
   })
 }
 
+/** Returns values (children) of the "Principle Type" taxonomy type. */
+export async function getPrincipleTypes(organizationId: string) {
+  const type = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq, and }) =>
+      and(eq(t.organizationId, organizationId), isNull(t.parentId), eq(t.slug, 'principle-type')),
+  })
+  if (!type) return []
+  return db.query.taxonomyTerms.findMany({
+    where: (t, { eq, and }) =>
+      and(eq(t.organizationId, organizationId), eq(t.parentId, type.id)),
+    orderBy: (t, { asc }) => [asc(t.sortOrder), asc(t.name)],
+  })
+}
+
 /** Returns values (children) of the "Persona Type" taxonomy type. */
 export async function getPersonaTypesFromTaxonomy(organizationId: string) {
   const type = await db.query.taxonomyTerms.findFirst({

@@ -17,7 +17,7 @@ export default async function TaxonomyPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Taxonomy</h1>
         <p className="text-muted-foreground mt-1">
-          Classification types and their values — used to organize capabilities, glossary entries, and personas.
+          Classification types and their values — used to organize capabilities, glossary entries, personas, and principles.
         </p>
       </div>
       <TaxonomyTable types={types} values={values} role={role} />
