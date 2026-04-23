@@ -16,6 +16,7 @@ import {
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
+import { MarkdownContent } from '@/components/markdown-content'
 
 const CHANNEL_LABELS: Record<string, string> = {
   online: 'Online',
@@ -115,7 +116,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
         </div>
 
         {service.description && (
-          <p className="text-muted-foreground">{service.description}</p>
+          <MarkdownContent>{service.description}</MarkdownContent>
         )}
 
         <div className="flex flex-wrap gap-3 pt-1">

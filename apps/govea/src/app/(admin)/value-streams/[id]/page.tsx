@@ -13,6 +13,7 @@ import {
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { MarkdownContent } from '@/components/markdown-content'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -75,7 +76,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
         </div>
 
         {vs.description && (
-          <p className="text-muted-foreground">{vs.description}</p>
+          <MarkdownContent>{vs.description}</MarkdownContent>
         )}
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">

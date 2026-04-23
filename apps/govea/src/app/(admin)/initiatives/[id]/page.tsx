@@ -16,6 +16,7 @@ import {
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { MarkdownContent } from '@/components/markdown-content'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -114,7 +115,7 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         </div>
 
         {initiative.description && (
-          <p className="text-muted-foreground">{initiative.description}</p>
+          <MarkdownContent>{initiative.description}</MarkdownContent>
         )}
 
         {(initiative.startDate || initiative.endDate) && (

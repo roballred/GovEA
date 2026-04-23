@@ -217,7 +217,7 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
             <FormField label="Name" name="name" required />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2}
+              <textarea name="description" rows={2} placeholder="Markdown supported"
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Value delivered" name="valueItem" placeholder="What is delivered to the stakeholder?" />
@@ -255,7 +255,7 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''}
+              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported"
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Value delivered" name="valueItem" defaultValue={editTarget?.valueItem ?? ''} />

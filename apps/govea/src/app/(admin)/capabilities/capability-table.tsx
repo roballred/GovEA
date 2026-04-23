@@ -261,19 +261,19 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
             <FormField label="Name" name="name" required />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+              <textarea name="description" rows={2} placeholder="Markdown supported" className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue="" />
             <div className="space-y-1.5">
               <Label htmlFor="create-behaviors">Behaviors</Label>
               <textarea id="create-behaviors" name="behaviors" rows={4}
-                placeholder="One behavior per line — what the capability must do"
+                placeholder="Markdown supported — use - bullets, **bold**, etc."
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="create-rules">Rules</Label>
               <textarea id="create-rules" name="rules" rows={3}
-                placeholder="One rule per line — constraints and invariants"
+                placeholder="Markdown supported — use - bullets, **bold**, etc."
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <div className="space-y-1.5">
@@ -324,20 +324,20 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+              <textarea name="description" rows={2} placeholder="Markdown supported" defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue={editTarget?.domain ?? ''} />
             <div className="space-y-1.5">
               <Label htmlFor="edit-behaviors">Behaviors</Label>
               <textarea id="edit-behaviors" name="behaviors" rows={4}
-                placeholder="One behavior per line — what the capability must do"
+                placeholder="Markdown supported — use - bullets, **bold**, etc."
                 defaultValue={editTarget?.behaviors ?? ''}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="edit-rules">Rules</Label>
               <textarea id="edit-rules" name="rules" rows={3}
-                placeholder="One rule per line — constraints and invariants"
+                placeholder="Markdown supported — use - bullets, **bold**, etc."
                 defaultValue={editTarget?.rules ?? ''}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>

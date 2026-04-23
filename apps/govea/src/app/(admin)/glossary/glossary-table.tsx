@@ -348,7 +348,7 @@ function TermForm({
           name="definition"
           rows={3}
           required
-          placeholder="Plain-language definition"
+          placeholder="Plain-language definition — Markdown supported"
           value={definition}
           onChange={e => setDefinition(e.target.value)}
           className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
@@ -359,7 +359,7 @@ function TermForm({
         options={domainTerms.map(t => t.name)}
         defaultValue={term?.domain ?? ''}
       />
-      <TextareaField label="Notes" name="notes" rows={2} defaultValue={term?.notes ?? ''} placeholder="Usage guidance, synonyms, or anti-patterns (optional)" />
+      <TextareaField label="Notes" name="notes" rows={2} defaultValue={term?.notes ?? ''} placeholder="Usage guidance, synonyms, or anti-patterns — Markdown supported" />
       <StatusVisibilityFields defaultStatus={term?.status ?? 'draft'} defaultVisibility={term?.visibility ?? 'org'} />
 
       {/* Reference Sources */}

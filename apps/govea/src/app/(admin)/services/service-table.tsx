@@ -242,7 +242,7 @@ export function ServiceTable({ services, personas, role }: Props) {
             <FormField label="Name" name="name" required />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+              <textarea name="description" rows={2} placeholder="Markdown supported" className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" />
             <ChannelCheckboxes />
@@ -266,7 +266,7 @@ export function ServiceTable({ services, personas, role }: Props) {
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" defaultValue={editTarget?.serviceOwner ?? ''} />
             <ChannelCheckboxes selected={editTarget?.channels ?? []} />
