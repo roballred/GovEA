@@ -174,7 +174,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
-            + New application
+            + New Application
           </Button>
         )}
       </div>
@@ -296,7 +296,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New application</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New Application</DialogTitle></DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
             <div className="space-y-1.5">
@@ -368,7 +368,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Edit application</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit Application</DialogTitle></DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
@@ -446,7 +446,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete application</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Application</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
           </p>

@@ -151,7 +151,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
         )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
-            + New capability
+            + New Capability
           </Button>
         )}
       </div>
@@ -255,7 +255,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New capability</DialogTitle>
+            <DialogTitle>New Capability</DialogTitle>
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
@@ -318,7 +318,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit capability</DialogTitle>
+            <DialogTitle>Edit Capability</DialogTitle>
           </DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
@@ -388,7 +388,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete capability</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Delete Capability</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
           </p>

@@ -159,7 +159,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
         <div className="ml-auto flex items-center gap-2">
           {canEdit && (
             <Button onClick={() => setCreateOpen(true)} size="sm">
-              + New persona
+              + New Persona
             </Button>
           )}
         </div>
@@ -271,7 +271,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New persona</DialogTitle>
+            <DialogTitle>New Persona</DialogTitle>
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
@@ -333,7 +333,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit persona</DialogTitle>
+            <DialogTitle>Edit Persona</DialogTitle>
           </DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
@@ -399,7 +399,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete persona</DialogTitle>
+            <DialogTitle>Delete Persona</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.

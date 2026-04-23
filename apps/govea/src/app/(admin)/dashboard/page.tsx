@@ -8,6 +8,8 @@ import {
 } from '@/db/schema'
 import { and, count, eq, gt, isNotNull, desc, asc, inArray } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { CoverageTileLabel } from './coverage-tile-label'
 import { DomainBadge } from '@/components/domain-badge'
 import Link from 'next/link'
 
@@ -30,15 +32,15 @@ function pct(numerator: number, denominator: number) {
 }
 
 const COVERAGE_ENTITIES = [
-  { label: 'Capabilities',   key: 'capabilities' as const,  href: '/capabilities',   draftKey: 'draft'     },
-  { label: 'Applications',   key: 'applications' as const,  href: '/applications',   draftKey: 'draft'     },
-  { label: 'Personas',       key: 'personas'     as const,  href: '/personas',       draftKey: 'draft'     },
-  { label: 'Value Streams',  key: 'valueStreams'  as const,  href: '/value-streams',  draftKey: 'draft'     },
-  { label: 'Objectives',     key: 'objectives'   as const,  href: '/objectives',     draftKey: 'draft'     },
-  { label: 'Initiatives',    key: 'initiatives'  as const,  href: '/initiatives',    draftKey: 'proposed'  },
-  { label: 'Decisions',      key: 'adrs'         as const,  href: '/adrs',           draftKey: 'proposed'  },
-  { label: 'Principles',     key: 'principles'   as const,  href: '/principles',     draftKey: 'draft'     },
-  { label: 'Glossary',       key: 'glossary'     as const,  href: '/glossary',       draftKey: 'draft'     },
+  { label: 'Capabilities',   key: 'capabilities' as const,  href: '/capabilities',   draftKey: 'draft',    tooltip: undefined                         },
+  { label: 'Applications',   key: 'applications' as const,  href: '/applications',   draftKey: 'draft',    tooltip: undefined                         },
+  { label: 'Personas',       key: 'personas'     as const,  href: '/personas',       draftKey: 'draft',    tooltip: undefined                         },
+  { label: 'Value Streams',  key: 'valueStreams'  as const,  href: '/value-streams',  draftKey: 'draft',    tooltip: undefined                         },
+  { label: 'Objectives',     key: 'objectives'   as const,  href: '/objectives',     draftKey: 'draft',    tooltip: undefined                         },
+  { label: 'Initiatives',    key: 'initiatives'  as const,  href: '/initiatives',    draftKey: 'proposed', tooltip: undefined                         },
+  { label: 'Decisions',      key: 'adrs'         as const,  href: '/adrs',           draftKey: 'proposed', tooltip: 'Architecture Decision Records'   },
+  { label: 'Principles',     key: 'principles'   as const,  href: '/principles',     draftKey: 'draft',    tooltip: undefined                         },
+  { label: 'Glossary',       key: 'glossary'     as const,  href: '/glossary',       draftKey: 'draft',    tooltip: undefined                         },
 ]
 
 const INITIATIVE_STATUS_LABELS: Record<string, string> = {
@@ -175,27 +177,31 @@ export default async function DashboardPage() {
       {/* Coverage */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Coverage</p>
-        <div className="grid gap-3 grid-cols-3">
-          {COVERAGE_ENTITIES.map(e => {
-            const s = stats[e.key]
-            const draftCount = s.byStatus[e.draftKey] ?? 0
-            return (
-              <Link key={e.key} href={e.href}>
-                <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
-                  <CardHeader className="pb-1 pt-4 px-4">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">{e.label}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-4 px-4">
-                    <p className="text-2xl font-bold">{s.total}</p>
-                    {draftCount > 0 && (
-                      <p className="text-xs text-amber-600 mt-0.5">{draftCount} draft</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
+        <TooltipProvider>
+          <div className="grid gap-3 grid-cols-3">
+            {COVERAGE_ENTITIES.map(e => {
+              const s = stats[e.key]
+              const draftCount = s.byStatus[e.draftKey] ?? 0
+              return (
+                <Link key={e.key} href={e.href}>
+                  <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                    <CardHeader className="pb-1 pt-4 px-4">
+                      <CardTitle className="text-xs font-medium text-muted-foreground">
+                        <CoverageTileLabel label={e.label} tooltip={e.tooltip} />
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-4 px-4">
+                      <p className="text-2xl font-bold">{s.total}</p>
+                      {draftCount > 0 && (
+                        <p className="text-xs text-amber-600 mt-0.5">{draftCount} draft</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        </TooltipProvider>
       </div>
 
       {/* Federation Activity */}
