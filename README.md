@@ -124,7 +124,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
-- Reviewing create/edit dialog naming and tooltip consistency
+- Reviewing taxonomy-backed typed principle sets and the related taxonomy delete safety follow-up
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
 - Keeping documentation aligned with rapid product-shape changes
