@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getGlossaryTerm } from '@/actions/glossary'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { MarkdownContent } from '@/components/markdown-content'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -70,13 +71,13 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{term.definition}</p>
+          <MarkdownContent>{term.definition}</MarkdownContent>
         </div>
 
         {term.notes && (
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">Notes</h2>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{term.notes}</p>
+            <MarkdownContent>{term.notes}</MarkdownContent>
           </div>
         )}
 
@@ -99,7 +100,7 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{source.definition}</p>
+                  <MarkdownContent>{source.definition}</MarkdownContent>
                 </div>
               ))}
             </div>

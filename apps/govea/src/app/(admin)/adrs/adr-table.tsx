@@ -235,9 +235,9 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
                 <FormField label="Title" name="title" required placeholder="e.g. Use Next.js App Router for all routing" />
               </div>
             </div>
-            <TextareaField label="Context" name="context" placeholder="What is the situation and why does this decision need to be made?" />
-            <TextareaField label="Decision" name="decision" placeholder="What was decided?" />
-            <TextareaField label="Consequences" name="consequences" placeholder="What are the resulting outcomes, tradeoffs, and risks?" />
+            <TextareaField label="Context" name="context" placeholder="What is the situation and why does this decision need to be made? — Markdown supported" />
+            <TextareaField label="Decision" name="decision" placeholder="What was decided? — Markdown supported" />
+            <TextareaField label="Consequences" name="consequences" placeholder="What are the resulting outcomes, tradeoffs, and risks? — Markdown supported" />
             <LinkedItemsFields
               capabilities={capabilities}
               applications={applications}
@@ -276,9 +276,9 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
                 <FormField label="Title" name="title" required defaultValue={editTarget?.title} />
               </div>
             </div>
-            <TextareaField label="Context" name="context" defaultValue={editTarget?.context ?? ''} />
-            <TextareaField label="Decision" name="decision" defaultValue={editTarget?.decision ?? ''} />
-            <TextareaField label="Consequences" name="consequences" defaultValue={editTarget?.consequences ?? ''} />
+            <TextareaField label="Context" name="context" defaultValue={editTarget?.context ?? ''} placeholder="Markdown supported" />
+            <TextareaField label="Decision" name="decision" defaultValue={editTarget?.decision ?? ''} placeholder="Markdown supported" />
+            <TextareaField label="Consequences" name="consequences" defaultValue={editTarget?.consequences ?? ''} placeholder="Markdown supported" />
             <LinkedItemsFields
               capabilities={capabilities}
               applications={applications}

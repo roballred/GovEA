@@ -98,6 +98,7 @@ export function PersonaEditForm({
             name="description"
             defaultValue={initial.description ?? ''}
             rows={3}
+            placeholder="Markdown supported"
           />
         </div>
 

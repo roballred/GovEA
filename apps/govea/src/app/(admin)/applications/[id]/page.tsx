@@ -16,6 +16,7 @@ import {
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
+import { MarkdownContent } from '@/components/markdown-content'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -105,7 +106,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </div>
 
         {application.description && (
-          <p className="text-muted-foreground">{application.description}</p>
+          <MarkdownContent>{application.description}</MarkdownContent>
         )}
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">

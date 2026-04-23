@@ -214,7 +214,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
             <FormField label="Name" name="name" required placeholder="e.g. Reduce permit processing time by 40%" />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2}
+              <textarea name="description" rows={2} placeholder="Markdown supported"
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Success metric" name="successMetric" placeholder="How will achievement be measured?" />
@@ -280,7 +280,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''}
+              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported"
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
             <FormField label="Success metric" name="successMetric" defaultValue={editTarget?.successMetric ?? ''} />

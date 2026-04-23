@@ -525,24 +525,31 @@ async function seed() {
     const existing = await db.query.principles.findFirst({
       where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, p.name)),
     })
-    if (existing) continue
-    const [pRow] = await db.insert(principles).values({
-      name: p.name,
-      description: p.description ?? null,
-      title: p.title ?? null,
-      rationale: p.rationale,
-      implications: p.implications,
-      status: p.status,
-      visibility: p.visibility,
-      organizationId: devOrgId,
-    }).returning()
+    let pRow: typeof existing
+    if (existing) {
+      await db.update(principles).set({ principleType: p.principleType }).where(eq(principles.id, existing.id))
+      pRow = existing
+    } else {
+      const [inserted] = await db.insert(principles).values({
+        name: p.name,
+        description: p.description ?? null,
+        title: p.title ?? null,
+        rationale: p.rationale,
+        implications: p.implications,
+        principleType: p.principleType,
+        status: p.status,
+        visibility: p.visibility,
+        organizationId: devOrgId,
+      }).returning()
+      pRow = inserted
+    }
     for (const capName of p.capabilities) {
       const capId = devCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.principleCapabilities.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.principleId, pRow.id), e(t.capabilityId, capId)),
+        where: (t, { eq: e, and }) => and(e(t.principleId, pRow!.id), e(t.capabilityId, capId)),
       })
-      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow.id, capabilityId: capId })
+      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow!.id, capabilityId: capId })
     }
   }
   console.log(`  ✓ ${DEV_PRINCIPLES.length} principles`)
@@ -938,19 +945,25 @@ async function seed() {
     const existing = await db.query.principles.findFirst({
       where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, p.name)),
     })
-    if (existing) continue
-    const [pRow] = await db.insert(principles).values({
-      name: p.name, description: p.description ?? null, title: p.title ?? null,
-      rationale: p.rationale, implications: p.implications,
-      status: p.status, visibility: p.visibility, organizationId: lakesideOrgId,
-    }).returning()
+    let pRow: typeof existing
+    if (existing) {
+      await db.update(principles).set({ principleType: p.principleType }).where(eq(principles.id, existing.id))
+      pRow = existing
+    } else {
+      const [inserted] = await db.insert(principles).values({
+        name: p.name, description: p.description ?? null, title: p.title ?? null,
+        rationale: p.rationale, implications: p.implications, principleType: p.principleType,
+        status: p.status, visibility: p.visibility, organizationId: lakesideOrgId,
+      }).returning()
+      pRow = inserted
+    }
     for (const capName of p.capabilities) {
       const capId = lakesideCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.principleCapabilities.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.principleId, pRow.id), e(t.capabilityId, capId)),
+        where: (t, { eq: e, and }) => and(e(t.principleId, pRow!.id), e(t.capabilityId, capId)),
       })
-      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow.id, capabilityId: capId })
+      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow!.id, capabilityId: capId })
     }
   }
   console.log(`  ✓ ${LAKESIDE_PRINCIPLES.length} principles`)
@@ -1331,19 +1344,25 @@ async function seed() {
     const existing = await db.query.principles.findFirst({
       where: (t, { eq: e, and }) => and(e(t.organizationId, togafOrgId), e(t.name, p.name)),
     })
-    if (existing) continue
-    const [pRow] = await db.insert(principles).values({
-      name: p.name, description: p.description ?? null, title: p.title ?? null,
-      rationale: p.rationale, implications: p.implications,
-      status: p.status, visibility: p.visibility, organizationId: togafOrgId,
-    }).returning()
+    let pRow: typeof existing
+    if (existing) {
+      await db.update(principles).set({ principleType: p.principleType }).where(eq(principles.id, existing.id))
+      pRow = existing
+    } else {
+      const [inserted] = await db.insert(principles).values({
+        name: p.name, description: p.description ?? null, title: p.title ?? null,
+        rationale: p.rationale, implications: p.implications, principleType: p.principleType,
+        status: p.status, visibility: p.visibility, organizationId: togafOrgId,
+      }).returning()
+      pRow = inserted
+    }
     for (const capName of p.capabilities) {
       const capId = togafCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.principleCapabilities.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.principleId, pRow.id), e(t.capabilityId, capId)),
+        where: (t, { eq: e, and }) => and(e(t.principleId, pRow!.id), e(t.capabilityId, capId)),
       })
-      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow.id, capabilityId: capId })
+      if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow!.id, capabilityId: capId })
     }
   }
   console.log(`  ✓ ${TOGAF_PRINCIPLES.length} principles`)

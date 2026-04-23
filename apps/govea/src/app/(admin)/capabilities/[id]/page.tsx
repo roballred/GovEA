@@ -21,6 +21,7 @@ import {
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
+import { MarkdownContent } from '@/components/markdown-content'
 import {
   approveCrossOrgLink,
   getCrossOrgLinkContext,
@@ -112,7 +113,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         </div>
 
         {capability.description && (
-          <p className="text-muted-foreground">{capability.description}</p>
+          <MarkdownContent>{capability.description}</MarkdownContent>
         )}
 
         <div className="flex flex-wrap gap-3 pt-1">
@@ -128,28 +129,14 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
       {capability.behaviors && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Behaviors</h2>
-          <ul className="space-y-1.5 text-sm text-muted-foreground">
-            {capability.behaviors.split('\n').filter(Boolean).map((line, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="mt-0.5 shrink-0 text-muted-foreground/50">—</span>
-                <span>{line.replace(/^[-•]\s*/, '')}</span>
-              </li>
-            ))}
-          </ul>
+          <MarkdownContent>{capability.behaviors}</MarkdownContent>
         </div>
       )}
 
       {capability.rules && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Rules</h2>
-          <ul className="space-y-1.5 text-sm text-muted-foreground">
-            {capability.rules.split('\n').filter(Boolean).map((line, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="mt-0.5 shrink-0 text-muted-foreground/50">—</span>
-                <span>{line.replace(/^[-•]\s*/, '')}</span>
-              </li>
-            ))}
-          </ul>
+          <MarkdownContent>{capability.rules}</MarkdownContent>
         </div>
       )}
 

@@ -14,6 +14,7 @@ import {
   linkPersonaValueStream, unlinkPersonaValueStream,
 } from '@/actions/links'
 import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
+import { MarkdownContent } from '@/components/markdown-content'
 import {
   approveCrossOrgLink,
   getCrossOrgLinkContext,
@@ -90,7 +91,7 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
         </div>
 
         {persona.description && (
-          <p className="text-muted-foreground">{persona.description}</p>
+          <MarkdownContent>{persona.description}</MarkdownContent>
         )}
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">

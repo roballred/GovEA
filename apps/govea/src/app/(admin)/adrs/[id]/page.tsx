@@ -17,6 +17,7 @@ import {
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { MarkdownContent } from '@/components/markdown-content'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -113,19 +114,19 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
       <div className="space-y-6">
         {adr.context && (
           <Section title="Context">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{adr.context}</p>
+            <MarkdownContent>{adr.context}</MarkdownContent>
           </Section>
         )}
 
         {adr.decision && (
           <Section title="Decision">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{adr.decision}</p>
+            <MarkdownContent>{adr.decision}</MarkdownContent>
           </Section>
         )}
 
         {adr.consequences && (
           <Section title="Consequences">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{adr.consequences}</p>
+            <MarkdownContent>{adr.consequences}</MarkdownContent>
           </Section>
         )}
       </div>
