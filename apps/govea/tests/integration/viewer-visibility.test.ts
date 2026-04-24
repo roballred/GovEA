@@ -1,28 +1,31 @@
 /**
- * Integration tests: viewer visibility for ADRs and initiatives (#208)
+ * Integration tests: viewer visibility for ADRs, initiatives, capabilities,
+ * personas, and glossary terms.
  *
  * The viewer status gate must be enforced in the action layer — not only in
- * page components — so every caller of getADR / getInitiative inherits the
- * rule automatically.
+ * page components — so every caller of getXxx inherits the rule automatically.
  *
- * Rules (Option B decision from #202):
- *  - ADRs:        viewer sees only `accepted`
- *  - Initiatives: viewer sees only `active` and `complete`
+ * Rules:
+ *  - ADRs:          viewer sees only `accepted`
+ *  - Initiatives:   viewer sees only `active` and `complete`
+ *  - Capabilities:  viewer sees only `published`
+ *  - Personas:      viewer sees only `published`
+ *  - Glossary:      viewer sees only `published` (#270)
  *
  * Coverage matrix:
- *  - getADRs        (list)   × viewer / contributor / admin
- *  - getADR         (detail) × each ADR status × viewer / contributor
- *  - getInitiatives (list)   × viewer / contributor / admin
- *  - getInitiative  (detail) × each initiative status × viewer / contributor
+ *  - getGlossaryTerms (list)   × viewer / contributor / admin
+ *  - getGlossaryTerm  (detail) × each status × viewer / contributor
  */
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { getADRs, getADR } from '@/actions/adrs'
 import { getInitiatives, getInitiative } from '@/actions/initiatives'
 import { getCapabilities, getCapability } from '@/actions/capabilities'
 import { getPersonas, getPersona } from '@/actions/personas'
+import { getGlossaryTerms, getGlossaryTerm } from '@/actions/glossary'
 import {
   createTestOrg, createTestUser, cleanupOrg,
   makeSession, insertAdr, insertInitiative, insertCapability, insertPersona,
+  insertGlossaryTerm,
   type TestUser,
 } from './helpers/db'
 
@@ -435,6 +438,98 @@ describe('viewer visibility — Personas', () => {
     it('admin can access any status by ID', async () => {
       mockAuth.mockResolvedValue(makeSession(admin))
       expect(await getPersona(draftId)).not.toBeNull()
+    })
+  })
+})
+
+// ── Glossary visibility ────────────────────────────────────────────────────────
+
+describe('viewer visibility — Glossary', () => {
+  let orgId: string
+  let admin: TestUser
+  let contributor: TestUser
+  let viewer: TestUser
+
+  let publishedId: string
+  let draftId: string
+  let archivedId: string
+
+  beforeAll(async () => {
+    const org = await createTestOrg()
+    orgId = org.id
+    ;[admin, contributor, viewer] = await Promise.all([
+      createTestUser(orgId, 'admin'),
+      createTestUser(orgId, 'contributor'),
+      createTestUser(orgId, 'viewer'),
+    ])
+    ;[publishedId, draftId, archivedId] = await Promise.all([
+      insertGlossaryTerm(orgId, { status: 'published' }).then(t => t.id),
+      insertGlossaryTerm(orgId, { status: 'draft'     }).then(t => t.id),
+      insertGlossaryTerm(orgId, { status: 'archived'  }).then(t => t.id),
+    ])
+  })
+
+  afterAll(() => cleanupOrg(orgId))
+
+  describe('getGlossaryTerms — list', () => {
+    it('viewer sees only published terms', async () => {
+      const result = await getGlossaryTerms(orgId, 'viewer')
+      const ids = result.map(t => t.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).not.toContain(draftId)
+      expect(ids).not.toContain(archivedId)
+    })
+
+    it('contributor sees all statuses', async () => {
+      const result = await getGlossaryTerms(orgId, 'contributor')
+      const ids = result.map(t => t.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).toContain(draftId)
+      expect(ids).toContain(archivedId)
+    })
+
+    it('admin sees all statuses', async () => {
+      const result = await getGlossaryTerms(orgId, 'admin')
+      const ids = result.map(t => t.id)
+      expect(ids).toContain(publishedId)
+      expect(ids).toContain(draftId)
+      expect(ids).toContain(archivedId)
+    })
+  })
+
+  describe('getGlossaryTerm — detail', () => {
+    it('viewer can access a published term by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getGlossaryTerm(publishedId)
+      expect(result).not.toBeNull()
+      expect(result!.id).toBe(publishedId)
+    })
+
+    it('viewer gets null for a draft term', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      expect(await getGlossaryTerm(draftId)).toBeNull()
+    })
+
+    it('viewer gets null for an archived term', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      expect(await getGlossaryTerm(archivedId)).toBeNull()
+    })
+
+    it('contributor can access any status by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const [a, b, c] = await Promise.all([
+        getGlossaryTerm(publishedId),
+        getGlossaryTerm(draftId),
+        getGlossaryTerm(archivedId),
+      ])
+      expect(a).not.toBeNull()
+      expect(b).not.toBeNull()
+      expect(c).not.toBeNull()
+    })
+
+    it('admin can access any status by ID', async () => {
+      mockAuth.mockResolvedValue(makeSession(admin))
+      expect(await getGlossaryTerm(draftId)).not.toBeNull()
     })
   })
 })

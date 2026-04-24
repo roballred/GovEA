@@ -155,6 +155,13 @@
       "when": 1776959536217,
       "tag": "0021_common_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1777042299114,
+      "tag": "0022_legal_payback",
+      "breakpoints": true
     }
   ]
 }

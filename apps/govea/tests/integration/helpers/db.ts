@@ -12,6 +12,7 @@ import { db } from '@/db/client'
 import {
   organizations, users, capabilities, initiatives, adrs, auditLog,
   personas, applications, strategicObjectives, principles, valueStreams, services,
+  glossaryTerms,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
@@ -307,6 +308,29 @@ export async function insertInitiative(
       organizationId: orgId,
       name: overrides.name ?? `Test Initiative ${suffix}`,
       status: overrides.status ?? 'proposed',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert a glossary term directly — used by viewer-visibility tests. */
+export async function insertGlossaryTerm(
+  orgId: string,
+  overrides: {
+    term?: string
+    status?: 'draft' | 'published' | 'archived'
+    visibility?: 'org' | 'connections' | 'instance'
+  } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(glossaryTerms)
+    .values({
+      organizationId: orgId,
+      term: overrides.term ?? `Test Term ${suffix}`,
+      definition: 'Test definition',
+      status: overrides.status ?? 'draft',
       visibility: overrides.visibility ?? 'org',
     })
     .returning()

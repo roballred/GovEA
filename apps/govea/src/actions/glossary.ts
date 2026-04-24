@@ -23,22 +23,19 @@ async function requireAdmin() {
   return session
 }
 
-export async function getGlossaryTerms(orgId: string) {
+export async function getGlossaryTerms(orgId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(orgId)
+  const isViewer = role === 'viewer'
 
   return db.query.glossaryTerms.findMany({
     where: (g, { eq, or, and, inArray }) => {
       const base = eq(g.organizationId, orgId)
       const instanceWide = eq(g.visibility, 'instance')
-      if (connectedOrgIds.length === 0) return or(base, instanceWide)
-      return or(
-        base,
-        instanceWide,
-        and(
-          inArray(g.organizationId, connectedOrgIds),
-          inArray(g.visibility, ['connections', 'instance'])
-        )
-      )
+      const statusFilter = isViewer ? eq(g.status, 'published') : undefined
+      const orgFilter = connectedOrgIds.length === 0
+        ? or(base, instanceWide)
+        : or(base, instanceWide, and(inArray(g.organizationId, connectedOrgIds), inArray(g.visibility, ['connections', 'instance'])))
+      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
     },
     with: {
       organization: true,
@@ -64,7 +61,9 @@ export async function getGlossaryTerm(id: string) {
 
   if (!term) return null
   const visible = await canReadFederatedEntity(term.organizationId, term.visibility, session.user.organizationId!)
-  return visible ? term : null
+  if (!visible) return null
+  if (session.user.role === 'viewer' && term.status !== 'published') return null
+  return term
 }
 
 export async function createGlossaryTerm(formData: FormData) {

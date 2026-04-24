@@ -7,13 +7,13 @@
  *  - User with no org binding is blocked (defense-in-depth; schema makes this
  *    impossible in normal operation but guard must handle it explicitly)
  *  - Fully provisioned, active user with org binding is allowed
- *  - Same-email-across-orgs: first record wins (documented limitation until
- *    a global unique constraint is added in the first real-tenant migration)
+ *  - Duplicate email across orgs is rejected at the DB level (#269)
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { db } from '@/db/client'
-import { users } from '@/db/schema'
+import { users, organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
 import { checkSsoProvisioning } from '@/lib/sso-guard'
 import {
   createTestOrg, createTestUser, cleanupOrg,
@@ -81,4 +81,56 @@ describe('checkSsoProvisioning', () => {
   // current schema without violating the NOT NULL constraint.
   //
   // If the schema ever allows null org bindings again, re-enable this test.
+})
+
+describe('global email uniqueness (#269)', () => {
+  let orgAId: string
+  let orgBId: string
+
+  beforeAll(async () => {
+    const [orgA, orgB] = await Promise.all([createTestOrg(), createTestOrg()])
+    orgAId = orgA.id
+    orgBId = orgB.id
+  })
+
+  afterAll(async () => {
+    await Promise.all([cleanupOrg(orgAId), cleanupOrg(orgBId)])
+  })
+
+  it('rejects inserting the same email into a second org', async () => {
+    const suffix = randomUUID().slice(0, 8)
+    const sharedEmail = `shared-${suffix}@test.example`
+
+    // First insert into org A — must succeed
+    await db.insert(users).values({
+      id: randomUUID(),
+      organizationId: orgAId,
+      email: sharedEmail,
+      name: 'User A',
+      role: 'viewer',
+      isActive: 'true',
+    })
+
+    // Second insert with same email into org B — must fail with unique violation
+    await expect(
+      db.insert(users).values({
+        id: randomUUID(),
+        organizationId: orgBId,
+        email: sharedEmail,
+        name: 'User B',
+        role: 'viewer',
+        isActive: 'true',
+      })
+    ).rejects.toThrow(/unique|duplicate/i)
+  })
+
+  it('checkSsoProvisioning resolves to exactly one user when email is globally unique', async () => {
+    const user = await createTestUser(orgAId, 'contributor')
+    const result = await checkSsoProvisioning(user.email)
+    expect(result.status).toBe('allowed')
+    if (result.status === 'allowed') {
+      expect(result.userId).toBe(user.id)
+      expect(result.organizationId).toBe(orgAId)
+    }
+  })
 })

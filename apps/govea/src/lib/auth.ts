@@ -11,6 +11,10 @@ import type { Role } from '@/lib/rbac'
 import { authConfig } from '@/lib/auth.config'
 import { checkSsoProvisioning } from '@/lib/sso-guard'
 
+// Identity model: users.email is globally unique across all organizations (#269).
+// Auth lookups by bare email (credentials provider, jwt callback) are therefore
+// unambiguous — there is at most one matching user record regardless of org.
+
 // Extended user type that includes our custom fields returned from the credentials provider
 interface AppUser {
   id: string
