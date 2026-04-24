@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 type InitiativeRow = Initiative & {
   organization: { id: string; name: string } | null
@@ -248,11 +249,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
           <DialogHeader><DialogTitle>New Initiative</DialogTitle></DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required placeholder="e.g. Replace OpenText Livelink" />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea name="description" rows={2} placeholder="Markdown supported"
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Start date" name="startDate" placeholder="e.g. Q1 FY2026" />
               <FormField label="End date" name="endDate" placeholder="e.g. Q4 FY2026" />
@@ -291,11 +288,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
           <DialogHeader><DialogTitle>Edit Initiative</DialogTitle></DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported"
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Start date" name="startDate" defaultValue={editTarget?.startDate ?? ''} />
               <FormField label="End date" name="endDate" defaultValue={editTarget?.endDate ?? ''} />

@@ -6,7 +6,7 @@ import { editPersona } from '@/actions/personas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 interface TaxonomyTerm {
   id: string
@@ -92,9 +92,9 @@ export function PersonaEditForm({
         </div>
 
         <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="pe-description">Description</Label>
-          <Textarea
+          <MarkdownEditor
             id="pe-description"
+            label="Description"
             name="description"
             defaultValue={initial.description ?? ''}
             rows={3}

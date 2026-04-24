@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 type PersonaRow = Persona & {
   organization: { id: string; name: string } | null
@@ -275,14 +276,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea
-                name="description"
-                rows={3}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={3} placeholder="Markdown supported" />
             <div className="space-y-1.5">
               <Label>Type</Label>
               <select name="type" defaultValue="" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -337,15 +331,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           </DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea
-                name="description"
-                rows={3}
-                defaultValue={editTarget?.description ?? ''}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={3} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <div className="space-y-1.5">
               <Label>Type</Label>
               <select name="type" defaultValue={editTarget?.type ?? ''} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">

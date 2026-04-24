@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "govea-dev",
-      "runtimeExecutable": "/Users/roballred/Repos/Claude/govea-app/.claude/start-worktree-dev.sh",
-      "runtimeArgs": [],
+      "runtimeExecutable": "/opt/homebrew/bin/pnpm",
+      "runtimeArgs": ["-C", "/Users/roballred/Repos/Claude/govea-app/.claude/worktrees/pedantic-albattani-03ad64", "--filter", "govea", "dev"],
       "port": 3000,
       "autoPort": false
     }

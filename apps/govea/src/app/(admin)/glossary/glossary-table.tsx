@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils'
 import { isSafeUrl } from '@/lib/url'
 import type { Role } from '@/lib/rbac'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 type GlossaryRow = GlossaryTerm & {
   organization: { id: string; name: string } | null
@@ -344,15 +345,14 @@ function TermForm({
             </div>
           )}
         </div>
-        <textarea
-          id="glossary-definition"
+        <MarkdownEditor
           name="definition"
+          id="glossary-definition"
           rows={3}
           required
           placeholder="Plain-language definition — Markdown supported"
           value={definition}
-          onChange={e => setDefinition(e.target.value)}
-          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+          onChange={setDefinition}
         />
       </div>
 
@@ -360,7 +360,7 @@ function TermForm({
         options={domainTerms.map(t => t.name)}
         defaultValue={term?.domain ?? ''}
       />
-      <TextareaField label="Notes" name="notes" rows={2} defaultValue={term?.notes ?? ''} placeholder="Usage guidance, synonyms, or anti-patterns — Markdown supported" />
+      <MarkdownEditor label="Notes" name="notes" rows={2} defaultValue={term?.notes ?? ''} placeholder="Usage guidance, synonyms, or anti-patterns — Markdown supported" />
       <StatusVisibilityFields defaultStatus={term?.status ?? 'draft'} defaultVisibility={term?.visibility ?? 'org'} />
 
       {/* Reference Sources */}
@@ -443,32 +443,6 @@ function FormField({ label, ...props }: { label: string } & React.InputHTMLAttri
   )
 }
 
-function TextareaField({
-  label, name, placeholder, defaultValue, rows = 3, required,
-}: {
-  label: string
-  name: string
-  placeholder?: string
-  defaultValue?: string
-  rows?: number
-  required?: boolean
-}) {
-  const id = `glossary-${name}`
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <textarea
-        id={id}
-        name={name}
-        rows={rows}
-        required={required}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-      />
-    </div>
-  )
-}
 
 function StatusVisibilityFields({
   defaultStatus, defaultVisibility,

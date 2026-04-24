@@ -111,17 +111,20 @@ describe('global email uniqueness (#269)', () => {
       isActive: 'true',
     })
 
-    // Second insert with same email into org B — must fail with unique violation
-    await expect(
-      db.insert(users).values({
-        id: randomUUID(),
-        organizationId: orgBId,
-        email: sharedEmail,
-        name: 'User B',
-        role: 'viewer',
-        isActive: 'true',
-      })
-    ).rejects.toThrow(/unique|duplicate/i)
+    // Second insert with same email into org B — must fail with unique violation.
+    // drizzle@0.45.x wraps DB errors as "Failed query: ..."; the Postgres unique
+    // constraint text is in error.cause, so we check the full error chain.
+    const insertError = await db.insert(users).values({
+      id: randomUUID(),
+      organizationId: orgBId,
+      email: sharedEmail,
+      name: 'User B',
+      role: 'viewer',
+      isActive: 'true',
+    }).catch((e: unknown) => e)
+    expect(insertError).toBeInstanceOf(Error)
+    const errText = [(insertError as Error).message, String((insertError as Error).cause ?? '')].join(' ')
+    expect(errText).toMatch(/unique|duplicate/i)
   })
 
   it('checkSsoProvisioning resolves to exactly one user when email is globally unique', async () => {

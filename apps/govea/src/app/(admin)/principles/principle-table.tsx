@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import type { TaxonomyTerm } from '@/db/schema'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 type PrincipleRow = Principle & {
   organization: { id: string; name: string } | null
@@ -279,10 +280,10 @@ export function PrincipleTable({ principles, adrs, capabilities, principleTypes,
           </DialogHeader>
           <form action={handleCreate} className="space-y-4">
             <FormField label="Name" name="name" required placeholder="e.g. SaaS First" />
-            <TextareaField label="Description" name="description" rows={2} placeholder="One-sentence summary — Markdown supported" />
-            <TextareaField label="Statement" name="title" rows={2} placeholder="Full imperative statement e.g. Prefer SaaS for all new application acquisitions — Markdown supported" />
-            <TextareaField label="Rationale" name="rationale" rows={3} placeholder="Why this principle exists and what problem it addresses — Markdown supported" />
-            <TextareaField label="Implications" name="implications" rows={3} placeholder="What this means in practice — constraints, expectations, and examples — Markdown supported" />
+            <MarkdownEditor label="Description" name="description" rows={2} placeholder="One-sentence summary — Markdown supported" />
+            <MarkdownEditor label="Statement" name="title" rows={2} placeholder="Full imperative statement e.g. Prefer SaaS for all new application acquisitions — Markdown supported" />
+            <MarkdownEditor label="Rationale" name="rationale" rows={3} placeholder="Why this principle exists and what problem it addresses — Markdown supported" />
+            <MarkdownEditor label="Implications" name="implications" rows={3} placeholder="What this means in practice — constraints, expectations, and examples — Markdown supported" />
             <LinkedItemsFields
               adrs={adrs}
               capabilities={capabilities}
@@ -307,10 +308,10 @@ export function PrincipleTable({ principles, adrs, capabilities, principleTypes,
           </DialogHeader>
           <form action={handleEdit} className="space-y-4">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
-            <TextareaField label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
-            <TextareaField label="Statement" name="title" rows={2} defaultValue={editTarget?.title ?? ''} placeholder="Markdown supported" />
-            <TextareaField label="Rationale" name="rationale" rows={3} defaultValue={editTarget?.rationale ?? ''} placeholder="Markdown supported" />
-            <TextareaField label="Implications" name="implications" rows={3} defaultValue={editTarget?.implications ?? ''} placeholder="Markdown supported" />
+            <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
+            <MarkdownEditor label="Statement" name="title" rows={2} defaultValue={editTarget?.title ?? ''} placeholder="Markdown supported" />
+            <MarkdownEditor label="Rationale" name="rationale" rows={3} defaultValue={editTarget?.rationale ?? ''} placeholder="Markdown supported" />
+            <MarkdownEditor label="Implications" name="implications" rows={3} defaultValue={editTarget?.implications ?? ''} placeholder="Markdown supported" />
             <LinkedItemsFields
               adrs={adrs}
               capabilities={capabilities}
@@ -361,30 +362,6 @@ function FormField({ label, ...props }: { label: string } & React.InputHTMLAttri
   )
 }
 
-function TextareaField({
-  label, name, placeholder, defaultValue, rows = 3,
-}: {
-  label: string
-  name: string
-  placeholder?: string
-  defaultValue?: string
-  rows?: number
-}) {
-  const id = `principle-${name}`
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <textarea
-        id={id}
-        name={name}
-        rows={rows}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-      />
-    </div>
-  )
-}
 
 function CheckboxList({
   label, name, items, selectedIds,
