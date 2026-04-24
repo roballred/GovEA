@@ -12,41 +12,46 @@ Recent merges strengthened the product in seven areas:
 - Guided stakeholder answers are now shipped through `/answers?q=`, connected from search results, and filtered by viewer publication rules.
 - The roadmap now has an executive timeline view in addition to the existing grid, and the viewer filter bug on roadmap data was fixed.
 - Dialog naming and ADR tooltip consistency have merged, closing the last visible UX cleanup item from the prior shortlist.
+- PR #268 merged the typed-principle and markdown-rendering slice, so principle sets and prose rendering are now part of the shipped baseline.
 - Mission-to-technology traceability, repository-wide search, and viewer visibility rules remain core shipped foundations.
 - Instance administration is a usable console with org inventory, user management, audit view, org suspension, and audited break-glass sessions.
 - Framework Alignment is documented as an optional overlay, but implementation has not started.
 
 New signal since the prior grooming pass:
 
-- PR #263 merged and closed #253. Dialog title consistency is no longer a top-five backlog item.
-- PR #265 is open and mergeable for #262, adding taxonomy-backed principle sets for Architecture and Data.
-- Issue #266 surfaced an important taxonomy safety gap: deleting a Principle Type can orphan existing principles because the reference is stored as plain text.
+- PR #268 merged and superseded PR #265, so #262 is now shipped and docs should treat taxonomy-backed principle sets as implemented.
+- Issue #266 is now a true post-merge integrity gap: deleting a Principle Type can orphan existing principles because the reference is stored as plain text.
+- Four fresh security and tenancy issues now dominate near-term priority: bare-email auth lookup across orgs (#269), viewer access to unpublished glossary content (#270), the Next.js App Router DoS advisory (#271), and unsafe glossary source URLs (#272).
+- Issue #273 is the clear UX follow-up to the markdown-rendering merge: authoring still uses plain textareas even though display now supports markdown.
 - Issue #258 still appears open even though its body says it was fixed in PR #257; close it after merge verification if no regression remains.
-- Stakeholder-facing visuals are now useful enough for demos, but further leadership-facing work should be validated against real stakeholder confidence needs.
+- Stakeholder-facing visuals are now useful enough for demos, but the immediate backlog should favor security, tenant-boundary correctness, and content-integrity fixes before more demo-surface expansion.
 
-The next work should finish the principle-set slice safely, then move into framework alignment and stakeholder trust only where the scope is narrow and traceable.
+The next work should first harden security and tenancy boundaries around the now-richer content model, then close the taxonomy-integrity gap introduced by the shipped principle-type work.
 
 ## Top 5 Next Things To Do
 
 | Rank | Recommended next thing | Why now | Primary issue(s) / PR |
 |---|---|---|---|
-| 1 | Review and merge typed principle sets, then handle taxonomy delete safety | PR #265 closes the principle-set design gap, but #266 shows the follow-up safety work needed before admins can freely manage Principle Type taxonomy values | PR #265, #262, #266 |
-| 2 | Define and seed the TOGAF overlay demo path before implementation | The core demo now has richer content and stakeholder views; framework alignment is the next credibility story, but it needs a constrained first slice before schema/UI work starts | #245, #247, related #89 |
-| 3 | Validate stakeholder demo personas and confidence needs | Guided answers and the executive timeline shipped from assumed stakeholder needs; before adding more leadership visuals, validate what Department Director, Budget/Performance, and Elected Official users actually trust | #216, #220 |
-| 4 | Ship the next stakeholder trust visual: repository confidence summary | After guided answers and the roadmap timeline, the next adoption gap is explaining whether the repository is current enough to trust without exposing internal maintenance noise | #220, related #219 |
-| 5 | Decide the next EA analysis slice: application risk, lifecycle, or rationalisation | The portfolio is strong as inventory; the next product value step is decision support that helps leaders see risk, modernization pressure, and investment tradeoffs | #219, #92 |
+| 1 | Fix multi-org auth identity binding | #269 is the highest-risk tenant-boundary issue in the repo: auth and SSO resolve users by bare email even though uniqueness is only guaranteed per organization | #269 |
+| 2 | Enforce published-only glossary access for viewers | #270 breaks the Viewer contract and leaks unpublished shared-reference content, which is especially visible now that glossary content is more central to stakeholder-facing views | #270 |
+| 3 | Patch the Next.js App Router security advisory | #271 is a framework-level DoS fix with a known patched target release, so it is a straightforward security-hardening move with broad platform value | #271 |
+| 4 | Validate glossary source URLs on write | #272 is a stored click-through script-injection vector; it should be closed before glossary usage expands further | #272 |
+| 5 | Add taxonomy delete safety for in-use principle types | #266 is the main post-merge integrity gap from the shipped principle-set work and should be fixed before admins manage principle vocabularies more aggressively | #266 |
 
 ## Product Manager Notes
 
-- Treat PR #265 as the immediate review item. Validate taxonomy seeding, edit pre-selection, type badges, and the migration note before merge.
-- Treat #266 as a near-immediate follow-up to #265. Blocking deletion for in-use taxonomy terms is safer than silently clearing or rewriting principle types.
-- For TOGAF, keep the first implementation slice narrow: framework mapping plus one TOGAF-aligned report or demo path is enough to test the overlay story.
-- Do not keep building leadership visuals from assumptions alone. #216 should inform whether #220 repository confidence or #219 application risk portfolio comes next.
+- Treat #269 as the main product decision item, not just a bug. The team needs to choose between global unique identity and org-qualified sign-in, then make schema, login UX, and docs agree.
+- Treat #270 and #272 as trust-and-safety fixes for the glossary slice. The glossary is now shared reference content, so visibility and outbound-link hygiene need to be explicit.
+- Treat #271 as the cleanest platform-hardening task: patch, refresh lockfile, and run build/lint plus targeted auth and server-action regression checks.
+- Treat #266 as the principal non-security follow-up. Blocking deletion for in-use taxonomy terms is safer than silently clearing or rewriting principle types.
+- Keep #273 close behind the top five. Markdown display shipped, but better authoring should wait until the current security and integrity work is closed.
 - If #258 was verified through PR #257, close it as fixed so open bugs reflect current reality.
 
 ## Documentation Follow-up
 
 This grooming pass also keeps public docs aligned with current repo state:
 
-- `docs/product-priorities.md`: removes merged #253 from the active top-five list and adds #265/#266 as the immediate principle-set thread.
-- `README.md`: active work now reflects typed principle review and taxonomy safety rather than already-merged dialog consistency work.
+- `docs/product-priorities.md`: replaces the stale PR-#265 review framing with the post-#268 security and integrity shortlist.
+- `README.md`: treats taxonomy-backed principle sets and markdown-rendered detail pages as shipped, and updates active work to the new hardening priorities.
+- `capabilities.md`: marks principles as taxonomy-backed and content display as markdown-rendered so the product summary matches the merged implementation.
+- `docs/data-model.md`: documents that `principles.principle_type` is taxonomy-backed text and therefore depends on application-level integrity checks.

@@ -57,7 +57,7 @@ Foundational content authoring and lifecycle capabilities shared across all EA c
 
 | Capability | Status | Description |
 |---|---|---|
-| Content Authoring | Implemented | Create, edit, and save content items |
+| Content Authoring | Implemented | Create, edit, and save content items, including markdown-authored long-text fields |
 | Content Workflow | Partially implemented | Draft -> Published -> Archived is established for core content types, but planning entities still use their own lifecycle states |
 | Taxonomy Management | Implemented | Hierarchical org-scoped taxonomy terms for domains, persona types, persona tags, and other controlled vocabularies |
 | Content Relationships | Implemented | Link content items; enforce GovEA traceability rules at publish time |
@@ -80,7 +80,7 @@ The structured inventory of the organization's architecture objects.
 | Capability Map | Implemented | Define business capabilities organized by domain; linked to applications, personas, principles, and decisions |
 | Personas | Implemented | Define the people GovEA serves; linked to capabilities and value streams |
 | Architecture Decision Records (ADRs) | Partially implemented | Basic ADR CRUD, detail pages, supersession, and cross-linking exist, but the overall authoring experience is still maturing relative to the stronger core portfolio records |
-| Principles | Implemented | Capture architecture principles and link them to capabilities and decisions; typed principle sets such as Architecture and Data are planned but not yet modeled |
+| Principles | Implemented | Capture architecture principles, link them to capabilities and decisions, and classify them with taxonomy-backed principle sets |
 | Glossary | Implemented | Maintain shared terminology to support consistent EA language across the repository |
 | Value Streams | Implemented | Define value streams with ordered stages; link to capabilities and personas |
 
@@ -132,7 +132,7 @@ How content is presented to authenticated users and, optionally, the public.
 | Guided Answer Views | Implemented | `/answers?q=` assembles capabilities, services, technology, active initiatives, and strategic objectives into a plain-language stakeholder answer with relevance explanations |
 | Relationship Navigation | Implemented | Navigate between linked entities (capability <-> application <-> persona) |
 | Value Stream Display | Implemented | Visualize value stream stages with linked capabilities |
-| Content Display | Implemented | Detail pages with status badges, metadata, linked records, and contributor-friendly edit affordances on shipped surfaces |
+| Content Display | Implemented | Detail pages with status badges, metadata, linked records, contributor-friendly edit affordances, and markdown-rendered narrative fields on shipped surfaces |
 | Product Tour | Implemented | Role-aware guided tour covering the main dashboard, architecture, portfolio, strategy, search, and role-specific workflows |
 | Public / Authenticated Views | Not implemented | Opt-in public access to published content without login |
 | Repository Confidence Summary | Not implemented | Plain-language freshness and trust cue for stakeholder-facing views |
