@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils'
 import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
   organization: { id: string; name: string } | null
@@ -259,23 +260,10 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea name="description" rows={2} placeholder="Markdown supported" className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue="" />
-            <div className="space-y-1.5">
-              <Label htmlFor="create-behaviors">Behaviors</Label>
-              <textarea id="create-behaviors" name="behaviors" rows={4}
-                placeholder="Markdown supported — use - bullets, **bold**, etc."
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="create-rules">Rules</Label>
-              <textarea id="create-rules" name="rules" rows={3}
-                placeholder="Markdown supported — use - bullets, **bold**, etc."
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Behaviors" name="behaviors" id="create-behaviors" rows={4} placeholder="Markdown supported — use - bullets, **bold**, etc." />
+            <MarkdownEditor label="Rules" name="rules" id="create-rules" rows={3} placeholder="Markdown supported — use - bullets, **bold**, etc." />
             <div className="space-y-1.5">
               <Label>Personas</Label>
               <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">
@@ -322,25 +310,10 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
           </DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea name="description" rows={2} placeholder="Markdown supported" defaultValue={editTarget?.description ?? ''} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue={editTarget?.domain ?? ''} />
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-behaviors">Behaviors</Label>
-              <textarea id="edit-behaviors" name="behaviors" rows={4}
-                placeholder="Markdown supported — use - bullets, **bold**, etc."
-                defaultValue={editTarget?.behaviors ?? ''}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-rules">Rules</Label>
-              <textarea id="edit-rules" name="rules" rows={3}
-                placeholder="Markdown supported — use - bullets, **bold**, etc."
-                defaultValue={editTarget?.rules ?? ''}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Behaviors" name="behaviors" id="edit-behaviors" rows={4} defaultValue={editTarget?.behaviors ?? ''} placeholder="Markdown supported — use - bullets, **bold**, etc." />
+            <MarkdownEditor label="Rules" name="rules" id="edit-rules" rows={3} defaultValue={editTarget?.rules ?? ''} placeholder="Markdown supported — use - bullets, **bold**, etc." />
             <div className="space-y-1.5">
               <Label>Personas</Label>
               <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">

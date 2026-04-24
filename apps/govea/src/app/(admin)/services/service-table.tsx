@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 type ServiceRow = Pick<Service, 'id' | 'name' | 'description' | 'serviceOwner' | 'channels' | 'status' | 'visibility' | 'organizationId'> & {
   organization: { id: string; name: string } | null
@@ -240,10 +241,7 @@ export function ServiceTable({ services, personas, role }: Props) {
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea name="description" rows={2} placeholder="Markdown supported" className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" />
             <ChannelCheckboxes />
             <PersonaCheckboxes personas={personas} selectedIds={[]} />
@@ -264,10 +262,7 @@ export function ServiceTable({ services, personas, role }: Props) {
           </DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <textarea name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
-            </div>
+            <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" defaultValue={editTarget?.serviceOwner ?? ''} />
             <ChannelCheckboxes selected={editTarget?.channels ?? []} />
             <PersonaCheckboxes personas={personas} selectedIds={editTarget?.servicePersonas.map(sp => sp.persona.id) ?? []} />

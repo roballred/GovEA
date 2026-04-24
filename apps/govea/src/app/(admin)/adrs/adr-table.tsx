@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import { MarkdownEditor } from '@/components/markdown-editor'
 
 type ADRRow = ADR & {
   organization: { id: string; name: string } | null
@@ -235,9 +236,9 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
                 <FormField label="Title" name="title" required placeholder="e.g. Use Next.js App Router for all routing" />
               </div>
             </div>
-            <TextareaField label="Context" name="context" placeholder="What is the situation and why does this decision need to be made? — Markdown supported" />
-            <TextareaField label="Decision" name="decision" placeholder="What was decided? — Markdown supported" />
-            <TextareaField label="Consequences" name="consequences" placeholder="What are the resulting outcomes, tradeoffs, and risks? — Markdown supported" />
+            <MarkdownEditor label="Context" name="context" placeholder="What is the situation and why does this decision need to be made? — Markdown supported" />
+            <MarkdownEditor label="Decision" name="decision" placeholder="What was decided? — Markdown supported" />
+            <MarkdownEditor label="Consequences" name="consequences" placeholder="What are the resulting outcomes, tradeoffs, and risks? — Markdown supported" />
             <LinkedItemsFields
               capabilities={capabilities}
               applications={applications}
@@ -276,9 +277,9 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
                 <FormField label="Title" name="title" required defaultValue={editTarget?.title} />
               </div>
             </div>
-            <TextareaField label="Context" name="context" defaultValue={editTarget?.context ?? ''} placeholder="Markdown supported" />
-            <TextareaField label="Decision" name="decision" defaultValue={editTarget?.decision ?? ''} placeholder="Markdown supported" />
-            <TextareaField label="Consequences" name="consequences" defaultValue={editTarget?.consequences ?? ''} placeholder="Markdown supported" />
+            <MarkdownEditor label="Context" name="context" defaultValue={editTarget?.context ?? ''} placeholder="Markdown supported" />
+            <MarkdownEditor label="Decision" name="decision" defaultValue={editTarget?.decision ?? ''} placeholder="Markdown supported" />
+            <MarkdownEditor label="Consequences" name="consequences" defaultValue={editTarget?.consequences ?? ''} placeholder="Markdown supported" />
             <LinkedItemsFields
               capabilities={capabilities}
               applications={applications}
@@ -335,29 +336,6 @@ function FormField({ label, ...props }: { label: string } & React.InputHTMLAttri
   )
 }
 
-function TextareaField({
-  label, name, placeholder, defaultValue,
-}: {
-  label: string
-  name: string
-  placeholder?: string
-  defaultValue?: string
-}) {
-  const id = `adr-${name}`
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <textarea
-        id={id}
-        name={name}
-        rows={3}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-      />
-    </div>
-  )
-}
 
 function LinkedItemsFields({
   capabilities, applications, initiatives, objectives,
