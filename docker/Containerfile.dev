@@ -15,6 +15,12 @@ RUN pnpm install --frozen-lockfile
 FROM base AS dev
 WORKDIR /app
 
+# Pre-download pnpm so corepack doesn't fetch it at container startup.
+# The deps stage downloads it too, but its cache lives in /root/.cache
+# which is not copied across stages, causing a runtime download on every
+# pnpm invocation in the entrypoint (migrate, seed, dev).
+RUN corepack prepare pnpm@9.0.0 --activate
+
 # Copy installed node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/govea/node_modules ./apps/govea/node_modules
