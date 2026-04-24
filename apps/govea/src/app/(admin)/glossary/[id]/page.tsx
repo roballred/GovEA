@@ -4,6 +4,7 @@ import { getGlossaryTerm } from '@/actions/glossary'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { MarkdownContent } from '@/components/markdown-content'
+import { isSafeUrl } from '@/lib/url'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -64,8 +65,8 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
             <h2 className="text-lg font-semibold">Definition</h2>
             {term.definitionSource && (
               <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border-blue-200">
-                {term.definitionSourceUrl
-                  ? <a href={term.definitionSourceUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">Source: {term.definitionSource}</a>
+                {isSafeUrl(term.definitionSourceUrl)
+                  ? <a href={term.definitionSourceUrl!} target="_blank" rel="noopener noreferrer" className="hover:underline">Source: {term.definitionSource}</a>
                   : <>Source: {term.definitionSource}</>
                 }
               </span>
@@ -89,8 +90,8 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
                 <div key={source.id} className="rounded-md border p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
-                      {source.url
-                        ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{source.name}</a>
+                      {isSafeUrl(source.url)
+                        ? <a href={source.url!} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{source.name}</a>
                         : source.name
                       }
                     </span>

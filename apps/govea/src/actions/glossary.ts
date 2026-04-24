@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
+import { validateWebUrl } from '@/lib/url'
 
 async function requireContributor() {
   const session = await auth()
@@ -73,7 +74,7 @@ export async function createGlossaryTerm(formData: FormData) {
   const term = formData.get('term') as string
   const definition = formData.get('definition') as string
   const definitionSource = (formData.get('definitionSource') as string) || null
-  const definitionSourceUrl = (formData.get('definitionSourceUrl') as string) || null
+  const definitionSourceUrl = validateWebUrl((formData.get('definitionSourceUrl') as string) || null)
   const domain = (formData.get('domain') as string) || null
   const notes = (formData.get('notes') as string) || null
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
@@ -87,13 +88,13 @@ export async function createGlossaryTerm(formData: FormData) {
     updatedBy: session.user.id,
   }).returning()
 
-  // Insert reference sources if provided
+  // Insert reference sources if provided — validate each URL before storage
   const sourcesJson = formData.get('sources') as string | null
   if (sourcesJson) {
     const sources: { name: string; url?: string; definition: string }[] = JSON.parse(sourcesJson)
     if (sources.length > 0) {
       await db.insert(glossaryTermSources).values(
-        sources.map(s => ({ termId: entry.id, name: s.name, url: s.url ?? null, definition: s.definition }))
+        sources.map(s => ({ termId: entry.id, name: s.name, url: validateWebUrl(s.url ?? null), definition: s.definition }))
       )
     }
   }
@@ -115,7 +116,7 @@ export async function editGlossaryTerm(termId: string, formData: FormData) {
   const term = formData.get('term') as string
   const definition = formData.get('definition') as string
   const definitionSource = (formData.get('definitionSource') as string) || null
-  const definitionSourceUrl = (formData.get('definitionSourceUrl') as string) || null
+  const definitionSourceUrl = validateWebUrl((formData.get('definitionSourceUrl') as string) || null)
   const domain = (formData.get('domain') as string) || null
   const notes = (formData.get('notes') as string) || null
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
@@ -131,14 +132,14 @@ export async function editGlossaryTerm(termId: string, formData: FormData) {
     updatedAt: new Date(),
   }).where(and(eq(glossaryTerms.id, termId), eq(glossaryTerms.organizationId, orgId)))
 
-  // Replace reference sources: delete all existing, re-insert
+  // Replace reference sources: delete all existing, re-insert — validate each URL
   const sourcesJson = formData.get('sources') as string | null
   if (sourcesJson !== null) {
     await db.delete(glossaryTermSources).where(eq(glossaryTermSources.termId, termId))
     const sources: { name: string; url?: string; definition: string }[] = JSON.parse(sourcesJson)
     if (sources.length > 0) {
       await db.insert(glossaryTermSources).values(
-        sources.map(s => ({ termId, name: s.name, url: s.url ?? null, definition: s.definition }))
+        sources.map(s => ({ termId, name: s.name, url: validateWebUrl(s.url ?? null), definition: s.definition }))
       )
     }
   }
