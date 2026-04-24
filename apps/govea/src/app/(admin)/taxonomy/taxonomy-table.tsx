@@ -16,12 +16,14 @@ interface Props {
   types: TaxonomyTerm[]
   values: TaxonomyTerm[]
   role: Role
+  /** termId → number of principles that reference that term's slug as their principleType */
+  principleTypeUsage: Record<string, number>
 }
 
 type EditTarget = { term: TaxonomyTerm; kind: 'type' | 'value' }
-type DeleteTarget = { term: TaxonomyTerm; valueCount: number }
+type DeleteTarget = { term: TaxonomyTerm; valueCount: number; principleCount: number }
 
-export function TaxonomyTable({ types, values, role }: Props) {
+export function TaxonomyTable({ types, values, role, principleTypeUsage }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -149,7 +151,13 @@ export function TaxonomyTable({ types, values, role }: Props) {
                       <Button
                         variant="ghost" size="sm"
                         className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteTarget({ term: type, valueCount: typeValues.length })}
+                        onClick={() => {
+                          // For the "Principle Type" parent, sum usage across all its children
+                          const principleCount = type.slug === 'principle-type'
+                            ? typeValues.reduce((sum, v) => sum + (principleTypeUsage[v.id] ?? 0), 0)
+                            : 0
+                          setDeleteTarget({ term: type, valueCount: typeValues.length, principleCount })
+                        }}
                         disabled={isPending}
                       >
                         Delete
@@ -195,7 +203,7 @@ export function TaxonomyTable({ types, values, role }: Props) {
                           <Button
                             variant="ghost" size="sm"
                             className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => setDeleteTarget({ term: val, valueCount: 0 })}
+                            onClick={() => setDeleteTarget({ term: val, valueCount: 0, principleCount: principleTypeUsage[val.id] ?? 0 })}
                             disabled={isPending}
                           >
                             Delete
@@ -280,10 +288,20 @@ export function TaxonomyTable({ types, values, role }: Props) {
                 This type has <strong>{deleteTarget?.valueCount} value{deleteTarget?.valueCount !== 1 ? 's' : ''}</strong> which will also be deleted.
               </p>
             )}
+            {(deleteTarget?.principleCount ?? 0) > 0 && (
+              <p className="text-destructive bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2">
+                <strong>{deleteTarget?.principleCount} principle{deleteTarget?.principleCount !== 1 ? 's' : ''}</strong>{' '}
+                use this type. Reassign them to a different type before deleting.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isPending || (deleteTarget?.principleCount ?? 0) > 0}
+            >
               {isPending ? 'Deleting…' : 'Delete'}
             </Button>
           </DialogFooter>
