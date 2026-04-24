@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { isSafeUrl } from '@/lib/url'
 import type { Role } from '@/lib/rbac'
 
 type GlossaryRow = GlossaryTerm & {
@@ -335,7 +336,7 @@ function TermForm({
           {defSource && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span>Source:</span>
-              {defSourceUrl
+              {isSafeUrl(defSourceUrl)
                 ? <a href={defSourceUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">{defSource}</a>
                 : <span className="font-medium">{defSource}</span>
               }
