@@ -1,8 +1,8 @@
 'use server'
 
 import { db } from '@/db/client'
-import { taxonomyTerms } from '@/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { taxonomyTerms, principles } from '@/db/schema'
+import { eq, and, isNull, inArray, count } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { assertOwnership } from '@/lib/federation'
@@ -66,6 +66,46 @@ export async function getTaxonomyTermsWithChildren(organizationId: string) {
   const values = allTerms.filter(t => t.parentId !== null)
 
   return { types, values }
+}
+
+/**
+ * Returns a map of taxonomy term id → count of principles using that term as their
+ * principleType, for all values under the "Principle Type" taxonomy type.
+ *
+ * Used by the taxonomy management page to show blocking warnings before deletion.
+ * Returns an empty object if the "Principle Type" type doesn't exist or has no values.
+ */
+export async function getPrincipleTypeValueUsage(organizationId: string): Promise<Record<string, number>> {
+  const principleType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq, and, isNull }) =>
+      and(eq(t.organizationId, organizationId), isNull(t.parentId), eq(t.slug, 'principle-type')),
+  })
+  if (!principleType) return {}
+
+  const children = await db.query.taxonomyTerms.findMany({
+    where: (t, { eq, and }) =>
+      and(eq(t.organizationId, organizationId), eq(t.parentId, principleType.id)),
+  })
+  if (children.length === 0) return {}
+
+  const slugToId = Object.fromEntries(children.map(c => [c.slug, c.id]))
+
+  const rows = await db
+    .select({ principleType: principles.principleType, total: count() })
+    .from(principles)
+    .where(and(
+      eq(principles.organizationId, organizationId),
+      inArray(principles.principleType, children.map(c => c.slug))
+    ))
+    .groupBy(principles.principleType)
+
+  // Map from termId → count, defaulting to 0 for values with no principles
+  const result: Record<string, number> = Object.fromEntries(children.map(c => [c.id, 0]))
+  for (const row of rows) {
+    const id = slugToId[row.principleType]
+    if (id) result[id] = row.total
+  }
+  return result
 }
 
 // ── Writes ────────────────────────────────────────────────────────────────────
@@ -134,6 +174,50 @@ export async function deleteTaxonomyTerm(termId: string) {
     where: eq(taxonomyTerms.id, termId),
   })
   assertOwnership(existing?.organizationId, orgId)
+
+  // ── Principle-type safety guard ───────────────────────────────────────────
+  // principles.principleType stores taxonomy slugs as plain text (no FK).
+  // Deleting a principle-type value or its parent type would silently orphan
+  // any principles referencing those slugs. Block deletion if any are in use.
+
+  if (existing?.parentId !== null && existing) {
+    // Deleting a value — check if its parent is the "Principle Type" type
+    const parent = await db.query.taxonomyTerms.findFirst({
+      where: eq(taxonomyTerms.id, existing.parentId!),
+    })
+    if (parent?.slug === 'principle-type') {
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(principles)
+        .where(and(eq(principles.organizationId, orgId), eq(principles.principleType, existing.slug)))
+      if (total > 0) {
+        throw new Error(
+          `Cannot delete "${existing.name}" — ${total} principle${total !== 1 ? 's' : ''} use this type. Reassign them before deleting.`
+        )
+      }
+    }
+  }
+
+  if (existing?.parentId === null && existing?.slug === 'principle-type') {
+    // Deleting the "Principle Type" parent — check all its children
+    const children = await db.query.taxonomyTerms.findMany({
+      where: and(eq(taxonomyTerms.parentId, termId), eq(taxonomyTerms.organizationId, orgId)),
+    })
+    if (children.length > 0) {
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(principles)
+        .where(and(
+          eq(principles.organizationId, orgId),
+          inArray(principles.principleType, children.map(c => c.slug))
+        ))
+      if (total > 0) {
+        throw new Error(
+          `Cannot delete "Principle Type" — ${total} principle${total !== 1 ? 's' : ''} use one of its values. Reassign them before deleting.`
+        )
+      }
+    }
+  }
 
   // When deleting a type, also delete its values (not promote — orphaned values are useless)
   // When deleting a value, just delete it
