@@ -152,27 +152,7 @@ GovEA is free and open source. There is no licensing fee. The real cost is staff
 - **Ongoing maintenance:** periodic updates, user provisioning, and backup verification; no dedicated admin role required
 - **Hosting:** runs on any server or container platform; no proprietary cloud dependency
 
-### Why not SharePoint, Confluence, or Notion?
 
-Those tools are general-purpose document repositories. They can store EA content, but they cannot enforce the relationships that make EA useful:
-
-- They cannot require that an application links to a capability, or that a capability links to a persona
-- They have no concept of a traceability chain from strategy to people to systems
-- They produce content for whoever created it, not outputs shaped for department directors or elected officials
-- Taxonomy and classification are ad hoc; there is no shared model across the organization
-
-### Why not an existing EA tool (LeanIX, Ardoq, MEGA HOPEX, etc.)?
-
-Commercial EA tools are designed for large enterprise architecture practices. They are expensive, complex, and assume a dedicated EA team with formal training. For state and local government agencies:
-
-- Licensing costs are prohibitive for agencies with no EA budget
-- Tool complexity discourages adoption; EA content stays current only when it is easy to maintain
-- Outputs are designed for architects, not for elected officials or department directors
-- On-prem or air-gapped deployment is difficult or unavailable
-
-GovEA is designed specifically for the agencies commercial tools ignore: 500-2,000 employees, 1-3 person IT team, no EA budget, needing something that works without a consultant.
-
----
 
 ## Contributing
 
