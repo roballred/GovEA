@@ -20,6 +20,8 @@ import {
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { FrameworkMappingPanel } from '@/components/framework-mapping-panel'
+import { getFrameworkMappings } from '@/actions/framework-mappings'
 import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
 import { MarkdownContent } from '@/components/markdown-content'
 import {
@@ -62,7 +64,9 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const canMutate = editor && capability.organizationId === orgId
   const canApproveCrossOrg = isAdmin(session.user) && capability.organizationId === orgId
 
-  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks] = editor
+  const frameworkOverlay = isModuleEnabled(enabledModules, 'framework-overlay')
+
+  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks, frameworkMappings] = editor
     ? await Promise.all([
         getPersonas(orgId),
         getApplications(orgId),
@@ -70,8 +74,9 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         getInitiatives(orgId),
         getADRs(orgId),
         getCrossOrgLinkContext('capability', id),
+        frameworkOverlay ? getFrameworkMappings('capability', id) : Promise.resolve([]),
       ])
-    : [[], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }]
+    : [[], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }, []]
 
   const addPersona = linkCapabilityPersona.bind(null, id)
   const removePersona = unlinkCapabilityPersona.bind(null, id)
@@ -238,6 +243,15 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             id: principle.id, name: principle.name, href: `/principles/${principle.id}`,
           }))}
           canEdit={false}
+        />
+      )}
+
+      {frameworkOverlay && (editor || frameworkMappings.length > 0) && (
+        <FrameworkMappingPanel
+          entityType="capability"
+          entityId={id}
+          mappings={frameworkMappings}
+          canMutate={canMutate}
         />
       )}
 

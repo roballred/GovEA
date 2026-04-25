@@ -5,6 +5,7 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
 import { ModuleToggles } from '@/components/module-toggles'
+import { FrameworkToggles } from '@/components/framework-toggles'
 import { isAdmin } from '@/lib/rbac'
 
 export default async function SettingsPage() {
@@ -47,6 +48,19 @@ export default async function SettingsPage() {
           </p>
         </div>
         <ModuleToggles initialModules={enabledModules} />
+      </section>
+
+      <hr />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Framework Alignment</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Optional overlays that add framework-specific labels and reports to your repository.
+            Disabled by default — enabling an overlay never changes existing content.
+          </p>
+        </div>
+        <FrameworkToggles initialModules={enabledModules} />
       </section>
     </div>
   )
