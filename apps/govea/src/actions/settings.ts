@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations } from '@/db/schema'
+import { organizations, type ConfidenceSettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
@@ -76,6 +76,47 @@ export async function setModuleEnabled(key: ModuleKey, enabled: boolean) {
     organizationId: orgId,
     before: { [key]: before[key] ?? true },
     after: { [key]: enabled },
+  })
+
+  revalidatePath('/', 'layout')
+}
+
+export async function updateConfidenceSettings(input: ConfidenceSettings) {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
+
+  const { enabled, narrative, suppressBelowPercent } = input
+
+  if (suppressBelowPercent < 0 || suppressBelowPercent > 100) {
+    throw new Error('suppressBelowPercent must be between 0 and 100')
+  }
+
+  const orgId = session.user.organizationId!
+
+  const before = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: { confidenceSettings: true },
+  })
+
+  const next: ConfidenceSettings = {
+    enabled,
+    narrative: narrative?.trim() || null,
+    suppressBelowPercent,
+  }
+
+  await db.update(organizations)
+    .set({ confidenceSettings: next, updatedAt: new Date() })
+    .where(eq(organizations.id, orgId))
+
+  await writeAuditLog({
+    action: 'settings.confidence_updated',
+    entityType: 'organization',
+    entityId: orgId,
+    userId: session.user.id,
+    organizationId: orgId,
+    before: { confidenceSettings: before?.confidenceSettings },
+    after: { confidenceSettings: next },
   })
 
   revalidatePath('/', 'layout')

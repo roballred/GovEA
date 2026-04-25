@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { CoverageTileLabel } from './coverage-tile-label'
 import { DomainBadge } from '@/components/domain-badge'
+import { ConfidenceSummary } from '@/components/confidence-summary'
 import Link from 'next/link'
 
 const REVIEW_WINDOW_DAYS = 90
@@ -173,6 +174,8 @@ export default async function DashboardPage() {
           Welcome back{session.user.name ? `, ${session.user.name}` : ''}.
         </p>
       </div>
+
+      <ConfidenceSummary orgId={orgId} />
 
       {/* Coverage */}
       <div>
