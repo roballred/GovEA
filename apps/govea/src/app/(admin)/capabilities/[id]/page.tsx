@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getCapability, markCapabilityReviewed } from '@/actions/capabilities'
+import { MarkReviewedForm } from '@/components/mark-reviewed-button'
 import { getApplications } from '@/actions/applications'
 import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
@@ -249,11 +250,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             : ' · Never reviewed'}
         </p>
         {canMutate && (
-          <form action={markCapabilityReviewed.bind(null, id)}>
-            <button type="submit" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-              Mark as reviewed
-            </button>
-          </form>
+          <MarkReviewedForm action={markCapabilityReviewed.bind(null, id)} />
         )}
       </div>
     </div>

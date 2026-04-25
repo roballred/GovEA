@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getPersona, markPersonaReviewed } from '@/actions/personas'
+import { MarkReviewedForm } from '@/components/mark-reviewed-button'
 import { getPersonaTypesFromTaxonomy, getPersonaTagsFromTaxonomy } from '@/actions/taxonomy'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
@@ -189,11 +190,7 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
             : ' · Never reviewed'}
         </p>
         {canMutate && (
-          <form action={markPersonaReviewed.bind(null, id)}>
-            <button type="submit" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-              Mark as reviewed
-            </button>
-          </form>
+          <MarkReviewedForm action={markPersonaReviewed.bind(null, id)} />
         )}
       </div>
     </div>

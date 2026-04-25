@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getApplication, markApplicationReviewed } from '@/actions/applications'
+import { MarkReviewedForm } from '@/components/mark-reviewed-button'
 import { getCapabilities } from '@/actions/capabilities'
 import { getInitiatives } from '@/actions/initiatives'
 import { getADRs } from '@/actions/adrs'
@@ -194,11 +195,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             : ' · Never reviewed'}
         </p>
         {canMutate && (
-          <form action={markApplicationReviewed.bind(null, id)}>
-            <button type="submit" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-              Mark as reviewed
-            </button>
-          </form>
+          <MarkReviewedForm action={markApplicationReviewed.bind(null, id)} />
         )}
       </div>
     </div>
