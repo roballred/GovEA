@@ -2,7 +2,6 @@
 
 import { useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -23,17 +22,10 @@ interface MarkReviewedFormProps {
 
 export function MarkReviewedForm({ action }: MarkReviewedFormProps) {
   const router = useRouter()
-  const [confirmed, setConfirmed] = useState(false)
 
   async function handleAction(formData: FormData) {
     await action(formData)
-    setConfirmed(true)
     router.refresh()
-    setTimeout(() => setConfirmed(false), 2000)
-  }
-
-  if (confirmed) {
-    return <span className="text-xs text-emerald-600 font-medium">Marked as reviewed</span>
   }
 
   return (
