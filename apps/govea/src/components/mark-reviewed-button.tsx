@@ -1,7 +1,8 @@
 'use client'
 
 import { useFormStatus } from 'react-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -21,16 +22,15 @@ interface MarkReviewedFormProps {
 }
 
 export function MarkReviewedForm({ action }: MarkReviewedFormProps) {
+  const router = useRouter()
   const [confirmed, setConfirmed] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function handleAction(formData: FormData) {
     await action(formData)
     setConfirmed(true)
-    timerRef.current = setTimeout(() => setConfirmed(false), 3000)
+    router.refresh()
+    setTimeout(() => setConfirmed(false), 2000)
   }
-
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   if (confirmed) {
     return <span className="text-xs text-emerald-600 font-medium">Marked as reviewed</span>
