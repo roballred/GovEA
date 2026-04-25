@@ -162,6 +162,13 @@
       "when": 1777042299114,
       "tag": "0022_legal_payback",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1745550000000,
+      "tag": "0023_confidence_settings",
+      "breakpoints": true
     }
   ]
 }
