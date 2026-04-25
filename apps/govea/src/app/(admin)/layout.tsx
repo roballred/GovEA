@@ -7,6 +7,7 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { getTheme, themeToStyleString } from '@/lib/themes'
 import type { Role } from '@/lib/rbac'
+import { isInstanceAdmin } from '@/lib/rbac'
 import { AppShell } from '@/components/app-shell'
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
@@ -58,7 +59,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       email={session.user.email ?? ''}
       roleBadgeClass={ROLE_BADGE_CLASS[role]}
       themeStyle={themeStyle}
-      isDev={process.env.NODE_ENV === 'development' || process.env.DEMO_MODE === 'true'}
+      isDev={isInstanceAdmin(session.user)}
       enabledModules={enabledModules}
       signOutSlot={signOutSlot}
     >
