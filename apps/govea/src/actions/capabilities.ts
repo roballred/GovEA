@@ -9,6 +9,7 @@ import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/actions/cross-org-links'
 
 async function requireContributor() {
   const session = await auth()
@@ -157,6 +158,13 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     before: { name: before?.name, status: before?.status, visibility: before?.visibility },
     after: { name, description, domain, status, visibility, personaIds },
   })
+
+  // Flag or clear cross-org links when visibility changes.
+  const prevVis = before?.visibility
+  const visDropped = (prevVis === 'connections' || prevVis === 'instance') && visibility === 'org'
+  const visRaised = prevVis === 'org' && (visibility === 'connections' || visibility === 'instance')
+  if (visDropped) await flagLinksForVisibilityDrop('capability', capabilityId, `"${name}" visibility was restricted to org-only — this link may no longer be accessible to the other org`)
+  if (visRaised)  await clearLinksFlag('capability', capabilityId)
 }
 
 export async function deleteCapability(capabilityId: string) {

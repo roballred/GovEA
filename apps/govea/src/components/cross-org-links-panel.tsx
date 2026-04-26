@@ -164,15 +164,25 @@ export function CrossOrgLinksPanel({
               <h3 className="text-sm font-medium">Approved</h3>
               {approved.map(link => (
                 <div key={link.id} className="flex items-center gap-2">
-                  <Link href={link.peerHref} className="flex-1 flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-muted/50 transition-colors">
-                    <div className="space-y-1">
-                      <div className="font-medium text-sm">{link.peerName}</div>
-                      <div className="text-xs text-muted-foreground">{link.peerOrganizationName}</div>
-                    </div>
-                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LINK_TYPE_STYLES[link.linkType])}>
-                      {link.linkType.replaceAll('_', ' ')}
-                    </span>
-                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <Link href={link.peerHref} className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-muted/50 transition-colors">
+                      <div className="space-y-1">
+                        <div className="font-medium text-sm">{link.peerName}</div>
+                        <div className="text-xs text-muted-foreground">{link.peerOrganizationName}</div>
+                      </div>
+                      <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LINK_TYPE_STYLES[link.linkType])}>
+                        {link.linkType.replaceAll('_', ' ')}
+                      </span>
+                    </Link>
+                    {link.flaggedForReview && (
+                      <div className="flex items-start gap-1.5 mt-1 px-1 text-xs text-amber-600">
+                        <svg className="h-3.5 w-3.5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        <span>Flagged for review — {link.flagReason ?? 'visibility changed by a connected org'}</span>
+                      </div>
+                    )}
+                  </div>
                   {canRequest && (
                     <button
                       type="button"

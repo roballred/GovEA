@@ -1,22 +1,19 @@
 /**
  * Unit tests for module toggle utilities (#118)
  *
- * isModuleEnabled — absent key behaviour depends on defaultOn:
- *   standard modules (defaultOn: true)  — absent → ON
- *   opt-in overlays  (defaultOn: false) — absent → OFF  ← TOGAF
- * moduleForPath — maps a pathname to its owning ModuleDef;
- *   modules with href: null (framework-overlay) never match any path
+ * isModuleEnabled — absent key defaults to true (opt-out semantics)
+ * moduleForPath  — maps a pathname to its owning ModuleDef
  */
 
 import { describe, it, expect } from 'vitest'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 
 // ---------------------------------------------------------------------------
-// isModuleEnabled — standard modules (defaultOn: true)
+// isModuleEnabled
 // ---------------------------------------------------------------------------
 
-describe('isModuleEnabled — standard modules (default ON)', () => {
-  it('returns true when key is absent', () => {
+describe('isModuleEnabled', () => {
+  it('returns true when key is absent (new modules default on)', () => {
     expect(isModuleEnabled({}, 'personas')).toBe(true)
   })
 
@@ -28,49 +25,27 @@ describe('isModuleEnabled — standard modules (default ON)', () => {
     expect(isModuleEnabled({ personas: false }, 'personas')).toBe(false)
   })
 
-  it('does not leak — other disabled keys do not affect the queried key', () => {
+  it('does not leak — other keys do not affect the queried key', () => {
     const map = { capabilities: false, roadmap: false }
     expect(isModuleEnabled(map, 'personas')).toBe(true)
   })
 
-  it('handles all standard module keys as default-on', () => {
-    const keys = [
-      'personas', 'value-streams', 'capabilities', 'services', 'glossary',
-      'applications', 'adrs', 'principles', 'objectives', 'initiatives', 'roadmap',
-    ] as const
-    for (const key of keys) {
-      expect(isModuleEnabled({}, key), `${key} absent → true`).toBe(true)
-      expect(isModuleEnabled({ [key]: false }, key), `${key} false → false`).toBe(false)
+  it('handles all module keys consistently', () => {
+    const allOff = {
+      personas: false,
+      'value-streams': false,
+      capabilities: false,
+      services: false,
+      glossary: false,
+      applications: false,
+      adrs: false,
+      principles: false,
+      objectives: false,
+      initiatives: false,
+      roadmap: false,
     }
-  })
-})
-
-// ---------------------------------------------------------------------------
-// isModuleEnabled — opt-in overlays (defaultOn: false) — TOGAF
-// ---------------------------------------------------------------------------
-
-describe('isModuleEnabled — framework-overlay (default OFF)', () => {
-  it('returns false when key is absent (opt-in modules default to OFF)', () => {
-    expect(isModuleEnabled({}, 'framework-overlay')).toBe(false)
-  })
-
-  it('returns true when key is explicitly true (org opted in)', () => {
-    expect(isModuleEnabled({ 'framework-overlay': true }, 'framework-overlay')).toBe(true)
-  })
-
-  it('returns false when key is explicitly false', () => {
-    expect(isModuleEnabled({ 'framework-overlay': false }, 'framework-overlay')).toBe(false)
-  })
-
-  it('enabling framework-overlay does not affect standard modules', () => {
-    const map = { 'framework-overlay': true }
-    expect(isModuleEnabled(map, 'personas')).toBe(true)
-    expect(isModuleEnabled(map, 'applications')).toBe(true)
-  })
-
-  it('disabling a standard module does not enable framework-overlay', () => {
-    const map = { personas: false }
-    expect(isModuleEnabled(map, 'framework-overlay')).toBe(false)
+    expect(isModuleEnabled(allOff, 'roadmap')).toBe(false)
+    expect(isModuleEnabled({}, 'roadmap')).toBe(true)
   })
 })
 
@@ -80,15 +55,18 @@ describe('isModuleEnabled — framework-overlay (default OFF)', () => {
 
 describe('moduleForPath', () => {
   it('returns the correct def for an exact route match', () => {
-    expect(moduleForPath('/personas')?.key).toBe('personas')
+    const mod = moduleForPath('/personas')
+    expect(mod?.key).toBe('personas')
   })
 
   it('returns the correct def for a sub-path', () => {
-    expect(moduleForPath('/personas/abc-123')?.key).toBe('personas')
+    const mod = moduleForPath('/personas/abc-123')
+    expect(mod?.key).toBe('personas')
   })
 
   it('returns the correct def for a deeply nested sub-path', () => {
-    expect(moduleForPath('/capabilities/abc/edit')?.key).toBe('capabilities')
+    const mod = moduleForPath('/capabilities/abc/edit')
+    expect(mod?.key).toBe('capabilities')
   })
 
   it('returns undefined for an unregistered path', () => {
@@ -112,19 +90,17 @@ describe('moduleForPath', () => {
     expect(moduleForPath('/value-streams/stage/99')).toMatchObject({ key: 'value-streams' })
   })
 
+  it('matches roadmap', () => {
+    expect(moduleForPath('/roadmap')).toMatchObject({ key: 'roadmap' })
+  })
+
   it('returns the full ModuleDef shape', () => {
-    expect(moduleForPath('/adrs')).toMatchObject({
+    const mod = moduleForPath('/adrs')
+    expect(mod).toMatchObject({
       key: 'adrs',
       label: expect.any(String),
       href: '/adrs',
       group: 'Portfolio',
     })
-  })
-
-  // framework-overlay has href: null — it should never claim a path
-  it('framework-overlay does not match any path (href is null)', () => {
-    expect(moduleForPath('/reports/togaf/application-landscape')).toBeUndefined()
-    expect(moduleForPath('/reports/togaf')).toBeUndefined()
-    expect(moduleForPath('/framework-overlay')).toBeUndefined()
   })
 })

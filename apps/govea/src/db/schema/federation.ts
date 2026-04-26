@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { boolean, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { organizations } from './organizations'
 import { users } from './users'
 
@@ -34,6 +34,8 @@ export const crossOrgLinks = pgTable('cross_org_links', {
   linkType: linkTypeEnum('link_type').notNull(),
   status: linkStatusEnum('status').notNull().default('pending'),
   rejectionReason: text('rejection_reason'),
+  flaggedForReview: boolean('flagged_for_review').notNull().default(false),
+  flagReason: text('flag_reason'),
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
