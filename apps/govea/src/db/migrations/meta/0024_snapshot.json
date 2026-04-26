@@ -1,6 +1,6 @@
 {
-  "id": "0024_framework_mappings",
-  "prevId": "0024_framework_mappings",
+  "id": "6dafe9ef-672e-4a18-9479-e895e6a98c8e",
+  "prevId": "d84ed3ee-632c-4a7a-9dd2-ef7ffd54b718",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -79,6 +79,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "confidence_settings": {
+          "name": "confidence_settings",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},

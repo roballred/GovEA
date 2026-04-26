@@ -169,6 +169,20 @@
       "when": 1745550000000,
       "tag": "0023_confidence_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1745552000000,
+      "tag": "0024_framework_mappings",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777240804706,
+      "tag": "0025_cross_org_link_flagging",
+      "breakpoints": true
     }
   ]
 }
