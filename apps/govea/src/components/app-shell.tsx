@@ -43,6 +43,12 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Reports',
+    items: [
+      { href: '/reports', label: 'Reports' },
+    ],
+  },
+  {
     label: 'Configuration',
     adminOnly: true,
     items: [
