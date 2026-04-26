@@ -5,8 +5,15 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
 import { ModuleToggles } from '@/components/module-toggles'
-import { FrameworkToggles } from '@/components/framework-toggles'
+import { ConfidenceSettingsForm } from '@/components/confidence-settings'
 import { isAdmin } from '@/lib/rbac'
+import type { ConfidenceSettings } from '@/db/schema'
+
+const DEFAULT_CONFIDENCE: ConfidenceSettings = {
+  enabled: false,
+  narrative: null,
+  suppressBelowPercent: 50,
+}
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -21,6 +28,7 @@ export default async function SettingsPage() {
 
   const activeTheme = org?.theme ?? 'govea'
   const enabledModules = org?.enabledModules ?? {}
+  const confidenceSettings = org?.confidenceSettings ?? DEFAULT_CONFIDENCE
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -54,13 +62,13 @@ export default async function SettingsPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold">Framework Alignment</h2>
+          <h2 className="text-base font-semibold">Repository Confidence</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Optional overlays that add framework-specific labels and reports to your repository.
-            Disabled by default — enabling an overlay never changes existing content.
+            Publish a plain-language confidence summary so stakeholders can judge how current
+            and trustworthy the repository is — without exposing internal draft or quality details.
           </p>
         </div>
-        <FrameworkToggles initialModules={enabledModules} />
+        <ConfidenceSettingsForm initial={confidenceSettings} />
       </section>
     </div>
   )
