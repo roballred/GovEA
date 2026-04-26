@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getCapability, markCapabilityReviewed } from '@/actions/capabilities'
+import { MarkReviewedForm } from '@/components/mark-reviewed-button'
 import { getApplications } from '@/actions/applications'
 import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
@@ -96,12 +97,20 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         <Link href="/capabilities" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           ← Capabilities
         </Link>
-        <Link
-          href={`/traceability?from=capability&id=${id}`}
-          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          View traceability →
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/capabilities/${id}/map`}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            View map →
+          </Link>
+          <Link
+            href={`/traceability?from=capability&id=${id}`}
+            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            View traceability →
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -263,11 +272,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             : ' · Never reviewed'}
         </p>
         {canMutate && (
-          <form action={markCapabilityReviewed.bind(null, id)}>
-            <button type="submit" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-              Mark as reviewed
-            </button>
-          </form>
+          <MarkReviewedForm action={markCapabilityReviewed.bind(null, id)} />
         )}
       </div>
     </div>
