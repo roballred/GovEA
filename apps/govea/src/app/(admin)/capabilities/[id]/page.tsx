@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getCapability, markCapabilityReviewed } from '@/actions/capabilities'
+import { MarkReviewedForm } from '@/components/mark-reviewed-button'
 import { getApplications } from '@/actions/applications'
 import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
@@ -20,6 +21,8 @@ import {
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { FrameworkMappingPanel } from '@/components/framework-mapping-panel'
+import { getFrameworkMappings } from '@/actions/framework-mappings'
 import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
 import { MarkdownContent } from '@/components/markdown-content'
 import {
@@ -62,7 +65,9 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const canMutate = editor && capability.organizationId === orgId
   const canApproveCrossOrg = isAdmin(session.user) && capability.organizationId === orgId
 
-  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks] = editor
+  const frameworkOverlay = isModuleEnabled(enabledModules, 'framework-overlay')
+
+  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks, frameworkMappings] = editor
     ? await Promise.all([
         getPersonas(orgId),
         getApplications(orgId),
@@ -70,8 +75,9 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         getInitiatives(orgId),
         getADRs(orgId),
         getCrossOrgLinkContext('capability', id),
+        frameworkOverlay ? getFrameworkMappings('capability', id) : Promise.resolve([]),
       ])
-    : [[], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }]
+    : [[], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }, []]
 
   const addPersona = linkCapabilityPersona.bind(null, id)
   const removePersona = unlinkCapabilityPersona.bind(null, id)
@@ -91,12 +97,20 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         <Link href="/capabilities" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           ← Capabilities
         </Link>
-        <Link
-          href={`/traceability?from=capability&id=${id}`}
-          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          View traceability →
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/capabilities/${id}/map`}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            View map →
+          </Link>
+          <Link
+            href={`/traceability?from=capability&id=${id}`}
+            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            View traceability →
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -241,6 +255,15 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         />
       )}
 
+      {frameworkOverlay && (editor || frameworkMappings.length > 0) && (
+        <FrameworkMappingPanel
+          entityType="capability"
+          entityId={id}
+          mappings={frameworkMappings}
+          canMutate={canMutate}
+        />
+      )}
+
       <div className="pt-4 border-t flex items-center justify-between gap-4">
         <p className="text-xs text-muted-foreground">
           Created {new Date(capability.createdAt).toLocaleDateString()} · Modified {new Date(capability.updatedAt).toLocaleDateString()}
@@ -249,11 +272,7 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             : ' · Never reviewed'}
         </p>
         {canMutate && (
-          <form action={markCapabilityReviewed.bind(null, id)}>
-            <button type="submit" className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-              Mark as reviewed
-            </button>
-          </form>
+          <MarkReviewedForm action={markCapabilityReviewed.bind(null, id)} />
         )}
       </div>
     </div>

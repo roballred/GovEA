@@ -1,0 +1,59 @@
+# Stakeholder Feature Assumption Register
+
+**Purpose:** Map each stakeholder-facing feature to the specific assumptions it depends on, ranked by consequence if the assumption is wrong. Use to prioritize which interview answers matter most before the next build.
+
+**Features covered:** Repository Confidence Summary, Roadmap Timeline, Guided Answers
+**Related issue:** [#216](https://github.com/roballred/GovEA/issues/216)
+
+**Priority ratings:**
+- **P1** — wrong assumption likely breaks the feature's value proposition entirely
+- **P2** — wrong assumption degrades usefulness but the feature survives
+- **P3** — wrong assumption creates friction but doesn't invalidate the feature
+
+---
+
+## Repository Confidence Summary
+
+| ID | Assumption | Persona | If wrong | Priority |
+|----|-----------|---------|----------|----------|
+| RC-1 | Stakeholders check freshness before acting on data — a staleness signal changes behavior | Elected Official, Budget Analyst | The label is ignored; no one reads metadata before using a view | P1 |
+| RC-2 | "Actively maintained / under development / getting started" labels are legible without a definition | Elected Official | Labels are opaque or feel like jargon ("maintained by whom? for what?") | P1 |
+| RC-3 | A percentage score mapped to a label is more trustworthy than a raw number | Budget Analyst | Analysts want the number and the methodology, not an abstracted label | P2 |
+| RC-4 | Stakeholders attribute the confidence rating to the IT team, which is sufficient for their purposes | Both | They need to know which human is accountable — a label without a name carries no weight in oversight | P2 |
+| RC-5 | The narrative field (admin-authored) will be filled in and kept current | Both | Feature silently degrades into label-only; optional fields in practice become empty fields | P3 |
+
+**Riskiest assumption:** RC-1. If no one reads freshness labels before acting, the entire feature is decorative.
+
+---
+
+## Roadmap Timeline
+
+| ID | Assumption | Persona | If wrong | Priority |
+|----|-----------|---------|----------|----------|
+| RT-1 | Elected officials want to see initiative sequence over time, not status counts or budget totals | Elected Official | The timeline view answers a question they don't ask; they want "how much" before "when" | P1 |
+| RT-2 | A 1–3 year horizon is the right window; shorter (current fiscal year) or longer (capital plan) is less useful | Both | Elected officials think in fiscal years; budget analysts think in multi-year CIP cycles — neither maps cleanly to a rolling 3-year view | P1 |
+| RT-3 | "Roadmap" is a legible term that implies forward planning, not a completed route | Elected Official | "Roadmap" reads as a finished document or a promise, not a living plan; creates accountability expectations the tool doesn't intend to carry | P2 |
+| RT-4 | Stakeholders will trust initiative data entered by IT staff without external corroboration | Budget Analyst | Budget analysts expect to reconcile this against the capital budget or CIP — mismatches make IT look unreliable, not the tool | P2 |
+| RT-5 | Seeing which capabilities each initiative affects is useful context, not noise | Both | At the stakeholder level, capability linkages are inside baseball; what matters is which departments or services are affected | P3 |
+
+**Riskiest assumption:** RT-2. If the time horizon is wrong, the view answers a question no one is asking at the moment they need an answer.
+
+---
+
+## Guided Answers
+
+| ID | Assumption | Persona | If wrong | Priority |
+|----|-----------|---------|----------|----------|
+| GA-1 | Elected officials and budget staff will ask questions directly, without staff intermediation | Elected Official | The actual user is a chief of staff or budget analyst using the tool on behalf of the principal — the UX needs to work for the proxy, not the elected official | P1 |
+| GA-2 | Plain-language answers reduce the need for staff interpretation | Both | Plain language lowers the reading burden but doesn't eliminate the trust deficit — stakeholders still want a human name attached to the answer | P1 |
+| GA-3 | The questions stakeholders ask map to the entity types GovEA stores (capabilities, applications, personas) | Budget Analyst | Budget staff ask about cost centers, FTEs, and contract vehicles — none of which are in GovEA's data model | P2 |
+| GA-4 | A direct question-answer format is preferred over a dashboard for this audience | Both | Some users want an overview first and drill down; others want to ask a specific question and stop — the right default is unknown | P2 |
+| GA-5 | Stakeholders will know enough to ask a useful question without prompting | Elected Official | Without suggested questions or examples, a blank prompt box is a blank stare; the discovery problem is upstream of the answer quality | P3 |
+
+**Riskiest assumption:** GA-3. Budget analysts work in a financial data model that doesn't overlap with EA data. If their real questions — "what does this system cost in FTE time?" "which contract expires next year?" — can't be answered, guided answers is useful only to architects, not to the personas it's targeting.
+
+---
+
+## Cross-cutting risk
+
+GA-1 and RT-1 share a structural assumption: that elected officials and budget staff use the tool themselves, not through a staff proxy. If the actual user is always a chief of staff or a budget aide, the UX decisions (reading level, question prompts, confidence labels) need to optimize for a different person than the named persona. This is the single most consequential thing to confirm or refute in interviews.

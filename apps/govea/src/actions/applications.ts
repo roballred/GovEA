@@ -1,8 +1,8 @@
 'use server'
 
 import { db } from '@/db/client'
-import { applications, applicationCapabilities } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { applications, applicationCapabilities, objectiveCapabilities } from '@/db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -32,10 +32,11 @@ export async function getApplication(id: string) {
     where: eq(applications.id, id),
     with: {
       organization: true,
+      // Note: capability is fetched shallow (no objectiveCapabilities nesting) to avoid
+      // PostgreSQL's 63-char identifier limit causing alias collisions on 4-level deep queries.
+      // Objectives linked through capabilities are fetched separately below.
       applicationCapabilities: {
-        with: {
-          capability: { with: { objectiveCapabilities: { with: { objective: true } } } },
-        },
+        with: { capability: true },
       },
       initiativeApplications: { with: { initiative: true } },
       adrApplications: { with: { adr: true } },
@@ -46,7 +47,17 @@ export async function getApplication(id: string) {
   const visible = await canReadFederatedEntity(application.organizationId, application.visibility, session.user.organizationId!)
   if (!visible) return null
   if (session.user.role === 'viewer' && application.status !== 'published') return null
-  return application
+
+  // Fetch objectives linked through this application's capabilities as a flat query.
+  const capabilityIds = application.applicationCapabilities.map(ac => ac.capabilityId)
+  const capabilityObjectives = capabilityIds.length > 0
+    ? await db.query.objectiveCapabilities.findMany({
+        where: inArray(objectiveCapabilities.capabilityId, capabilityIds),
+        with: { objective: true },
+      })
+    : []
+
+  return { ...application, capabilityObjectives }
 }
 
 export async function getApplications(organizationId: string, role?: string) {

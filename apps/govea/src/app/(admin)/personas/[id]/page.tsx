@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getPersona, markPersonaReviewed } from '@/actions/personas'
+import { MarkReviewedForm } from '@/components/mark-reviewed-button'
 import { getPersonaTypesFromTaxonomy, getPersonaTagsFromTaxonomy } from '@/actions/taxonomy'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
@@ -181,8 +182,16 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
         revokeAction={revokeCrossOrgLink}
       />
 
-      <div className="text-xs text-muted-foreground pt-4 border-t">
-        Created {new Date(persona.createdAt).toLocaleDateString()} · Updated {new Date(persona.updatedAt).toLocaleDateString()}
+      <div className="pt-4 border-t flex items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground">
+          Created {new Date(persona.createdAt).toLocaleDateString()} · Modified {new Date(persona.updatedAt).toLocaleDateString()}
+          {persona.lastReviewedAt
+            ? ` · Reviewed ${new Date(persona.lastReviewedAt).toLocaleDateString()}`
+            : ' · Never reviewed'}
+        </p>
+        {canMutate && (
+          <MarkReviewedForm action={markPersonaReviewed.bind(null, id)} />
+        )}
       </div>
     </div>
   )
