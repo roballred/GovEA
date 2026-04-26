@@ -72,14 +72,12 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const removeAdr = unlinkApplicationAdr.bind(null, id)
 
   const linkedObjectives = dedupeById(
-    application.applicationCapabilities.flatMap(({ capability }) =>
-      capability.objectiveCapabilities.map(({ objective }) => ({
-        id: objective.id,
-        name: objective.name,
-        href: `/objectives/${objective.id}`,
-        meta: objective.timeHorizon ?? undefined,
-      }))
-    )
+    application.capabilityObjectives.map(({ objective }) => ({
+      id: objective.id,
+      name: objective.name,
+      href: `/objectives/${objective.id}`,
+      meta: objective.timeHorizon ?? undefined,
+    }))
   )
 
   return (

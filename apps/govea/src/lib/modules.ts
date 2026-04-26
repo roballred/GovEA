@@ -1,9 +1,13 @@
 /**
  * Org-level module definitions.
  *
- * Absent key in `enabledModules` → module is ON.
- * Only explicitly set `false` values disable a module, so new modules
- * are visible to all orgs automatically without backfilling rows.
+ * Default behaviour is controlled by `defaultOn`:
+ *   defaultOn: true  (default) — absent key in `enabledModules` → module ON
+ *   defaultOn: false           — absent key in `enabledModules` → module OFF
+ *
+ * Standard content modules use defaultOn: true so new modules are visible to
+ * all orgs without backfilling rows. Optional overlays (e.g. TOGAF) use
+ * defaultOn: false so they stay opt-in.
  */
 
 export type ModuleKey =
@@ -18,15 +22,24 @@ export type ModuleKey =
   | 'objectives'
   | 'initiatives'
   | 'roadmap'
+  | 'framework-overlay'
 
-export type ModuleGroup = 'Business Architecture' | 'Portfolio' | 'Strategy'
+export type ModuleGroup = 'Business Architecture' | 'Portfolio' | 'Strategy' | 'Framework'
 
 export interface ModuleDef {
   key: ModuleKey
   label: string
-  /** The route prefix this module owns — used for nav filtering and route guarding. */
-  href: string
+  /**
+   * The route prefix this module owns — used for nav filtering and route
+   * guarding. Overlay modules that don't own a nav item set this to null.
+   */
+  href: string | null
   group: ModuleGroup
+  /**
+   * When false, the module is OFF unless `enabledModules[key]` is explicitly
+   * `true`. When true (default), the module is ON unless explicitly `false`.
+   */
+  defaultOn?: boolean
 }
 
 export const MODULE_DEFS: ModuleDef[] = [
@@ -44,14 +57,25 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'objectives',    label: 'Objectives',          href: '/objectives',    group: 'Strategy' },
   { key: 'initiatives',   label: 'Initiatives',         href: '/initiatives',   group: 'Strategy' },
   { key: 'roadmap',       label: 'Roadmap',             href: '/roadmap',       group: 'Strategy' },
+  // Framework overlays — opt-in, default OFF
+  { key: 'framework-overlay', label: 'TOGAF Framework Overlay', href: null, group: 'Framework', defaultOn: false },
 ]
 
-/** Returns true when a module is enabled. Absent key defaults to true. */
+/**
+ * Returns true when a module is enabled for the given org.
+ * Respects the module's defaultOn setting — standard modules default to ON,
+ * opt-in overlays default to OFF.
+ */
 export function isModuleEnabled(
   enabledModules: Record<string, boolean>,
   key: ModuleKey,
 ): boolean {
-  return enabledModules[key] !== false
+  const def = MODULE_DEFS.find(m => m.key === key)
+  const defaultOn = def?.defaultOn ?? true
+  if (defaultOn) {
+    return enabledModules[key] !== false
+  }
+  return enabledModules[key] === true
 }
 
 /**
@@ -60,6 +84,6 @@ export function isModuleEnabled(
  */
 export function moduleForPath(pathname: string): ModuleDef | undefined {
   return MODULE_DEFS.find(
-    m => pathname === m.href || pathname.startsWith(m.href + '/'),
+    m => m.href !== null && (pathname === m.href || pathname.startsWith(m.href + '/')),
   )
 }
