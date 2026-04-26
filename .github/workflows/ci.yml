@@ -115,8 +115,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run database migrations
-        run: pnpm --filter govea db:migrate
+      - name: Push schema to database
+        run: pnpm --filter govea db:push --force
 
       - name: Run integration tests
         run: pnpm --filter govea test:integration
@@ -162,8 +162,8 @@ jobs:
       - name: Install Playwright browsers (Chromium only)
         run: pnpm --filter govea exec playwright install --with-deps chromium
 
-      - name: Run database migrations
-        run: pnpm --filter govea db:migrate
+      - name: Push schema to database
+        run: pnpm --filter govea db:push --force
 
       # The db:seed script uses `tsx --env-file .env.local`.  Create an empty
       # placeholder so tsx does not fail on the missing file.  All real env

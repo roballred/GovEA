@@ -39,9 +39,9 @@ SSO users default to Viewer. Admins promote as needed.
 
 ## Database Workflow
 
-**Pre-production (current):** Use `db:push` to sync schema changes directly to the dev database. No migration files needed — run `pnpm --filter govea db:push` after schema edits, then `db:seed` to repopulate.
+**Pre-production (current):** Use `db:push` to sync schema changes directly to the dev database. CI also uses `db:push --force` on a fresh database. No migration files needed — run `pnpm --filter govea db:push` after schema edits, then `db:seed` to repopulate.
 
-**Switch to migrations when:** the first real tenant or persistent data exists that can't be thrown away. At that point, stop using `db:push` and switch to `db:generate` + `db:migrate` for all schema changes. Update this section when the switch happens.
+**Switch to migrations when:** the first real tenant or persistent data exists that can't be thrown away. At that point: squash the schema into a single `0000_initial_schema.sql`, switch CI from `db:push` to `db:migrate`, and use `db:generate` + `db:migrate` for all schema changes going forward. Update this section when the switch happens.
 
 Do not commit migration files generated during pre-production development.
 
