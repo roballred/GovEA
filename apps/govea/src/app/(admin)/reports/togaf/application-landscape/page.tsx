@@ -222,7 +222,7 @@ export default async function ApplicationLandscapePage() {
               Open a capability to add a TOGAF domain mapping.
             </p>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 divide-y divide-amber-200">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 divide-y divide-amber-200 dark:divide-amber-900">
             {unmapped.map(app => (
               <AppRow key={app.id} app={app} />
             ))}

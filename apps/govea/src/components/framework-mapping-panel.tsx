@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useTransition } from 'react'
+import { useTransition, useRef } from 'react'
 import { TOGAF_DOMAINS } from '@/db/schema'
 import type { FrameworkMapping } from '@/db/schema'
 import { addFrameworkMapping, removeFrameworkMapping } from '@/actions/framework-mappings'
@@ -46,19 +46,21 @@ function RemoveButton({ mappingId }: { mappingId: string }) {
 
 function AddMappingForm({ entityType, entityId }: { entityType: string; entityId: string }) {
   const router = useRouter()
-  const boundAction = addFrameworkMapping.bind(null, entityType, entityId)
+  const [isPending, startTransition] = useTransition()
+  const formRef = useRef<HTMLFormElement>(null)
 
-  const [, formAction, isPending] = useActionState(
-    async (_prev: unknown, formData: FormData) => {
-      const result = await boundAction(_prev, formData)
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    startTransition(async () => {
+      await addFrameworkMapping(entityType, entityId, null, formData)
       router.refresh()
-      return result
-    },
-    null,
-  )
+      formRef.current?.reset()
+    })
+  }
 
   return (
-    <form action={formAction} className="space-y-2 pt-3 border-t border-border">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-2 pt-3 border-t border-border">
       <div className="flex gap-2">
         <select
           name="conceptLabel"
