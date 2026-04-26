@@ -6,7 +6,7 @@ import {
   strategicObjectives, valueStreams, principles, glossaryTerms,
   auditLog, users, crossOrgLinks,
 } from '@/db/schema'
-import { and, count, eq, gt, isNotNull, desc, asc, inArray } from 'drizzle-orm'
+import { and, count, eq, gt, isNotNull, desc, asc, inArray, or } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { CoverageTileLabel } from './coverage-tile-label'
@@ -68,7 +68,7 @@ export default async function DashboardPage() {
     capTotal, capModified, capReviewed,
     appTotal, appModified, appReviewed,
     personaTotal, personaModified, personaReviewed,
-    fedInboundLinks, fedOutboundRows,
+    fedInboundLinks, fedOutboundRows, fedFlaggedRows,
   ] = await Promise.all([
     db.select({ status: personas.status,           count: count() }).from(personas)           .where(eq(personas.organizationId,           orgId)).groupBy(personas.status),
     db.select({ status: capabilities.status,       count: count() }).from(capabilities)       .where(eq(capabilities.organizationId,       orgId)).groupBy(capabilities.status),
@@ -114,6 +114,13 @@ export default async function DashboardPage() {
       .from(crossOrgLinks)
       .where(eq(crossOrgLinks.sourceOrgId, orgId))
       .groupBy(crossOrgLinks.status),
+    // Federation: links flagged for review (either direction)
+    db.select({ count: count() })
+      .from(crossOrgLinks)
+      .where(and(
+        or(eq(crossOrgLinks.sourceOrgId, orgId), eq(crossOrgLinks.targetOrgId, orgId)),
+        eq(crossOrgLinks.flaggedForReview, true),
+      )),
   ])
 
   const stats = {
@@ -152,6 +159,7 @@ export default async function DashboardPage() {
 
   const fedByStatus: Record<string, number> = {}
   for (const row of fedOutboundRows) fedByStatus[row.status] = (fedByStatus[row.status] ?? 0) + Number(row.count)
+  const flaggedCount = Number(fedFlaggedRows[0]?.count ?? 0)
 
   const federation = {
     inboundPending: fedInboundLinks.map(l => ({
@@ -162,7 +170,8 @@ export default async function DashboardPage() {
     outboundPending:  fedByStatus['pending']  ?? 0,
     outboundRejected: fedByStatus['rejected'] ?? 0,
     totalActive:      fedByStatus['active']   ?? 0,
-    hasAny: Object.values(fedByStatus).some(n => n > 0) || fedInboundLinks.length > 0,
+    flaggedCount,
+    hasAny: Object.values(fedByStatus).some(n => n > 0) || fedInboundLinks.length > 0 || flaggedCount > 0,
   }
 
   return (
@@ -249,7 +258,17 @@ export default async function DashboardPage() {
                   )}
                 </div>
               )}
-              {federation.inboundPending.length === 0 && federation.outboundPending === 0 && federation.outboundRejected === 0 && (
+              {federation.flaggedCount > 0 && (
+                <div className="space-y-1 border-t pt-3">
+                  <p className="text-xs text-amber-600 font-medium">
+                    {federation.flaggedCount} link{federation.flaggedCount !== 1 ? 's' : ''} flagged for review
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    A connected org restricted content visibility — open the affected capability or persona to withdraw or revoke the link.
+                  </p>
+                </div>
+              )}
+              {federation.inboundPending.length === 0 && federation.outboundPending === 0 && federation.outboundRejected === 0 && federation.flaggedCount === 0 && (
                 <p className="text-sm text-muted-foreground">
                   {federation.totalActive} active cross-org link{federation.totalActive !== 1 ? 's' : ''} — no pending actions.
                 </p>

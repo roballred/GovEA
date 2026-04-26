@@ -25,6 +25,8 @@ export interface CrossOrgLinkItem {
   linkType: CrossOrgLinkType
   status: 'pending' | 'active' | 'rejected'
   rejectionReason: string | null
+  flaggedForReview: boolean
+  flagReason: string | null
   peerId: string
   peerName: string
   peerHref: string
@@ -191,6 +193,8 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
       linkType: link.linkType,
       status: link.status,
       rejectionReason: link.rejectionReason,
+      flaggedForReview: link.flaggedForReview,
+      flagReason: link.flagReason,
       peerId: peer.id,
       peerName: peer.name,
       peerHref: peer.href,
@@ -245,6 +249,48 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
   }
 
   return { approved, inboundPending, outboundPending, outboundRejected, availableTargets }
+}
+
+// Called by editCapability / editPersona when an entity's visibility drops to 'org'.
+// Flags all active and pending links involving that entity so both orgs are alerted.
+export async function flagLinksForVisibilityDrop(
+  entityType: CrossOrgEntityType,
+  entityId: string,
+  reason: string,
+) {
+  await db.update(crossOrgLinks).set({
+    flaggedForReview: true,
+    flagReason: reason,
+    updatedAt: new Date(),
+  }).where(
+    and(
+      or(
+        and(eq(crossOrgLinks.sourceEntityType, entityType), eq(crossOrgLinks.sourceEntityId, entityId)),
+        and(eq(crossOrgLinks.targetEntityType, entityType), eq(crossOrgLinks.targetEntityId, entityId)),
+      ),
+      inArray(crossOrgLinks.status, ['pending', 'active']),
+    )
+  )
+}
+
+// Called when visibility is raised back to 'connections' or 'instance', clearing stale flags.
+export async function clearLinksFlag(
+  entityType: CrossOrgEntityType,
+  entityId: string,
+) {
+  await db.update(crossOrgLinks).set({
+    flaggedForReview: false,
+    flagReason: null,
+    updatedAt: new Date(),
+  }).where(
+    and(
+      or(
+        and(eq(crossOrgLinks.sourceEntityType, entityType), eq(crossOrgLinks.sourceEntityId, entityId)),
+        and(eq(crossOrgLinks.targetEntityType, entityType), eq(crossOrgLinks.targetEntityId, entityId)),
+      ),
+      eq(crossOrgLinks.flaggedForReview, true),
+    )
+  )
 }
 
 export async function requestCrossOrgLink(
