@@ -15,10 +15,26 @@ export default async function ReportsPage() {
     <div className="space-y-8 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
-        <p className="text-muted-foreground mt-1">Generated views and framework-aligned outputs from your repository.</p>
+        <p className="text-muted-foreground mt-1">Generated summaries derived from your GovEA repository. No duplicate documentation — these reports read directly from your existing records.</p>
       </div>
 
-      {frameworkOverlay ? (
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Architecture Outputs</h2>
+        <div className="rounded-lg border border-border bg-card divide-y">
+          <Link
+            href="/reports/architecture-vision"
+            className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
+          >
+            <div>
+              <p className="text-sm font-medium group-hover:text-primary transition-colors">Architecture Vision</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Synthesizes objectives, capabilities, stakeholders, principles, decisions, and roadmap into one architect-facing summary. Gaps are surfaced explicitly.</p>
+            </div>
+            <span className="text-muted-foreground text-sm">→</span>
+          </Link>
+        </div>
+      </section>
+
+      {frameworkOverlay && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">TOGAF Framework</h2>
           <div className="rounded-lg border border-border bg-card divide-y">
@@ -34,15 +50,6 @@ export default async function ReportsPage() {
             </Link>
           </div>
         </section>
-      ) : (
-        <div className="rounded-lg border border-dashed border-border px-6 py-8 text-center space-y-2">
-          <p className="text-sm font-medium">No reports available</p>
-          <p className="text-xs text-muted-foreground">
-            Enable the TOGAF Framework Overlay in{' '}
-            <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">Settings</Link>
-            {' '}to unlock framework-aligned reports.
-          </p>
-        </div>
       )}
     </div>
   )
