@@ -41,6 +41,7 @@ const LIFECYCLE_STYLES: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
   planned: 'bg-blue-100 text-blue-700 border-blue-200',
   sunset: 'bg-amber-100 text-amber-800 border-amber-200',
+  retiring: 'bg-amber-100 text-amber-800 border-amber-200',
   decommissioned: 'bg-red-100 text-red-700 border-red-200',
 }
 
@@ -56,14 +57,195 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
+const HOSTING_LABELS: Record<string, string> = {
+  'on-prem': 'On-premises',
+  saas: 'SaaS',
+  hybrid: 'Hybrid',
+}
+
+// ---------------------------------------------------------------------------
+// Risk signal — derived purely from existing fields, no stored score
+// ---------------------------------------------------------------------------
+
+type RiskLevel = 'attention' | 'info' | null
+
+interface RiskSignal {
+  level: RiskLevel
+  label: string
+  detail: string
+}
+
+function getRiskSignal(app: ApplicationRow): RiskSignal {
+  const retiring = app.lifecycleStatus === 'sunset' || app.lifecycleStatus === 'decommissioned'
+  const hasCaps = app.applicationCapabilities.length > 0
+
+  if (retiring && hasCaps) {
+    return {
+      level: 'attention',
+      label: 'Retiring with active capabilities',
+      detail: `${app.applicationCapabilities.length} ${app.applicationCapabilities.length === 1 ? 'capability' : 'capabilities'} still linked`,
+    }
+  }
+
+  if (!hasCaps) {
+    return {
+      level: 'info',
+      label: 'No capabilities linked',
+      detail: 'This application has no capability coverage recorded',
+    }
+  }
+
+  return { level: null, label: '', detail: '' }
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio card
+// ---------------------------------------------------------------------------
+
+const MAX_CAP_CHIPS = 4
+
+function PortfolioCard({
+  app,
+  canEdit,
+  canDelete,
+  currentOrgId,
+  isPending,
+  onEdit,
+  onDelete,
+}: {
+  app: ApplicationRow
+  canEdit: boolean
+  canDelete: boolean
+  currentOrgId: string
+  isPending: boolean
+  onEdit: (a: ApplicationRow) => void
+  onDelete: (a: ApplicationRow) => void
+}) {
+  const signal = getRiskSignal(app)
+  const isOwn = app.organizationId === currentOrgId
+  const caps = app.applicationCapabilities
+  const visibleCaps = caps.slice(0, MAX_CAP_CHIPS)
+  const extraCaps = caps.length - MAX_CAP_CHIPS
+  const uniqueDomains = Array.from(
+    new Set(caps.map(ac => ac.capability.domain).filter(Boolean))
+  ) as string[]
+
+  return (
+    <div className={cn(
+      'rounded-lg border bg-card flex flex-col overflow-hidden',
+      signal.level === 'attention' && 'border-amber-300',
+    )}>
+      {/* Risk banner */}
+      {signal.level === 'attention' && (
+        <div className="flex items-center gap-2 bg-amber-50 border-b border-amber-200 px-3 py-2 text-xs text-amber-800">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          <span><strong>{signal.label}</strong> — {signal.detail}</span>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 p-4 flex-1">
+        {/* Header row: lifecycle badge + name */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={cn(
+              'inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+              LIFECYCLE_STYLES[app.lifecycleStatus] ?? 'bg-slate-100 text-slate-700 border-slate-200',
+            )}>
+              {app.lifecycleStatus.charAt(0).toUpperCase() + app.lifecycleStatus.slice(1)}
+            </span>
+            <Link href={`/applications/${app.id}`} className="font-semibold text-sm hover:underline truncate">
+              {app.name}
+            </Link>
+            {!isOwn && app.organization && (
+              <span className="inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                {app.organization.name}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Vendor / hosting */}
+        {(app.vendor || app.hostingModel) && (
+          <p className="text-xs text-muted-foreground">
+            {[app.vendor, app.hostingModel ? HOSTING_LABELS[app.hostingModel] : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
+
+        {/* Capabilities */}
+        {caps.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {visibleCaps.map(ac => (
+              <span key={ac.capability.id} className="inline-flex items-center rounded-md border bg-slate-50 px-2 py-0.5 text-xs text-slate-700 border-slate-200">
+                {ac.capability.name}
+              </span>
+            ))}
+            {extraCaps > 0 && (
+              <span className="inline-flex items-center rounded-md border bg-slate-50 px-2 py-0.5 text-xs text-slate-500 border-slate-200">
+                +{extraCaps} more
+              </span>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">No capabilities linked</p>
+        )}
+
+        {/* Domains */}
+        {uniqueDomains.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {uniqueDomains.map(d => <DomainBadge key={d} domain={d} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Footer actions */}
+      {canEdit && (
+        <div className="flex items-center gap-1 border-t px-3 py-2 bg-muted/30">
+          <Link href={`/applications/${app.id}`}>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+          </Link>
+          {isOwn && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => onEdit(app)} className="h-7 px-2 text-xs">
+                Edit
+              </Button>
+              {canDelete && (
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => onDelete(app)}
+                  disabled={isPending}
+                  className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  Delete
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+type ViewMode = 'table' | 'portfolio'
+
 export function ApplicationTable({ applications, capabilities, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
+  const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [search, setSearch] = useState('')
   const [lifecycleFilter, setLifecycleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [domainFilter, setDomainFilter] = useState('all')
+  const [hostingFilter, setHostingFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
 
   const orgOptions = Array.from(new Map(
@@ -78,6 +260,11 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         .filter(Boolean)
     )
   ).sort() as string[]
+
+  const hostingOptions = Array.from(
+    new Set(applications.map(a => a.hostingModel).filter(Boolean))
+  ).sort() as string[]
+
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ApplicationRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ApplicationRow | null>(null)
@@ -92,9 +279,23 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
     const matchLifecycle = lifecycleFilter === 'all' || a.lifecycleStatus === lifecycleFilter
     const matchStatus = statusFilter === 'all' || a.status === statusFilter
     const matchDomain = domainFilter === 'all' || a.applicationCapabilities.some(ac => ac.capability.domain === domainFilter)
+    const matchHosting = hostingFilter === 'all' || a.hostingModel === hostingFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? a.organizationId === currentOrgId : a.organizationId === orgFilter)
-    return matchSearch && matchLifecycle && matchStatus && matchDomain && matchOrg
+    return matchSearch && matchLifecycle && matchStatus && matchDomain && matchHosting && matchOrg
   })
+
+  // Portfolio sort: attention items first, then alphabetical
+  const portfolioSorted = [...filtered].sort((a, b) => {
+    const la = getRiskSignal(a).level
+    const lb = getRiskSignal(b).level
+    const rank = (l: RiskLevel) => l === 'attention' ? 0 : l === 'info' ? 1 : 2
+    const diff = rank(la) - rank(lb)
+    if (diff !== 0) return diff
+    return a.name.localeCompare(b.name)
+  })
+
+  // Summary count for portfolio banner
+  const attentionCount = portfolioSorted.filter(a => getRiskSignal(a).level === 'attention').length
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -122,6 +323,8 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
     })
   }
 
+  const selectClass = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -136,7 +339,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         <select
           value={lifecycleFilter}
           onChange={e => setLifecycleFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          className={selectClass}
         >
           <option value="all">All lifecycle statuses</option>
           <option value="active">Active</option>
@@ -144,28 +347,43 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           <option value="sunset">Sunset</option>
           <option value="decommissioned">Decommissioned</option>
         </select>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="all">All statuses</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
-        </select>
+        {/* Status filter hidden in portfolio view — less relevant for leadership */}
+        {viewMode === 'table' && (
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </select>
+        )}
         {domainOptions.length > 0 && (
           <select
             value={domainFilter}
             onChange={e => setDomainFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            className={selectClass}
           >
             <option value="all">All domains</option>
             {domainOptions.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         )}
+        {hostingOptions.length > 0 && (
+          <select
+            value={hostingFilter}
+            onChange={e => setHostingFilter(e.target.value)}
+            className={selectClass}
+          >
+            <option value="all">All hosting models</option>
+            {hostingOptions.map(h => (
+              <option key={h} value={h}>{HOSTING_LABELS[h] ?? h}</option>
+            ))}
+          </select>
+        )}
         {orgOptions.length > 1 && (
-          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className={selectClass}>
             <option value="all">All organizations</option>
             <option value="own">My organization</option>
             {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
@@ -173,6 +391,35 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
             ))}
           </select>
         )}
+
+        {/* View toggle */}
+        <div className="flex items-center rounded-md border border-input overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={cn(
+              'px-3 h-9 text-sm font-medium transition-colors',
+              viewMode === 'table'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-transparent text-muted-foreground hover:bg-muted',
+            )}
+          >
+            Table
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('portfolio')}
+            className={cn(
+              'px-3 h-9 text-sm font-medium transition-colors border-l border-input',
+              viewMode === 'portfolio'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-transparent text-muted-foreground hover:bg-muted',
+            )}
+          >
+            Portfolio
+          </button>
+        </div>
+
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
             + New Application
@@ -180,119 +427,162 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         )}
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Domains</TableHead>
-              <TableHead>Capabilities</TableHead>
-              <TableHead>Lifecycle</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Visibility</TableHead>
-              {canEdit && <TableHead>Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 && (
+      {/* Portfolio summary banner */}
+      {viewMode === 'portfolio' && attentionCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0 text-amber-600">
+            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          <span>
+            <strong>{attentionCount} {attentionCount === 1 ? 'application' : 'applications'}</strong>{' '}
+            retiring while still supporting active capabilities — review or re-map before decommission.
+          </span>
+        </div>
+      )}
+
+      {/* Table view */}
+      {viewMode === 'table' && (
+        <div className="rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-8">
-                  {applications.length === 0
-                    ? 'No applications yet. Add one to get started.'
-                    : 'No applications match the current filters.'}
-                </TableCell>
+                <TableHead>Name</TableHead>
+                <TableHead>Vendor</TableHead>
+                <TableHead>Domains</TableHead>
+                <TableHead>Capabilities</TableHead>
+                <TableHead>Lifecycle</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Visibility</TableHead>
+                {canEdit && <TableHead>Actions</TableHead>}
               </TableRow>
-            )}
-            {filtered.map(a => (
-              <TableRow key={a.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <Link href={`/applications/${a.id}`} className="hover:underline">
-                      {a.name}
-                    </Link>
-                    {a.organizationId !== currentOrgId && a.organization && (
-                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
-                        {a.organization.name}
-                      </span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{a.vendor ?? '—'}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {(() => {
-                      const uniqueDomains = Array.from(
-                        new Set(a.applicationCapabilities.map(ac => ac.capability.domain).filter(Boolean))
-                      ) as string[]
-                      return uniqueDomains.length === 0
-                        ? <span className="text-muted-foreground text-sm">—</span>
-                        : uniqueDomains.map(d => <DomainBadge key={d} domain={d} />)
-                    })()}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {a.applicationCapabilities.length === 0
-                      ? <span className="text-muted-foreground text-sm">—</span>
-                      : a.applicationCapabilities.map(ac => (
-                        <span key={ac.capability.id} className="inline-flex items-center rounded-md border bg-slate-50 px-2 py-0.5 text-xs text-slate-700 border-slate-200">
-                          {ac.capability.name}
-                        </span>
-                      ))
-                    }
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LIFECYCLE_STYLES[a.lifecycleStatus])}>
-                    {a.lifecycleStatus.charAt(0).toUpperCase() + a.lifecycleStatus.slice(1)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[a.status])}>
-                    {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', VISIBILITY_STYLES[a.visibility])}>
-                    {VISIBILITY_LABELS[a.visibility]}
-                  </span>
-                </TableCell>
-                {canEdit && a.organizationId === currentOrgId && (
-                  <TableCell>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-8">
+                    {applications.length === 0
+                      ? 'No applications yet. Add one to get started.'
+                      : 'No applications match the current filters.'}
+                  </TableCell>
+                </TableRow>
+              )}
+              {filtered.map(a => (
+                <TableRow key={a.id}>
+                  <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <Link href={`/applications/${a.id}`}>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      <Link href={`/applications/${a.id}`} className="hover:underline">
+                        {a.name}
                       </Link>
-                      <Button variant="ghost" size="sm" onClick={() => setEditTarget(a)} className="h-7 px-2 text-xs">
-                        Edit
-                      </Button>
-                      {canDelete && (
-                        <Button
-                          variant="ghost" size="sm"
-                          onClick={() => setDeleteTarget(a)}
-                          disabled={isPending}
-                          className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          Delete
-                        </Button>
+                      {a.organizationId !== currentOrgId && a.organization && (
+                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                          {a.organization.name}
+                        </span>
                       )}
                     </div>
                   </TableCell>
-                )}
-                {canEdit && a.organizationId !== currentOrgId && (
+                  <TableCell className="text-muted-foreground">{a.vendor ?? '—'}</TableCell>
                   <TableCell>
-                    <Link href={`/applications/${a.id}`}>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
-                    </Link>
+                    <div className="flex flex-wrap gap-1">
+                      {(() => {
+                        const uniqueDomains = Array.from(
+                          new Set(a.applicationCapabilities.map(ac => ac.capability.domain).filter(Boolean))
+                        ) as string[]
+                        return uniqueDomains.length === 0
+                          ? <span className="text-muted-foreground text-sm">—</span>
+                          : uniqueDomains.map(d => <DomainBadge key={d} domain={d} />)
+                      })()}
+                    </div>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {a.applicationCapabilities.length === 0
+                        ? <span className="text-muted-foreground text-sm">—</span>
+                        : a.applicationCapabilities.map(ac => (
+                          <span key={ac.capability.id} className="inline-flex items-center rounded-md border bg-slate-50 px-2 py-0.5 text-xs text-slate-700 border-slate-200">
+                            {ac.capability.name}
+                          </span>
+                        ))
+                      }
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', LIFECYCLE_STYLES[a.lifecycleStatus])}>
+                      {a.lifecycleStatus.charAt(0).toUpperCase() + a.lifecycleStatus.slice(1)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[a.status])}>
+                      {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', VISIBILITY_STYLES[a.visibility])}>
+                      {VISIBILITY_LABELS[a.visibility]}
+                    </span>
+                  </TableCell>
+                  {canEdit && a.organizationId === currentOrgId && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/applications/${a.id}`}>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                        </Link>
+                        <Button variant="ghost" size="sm" onClick={() => setEditTarget(a)} className="h-7 px-2 text-xs">
+                          Edit
+                        </Button>
+                        {canDelete && (
+                          <Button
+                            variant="ghost" size="sm"
+                            onClick={() => setDeleteTarget(a)}
+                            disabled={isPending}
+                            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                  {canEdit && a.organizationId !== currentOrgId && (
+                    <TableCell>
+                      <Link href={`/applications/${a.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
+                      </Link>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Portfolio view */}
+      {viewMode === 'portfolio' && (
+        <div>
+          {portfolioSorted.length === 0 ? (
+            <p className="py-12 text-center text-muted-foreground text-sm">
+              {applications.length === 0
+                ? 'No applications yet. Add one to get started.'
+                : 'No applications match the current filters.'}
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {portfolioSorted.map(a => (
+                <PortfolioCard
+                  key={a.id}
+                  app={a}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  currentOrgId={currentOrgId}
+                  isPending={isPending}
+                  onEdit={setEditTarget}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
