@@ -145,6 +145,23 @@ export default async function ArchitectureVisionPage() {
   const appsWithNoCap     = applicationRows.filter(a => a.applicationCapabilities.length === 0)
   const activeInitiatives = initiativeRows.filter(i => i.status === 'active' || i.status === 'proposed')
 
+  // Application portfolio summary — grouped by lifecycle status
+  const APP_LIFECYCLE_ORDER = ['active', 'planned', 'sunset', 'decommissioned'] as const
+  type LifecycleKey = typeof APP_LIFECYCLE_ORDER[number]
+  const appsByLifecycle = new Map<LifecycleKey | string, { total: number; noCap: number }>()
+  for (const app of applicationRows) {
+    const key = app.lifecycleStatus ?? 'active'
+    const row = appsByLifecycle.get(key) ?? { total: 0, noCap: 0 }
+    row.total++
+    if (app.applicationCapabilities.length === 0) row.noCap++
+    appsByLifecycle.set(key, row)
+  }
+  const appLifecycleRows = [
+    ...APP_LIFECYCLE_ORDER.filter(k => appsByLifecycle.has(k)).map(k => [k, appsByLifecycle.get(k)!] as const),
+    ...[...appsByLifecycle.entries()].filter(([k]) => !APP_LIFECYCLE_ORDER.includes(k as LifecycleKey)),
+  ]
+  const appsWithCapLink = applicationRows.length - appsWithNoCap.length
+
   // Group capabilities by domain
   const capsByDomain = new Map<string, typeof capabilityRows>()
   for (const cap of capabilityRows) {
@@ -350,27 +367,51 @@ export default async function ArchitectureVisionPage() {
           {applicationRows.length === 0 ? (
             <GapCallout message="No published applications found. Applications document the technology that enables capabilities." />
           ) : (
-            <div className="rounded-lg border bg-card divide-y">
-              {applicationRows.map(app => (
-                <div key={app.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                  <div className="min-w-0">
-                    <Link href={`/applications/${app.id}`} className="text-sm hover:text-primary transition-colors">
-                      {app.name}
-                    </Link>
-                    <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
-                      {app.vendor && <span>{app.vendor}</span>}
-                      {app.hostingModel && <span>{app.hostingModel}</span>}
-                      {app.applicationCapabilities.length === 0 && (
-                        <span className="text-amber-600">no capability link</span>
-                      )}
-                    </div>
+            <>
+              {/* Summary stats */}
+              <div className="grid grid-cols-3 gap-3 text-center">
+                {[
+                  { label: 'Total', value: applicationRows.length },
+                  { label: 'Linked to capability', value: `${appsWithCapLink} / ${applicationRows.length}` },
+                  { label: 'No capability link', value: appsWithNoCap.length },
+                ].map(stat => (
+                  <div key={stat.label} className="rounded-lg border bg-card px-3 py-3">
+                    <p className="text-xl font-bold">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0 capitalize">
-                    {app.lifecycleStatus ?? 'active'}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* Lifecycle breakdown table */}
+              <div className="rounded-lg border bg-card overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Lifecycle status</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Count</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">No capability link</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {appLifecycleRows.map(([status, row]) => (
+                      <tr key={status}>
+                        <td className="px-4 py-2.5 capitalize">{status}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{row.total}</td>
+                        <td className={cn('px-4 py-2.5 text-right tabular-nums', row.noCap > 0 ? 'text-amber-600' : 'text-muted-foreground')}>
+                          {row.noCap > 0 ? row.noCap : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                <Link href="/applications" className="underline underline-offset-2 hover:text-foreground">
+                  View full application inventory →
+                </Link>
+              </p>
+            </>
           )}
         </section>
       )}
