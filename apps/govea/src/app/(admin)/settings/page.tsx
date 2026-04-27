@@ -5,6 +5,7 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
 import { ModuleToggles } from '@/components/module-toggles'
+import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
 import { isAdmin } from '@/lib/rbac'
 import type { ConfidenceSettings } from '@/db/schema'
@@ -56,6 +57,18 @@ export default async function SettingsPage() {
           </p>
         </div>
         <ModuleToggles initialModules={enabledModules} />
+      </section>
+
+      <hr />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Framework Overlays</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Optional framework integrations. These are opt-in and off by default — enable only what your organization actively uses.
+          </p>
+        </div>
+        <FrameworkToggles initialModules={enabledModules} />
       </section>
 
       <hr />
