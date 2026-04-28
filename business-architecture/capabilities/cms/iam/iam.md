@@ -13,10 +13,18 @@ The system must control who can access it, how they authenticate, and what they 
 |---|---|---|
 | User Management | [iam-user-management.md](./iam-user-management.md) | Create, edit, deactivate, and delete user accounts |
 | Role-Based Access Control | [iam-role-based-access-control.md](./iam-role-based-access-control.md) | Enforce Admin / Contributor / Viewer roles and permissions |
+| Instance Administration | — | Instance-scoped admin role, `/instance` console, org inventory, user view, audit view, org suspension, instance-admin promotion/demotion, and audited break-glass sessions |
 | Local Authentication | [iam-local-authentication.md](./iam-local-authentication.md) | Email and password login with password reset |
 | SSO Authentication | [iam-sso-authentication.md](./iam-sso-authentication.md) | Microsoft Entra ID sign-in via OpenID Connect with admin-managed pre-provisioned access |
 | IAM Audit Trail | [iam-audit-trail.md](./iam-audit-trail.md) | Immutable log of all identity and access events |
 | First-Run Setup | [iam-first-run-setup.md](./iam-first-run-setup.md) | Bootstrap initial Admin account on first launch |
+| API Auth Decision | [iam-api-auth-decision.md](./iam-api-auth-decision.md) | Auth strategy for API routes (session-based, not token-based in v1) |
+
+## Current State
+
+IAM is one of GovEA's strongest product areas and is credible as a core v1 pillar. Authentication, authorization, audit logging, meaningful E2E test coverage, and the full instance-admin console are all present.
+
+**Remaining gap:** The last-admin edge case (preventing the final admin account from being demoted or deactivated) has a known CI reliability gap. Tracked in [issue #33](https://github.com/roballred/GovEA/issues/33). This is a test-coverage gap, not a missing feature — the behavior is implemented but the test scenario is not consistently exercised in CI.
 
 ## Success Criteria
 
