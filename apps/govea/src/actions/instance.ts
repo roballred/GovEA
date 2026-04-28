@@ -1,11 +1,12 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations, users, breakGlassSessions } from '@/db/schema'
+import { organizations, users, breakGlassSessions, platformConfig } from '@/db/schema'
 import { eq, and, isNull, gt } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
+import { themes } from '@/lib/themes'
 
 export async function grantBreakGlass(orgId: string, reason: string) {
   const session = await requireInstanceAdmin()
@@ -135,6 +136,60 @@ export async function demoteInstanceAdmin(userId: string) {
   })
 
   revalidatePath('/instance/users')
+}
+
+export async function getPlatformConfig() {
+  await requireInstanceAdmin()
+  return db.query.platformConfig.findFirst() ?? null
+}
+
+export async function updatePlatformConfig(data: {
+  instanceName: string
+  defaultTheme: string
+  allowLocalAuth: boolean
+}) {
+  const session = await requireInstanceAdmin()
+
+  const trimmed = data.instanceName.trim()
+  if (!trimmed) throw new Error('Instance name is required')
+  if (!themes.find(t => t.id === data.defaultTheme)) throw new Error('Invalid theme')
+
+  const before = await db.query.platformConfig.findFirst()
+
+  await db.insert(platformConfig)
+    .values({
+      id: 'singleton',
+      instanceName: trimmed,
+      defaultTheme: data.defaultTheme,
+      allowLocalAuth: data.allowLocalAuth,
+      updatedAt: new Date(),
+      updatedBy: session.user.id,
+    })
+    .onConflictDoUpdate({
+      target: platformConfig.id,
+      set: {
+        instanceName: trimmed,
+        defaultTheme: data.defaultTheme,
+        allowLocalAuth: data.allowLocalAuth,
+        updatedAt: new Date(),
+        updatedBy: session.user.id,
+      },
+    })
+
+  await writeAuditLog({
+    action: 'instance.config.update',
+    entityType: 'platform_config',
+    entityId: 'singleton',
+    userId: session.user.id,
+    organizationId: null,
+    before: before
+      ? { instanceName: before.instanceName, defaultTheme: before.defaultTheme, allowLocalAuth: before.allowLocalAuth }
+      : null,
+    after: { instanceName: trimmed, defaultTheme: data.defaultTheme, allowLocalAuth: data.allowLocalAuth },
+  })
+
+  revalidatePath('/instance/config')
+  revalidatePath('/instance')
 }
 
 export async function getActiveBreakGlass(adminId: string, orgId: string) {
