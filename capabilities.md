@@ -29,8 +29,8 @@ Controls authentication, authorization, and all identity events.
 | Capability | Status | Description |
 |---|---|---|
 | User Management | Implemented | Create, edit, deactivate, and assign org-scoped roles to user accounts |
-| Role-Based Access Control | Implemented | Enforce Admin / Contributor / Viewer roles across all content and actions |
-| Instance Administration | Implemented | Instance-scoped admin role, `/instance` console, org inventory, user view, audit view, org suspension, instance-admin promotion/demotion, and audited break-glass sessions |
+| Role-Based Access Control | Implemented | Enforce Admin / Contributor / Viewer roles across all content and actions, with `instance_admin` layered separately for platform operations |
+| Instance Administration | Implemented | Instance-scoped admin role, `/instance` console, org inventory, user view, audit view, org suspension, instance-admin promotion/demotion, and audited break-glass sessions without taking over org-scoped settings |
 | SSO Authentication | Implemented | Microsoft Entra ID sign-in via OpenID Connect (OIDC) with admin-managed pre-provisioned access |
 | Local Authentication | Implemented | Email and password login; always available as SSO fallback |
 | IAM Audit Trail | Implemented | Immutable log of all identity and access events, including instance-scoped platform events |

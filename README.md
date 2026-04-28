@@ -37,7 +37,7 @@ Personas -> Capabilities -> Applications
 - **Strategic Objectives** link to capabilities and value streams. Supporting applications are surfaced through linked capabilities rather than direct objective-to-application joins.
 - **Persona Type** and **Persona Tag** values are managed through **Taxonomy**, not through persona-specific admin tables.
 - **Organization** is the top-level tenant boundary.
-- **Instance Admin** is a separate instance-scoped operating role used for platform administration. It does not automatically make a user the owner or editor of every agency's EA content.
+- **Instance Admin** is a separate instance-scoped operating role used for platform administration. It does not automatically make a user the owner or editor of every agency's EA content, and it should not absorb routine org-scoped settings like themes or module choices.
 - Additional core entities include **Architecture Decision Records (ADRs)**, **Strategic Objectives**, **Initiatives**, **Principles**, and the **Glossary**.
 - Single-org use is still the default operating mode, but GovEA now also ships a prototype multi-organization model with org-scoped visibility and approval-based cross-org links.
 
@@ -112,7 +112,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Taxonomy management: org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Identity & access management: SSO via Microsoft Entra ID (OIDC) with admin-managed pre-provisioned access, local auth fallback, Admin/Contributor/Viewer roles
 - Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, and audited break-glass sessions
-- TOGAF framework overlay: org-level opt-in toggle, framework mappings on capability/application detail pages, and a TOGAF Application Landscape report
+- Clear product boundary: org admins manage their own workspace settings; instance admins govern the shared platform and tenant lifecycle
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
 - Prototype multi-org federation: connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
