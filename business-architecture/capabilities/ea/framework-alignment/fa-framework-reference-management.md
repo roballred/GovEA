@@ -29,7 +29,7 @@ Reference material is not authoritative GovEA product definition. It is an input
 
 ## Implementation Status
 
-Not implemented. GovEA has glossary source-definition support today, but not a general framework reference-management surface.
+Not implemented. GovEA has glossary source-definition support today and a shipped TOGAF overlay slice, but there is still no general framework reference-management surface for admins.
 
 ## Links
 

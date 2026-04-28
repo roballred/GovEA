@@ -102,8 +102,10 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Service catalogue: first-class service records linked to personas, capabilities, and value streams, with supporting applications derived through capabilities
 - Contributor-friendly relationship panels across detail pages, including in-context persona editing
 - Markdown-rendered long-form detail pages across the portfolio model, with shared prose styling for descriptions and other narrative fields
+- Leadership-friendly application risk portfolio view on the Applications page, highlighting retiring systems that still support active capability work
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
 - Demo-ready planning module: strategic objectives plus initiatives with roadmap grid and executive timeline views
+- Reports hub with generated Architecture Vision output from existing repository content
 - Repository-wide search across the core content model
 - Guided product tour with role-aware coach marks for the main application areas
 - Audit trail: immutable before/after log of all changes
@@ -127,18 +129,18 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
-- Hardening multi-org auth, viewer visibility, and glossary-link safety after the latest security findings
-- Closing the taxonomy delete-safety gap for in-use principle types
+- Defining the true instance-level configuration surface for the `/instance` console
+- Turning the new reporting and portfolio foundations into stronger stakeholder-facing decision support
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
-- Resolve the multi-org auth identity model and duplicate-email tenant-boundary risk
-- Fix glossary viewer-publishing and URL-validation gaps
-- Upgrade Next.js to the patched App Router security release
-- Add taxonomy delete safety for in-use principle types
-- Add a markdown editor with preview for long-text fields
+- Define and ship instance-level platform configuration in `/instance`
+- Add an executive dashboard for non-architect leadership audiences
+- Add impact analysis on application and capability detail pages
+- Add heatmap analysis views over existing portfolio data
+- Start lightweight user feedback capture for EA practice fit
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking

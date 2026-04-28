@@ -21,6 +21,11 @@ The system must provide a visual portfolio view that helps stakeholders identify
 - The visual must not imply precision the repository does not support; any derived score should be explainable
 - Viewer-facing output should emphasize operational meaning such as `aging`, `replacement underway`, or `high dependency`
 
+## Implementation Status
+
+- **v1:** Implemented as a Portfolio view on the Applications page. It uses existing lifecycle and capability-link data to surface retiring systems, no-capability-link records, and cleaner portfolio cards for leadership-style review.
+- Duplicate-detection, richer scoring, and deeper modernization analysis remain future work.
+
 ## Links
 - Depends on: Portfolio Management — Application Portfolio, Front-end Display — Portfolio Views
 - Related: Planning — Initiatives, Repository & Modelling — Repository Completeness
