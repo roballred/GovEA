@@ -10,9 +10,11 @@ The system must provide administrators with the tools needed to configure, monit
 
 | Capability | File | Description |
 |---|---|---|
-| Site Settings | [ac-site-settings.md](./ac-site-settings.md) | Organization name, URL, timezone, and branding |
+| Site Settings | [ac-site-settings.md](./ac-site-settings.md) | Theme selection and appearance configuration; broader org settings are future work |
+| Persona Type Management | [ac-persona-type-management.md](./ac-persona-type-management.md) | Manage persona type categories as taxonomy terms |
+| Persona Tags | [ac-persona-tags.md](./ac-persona-tags.md) | Manage persona tag values as taxonomy terms |
+| Admin Dashboard | [ac-admin-dashboard.md](./ac-admin-dashboard.md) | Live coverage grid, needs-attention signals, recent activity, and domain summaries |
 | Feature Management | [ac-feature-management.md](./ac-feature-management.md) | Enable and disable optional modules without code |
-| Admin Dashboard | [ac-admin-dashboard.md](./ac-admin-dashboard.md) | System health, content status, and repository completeness |
 | Email Configuration | [ac-email-configuration.md](./ac-email-configuration.md) | SMTP settings for transactional email delivery |
 | Security Settings | [ac-security-settings.md](./ac-security-settings.md) | Password policy, session timeout, and account lockout |
 | Backup & Export | [ac-backup-export.md](./ac-backup-export.md) | Export and import configuration and content |

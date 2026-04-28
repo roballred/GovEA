@@ -6,6 +6,10 @@ The system must allow architects to identify, record, and track conditions in th
 
 Debt that is named and tracked is manageable. Debt that is invisible becomes the reason EA outputs stop being trusted.
 
+## Implementation Status
+
+**Not yet implemented.** No architecture debt tracking surface exists in the current product. This document is the design specification for a future capability. The severity tier definitions here are referenced by `rm-end-to-end-traceability` and `rm-repository-completeness` as a shared vocabulary for a future unified priority signal.
+
 ## Personas
 
 - **Enterprise Architect (Central IT)** — needs to surface and communicate architectural debt to leadership in plain language; currently has no mechanism to separate "what we know is a problem" from "what we haven't looked at yet"; this conflation erodes trust in EA outputs

@@ -6,6 +6,10 @@ The system must continuously signal the health and completeness of the EA object
 
 A repository where everything appears equally authoritative — regardless of whether it was updated last week or three years ago — is a repository people stop trusting. Completeness signals turn the unknown unknowns into known gaps.
 
+## Implementation Status
+
+**Scaffolded.** Basic coverage signals (entity counts and needs-attention summaries) are surfaced on the Admin Dashboard. The full completeness workflow described in this document — drill-down views, trend lines, domain scoring, publication controls, and staleness thresholds — is not yet implemented. This document is the design specification for that future build.
+
 ## Personas
 
 - **Enterprise Architect (Central IT)** — needs to report the state of the enterprise capability map with honesty; a completeness view allows them to say "we have 80% of capabilities mapped to at least one application" rather than making claims that can be challenged; currently has no mechanism to produce this picture without manual audit
