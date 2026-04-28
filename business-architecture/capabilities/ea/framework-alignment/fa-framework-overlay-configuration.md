@@ -27,7 +27,19 @@ The system must allow administrators to enable, disable, and configure optional 
 
 ## Implementation Status
 
-Not implemented.
+Partially implemented.
+
+Current shipped slice:
+
+- Org admins can enable or disable the TOGAF framework overlay from settings
+- The overlay is off by default for new organizations
+- Disabling the overlay hides framework UI without deleting saved mapping data
+
+Not yet shipped:
+
+- Per-framework options beyond the single TOGAF toggle
+- Per-entity or per-report overlay controls
+- Admin-defined framework bundles or reference sources
 
 ## Links
 

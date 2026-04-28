@@ -18,7 +18,7 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 | 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
 | 7 | [Multi-Organization Federation](#7-multi-organization-federation) | Prototype |
 | 8 | [Repository & Modelling](#8-repository--modelling) | Scaffolded |
-| 9 | [Framework Alignment](#9-framework-alignment) | Not implemented |
+| 9 | [Framework Alignment](#9-framework-alignment) | Partially implemented |
 
 ---
 
@@ -136,7 +136,7 @@ How content is presented to authenticated users and, optionally, the public.
 | Product Tour | Implemented | Role-aware guided tour covering the main dashboard, architecture, portfolio, strategy, search, and role-specific workflows |
 | Public / Authenticated Views | Not implemented | Opt-in public access to published content without login |
 | Repository Confidence Summary | Not implemented | Plain-language freshness and trust cue for stakeholder-facing views |
-| Application Risk Portfolio | Not implemented | Leadership-oriented view of lifecycle, dependency, duplication, and modernization risk across applications |
+| Application Risk Portfolio | Implemented | Leadership-oriented portfolio card view on the Applications page, with lifecycle and dependency risk cues derived from existing data |
 | Responsive Layout | Partially implemented | Desktop-first; mobile not a v1 priority |
 | Theming | Implemented | Organization-selected predefined themes applied through settings |
 
@@ -210,10 +210,12 @@ Optional alignment to external architecture frameworks such as TOGAF without rep
 | Capability | Status | Description |
 |---|---|---|
 | Framework Reference Management | Not implemented | Store external framework references separately from GovEA's authoritative capability definitions |
-| Framework Mapping | Not implemented | Map GovEA records to framework concepts, domains, content types, or reference categories |
+| Framework Mapping | Partially implemented | Capability and application detail pages support TOGAF Architecture Domain mappings with optional rationale; broader framework concept mapping remains future work |
 | ADM Phase Alignment | Not implemented | Optionally tag architecture work to TOGAF ADM phases for TOGAF-aware teams |
-| TOGAF-Aligned Reporting | Not implemented | Generate TOGAF-friendly outputs from existing GovEA content and mappings |
-| Framework Overlay Configuration | Not implemented | Enable, disable, and configure optional framework overlays per organization |
+| TOGAF-Aligned Reporting | Partially implemented | Reports hub ships an Architecture Vision summary for all orgs and a TOGAF Application Landscape report when the overlay is enabled |
+| Framework Overlay Configuration | Partially implemented | Org admins can enable or disable the TOGAF overlay module; richer per-framework configuration remains future work |
+
+Current reality: GovEA now ships the first framework-alignment slice. The TOGAF overlay is opt-in and off by default, application and capability records can carry TOGAF Architecture Domain mappings, and the Reports area includes a TOGAF Application Landscape report. ADM phase tagging, admin-managed framework references, and broader mapping depth remain future work.
 
 **Design principle:** Framework support should increase credibility without increasing friction. TOGAF-aware architects should be able to recognize familiar concepts and reporting structures, while ordinary GovEA users continue working with plain-language personas, capabilities, services, applications, objectives, initiatives, principles, and decisions.
 
@@ -223,7 +225,7 @@ Framework alignment is distinct from formal modelling notation. GovEA can map co
 
 ## Capability Target Surface
 
-GovEA's long-term capability surface spans 9 groups, each defined through the EasyEA workflow: persona validation -> capability definition -> ARB review -> implementation issues.
+GovEA's longer-horizon capability direction spans the major themes below, each defined through the EasyEA workflow: persona validation -> capability definition -> ARB review -> implementation issues.
 
 | Group | Near-term priorities |
 |---|---|
