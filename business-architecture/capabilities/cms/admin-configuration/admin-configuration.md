@@ -4,7 +4,7 @@
 The system must provide administrators with the tools needed to configure, monitor, and maintain the site without requiring code changes or server access. In the current product this is an early admin toolkit rather than a complete operations surface.
 
 ## Personas
-- **CMS Administrator** — the sole user of this capability group; configures and maintains the system on behalf of the organization
+- **CMS Administrator** — configures and maintains the system on behalf of their organization
 
 ## Sub-Capabilities
 
@@ -41,6 +41,7 @@ GovEA follows a migration-based upgrade model. This section defines expectations
 - All Admin & Configuration capabilities are accessible to Admins only
 - Configuration changes must not require a server restart
 - No Admin & Configuration function should require CLI or database access
+- Platform governance responsibilities such as tenant lifecycle, instance-admin promotion, and break-glass access belong to IAM Instance Administration, not this capability group
 
 ## Current Scope
 - Implemented today: admin dashboard, user management, audit visibility, taxonomy and persona metadata management, org connections, and theme selection
