@@ -120,7 +120,7 @@ function SidebarContent({
           return (
             <div key={group.label}>
               <p
-                data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : undefined}
+                data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : group.label === 'Reports' ? 'nav-reports' : undefined}
                 className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none"
               >
                 {group.label}
