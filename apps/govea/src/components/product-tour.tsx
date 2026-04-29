@@ -6,9 +6,9 @@ import 'driver.js/dist/driver.css'
 import type { Role } from '@/lib/rbac'
 
 const ROLE_COPY: Record<Role, string> = {
-  admin:       'As an Admin, you can create and edit all EA content and manage users, connections, and org settings.',
-  contributor: 'As a Contributor, you can create and edit all EA content. Set items to Published to make them visible to read-only colleagues.',
-  viewer:      'As a Viewer, you have read-only access to published content across the catalog.',
+  admin:       'You can create, edit, and publish all EA content, and manage users, connections, and org settings.',
+  contributor: 'You can create and edit all EA content. Publish items to make them visible to Viewer-role colleagues.',
+  viewer:      'You have read-only access to published content across the catalog.',
 }
 
 function buildTour(role: Role) {
@@ -23,7 +23,7 @@ function buildTour(role: Role) {
       {
         popover: {
           title: 'Welcome to GovEA',
-          description: 'Your organization\'s enterprise architecture workspace — built for state and local government teams using the EasyEA methodology. This tour walks you through the key sections and what makes GovEA different.',
+          description: 'GovEA is your organization\'s enterprise architecture workspace. This tour shows you where everything lives and how the pieces connect.',
           side: 'over' as const,
           align: 'center',
         },
@@ -31,8 +31,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="dashboard"]',
         popover: {
-          title: 'Dashboard — Your EA Health Check',
-          description: 'See catalog coverage at a glance: how many items are published vs. draft, review health scores, and recent activity. Before any ARB meeting, this is the first place to check — it shows you exactly where your gaps are.',
+          title: 'Dashboard',
+          description: 'See how much of your catalog is published vs. draft and where the gaps are. A good starting point before any governance review.',
           side: 'right' as const,
           align: 'start',
         },
@@ -40,8 +40,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-business-arch"]',
         popover: {
-          title: 'Business Architecture — Start Here',
-          description: 'The foundation of EasyEA. Document who you serve, what you deliver, what your organization does, and how value flows. Everything in your portfolio — every application, every decision — connects back to this layer.',
+          title: 'Business Architecture',
+          description: 'Document who you serve, what your organization does, and how value flows. These records anchor everything else in the catalog.',
           side: 'right' as const,
           align: 'start',
         },
@@ -49,8 +49,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-personas"]',
         popover: {
-          title: 'Personas — People Before Systems',
-          description: 'Personas represent everyone who interacts with government: residents, businesses, internal staff, and partner agencies. In EasyEA, you start here — not with technology. Every service, capability, and application you catalog should ultimately trace to a person it serves.',
+          title: 'Personas',
+          description: 'Add the people your services are built for — residents, businesses, staff, and partner agencies. Link them to capabilities and services to track who each part of your architecture serves.',
           side: 'right' as const,
           align: 'start',
         },
@@ -58,8 +58,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-value-streams"]',
         popover: {
-          title: 'Value Streams — How Work Flows',
-          description: 'Model the end-to-end flow of value from a triggering event to an outcome. Each stage maps to the capabilities that enable it. This is how you find redundancies, handoff gaps, and the real cost of legacy systems — before you try to replace them.',
+          title: 'Value Streams',
+          description: 'Map how work moves from a triggering event to an outcome. Link stages to capabilities to see where gaps or handoff problems exist.',
           side: 'right' as const,
           align: 'start',
         },
@@ -67,8 +67,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-capabilities"]',
         popover: {
-          title: 'Capabilities — What Your Organization Does',
-          description: 'Capabilities are technology-agnostic. "Process Permit Applications" is a capability — the system that does it today is just an implementation detail. This separation lets you plan replacements, measure coverage, and survive application turnover without losing institutional knowledge.',
+          title: 'Capabilities',
+          description: 'Record what your organization does, independent of which systems do it. Link capabilities to applications to track how each function is currently enabled.',
           side: 'right' as const,
           align: 'start',
         },
@@ -76,8 +76,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-services"]',
         popover: {
-          title: 'Services — What You Deliver to the Public',
-          description: 'Services are the tangible things residents and businesses interact with — permitting, licensing, benefits enrollment. Link them to the personas who use them and the capabilities that power them to build a complete picture of government service delivery.',
+          title: 'Services',
+          description: 'Document what you deliver to the public. Link services to the personas who use them and the capabilities that power them.',
           side: 'right' as const,
           align: 'start',
         },
@@ -85,8 +85,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-applications"]',
         popover: {
-          title: 'Applications — Your Technology Portfolio',
-          description: 'Track every application with its lifecycle status (active, sunset, or decommissioned), the capabilities it supports, and the decisions made about it. When leadership asks "why are we still running this?" — the answer is here.',
+          title: 'Applications',
+          description: 'Your technology inventory — lifecycle status, capability links, and the decisions behind each system. Filter by lifecycle to surface risks.',
           side: 'right' as const,
           align: 'start',
         },
@@ -94,8 +94,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-adrs"]',
         popover: {
-          title: 'Decisions — Institutional Memory',
-          description: 'Architecture Decision Records (ADRs) capture the "why" behind every major technical choice — not just what was decided, but the context, constraints, and alternatives considered. Future teams won\'t repeat past mistakes if the reasoning is documented here.',
+          title: 'Decisions',
+          description: 'Record the why behind major technology choices. Superseded decisions stay visible so future teams understand the full context.',
           side: 'right' as const,
           align: 'start',
         },
@@ -103,8 +103,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-strategy"]',
         popover: {
-          title: 'Strategy — Mission to Technology',
-          description: 'Connect your architecture to mission. Link capabilities to strategic objectives and running initiatives. This is how you justify every system you operate — and surface the ones you can\'t justify. Essential for budget season and IT governance reviews.',
+          title: 'Strategy',
+          description: 'Link capabilities to objectives and running initiatives to show which parts of your architecture are connected to mission outcomes.',
           side: 'right' as const,
           align: 'start',
         },
@@ -112,8 +112,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="nav-roadmap"]',
         popover: {
-          title: 'Roadmap — The Executive View',
-          description: 'A visual timeline of active initiatives and planned changes. Built for elected officials and non-technical stakeholders who need to see what\'s changing, when, and why — without reading a 40-page strategy document.',
+          title: 'Roadmap',
+          description: 'A timeline of active and planned initiatives. Useful for stakeholder reviews and communicating what\'s changing and when.',
           side: 'right' as const,
           align: 'start',
         },
@@ -121,8 +121,8 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="search"]',
         popover: {
-          title: 'Search Everything',
-          description: 'Find any persona, capability, application, decision, or principle across your catalog instantly. Especially useful when linking items — check for duplicates before creating something new, and discover connections you didn\'t know existed.',
+          title: 'Search',
+          description: 'Find any record across the catalog instantly. Check for existing items before creating something new to avoid duplicates.',
           side: 'bottom' as const,
           align: 'start',
         },
@@ -130,7 +130,7 @@ function buildTour(role: Role) {
       {
         element: '[data-tour="role-badge"]',
         popover: {
-          title: `Your Role: ${role.charAt(0).toUpperCase() + role.slice(1)}`,
+          title: `Your role: ${role.charAt(0).toUpperCase() + role.slice(1)}`,
           description: ROLE_COPY[role],
           side: 'bottom' as const,
           align: 'end',
