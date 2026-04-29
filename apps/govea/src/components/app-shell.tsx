@@ -12,7 +12,7 @@ import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
-type NavItem = { href: string; label: string; moduleKey?: string }
+type NavItem = { href: string; label: string; moduleKey?: string; contributorOnly?: boolean }
 type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -45,7 +45,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Reports',
     items: [
-      { href: '/reports', label: 'Reports' },
+      { href: '/reports',    label: 'Reports' },
+      { href: '/executive',  label: 'Executive Summary', contributorOnly: true },
     ],
   },
   {
@@ -75,6 +76,7 @@ function SidebarContent({
   onClose?: () => void
 }) {
   const isAdmin = role === 'admin'
+  const isContributor = role === 'admin' || role === 'contributor'
 
   return (
     <nav className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
@@ -110,7 +112,9 @@ function SidebarContent({
       <div className="mt-2 space-y-4">
         {NAV_GROUPS.filter(g => !g.adminOnly || isAdmin).map(group => {
           const visibleItems = group.items.filter(
-            item => !item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])
+            item =>
+              (!item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])) &&
+              (!item.contributorOnly || isContributor)
           )
           if (visibleItems.length === 0) return null
           return (

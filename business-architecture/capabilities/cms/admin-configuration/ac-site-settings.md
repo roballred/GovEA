@@ -16,6 +16,7 @@ The system must allow administrators to configure the basic identity and appeara
 ## Rules
 - Site settings changes take effect immediately without a restart
 - Only Admins can access or modify site settings
+- Site settings in this capability are organization-scoped, not instance-scoped platform settings
 
 ## Implementation Status
 - **v1:** Theme selection and appearance settings are implemented.

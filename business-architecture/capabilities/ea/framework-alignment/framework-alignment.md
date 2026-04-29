@@ -9,17 +9,17 @@ The system must allow organizations to align GovEA content to external architect
 - **CMS Administrator** — needs to enable, configure, and maintain framework overlays without code changes
 - **Department Director** — benefits from clearer reports and better-governed architecture content, but should not need to understand TOGAF terminology
 
-> ⚠️ Enterprise Architect, Agency EA Coordinator, CMS Administrator, and Department Director are currently **Assumed** personas. Framework-alignment implementation should wait until the relevant needs are validated through direct user research.
+> ⚠️ Enterprise Architect, Agency EA Coordinator, CMS Administrator, and Department Director are currently **Assumed** personas. GovEA has still shipped a narrow TOGAF-alignment slice to reduce procurement and demo friction, but broader framework work should remain gated by real user validation.
 
 ## Sub-Capabilities
 
 | Capability | File | Status | Description |
 |---|---|---|---|
 | Framework Reference Management | [fa-framework-reference-management.md](./fa-framework-reference-management.md) | Not implemented | Store external framework references separately from GovEA's authoritative capability definitions |
-| Framework Mapping | [fa-framework-mapping.md](./fa-framework-mapping.md) | Not implemented | Map GovEA records to framework concepts, domains, content types, or reference categories |
+| Framework Mapping | [fa-framework-mapping.md](./fa-framework-mapping.md) | Partially implemented | Map capability and application records to TOGAF Architecture Domains; broader framework concept mapping remains future work |
 | ADM Phase Alignment | [fa-adm-phase-alignment.md](./fa-adm-phase-alignment.md) | Not implemented | Optionally tag architecture work to TOGAF ADM phases for TOGAF-aware teams |
-| TOGAF-Aligned Reporting | [fa-togaf-reporting.md](./fa-togaf-reporting.md) | Not implemented | Generate TOGAF-friendly reports from existing GovEA content |
-| Framework Overlay Configuration | [fa-framework-overlay-configuration.md](./fa-framework-overlay-configuration.md) | Not implemented | Allow admins to enable, disable, and configure framework overlays per organization |
+| TOGAF-Aligned Reporting | [fa-togaf-reporting.md](./fa-togaf-reporting.md) | Partially implemented | Generate TOGAF-friendly reports from existing GovEA content |
+| Framework Overlay Configuration | [fa-framework-overlay-configuration.md](./fa-framework-overlay-configuration.md) | Partially implemented | Allow admins to enable, disable, and configure optional framework overlays per organization |
 
 ## Reference Sources
 
@@ -45,3 +45,19 @@ Framework reference sources are inputs to capability design, not GovEA capabilit
 ## Design Principle
 
 Framework support should increase credibility without increasing friction. A TOGAF-trained architect should be able to recognize the structure of the work, while an agency practitioner should still experience GovEA as a simple mission-to-technology repository.
+
+## Current State
+
+GovEA now ships the first framework-alignment slice:
+
+- The `framework-overlay` module is org-scoped, opt-in, and off by default
+- Capability and application detail pages support TOGAF Architecture Domain mappings with optional rationale
+- The Reports area includes a TOGAF Application Landscape report when the overlay is enabled
+- The generic Architecture Vision report also now provides a framework-friendly summary built from existing repository content
+
+Still not shipped:
+
+- ADM phase tagging
+- Admin-managed framework reference records
+- Broader framework mappings beyond the current TOGAF domain slice
+- Per-framework configuration deeper than a single overlay toggle
