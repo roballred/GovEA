@@ -86,6 +86,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export default async function ExecutiveDashboardPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  if (session.user.role === 'viewer') redirect('/dashboard')
 
   const orgId = session.user.organizationId!
   const enabledModules = await getEnabledModules()

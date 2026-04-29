@@ -1,57 +1,50 @@
 # Product Priority Shortlist
 
-Last groomed: 2026-04-23
+Last groomed: 2026-04-28
 
 This note summarizes the top next product moves from the current capability inventory, open issues, and recent pull requests. It is intentionally short so it can be reviewed during backlog planning without replacing GitHub issues as the source of execution detail.
 
 ## Current Signal
 
-Recent merges strengthened the product in seven areas:
+Recent merges materially changed the product surface:
 
-- The second municipal demo organization is now merged, so GovEA has a stronger multi-org and instance-admin demo base.
-- Guided stakeholder answers are now shipped through `/answers?q=`, connected from search results, and filtered by viewer publication rules.
-- The roadmap now has an executive timeline view in addition to the existing grid, and the viewer filter bug on roadmap data was fixed.
-- Dialog naming and ADR tooltip consistency have merged, closing the last visible UX cleanup item from the prior shortlist.
-- PR #268 merged the typed-principle and markdown-rendering slice, so principle sets and prose rendering are now part of the shipped baseline.
-- Mission-to-technology traceability, repository-wide search, and viewer visibility rules remain core shipped foundations.
-- Instance administration is a usable console with org inventory, user management, audit view, org suspension, and audited break-glass sessions.
-- Framework Alignment is documented as an optional overlay, but implementation has not started.
+- PR #304 shipped the Application Portfolio risk view, giving GovEA a stronger leadership-facing application surface built from existing lifecycle and capability-link data.
+- PR #299 shipped the Reports hub and Architecture Vision output, proving GovEA can generate executive summaries directly from repository content rather than requiring duplicate documentation.
+- PR #301 shipped the first TOGAF overlay slice: org-level enablement, framework mappings on capability/application records, and a TOGAF Application Landscape report.
+- PR #303 documented the TOGAF/ADM boundary clearly: optional overlay in, ADM workflow enforcement out for v1/v2.
+- PR #309 clarified the instance-admin product boundary and made the persona/capability model match the already-shipped `/instance` console.
+- PR #310 reconciled several business-architecture docs, but a follow-up pass is still needed because top-level docs had drifted behind the newest product work.
 
-New signal since the prior grooming pass:
+What this means for prioritization:
 
-- PR #268 merged and superseded PR #265, so #262 is now shipped and docs should treat taxonomy-backed principle sets as implemented.
-- Issue #266 is now a true post-merge integrity gap: deleting a Principle Type can orphan existing principles because the reference is stored as plain text.
-- Four fresh security and tenancy issues now dominate near-term priority: bare-email auth lookup across orgs (#269), viewer access to unpublished glossary content (#270), the Next.js App Router DoS advisory (#271), and unsafe glossary source URLs (#272).
-- Issue #273 is the clear UX follow-up to the markdown-rendering merge: authoring still uses plain textareas even though display now supports markdown.
-- Issue #258 still appears open even though its body says it was fixed in PR #257; close it after merge verification if no regression remains.
-- Stakeholder-facing visuals are now useful enough for demos, but the immediate backlog should favor security, tenant-boundary correctness, and content-integrity fixes before more demo-surface expansion.
-
-The next work should first harden security and tenancy boundaries around the now-richer content model, then close the taxonomy-integrity gap introduced by the shipped principle-type work.
+- GovEA now has stronger admin, reporting, and leadership-demo foundations than it did a week ago.
+- The next best work is less about another isolated CRUD slice and more about turning the existing repository into decision support for platform admins, leadership audiences, and real-user feedback loops.
+- The repo still has important long-range ARB and market-research issues open, but the highest-leverage next moves are the ones that compound the product areas strengthened by the latest merges.
 
 ## Top 5 Next Things To Do
 
 | Rank | Recommended next thing | Why now | Primary issue(s) / PR |
 |---|---|---|---|
-| 1 | Fix multi-org auth identity binding | #269 is the highest-risk tenant-boundary issue in the repo: auth and SSO resolve users by bare email even though uniqueness is only guaranteed per organization | #269 |
-| 2 | Enforce published-only glossary access for viewers | #270 breaks the Viewer contract and leaks unpublished shared-reference content, which is especially visible now that glossary content is more central to stakeholder-facing views | #270 |
-| 3 | Patch the Next.js App Router security advisory | #271 is a framework-level DoS fix with a known patched target release, so it is a straightforward security-hardening move with broad platform value | #271 |
-| 4 | Validate glossary source URLs on write | #272 is a stored click-through script-injection vector; it should be closed before glossary usage expands further | #272 |
-| 5 | Add taxonomy delete safety for in-use principle types | #266 is the main post-merge integrity gap from the shipped principle-set work and should be fixed before admins manage principle vocabularies more aggressively | #266 |
+| 1 | Define and ship instance-level platform configuration | The `/instance` console is now real, documented, and clearly separated from org admin scope. #308 is the immediate product follow-on that turns instance admin from an audit/provisioning console into a real platform-management surface. | #308, PR #309 |
+| 2 | Build the Executive Dashboard for non-architects | PR #304 and PR #299 already proved the underlying summary data and leadership framing. #84 is the clearest next stakeholder-facing screen and the strongest adoption move in the open backlog. | #84, PR #304, PR #299 |
+| 3 | Add Impact Analysis on application and capability detail pages | GovEA already has the traceability graph and now has better portfolio/risk storytelling. #83 is the next decision-support feature that helps users act on lifecycle and modernization questions instead of just viewing linked records. | #83 |
+| 4 | Add Heatmap Analysis views | With the application risk portfolio shipped, #82 becomes a natural companion view for portfolio exposure, maturity, and domain-level pattern detection using the same core data. | #82, PR #304 |
+| 5 | Start lightweight user feedback capture for practice fit | The product now has enough breadth that wrong assumptions will compound unless feedback is captured systematically. #103 has a low-cost Phase 1 that can start immediately without waiting for a full in-app workflow. | #103 |
 
 ## Product Manager Notes
 
-- Treat #269 as the main product decision item, not just a bug. The team needs to choose between global unique identity and org-qualified sign-in, then make schema, login UX, and docs agree.
-- Treat #270 and #272 as trust-and-safety fixes for the glossary slice. The glossary is now shared reference content, so visibility and outbound-link hygiene need to be explicit.
-- Treat #271 as the cleanest platform-hardening task: patch, refresh lockfile, and run build/lint plus targeted auth and server-action regression checks.
-- Treat #266 as the principal non-security follow-up. Blocking deletion for in-use taxonomy terms is safer than silently clearing or rewriting principle types.
-- Keep #273 close behind the top five. Markdown display shipped, but better authoring should wait until the current security and integrity work is closed.
-- If #258 was verified through PR #257, close it as fixed so open bugs reflect current reality.
+- Treat #308 as the most concrete next product-management task. The repo now has a documented instance-admin boundary but not yet a clearly owned platform-config surface.
+- #84, #83, and #82 form a coherent sequence, not three isolated ideas: executive summary -> decision-support drill-down -> portfolio pattern visualization.
+- #306 is worth keeping warm as an input to future analysis and reporting work, but it is narrower than the five items above unless real users confirm it is blocking capability modelling today.
+- The ARB/research issues in the 90s and 130s still matter, but many are capability-definition or scope-decision work. The shortlist above favors moves that build directly on what the latest merged code already made possible.
+- Ship the Phase 1 manual feedback log from #103 before designing a full feedback table/UI. The process signal is more urgent than the schema.
 
 ## Documentation Follow-up
 
-This grooming pass also keeps public docs aligned with current repo state:
+This grooming pass also updates product docs to match current repo reality:
 
-- `docs/product-priorities.md`: replaces the stale PR-#265 review framing with the post-#268 security and integrity shortlist.
-- `README.md`: treats taxonomy-backed principle sets and markdown-rendered detail pages as shipped, and updates active work to the new hardening priorities.
-- `capabilities.md`: marks principles as taxonomy-backed and content display as markdown-rendered so the product summary matches the merged implementation.
-- `docs/data-model.md`: documents that `principles.principle_type` is taxonomy-backed text and therefore depends on application-level integrity checks.
+- `docs/product-priorities.md`: replaced the stale hardening shortlist with the current product-development sequence.
+- `README.md`: now reflects the shipped application risk portfolio, reports hub, and TOGAF overlay/reporting slice.
+- `capabilities.md`: now marks Application Risk Portfolio and the first framework-alignment slice accurately.
+- `business-architecture/capabilities/ea/framework-alignment/*.md`: implementation status now matches the shipped TOGAF overlay, mapping, and reporting behavior.
+- `business-architecture/capabilities/cms/frontend-display/fd-application-risk-portfolio.md`: now explicitly records the shipped v1 implementation status.
