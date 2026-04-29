@@ -23,7 +23,7 @@ function buildTour(role: Role) {
       {
         popover: {
           title: 'Welcome to GovEA',
-          description: 'GovEA is your organization\'s enterprise architecture workspace. This tour shows you where everything lives and how the pieces connect.',
+          description: 'GovEA is your organization\'s architecture repository, planning, and reporting workspace. This tour shows you where the core sections live and how they fit together.',
           side: 'over' as const,
           align: 'center',
         },
@@ -32,16 +32,7 @@ function buildTour(role: Role) {
         element: '[data-tour="dashboard"]',
         popover: {
           title: 'Dashboard',
-          description: 'See how much of your catalog is published vs. draft and where the gaps are. A good starting point before any governance review.',
-          side: 'right' as const,
-          align: 'start',
-        },
-      },
-      {
-        element: '[data-tour="nav-business-arch"]',
-        popover: {
-          title: 'Business Architecture',
-          description: 'Document who you serve, what your organization does, and how value flows. These records anchor everything else in the catalog.',
+          description: 'Check catalog coverage, review draft content, and see recent activity. A useful first stop before any planning or governance review.',
           side: 'right' as const,
           align: 'start',
         },
@@ -50,16 +41,7 @@ function buildTour(role: Role) {
         element: '[data-tour="nav-personas"]',
         popover: {
           title: 'Personas',
-          description: 'Add the people your services are built for — residents, businesses, staff, and partner agencies. Link them to capabilities and services to track who each part of your architecture serves.',
-          side: 'right' as const,
-          align: 'start',
-        },
-      },
-      {
-        element: '[data-tour="nav-value-streams"]',
-        popover: {
-          title: 'Value Streams',
-          description: 'Map how work moves from a triggering event to an outcome. Link stages to capabilities to see where gaps or handoff problems exist.',
+          description: 'Capture who your organization serves or supports — residents, staff, partner agencies, and others. Linking personas to capabilities and services keeps the architecture grounded in real users.',
           side: 'right' as const,
           align: 'start',
         },
@@ -68,16 +50,7 @@ function buildTour(role: Role) {
         element: '[data-tour="nav-capabilities"]',
         popover: {
           title: 'Capabilities',
-          description: 'Record what your organization does, independent of which systems do it. Link capabilities to applications to track how each function is currently enabled.',
-          side: 'right' as const,
-          align: 'start',
-        },
-      },
-      {
-        element: '[data-tour="nav-services"]',
-        popover: {
-          title: 'Services',
-          description: 'Document what you deliver to the public. Link services to the personas who use them and the capabilities that power them.',
+          description: 'Define what your organization needs to do, independent of which systems do it. Capabilities are the main organizing layer — everything else links back to them.',
           side: 'right' as const,
           align: 'start',
         },
@@ -86,16 +59,7 @@ function buildTour(role: Role) {
         element: '[data-tour="nav-applications"]',
         popover: {
           title: 'Applications',
-          description: 'Your technology inventory — lifecycle status, capability links, and the decisions behind each system. Filter by lifecycle to surface risks.',
-          side: 'right' as const,
-          align: 'start',
-        },
-      },
-      {
-        element: '[data-tour="nav-adrs"]',
-        popover: {
-          title: 'Decisions',
-          description: 'Record the why behind major technology choices. Superseded decisions stay visible so future teams understand the full context.',
+          description: 'Track which systems support which capabilities, and manage lifecycle and portfolio decisions. Filter by lifecycle status to surface risk.',
           side: 'right' as const,
           align: 'start',
         },
@@ -104,7 +68,7 @@ function buildTour(role: Role) {
         element: '[data-tour="nav-strategy"]',
         popover: {
           title: 'Strategy',
-          description: 'Link capabilities to objectives and running initiatives to show which parts of your architecture are connected to mission outcomes.',
+          description: 'Connect capabilities and applications to strategic objectives and active initiatives. This is how you show what the architecture is doing for the mission.',
           side: 'right' as const,
           align: 'start',
         },
@@ -113,7 +77,16 @@ function buildTour(role: Role) {
         element: '[data-tour="nav-roadmap"]',
         popover: {
           title: 'Roadmap',
-          description: 'A timeline of active and planned initiatives. Useful for stakeholder reviews and communicating what\'s changing and when.',
+          description: 'See planned and active initiatives on a timeline. Useful for leadership conversations about what\'s changing and when.',
+          side: 'right' as const,
+          align: 'start',
+        },
+      },
+      {
+        element: '[data-tour="nav-reports"]',
+        popover: {
+          title: 'Reports',
+          description: 'Turn your repository content into outputs for leadership and planning conversations — architecture vision, portfolio health, and executive summaries.',
           side: 'right' as const,
           align: 'start',
         },
@@ -122,7 +95,7 @@ function buildTour(role: Role) {
         element: '[data-tour="search"]',
         popover: {
           title: 'Search',
-          description: 'Find any record across the catalog instantly. Check for existing items before creating something new to avoid duplicates.',
+          description: 'Find any record across the catalog and follow links between related items. Check here before creating something new to avoid duplicates.',
           side: 'bottom' as const,
           align: 'start',
         },
