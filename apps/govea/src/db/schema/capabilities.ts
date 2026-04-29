@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
@@ -28,5 +28,12 @@ export const capabilityPersonas = pgTable('capability_personas', {
   personaId: uuid('persona_id').notNull().references(() => personas.id, { onDelete: 'cascade' }),
 })
 
+// Junction table: capabilities ↔ capabilities (parent-child hierarchy)
+export const capabilityRelationships = pgTable('capability_relationships', {
+  parentId: uuid('parent_id').notNull().references(() => capabilities.id, { onDelete: 'cascade' }),
+  childId:  uuid('child_id').notNull().references(() => capabilities.id, { onDelete: 'cascade' }),
+}, (t) => [primaryKey({ columns: [t.parentId, t.childId] })])
+
 export type Capability = typeof capabilities.$inferSelect
 export type NewCapability = typeof capabilities.$inferInsert
+export type CapabilityRelationship = typeof capabilityRelationships.$inferSelect

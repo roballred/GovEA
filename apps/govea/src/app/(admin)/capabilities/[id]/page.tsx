@@ -91,12 +91,21 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const removeAdr = unlinkCapabilityAdr.bind(null, id)
   const requestFederatedLink = requestCrossOrgLink.bind(null, 'capability', id)
 
+  const parents = capability.parentRelationships.map(r => r.parent)
+  const children = capability.childRelationships.map(r => r.child)
+
   return (
     <div className="space-y-8 max-w-3xl">
       <div className="flex items-center justify-between">
-        <Link href="/capabilities" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          ← Capabilities
-        </Link>
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href="/capabilities" className="hover:text-foreground transition-colors">Capabilities</Link>
+          {parents.map(p => (
+            <span key={p.id} className="flex items-center gap-1.5">
+              <span>/</span>
+              <Link href={`/capabilities/${p.id}`} className="hover:text-foreground transition-colors">{p.name}</Link>
+            </span>
+          ))}
+        </div>
         <div className="flex items-center gap-4">
           <Link
             href={`/capabilities/${id}/map`}
@@ -133,9 +142,28 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         <div className="flex flex-wrap gap-3 pt-1">
           {capability.domain
             ? <DomainBadge domain={capability.domain} />
-            : <span className="text-sm text-muted-foreground">No domain assigned</span>
+            : parents.length > 0
+              ? <span className="text-sm text-muted-foreground italic">Domain inherited from parent</span>
+              : <span className="text-sm text-muted-foreground">No domain assigned</span>
           }
         </div>
+
+        {children.length > 0 && (
+          <div className="pt-2 space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sub-capabilities</p>
+            <div className="flex flex-wrap gap-2">
+              {children.map(child => (
+                <Link
+                  key={child.id}
+                  href={`/capabilities/${child.id}`}
+                  className="inline-flex items-center rounded-md border bg-muted/40 px-2.5 py-1 text-sm hover:bg-muted transition-colors"
+                >
+                  {child.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <hr />
