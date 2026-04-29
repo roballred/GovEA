@@ -93,6 +93,20 @@ function SidebarContent({
         Dashboard
       </Link>
 
+      {/* Executive Summary */}
+      <Link
+        href="/executive"
+        onClick={onClose}
+        className={cn(
+          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          pathname === '/executive' || pathname.startsWith('/executive/')
+            ? 'bg-white/15 text-white'
+            : 'text-white/70 hover:bg-white/10 hover:text-white'
+        )}
+      >
+        Executive Summary
+      </Link>
+
       <div className="mt-2 space-y-4">
         {NAV_GROUPS.filter(g => !g.adminOnly || isAdmin).map(group => {
           const visibleItems = group.items.filter(
