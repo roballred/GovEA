@@ -21,7 +21,21 @@ RUN cd apps/govea && node node_modules/next/dist/bin/next build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Standalone Next.js build
 COPY --from=builder /app/apps/govea/.next/standalone ./
 COPY --from=builder /app/apps/govea/.next/static ./apps/govea/.next/static
+
+# Migration tooling — isolated in /app/db-tools so it doesn't conflict with the standalone bundle.
+# Uses plain npm (not pnpm) to avoid symlink issues when copying from the deps stage.
+WORKDIR /app/db-tools
+COPY apps/govea/src/db/migrations ./migrations/
+COPY docker/migrate.mjs docker/create-admin.mjs ./
+RUN npm init -y --quiet && npm install --save-exact --quiet postgres drizzle-orm bcryptjs
+
+WORKDIR /app
+COPY docker/entrypoint.prod.sh /entrypoint.prod.sh
+RUN chmod +x /entrypoint.prod.sh
+
 EXPOSE 3000
-CMD ["node", "apps/govea/server.js"]
+ENTRYPOINT ["/entrypoint.prod.sh"]

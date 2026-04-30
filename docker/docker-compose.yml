@@ -7,6 +7,20 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/govea
+      NODE_ENV: production
+
+      # Required — generate with: openssl rand -base64 32
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required. Run: export AUTH_SECRET=$(openssl rand -base64 32)}
+
+      # Required — set to the URL where the app is reachable
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+
+      # First-run setup — creates an org + instance admin on first boot if no users exist.
+      # Safe to leave set on subsequent runs (no-ops when users already exist).
+      GOVEA_SETUP_EMAIL: ${GOVEA_SETUP_EMAIL:-}
+      GOVEA_SETUP_PASSWORD: ${GOVEA_SETUP_PASSWORD:-}
+      GOVEA_SETUP_ORG_NAME: ${GOVEA_SETUP_ORG_NAME:-My Organization}
+
     depends_on:
       db:
         condition: service_healthy
