@@ -116,9 +116,7 @@ export function InstanceUserTable({ users, organizations, currentUserId }: Props
                           confirmLabel="Remove Platform Access"
                           destructive
                           onConfirm={async (reason) => {
-                            'use server'
-                            void reason
-                            await demoteInstanceAdmin(u.id)
+                            await demoteInstanceAdmin(u.id, reason)
                           }}
                         />
                       ) : (
@@ -128,9 +126,7 @@ export function InstanceUserTable({ users, organizations, currentUserId }: Props
                           description="This will grant platform admin access across all organisations. Enter a reason for the audit log."
                           confirmLabel="Grant Platform Access"
                           onConfirm={async (reason) => {
-                            'use server'
-                            void reason
-                            await promoteInstanceAdmin(u.id)
+                            await promoteInstanceAdmin(u.id, reason)
                           }}
                         />
                       )

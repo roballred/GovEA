@@ -100,7 +100,7 @@ export async function unsuspendOrg(orgId: string) {
   revalidatePath(`/instance/orgs/${orgId}`)
 }
 
-export async function promoteInstanceAdmin(userId: string) {
+export async function promoteInstanceAdmin(userId: string, reason?: string) {
   const session = await requireInstanceAdmin()
 
   await db.update(users)
@@ -113,13 +113,13 @@ export async function promoteInstanceAdmin(userId: string) {
     entityId: userId,
     userId: session.user.id,
     organizationId: null,
-    after: { instanceRole: 'instance_admin' },
+    after: { instanceRole: 'instance_admin', reason: reason?.trim() || null },
   })
 
   revalidatePath('/instance/users')
 }
 
-export async function demoteInstanceAdmin(userId: string) {
+export async function demoteInstanceAdmin(userId: string, reason?: string) {
   const session = await requireInstanceAdmin()
   if (userId === session.user.id) throw new Error('Cannot demote yourself')
 
@@ -134,7 +134,7 @@ export async function demoteInstanceAdmin(userId: string) {
     userId: session.user.id,
     organizationId: null,
     before: { instanceRole: 'instance_admin' },
-    after: { instanceRole: null },
+    after: { instanceRole: null, reason: reason?.trim() || null },
   })
 
   revalidatePath('/instance/users')
@@ -215,7 +215,12 @@ export async function setInstanceModuleAvailability(key: ModuleKey, available: b
 
   const before = await db.query.instanceSettings.findFirst()
   const beforeDisabledModules = before?.disabledModules ?? {}
-  const afterDisabledModules = { ...beforeDisabledModules, [key]: !available }
+  const afterDisabledModules = { ...beforeDisabledModules }
+  if (available) {
+    delete afterDisabledModules[key]
+  } else {
+    afterDisabledModules[key] = true
+  }
 
   const [row] = before
     ? await db.update(instanceSettings)
