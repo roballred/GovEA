@@ -1,7 +1,7 @@
 #!/bin/sh
 # Azure Container Apps entrypoint.
-# Waits for the Postgres sidecar (localhost:5432) before migrating + seeding,
-# then builds and starts the Next.js app (production build for stable server action IDs).
+# Waits for the Postgres sidecar (localhost:5432) before schema sync + seeding,
+# then starts the pre-built Next.js app (production mode for stable server action IDs).
 set -e
 
 echo ""
@@ -17,8 +17,10 @@ done
 echo "    Postgres is ready."
 
 echo ""
-echo "==> Running database migrations..."
-pnpm --filter govea db:migrate
+echo "==> Syncing database schema..."
+# Pre-production: push schema directly (no migration files yet).
+# Switch to db:migrate once the first persistent tenant/data exists.
+pnpm --filter govea exec drizzle-kit push --force
 
 echo ""
 echo "==> Seeding database..."
@@ -27,5 +29,5 @@ echo "==> Seeding database..."
 pnpm --filter govea db:seed:container
 
 echo ""
-echo "==> Starting dev server..."
-exec pnpm --filter govea dev
+echo "==> Starting server..."
+exec pnpm --filter govea start
