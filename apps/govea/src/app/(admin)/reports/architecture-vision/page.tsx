@@ -147,6 +147,7 @@ export default async function ArchitectureVisionPage() {
     : []
   const capById = new Map(capabilityRows.map(c => ({
     ...c,
+    childRelationships: [] as { parentId: string; childId: string }[],
     parentRelationships: parentRels.filter(r => r.childId === c.id),
   })).map(c => [c.id, c]))
 
