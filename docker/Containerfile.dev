@@ -34,19 +34,6 @@ COPY docker/entrypoint.dev.sh /entrypoint.dev.sh
 COPY docker/entrypoint.azure-dev.sh /entrypoint.azure-dev.sh
 RUN chmod +x /entrypoint.dev.sh /entrypoint.azure-dev.sh
 
-# Cache-bust: pass --build-arg CACHE_BUST=$(date +%s) to force re-execution.
-ARG CACHE_BUST=1
-
-# Pre-build the Next.js app so server action IDs are stable at runtime.
-# Placeholder env vars are sufficient — all DB queries are request-time only.
-RUN DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/govea \
-    AUTH_SECRET=build-placeholder \
-    NEXT_PUBLIC_APP_URL=http://localhost:3000 \
-    pnpm --filter govea build
-
-# Standalone output omits static assets — copy them in so the server can serve them.
-RUN cp -r apps/govea/.next/static apps/govea/.next/standalone/apps/govea/.next/static
-
 EXPOSE 3000
 
 ENTRYPOINT ["/entrypoint.dev.sh"]
