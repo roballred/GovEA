@@ -2,18 +2,56 @@ import { auth } from '@/lib/auth'
 import { db } from '@/db/client'
 import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { mergeModuleSettings, type ModuleStateMap } from '@/lib/modules'
 
 /**
- * Server-only helper: returns the current org's enabledModules record.
- * Absent key → module is on (same semantics as isModuleEnabled).
- * Safe to call from any server component or server action.
+ * Server-only helper: returns the instance-wide disabled module map.
  */
-export async function getEnabledModules(): Promise<Record<string, boolean>> {
-  const session = await auth()
-  if (!session?.user?.organizationId) return {}
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, session.user.organizationId),
-    columns: { enabledModules: true },
+export async function getInstanceDisabledModules(): Promise<ModuleStateMap> {
+  const row = await db.query.instanceSettings.findFirst({
+    columns: { disabledModules: true },
   })
-  return org?.enabledModules ?? {}
+  return row?.disabledModules ?? {}
+}
+
+/**
+ * Server-only helper: returns current-org module settings split by scope.
+ */
+export async function getCurrentModuleSettings(): Promise<{
+  orgEnabledModules: ModuleStateMap
+  instanceDisabledModules: ModuleStateMap
+  effectiveEnabledModules: ModuleStateMap
+}> {
+  const session = await auth()
+  if (!session?.user?.organizationId) {
+    return {
+      orgEnabledModules: {},
+      instanceDisabledModules: await getInstanceDisabledModules(),
+      effectiveEnabledModules: {},
+    }
+  }
+
+  const [org, global] = await Promise.all([
+    db.query.organizations.findFirst({
+      where: eq(organizations.id, session.user.organizationId),
+      columns: { enabledModules: true },
+    }),
+    getInstanceDisabledModules(),
+  ])
+
+  const orgEnabledModules = org?.enabledModules ?? {}
+  return {
+    orgEnabledModules,
+    instanceDisabledModules: global,
+    effectiveEnabledModules: mergeModuleSettings(orgEnabledModules, global),
+  }
+}
+
+/**
+ * Server-only helper: returns the current org's effective enabledModules
+ * record after applying instance-wide disable overrides.
+ */
+export async function getEnabledModules(): Promise<ModuleStateMap> {
+  const { effectiveEnabledModules } = await getCurrentModuleSettings()
+  return effectiveEnabledModules
 }

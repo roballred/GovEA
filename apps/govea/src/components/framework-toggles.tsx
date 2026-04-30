@@ -7,11 +7,12 @@ import { cn } from '@/lib/utils'
 
 interface FrameworkTogglesProps {
   initialModules: Record<string, boolean>
+  lockedModules?: Record<string, boolean>
 }
 
 const FRAMEWORK_MODULES = MODULE_DEFS.filter(m => m.group === 'Framework')
 
-export function FrameworkToggles({ initialModules }: FrameworkTogglesProps) {
+export function FrameworkToggles({ initialModules, lockedModules = {} }: FrameworkTogglesProps) {
   const [modules, setModules] = useState(initialModules)
   const [isPending, startTransition] = useTransition()
 
@@ -26,7 +27,8 @@ export function FrameworkToggles({ initialModules }: FrameworkTogglesProps) {
   return (
     <div className="space-y-1.5">
       {FRAMEWORK_MODULES.map(mod => {
-        const enabled = isModuleEnabled(modules, mod.key)
+        const locked = lockedModules[mod.key] === true
+        const enabled = locked ? false : isModuleEnabled(modules, mod.key)
         return (
           <div
             key={mod.key}
@@ -40,13 +42,18 @@ export function FrameworkToggles({ initialModules }: FrameworkTogglesProps) {
                   Only visible to editors and admins. Disable to hide all framework UI without deleting mapping data.
                 </p>
               )}
+              {locked && (
+                <p className="text-xs text-muted-foreground">
+                  Disabled for the entire GovEA instance by a platform admin.
+                </p>
+              )}
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={enabled}
               aria-label={`${enabled ? 'Disable' : 'Enable'} ${mod.label}`}
-              disabled={isPending}
+              disabled={isPending || locked}
               onClick={() => toggle(mod.key)}
               className={cn(
                 'mt-0.5 relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',
