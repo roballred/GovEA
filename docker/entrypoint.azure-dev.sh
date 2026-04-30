@@ -30,4 +30,4 @@ pnpm --filter govea db:seed:container
 
 echo ""
 echo "==> Starting server..."
-exec pnpm --filter govea start
+exec pnpm --filter govea dev
