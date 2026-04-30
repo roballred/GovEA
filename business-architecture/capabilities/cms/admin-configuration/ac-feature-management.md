@@ -21,6 +21,7 @@ The system must allow administrators to enable and disable optional modules with
 - Org-level feature changes are available to Admins
 - Instance-wide feature changes are available only to Instance Admins
 - Feature changes take effect without a server restart
+- Feature management in this capability is organization-scoped module visibility, not instance-wide platform configuration
 
 ## Implementation Status
 - **v1:** Org-level module toggles are implemented for the current module set.

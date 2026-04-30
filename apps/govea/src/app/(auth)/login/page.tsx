@@ -79,6 +79,7 @@ export default async function LoginPage({
                 { label: 'State Admin',           email: 'sam@state.govea.dev',           cls: 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' },
                 { label: 'Hartfield EA Admin',    email: 'maya@hartfield.govea.dev',      cls: 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100' },
                 { label: 'Instance Admin (dev)',  email: 'ivan@govea.dev',                cls: 'bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100' },
+                { label: 'Scale Test Admin (500 apps)',  email: 'scale@govea.dev',         cls: 'bg-slate-50 text-slate-800 border-slate-300 hover:bg-slate-100' },
               ] as const).map(({ label, email, cls }) => (
                 <form key={email} action={devSignIn}>
                   <input type="hidden" name="email" value={email} />

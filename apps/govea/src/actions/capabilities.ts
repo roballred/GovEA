@@ -1,8 +1,8 @@
 'use server'
 
 import { db } from '@/db/client'
-import { capabilities, capabilityPersonas } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { capabilities, capabilityPersonas, capabilityRelationships } from '@/db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -46,14 +46,39 @@ export async function getCapability(id: string) {
   const visible = await canReadFederatedEntity(capability.organizationId, capability.visibility, session.user.organizationId!)
   if (!visible) return null
   if (session.user.role === 'viewer' && capability.status !== 'published') return null
-  return capability
+
+  // Fetch relationships separately — avoids Drizzle relational schema cache for self-referential table
+  const [childRels, parentRels] = await Promise.all([
+    db.select({
+      parentId: capabilityRelationships.parentId,
+      childId: capabilityRelationships.childId,
+    }).from(capabilityRelationships).where(eq(capabilityRelationships.parentId, id)),
+    db.select({
+      parentId: capabilityRelationships.parentId,
+      childId: capabilityRelationships.childId,
+    }).from(capabilityRelationships).where(eq(capabilityRelationships.childId, id)),
+  ])
+
+  // Fetch names for related caps
+  const relatedIds = [...childRels.map(r => r.childId), ...parentRels.map(r => r.parentId)]
+  const relatedCaps = relatedIds.length > 0
+    ? await db.select({ id: capabilities.id, name: capabilities.name }).from(capabilities)
+        .where(inArray(capabilities.id, relatedIds))
+    : []
+  const capNameById = new Map(relatedCaps.map(c => [c.id, c.name]))
+
+  return {
+    ...capability,
+    childRelationships: childRels.map(r => ({ ...r, child: { id: r.childId, name: capNameById.get(r.childId) ?? '' } })),
+    parentRelationships: parentRels.map(r => ({ ...r, parent: { id: r.parentId, name: capNameById.get(r.parentId) ?? '' } })),
+  }
 }
 
 export async function getCapabilities(organizationId: string, role?: string) {
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
   const isViewer = role === 'viewer'
 
-  return db.query.capabilities.findMany({
+  const rows = await db.query.capabilities.findMany({
     where: (c, { eq, or, and, inArray }) => {
       const base = eq(c.organizationId, organizationId)
       const instanceWide = eq(c.visibility, 'instance')
@@ -69,6 +94,36 @@ export async function getCapabilities(organizationId: string, role?: string) {
     },
     orderBy: (c, { asc }) => [asc(c.name)],
   })
+
+  // Fetch capability relationships separately and attach — avoids relying on Drizzle
+  // relational query schema cache for the self-referential junction table.
+  if (rows.length === 0) return rows.map(r => ({ ...r, childRelationships: [], parentRelationships: [] }))
+  const capIds = rows.map(r => r.id)
+  const rels = await db.select().from(capabilityRelationships).where(
+    and(
+      inArray(capabilityRelationships.parentId, capIds),
+    )
+  )
+  const parentRels = await db.select().from(capabilityRelationships).where(
+    inArray(capabilityRelationships.childId, capIds)
+  )
+  const childRelMap = new Map<string, { parentId: string; childId: string }[]>()
+  const parentRelMap = new Map<string, { parentId: string; childId: string }[]>()
+  for (const r of rels) {
+    const arr = childRelMap.get(r.parentId) ?? []
+    arr.push(r)
+    childRelMap.set(r.parentId, arr)
+  }
+  for (const r of parentRels) {
+    const arr = parentRelMap.get(r.childId) ?? []
+    arr.push(r)
+    parentRelMap.set(r.childId, arr)
+  }
+  return rows.map(r => ({
+    ...r,
+    childRelationships:  childRelMap.get(r.id)  ?? [],
+    parentRelationships: parentRelMap.get(r.id) ?? [],
+  }))
 }
 
 export async function createCapability(formData: FormData) {
@@ -83,6 +138,7 @@ export async function createCapability(formData: FormData) {
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const personaIds = formData.getAll('personaIds') as string[]
+  const parentId = (formData.get('parentId') as string) || null
 
   const [capability] = await db.insert(capabilities).values({
     name,
@@ -103,13 +159,17 @@ export async function createCapability(formData: FormData) {
     )
   }
 
+  if (parentId) {
+    await db.insert(capabilityRelationships).values({ parentId, childId: capability.id }).onConflictDoNothing()
+  }
+
   await writeAuditLog({
     action: 'capability.create',
     entityType: 'capability',
     entityId: capability.id,
     userId: session.user.id,
     organizationId: orgId,
-    after: { name, description, domain, status, visibility, personaIds },
+    after: { name, description, domain, status, visibility, personaIds, parentId },
   })
 }
 
@@ -125,6 +185,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const personaIds = formData.getAll('personaIds') as string[]
+  const parentId = (formData.get('parentId') as string) || null
 
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(before?.organizationId, orgId)
@@ -149,6 +210,12 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     )
   }
 
+  // Replace parent relationship (remove existing, add new if set)
+  await db.delete(capabilityRelationships).where(eq(capabilityRelationships.childId, capabilityId))
+  if (parentId) {
+    await db.insert(capabilityRelationships).values({ parentId, childId: capabilityId }).onConflictDoNothing()
+  }
+
   await writeAuditLog({
     action: 'capability.edit',
     entityType: 'capability',
@@ -156,7 +223,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     userId: session.user.id,
     organizationId: orgId,
     before: { name: before?.name, status: before?.status, visibility: before?.visibility },
-    after: { name, description, domain, status, visibility, personaIds },
+    after: { name, description, domain, status, visibility, personaIds, parentId },
   })
 
   // Flag or clear cross-org links when visibility changes.

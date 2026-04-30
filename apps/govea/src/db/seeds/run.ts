@@ -5,7 +5,7 @@ import {
   DEV_USERS, STATE_USERS, SYSTEM_USERS,
   DEFAULT_PERSONA_TYPES, DEFAULT_PERSONA_TAGS,
   DEV_PERSONA_TAG_ASSIGNMENTS,
-  DEV_PERSONAS, DEV_CAPABILITIES, DEV_APPLICATIONS,
+  DEV_PERSONAS, DEV_CAPABILITIES, DEV_CAPABILITY_RELATIONSHIPS, DEV_APPLICATIONS,
   DEV_OBJECTIVES, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
   DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
@@ -21,11 +21,14 @@ import {
   TOGAF_VALUE_STREAMS, TOGAF_OBJECTIVES, TOGAF_INITIATIVES,
   TOGAF_ADRS, TOGAF_PRINCIPLES, TOGAF_GLOSSARY, TOGAF_SERVICES,
 } from './togaf-demo-fixtures'
+import {
+  SCALE_ORG, SCALE_USERS, SCALE_CAPABILITIES, SCALE_APPLICATIONS,
+} from './scale-fixtures'
 import { db } from '../client'
 import {
   users, organizations,
   personas, personaTags, capabilities, applications,
-  capabilityPersonas, applicationCapabilities,
+  capabilityPersonas, applicationCapabilities, capabilityRelationships,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
@@ -220,6 +223,18 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${DEV_CAPABILITIES.length} capabilities`)
+
+  // Capability parent-child relationships
+  for (const rel of DEV_CAPABILITY_RELATIONSHIPS) {
+    const parentId = devCapabilityIds[rel.parentName]
+    const childId = devCapabilityIds[rel.childName]
+    if (!parentId || !childId) continue
+    const exists = await db.query.capabilityRelationships.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.parentId, parentId), e(t.childId, childId)),
+    })
+    if (!exists) await db.insert(capabilityRelationships).values({ parentId, childId })
+  }
+  console.log(`  ✓ ${DEV_CAPABILITY_RELATIONSHIPS.length} capability parent-child relationships`)
 
   // Applications + capability links
   const devApplicationIds: Record<string, string> = {}
@@ -1441,9 +1456,43 @@ async function seed() {
   }
   console.log(`  ✓ ${TOGAF_SERVICES.length} services with capability, persona, and value stream links`)
 
-  // ── Org 6: GovEA Platform (system org) ───────────────────────────────────
+  // ── Org 6: Metro Scale Test (stress-test portfolio) ──────────────────────
 
-  console.log('\n[Org 6] GovEA Platform (system org)')
+  console.log('\n[Org 6] Metro Scale Test (scale dataset — 300 capabilities, 500 applications)')
+  const scaleOrgId = await findOrCreateOrg(SCALE_ORG.slug, SCALE_ORG.name)
+
+  for (const u of SCALE_USERS) {
+    await db.insert(users).values({ ...u, passwordHash, organizationId: scaleOrgId, isActive: 'true' }).onConflictDoNothing()
+  }
+  console.log(`  ✓ ${SCALE_USERS.length} users (scale@govea.dev / dev-password)`)
+
+  const scaleCapabilityIds: Record<string, string> = {}
+  for (const c of SCALE_CAPABILITIES) {
+    scaleCapabilityIds[c.name] = await findOrCreateCapability(scaleOrgId, c.name, {
+      description: c.description, domain: c.domain, status: c.status, visibility: c.visibility,
+    })
+  }
+  console.log(`  ✓ ${SCALE_CAPABILITIES.length} capabilities`)
+
+  for (const a of SCALE_APPLICATIONS) {
+    const appId = await findOrCreateApplication(scaleOrgId, a.name, {
+      description: a.description, vendor: a.vendor,
+      hostingModel: a.hostingModel, lifecycleStatus: a.lifecycleStatus, status: a.status,
+    })
+    for (const capName of a.capabilities) {
+      const capId = scaleCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.applicationCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.applicationId, appId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(applicationCapabilities).values({ applicationId: appId, capabilityId: capId })
+    }
+  }
+  console.log(`  ✓ ${SCALE_APPLICATIONS.length} applications with capability links`)
+
+  // ── Org 7: GovEA Platform (system org) ───────────────────────────────────
+
+  console.log('\n[Org 7] GovEA Platform (system org)')
   const systemOrgId = await findOrCreateOrg(SYSTEM_ORG.slug, SYSTEM_ORG.name, { isSystemOrg: true })
 
   for (const u of SYSTEM_USERS) {

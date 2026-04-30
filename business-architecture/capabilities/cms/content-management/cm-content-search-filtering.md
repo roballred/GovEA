@@ -22,6 +22,15 @@ The system must allow users to find content items quickly using list-level filte
 - Filters are additive — multiple filters narrow results
 - Empty filters return all content matching the current screen and role context
 
+## Implementation Status
+
+- **Per-entity filtering** — implemented: each list view has its own search bar and filter controls
+- **Taxonomy-driven browsing** — implemented: filter by taxonomy term on taxonomy-backed entity lists
+- **Repository-wide search** — implemented: the shared search surface covers the core EA entity types and does not require an external search service
+- **Search relevance and workflow-state filtering consistency** — maturing: relevance tuning and Viewer-scoped result filtering are still being refined
+
+Per-entity filtering is the most mature surface. The repository-wide search covers key entity types but is not a full-text index with relevance scoring; results are useful but not yet optimized for precision or Viewer role filtering consistency.
+
 ## Links
 - Depends on: Content Authoring, Content Workflow, Taxonomy Management
 - Related: Content Relationships, IAM — Role-Based Access Control

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { isInstanceAdmin } from '@/lib/rbac'
 import { InstanceShell } from '@/components/instance-shell'
 import { db } from '@/db/client'
-import { breakGlassSessions, organizations } from '@/db/schema'
+import { breakGlassSessions, organizations, platformConfig } from '@/db/schema'
 import { and, eq, isNull, gt } from 'drizzle-orm'
 
 export default async function InstanceLayout({ children }: { children: React.ReactNode }) {
@@ -13,21 +13,24 @@ export default async function InstanceLayout({ children }: { children: React.Rea
   if (!isInstanceAdmin(session.user)) redirect('/')
 
   const now = new Date()
-  const activeSessions = await db
-    .select({
-      id: breakGlassSessions.id,
-      targetOrgName: organizations.name,
-      expiresAt: breakGlassSessions.expiresAt,
-    })
-    .from(breakGlassSessions)
-    .innerJoin(organizations, eq(breakGlassSessions.targetOrgId, organizations.id))
-    .where(
-      and(
-        eq(breakGlassSessions.instanceAdminId, session.user.id),
-        isNull(breakGlassSessions.revokedAt),
-        gt(breakGlassSessions.expiresAt, now),
-      )
-    )
+  const [activeSessions, config] = await Promise.all([
+    db
+      .select({
+        id: breakGlassSessions.id,
+        targetOrgName: organizations.name,
+        expiresAt: breakGlassSessions.expiresAt,
+      })
+      .from(breakGlassSessions)
+      .innerJoin(organizations, eq(breakGlassSessions.targetOrgId, organizations.id))
+      .where(
+        and(
+          eq(breakGlassSessions.instanceAdminId, session.user.id),
+          isNull(breakGlassSessions.revokedAt),
+          gt(breakGlassSessions.expiresAt, now),
+        )
+      ),
+    db.query.platformConfig.findFirst(),
+  ])
 
   const signOutSlot = (
     <form action={async () => {
@@ -45,6 +48,7 @@ export default async function InstanceLayout({ children }: { children: React.Rea
       email={session.user.email ?? ''}
       signOutSlot={signOutSlot}
       activeBreakGlassSessions={activeSessions}
+      instanceName={config?.instanceName}
     >
       {children}
     </InstanceShell>
