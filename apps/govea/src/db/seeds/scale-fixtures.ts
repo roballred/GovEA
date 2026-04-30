@@ -987,20 +987,10 @@ const DOMAIN_DEFS: DomainDef[] = [
 
 // ── Exported fixtures ────────────────────────────────────────────────────────
 
-// Structural pattern: caps 0–3 are top-level; 4–14 are distributed as children.
-// This exercises domain inheritance — sub-caps have no own domain and inherit from parent.
-const CHILD_STRUCTURE: [number, number][] = [
-  [0, 4], [0, 5], [0, 6], [0, 7],
-  [1, 8], [1, 9], [1, 10],
-  [2, 11], [2, 12],
-  [3, 13], [3, 14],
-]
-const CHILD_INDICES = new Set(CHILD_STRUCTURE.map(([, child]) => child))
-
 export type ScaleCapability = {
   name: string
   description: string
-  domain: string | null
+  domain: string
   status: 'draft' | 'published' | 'archived'
   visibility: 'org'
   personas: string[]
@@ -1016,30 +1006,16 @@ export type ScaleApplication = {
   capabilities: string[]
 }
 
-export type ScaleCapabilityRelationship = {
-  parentName: string
-  childName: string
-}
-
 export const SCALE_CAPABILITIES: ScaleCapability[] = DOMAIN_DEFS.flatMap(({ domain, capabilities }) =>
-  capabilities.map((name, i) => ({
+  capabilities.map(name => ({
     name,
     description: `${name} supporting ${domain} services.`,
-    // Sub-capabilities inherit domain from their parent; only set it on top-level caps
-    domain: CHILD_INDICES.has(i) ? null : domain,
+    domain,
     status: 'published',
     visibility: 'org',
     personas: [],
   }))
 )
-
-export const SCALE_CAPABILITY_RELATIONSHIPS: ScaleCapabilityRelationship[] =
-  DOMAIN_DEFS.flatMap(({ capabilities }) =>
-    CHILD_STRUCTURE.map(([parentIdx, childIdx]) => ({
-      parentName: capabilities[parentIdx],
-      childName: capabilities[childIdx],
-    }))
-  )
 
 export const SCALE_APPLICATIONS: ScaleApplication[] = DOMAIN_DEFS.flatMap(({ capabilities, apps }) =>
   apps.map(({ name, vendor }, i) => {

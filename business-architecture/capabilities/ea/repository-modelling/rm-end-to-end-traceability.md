@@ -4,6 +4,10 @@
 
 The system must allow any user to follow a chain of relationships across the full architecture — from strategic objectives through capabilities to applications and technology — in either direction, and must surface where those chains are broken or incomplete.
 
+## Implementation Status
+
+**Not yet implemented.** Read-only traceability views for individual objectives, capabilities, and services exist in the product (see `fd-traceability-views.md`), but the cross-layer impact analysis, reverse traversal UI, broken chain indicators, and cross-agency views described in this document are not yet built. This document is the design specification for that future work.
+
 ## Personas
 
 - **Enterprise Architect (Central IT)** — needs to see the full impact of a proposed change or decommission before it happens; wants to identify which agencies have redundant applications serving the same capability

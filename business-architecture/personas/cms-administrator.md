@@ -6,11 +6,12 @@
 Internal — Back-end administrator
 
 ## Who They Are
-The CMS Administrator is the person responsible for setting up, configuring, and maintaining the content management system. In a government context this is typically a senior IT staff member or system owner — not a developer, but technically capable. They manage who has access, what content types exist, and how the system behaves. They are accountable for data integrity and system security.
+The CMS Administrator is the person responsible for setting up, configuring, and maintaining GovEA for a single organization. In a government context this is typically a senior IT staff member or system owner — not a developer, but technically capable. They manage who has access, what content types exist, and how the organization's workspace behaves. They are accountable for data integrity and system security inside their own tenant, not for platform-wide operations across every org on the instance.
 
 ## Goals
 - Configure and maintain content types, taxonomies, and workflows without writing code
 - Manage user accounts, roles, and permissions from a single interface
+- Configure organization-scoped settings such as themes, enabled modules, and similar workspace behavior without platform-operator help
 - Connect the system to the agency's identity provider (e.g. Microsoft Entra ID / SSO) without custom development
 - Audit who changed what and when, and be able to roll back or review changes
 - Keep the system running predictably with minimal ongoing maintenance
@@ -19,11 +20,12 @@ The CMS Administrator is the person responsible for setting up, configuring, and
 - Current tools require developer involvement for routine configuration changes
 - No clear audit trail — hard to answer "who changed this and when"
 - User provisioning is manual and error-prone, especially when staff turn over
+- It is often unclear which settings belong to the agency versus the platform operator
 - SSO integration is either unavailable or requires expensive professional services
 - Role and permission models are too coarse (all or nothing) or too complex to manage
 
 ## Critical Insight
-The CMS Administrator is not a developer and should never need to be. If administrative functions require code changes or CLI access, the system has failed this persona. Every configuration action they need to perform must be available through the UI, and every access decision must be auditable.
+The CMS Administrator is not a developer and should never need to be. If ordinary organization administration requires code changes, CLI access, or filing a platform-operator ticket for routine workspace settings, the system has failed this persona. Every org-scoped configuration action they need must be available through the UI, and every access decision must be auditable.
 
 ## Data Stored About This Persona
 
@@ -44,6 +46,7 @@ GovEA stores the following personal data about CMS Administrator accounts:
 
 ## Relevant Capabilities
 - Back-end content administration
+- Organization-scoped configuration and settings
 - User and role management
 - Identity and access management (SSO integration)
 - Audit trail and change history

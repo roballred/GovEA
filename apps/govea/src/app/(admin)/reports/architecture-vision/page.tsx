@@ -306,30 +306,42 @@ export default async function ArchitectureVisionPage() {
               ))}
             </div>
 
-            <div className="space-y-3">
-              {Array.from(capsByDomain.entries()).map(([domain, caps]) => (
-                <div key={domain}>
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5">{domain}</p>
-                  <div className="rounded-lg border bg-card divide-y">
-                    {caps.map(cap => (
-                      <div key={cap.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                        <Link href={`/capabilities/${cap.id}`} className="text-sm hover:text-primary transition-colors">
-                          {cap.name}
-                        </Link>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                          {cap.objectiveCapabilities.length === 0 && (
-                            <span className="text-amber-600">no objective</span>
-                          )}
-                          {cap.applicationCapabilities.length === 0 && (
-                            <span className="text-amber-600">no app</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="rounded-lg border bg-card overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Domain</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Capabilities</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Obj. linked</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">App linked</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {Array.from(capsByDomain.entries()).map(([domain, caps]) => {
+                    const withObj = caps.filter(c => c.objectiveCapabilities.length > 0).length
+                    const withApp = caps.filter(c => c.applicationCapabilities.length > 0).length
+                    return (
+                      <tr key={domain}>
+                        <td className="px-4 py-2.5">{domain}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{caps.length}</td>
+                        <td className={cn('px-4 py-2.5 text-right tabular-nums', withObj === 0 ? 'text-amber-600' : 'text-muted-foreground')}>
+                          {withObj} / {caps.length}
+                        </td>
+                        <td className={cn('px-4 py-2.5 text-right tabular-nums', withApp < caps.length ? 'text-amber-600' : 'text-muted-foreground')}>
+                          {withApp} / {caps.length}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              <Link href="/capabilities" className="underline underline-offset-2 hover:text-foreground">
+                View full capability map →
+              </Link>
+            </p>
           </>
         )}
       </section>

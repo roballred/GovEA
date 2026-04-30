@@ -27,7 +27,20 @@ The system must generate TOGAF-friendly reports from GovEA content for organizat
 
 ## Implementation Status
 
-Not implemented.
+Partially implemented.
+
+Current shipped slice:
+
+- `Architecture Vision` report generates a plain-language architecture summary from existing GovEA records
+- `Application Landscape` report is available under Reports when the TOGAF overlay is enabled
+- Reports disclose repository gaps rather than hiding them
+- Reports link back to the underlying GovEA records
+
+Not yet shipped:
+
+- Additional TOGAF-style outputs beyond the current Architecture Vision and Application Landscape reports
+- Reporting driven by richer framework mappings or ADM phase labels
+- A broader configurable reporting surface for multiple frameworks
 
 ## Links
 

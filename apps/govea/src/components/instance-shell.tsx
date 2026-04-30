@@ -6,10 +6,11 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/instance',       label: 'Dashboard',      exact: true },
-  { href: '/instance/orgs',  label: 'Organizations' },
-  { href: '/instance/users', label: 'Users' },
-  { href: '/instance/audit', label: 'Audit Log' },
+  { href: '/instance',        label: 'Dashboard',      exact: true },
+  { href: '/instance/orgs',   label: 'Organizations' },
+  { href: '/instance/users',  label: 'Users' },
+  { href: '/instance/audit',  label: 'Audit Log' },
+  { href: '/instance/config', label: 'Configuration' },
 ]
 
 const BG    = '#1e1b4b' // indigo-950 — distinct from agency admin
@@ -26,6 +27,7 @@ interface InstanceShellProps {
   signOutSlot: ReactNode
   children: ReactNode
   activeBreakGlassSessions?: ActiveSession[]
+  instanceName?: string
 }
 
 export function InstanceShell({
@@ -33,6 +35,7 @@ export function InstanceShell({
   signOutSlot,
   children,
   activeBreakGlassSessions = [],
+  instanceName = 'GovEA',
 }: InstanceShellProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -49,7 +52,7 @@ export function InstanceShell({
           style={{ borderColor: BORDER }}
         >
           <Link href="/instance" className="font-bold tracking-tight text-white text-lg hover:opacity-80 transition-opacity">
-            GovEA
+            {instanceName}
           </Link>
           <span className="text-xs text-indigo-300 font-medium">Platform</span>
         </div>
@@ -79,7 +82,7 @@ export function InstanceShell({
           style={{ borderColor: BORDER }}
         >
           <span className="font-bold tracking-tight text-white text-lg">
-            GovEA <span className="text-indigo-300 font-medium text-sm">Platform</span>
+            {instanceName} <span className="text-indigo-300 font-medium text-sm">Platform</span>
           </span>
           <button
             onClick={() => setSidebarOpen(false)}

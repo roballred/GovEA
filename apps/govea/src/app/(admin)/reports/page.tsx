@@ -31,6 +31,16 @@ export default async function ReportsPage() {
             </div>
             <span className="text-muted-foreground text-sm">→</span>
           </Link>
+          <Link
+            href="/reports/heatmap"
+            className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
+          >
+            <div>
+              <p className="text-sm font-medium group-hover:text-primary transition-colors">Heatmap Analysis</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Portfolio pattern view — lifecycle health by domain, hosting model distribution, and capability coverage gaps at a glance.</p>
+            </div>
+            <span className="text-muted-foreground text-sm">→</span>
+          </Link>
         </div>
       </section>
 

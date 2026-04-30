@@ -29,7 +29,19 @@ Mappings explain how existing GovEA content relates to external architecture pra
 
 ## Implementation Status
 
-Not implemented.
+Partially implemented.
+
+Current shipped slice:
+
+- Capability and application detail pages support TOGAF Architecture Domain mappings
+- Mappings can carry an optional rationale
+- Mappings are organization-scoped and only visible when the TOGAF overlay is enabled
+
+Not yet shipped:
+
+- Mapping additional entity types
+- Supporting multiple frameworks or richer concept taxonomies
+- Reporting and filtering across arbitrary framework concepts beyond the current TOGAF domain slice
 
 ## Links
 

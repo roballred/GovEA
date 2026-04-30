@@ -12,7 +12,7 @@ import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
-type NavItem = { href: string; label: string; moduleKey?: string }
+type NavItem = { href: string; label: string; moduleKey?: string; contributorOnly?: boolean }
 type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -45,7 +45,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Reports',
     items: [
-      { href: '/reports', label: 'Reports' },
+      { href: '/reports',    label: 'Reports' },
+      { href: '/executive',  label: 'Executive Summary', contributorOnly: true },
     ],
   },
   {
@@ -75,6 +76,7 @@ function SidebarContent({
   onClose?: () => void
 }) {
   const isAdmin = role === 'admin'
+  const isContributor = role === 'admin' || role === 'contributor'
 
   return (
     <nav className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
@@ -93,16 +95,32 @@ function SidebarContent({
         Dashboard
       </Link>
 
+      {/* Executive Summary */}
+      <Link
+        href="/executive"
+        onClick={onClose}
+        className={cn(
+          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          pathname === '/executive' || pathname.startsWith('/executive/')
+            ? 'bg-white/15 text-white'
+            : 'text-white/70 hover:bg-white/10 hover:text-white'
+        )}
+      >
+        Executive Summary
+      </Link>
+
       <div className="mt-2 space-y-4">
         {NAV_GROUPS.filter(g => !g.adminOnly || isAdmin).map(group => {
           const visibleItems = group.items.filter(
-            item => !item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])
+            item =>
+              (!item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])) &&
+              (!item.contributorOnly || isContributor)
           )
           if (visibleItems.length === 0) return null
           return (
             <div key={group.label}>
               <p
-                data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : undefined}
+                data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : group.label === 'Reports' ? 'nav-reports' : undefined}
                 className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none"
               >
                 {group.label}

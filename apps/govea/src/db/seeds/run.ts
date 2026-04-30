@@ -22,7 +22,7 @@ import {
   TOGAF_ADRS, TOGAF_PRINCIPLES, TOGAF_GLOSSARY, TOGAF_SERVICES,
 } from './togaf-demo-fixtures'
 import {
-  SCALE_ORG, SCALE_USERS, SCALE_CAPABILITIES, SCALE_APPLICATIONS, SCALE_CAPABILITY_RELATIONSHIPS,
+  SCALE_ORG, SCALE_USERS, SCALE_CAPABILITIES, SCALE_APPLICATIONS,
 } from './scale-fixtures'
 import { db } from '../client'
 import {
@@ -1477,17 +1477,6 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${SCALE_APPLICATIONS.length} applications with capability links`)
-
-  // Seed capability parent-child relationships (parents already inserted above)
-  let relCount = 0
-  for (const rel of SCALE_CAPABILITY_RELATIONSHIPS) {
-    const parentId = scaleCapabilityIds[rel.parentName]
-    const childId  = scaleCapabilityIds[rel.childName]
-    if (!parentId || !childId) continue
-    await db.insert(capabilityRelationships).values({ parentId, childId }).onConflictDoNothing()
-    relCount++
-  }
-  console.log(`  ✓ ${relCount} capability parent-child relationships`)
 
   // ── Org 7: GovEA Platform (system org) ───────────────────────────────────
 
