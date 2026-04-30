@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/instance',       label: 'Dashboard',      exact: true },
+  { href: '/instance/features', label: 'Feature Controls' },
   { href: '/instance/orgs',  label: 'Organizations' },
   { href: '/instance/users', label: 'Users' },
   { href: '/instance/audit', label: 'Audit Log' },

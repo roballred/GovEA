@@ -26,6 +26,8 @@ export type ModuleKey =
 
 export type ModuleGroup = 'Business Architecture' | 'Portfolio' | 'Strategy' | 'Framework'
 
+export type ModuleStateMap = Record<string, boolean>
+
 export interface ModuleDef {
   key: ModuleKey
   label: string
@@ -67,7 +69,7 @@ export const MODULE_DEFS: ModuleDef[] = [
  * opt-in overlays default to OFF.
  */
 export function isModuleEnabled(
-  enabledModules: Record<string, boolean>,
+  enabledModules: ModuleStateMap,
   key: ModuleKey,
 ): boolean {
   const def = MODULE_DEFS.find(m => m.key === key)
@@ -76,6 +78,24 @@ export function isModuleEnabled(
     return enabledModules[key] !== false
   }
   return enabledModules[key] === true
+}
+
+/**
+ * Applies instance-wide disable overrides to an org's module settings.
+ * When an instance admin disables a module globally, it is OFF for every org
+ * regardless of that org's local preference.
+ */
+export function mergeModuleSettings(
+  orgEnabledModules: ModuleStateMap,
+  instanceDisabledModules: ModuleStateMap,
+): ModuleStateMap {
+  const merged = { ...orgEnabledModules }
+  for (const def of MODULE_DEFS) {
+    if (instanceDisabledModules[def.key]) {
+      merged[def.key] = false
+    }
+  }
+  return merged
 }
 
 /**

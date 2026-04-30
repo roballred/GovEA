@@ -7,11 +7,12 @@ import { cn } from '@/lib/utils'
 
 interface ModuleTogglesProps {
   initialModules: Record<string, boolean>
+  lockedModules?: Record<string, boolean>
 }
 
 const GROUPS: ModuleGroup[] = ['Business Architecture', 'Portfolio', 'Strategy']
 
-export function ModuleToggles({ initialModules }: ModuleTogglesProps) {
+export function ModuleToggles({ initialModules, lockedModules = {} }: ModuleTogglesProps) {
   const [modules, setModules] = useState(initialModules)
   const [isPending, startTransition] = useTransition()
 
@@ -33,19 +34,27 @@ export function ModuleToggles({ initialModules }: ModuleTogglesProps) {
           </p>
           <div className="space-y-1.5">
             {MODULE_DEFS.filter(m => m.group === group).map(mod => {
-              const enabled = isModuleEnabled(modules, mod.key)
+              const locked = lockedModules[mod.key] === true
+              const enabled = locked ? false : isModuleEnabled(modules, mod.key)
               return (
                 <div
                   key={mod.key}
                   className="flex items-center justify-between rounded-lg border bg-card px-4 py-3"
                 >
-                  <span className="text-sm font-medium">{mod.label}</span>
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-medium">{mod.label}</span>
+                    {locked && (
+                      <p className="text-xs text-muted-foreground">
+                        Disabled for the entire GovEA instance by a platform admin.
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={enabled}
                     aria-label={`${enabled ? 'Disable' : 'Enable'} ${mod.label}`}
-                    disabled={isPending}
+                    disabled={isPending || locked}
                     onClick={() => toggle(mod.key)}
                     className={cn(
                       'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',

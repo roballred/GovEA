@@ -9,6 +9,7 @@ import { getTheme, themeToStyleString } from '@/lib/themes'
 import type { Role } from '@/lib/rbac'
 import { isInstanceAdmin } from '@/lib/rbac'
 import { AppShell } from '@/components/app-shell'
+import { getCurrentModuleSettings } from '@/lib/get-enabled-modules'
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
   admin: 'bg-violet-100 text-violet-800 border-violet-200',
@@ -26,13 +27,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let themeStyle = ''
   let enabledModules: Record<string, boolean> = {}
   if (session.user.organizationId) {
-    const org = await db.query.organizations.findFirst({
-      where: eq(organizations.id, session.user.organizationId),
-    })
+    const [org, moduleSettings] = await Promise.all([
+      db.query.organizations.findFirst({
+        where: eq(organizations.id, session.user.organizationId),
+      }),
+      getCurrentModuleSettings(),
+    ])
     if (org) {
       const theme = getTheme(org.theme)
       themeStyle = themeToStyleString(theme)
-      enabledModules = org.enabledModules ?? {}
+      enabledModules = moduleSettings.effectiveEnabledModules
     }
   }
 

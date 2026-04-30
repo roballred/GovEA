@@ -1,11 +1,14 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations, users, breakGlassSessions } from '@/db/schema'
+import { organizations, users, breakGlassSessions, instanceSettings } from '@/db/schema'
 import { eq, and, isNull, gt } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
+import { MODULE_DEFS, type ModuleKey } from '@/lib/modules'
+import { validatePassword } from '@/lib/password'
+import bcrypt from 'bcryptjs'
 
 export async function grantBreakGlass(orgId: string, reason: string) {
   const session = await requireInstanceAdmin()
@@ -147,4 +150,94 @@ export async function getActiveBreakGlass(adminId: string, orgId: string) {
       gt(breakGlassSessions.expiresAt, now),
     ),
   })
+}
+
+export async function createInstanceUser(formData: FormData) {
+  const session = await requireInstanceAdmin()
+
+  const organizationId = formData.get('organizationId') as string
+  const name = formData.get('name') as string
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+  const role = formData.get('role') as 'admin' | 'contributor' | 'viewer'
+  const grantPlatformAdmin = formData.get('instanceAdmin') === 'on'
+
+  if (!organizationId) throw new Error('Organization is required')
+
+  const organization = await db.query.organizations.findFirst({
+    where: eq(organizations.id, organizationId),
+  })
+  if (!organization) throw new Error('Organization not found')
+
+  const existing = await db.query.users.findFirst({ where: eq(users.email, email) })
+  if (existing) throw new Error('A user with that email address already exists.')
+
+  const pwValidation = validatePassword(password)
+  if (!pwValidation.valid) throw new Error(pwValidation.message)
+
+  const passwordHash = await bcrypt.hash(password, 12)
+  const [user] = await db.insert(users).values({
+    organizationId,
+    name,
+    email,
+    passwordHash,
+    role,
+    instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
+    isActive: 'true',
+  }).returning()
+
+  await writeAuditLog({
+    action: 'instance.user.create',
+    entityType: 'user',
+    entityId: user.id,
+    userId: session.user.id,
+    organizationId: null,
+    after: {
+      name,
+      email,
+      role,
+      organizationId,
+      organizationName: organization.name,
+      instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
+    },
+  })
+
+  revalidatePath('/instance/users')
+}
+
+/**
+ * Controls whether a module is available anywhere on the instance.
+ * When unavailable, the module is forced OFF for every organization.
+ */
+export async function setInstanceModuleAvailability(key: ModuleKey, available: boolean) {
+  const session = await requireInstanceAdmin()
+  if (!MODULE_DEFS.find(m => m.key === key)) throw new Error('Unknown module')
+
+  const before = await db.query.instanceSettings.findFirst()
+  const beforeDisabledModules = before?.disabledModules ?? {}
+  const afterDisabledModules = { ...beforeDisabledModules, [key]: !available }
+
+  const [row] = before
+    ? await db.update(instanceSettings)
+        .set({ disabledModules: afterDisabledModules, updatedAt: new Date() })
+        .where(eq(instanceSettings.id, before.id))
+        .returning()
+    : await db.insert(instanceSettings)
+        .values({ disabledModules: afterDisabledModules })
+        .returning()
+
+  await writeAuditLog({
+    action: 'instance.settings.module_availability',
+    entityType: 'instance_settings',
+    entityId: row.id,
+    userId: session.user.id,
+    organizationId: null,
+    before: { [key]: beforeDisabledModules[key] ? 'disabled' : 'available' },
+    after: { [key]: available ? 'available' : 'disabled' },
+  })
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/instance')
+  revalidatePath('/instance/features')
+  revalidatePath('/settings')
 }

@@ -9,6 +9,7 @@ import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
 import { isAdmin } from '@/lib/rbac'
 import type { ConfidenceSettings } from '@/db/schema'
+import { getCurrentModuleSettings } from '@/lib/get-enabled-modules'
 
 const DEFAULT_CONFIDENCE: ConfidenceSettings = {
   enabled: false,
@@ -21,14 +22,18 @@ export default async function SettingsPage() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) redirect('/dashboard')
 
-  const org = session.user.organizationId
-    ? await db.query.organizations.findFirst({
-        where: eq(organizations.id, session.user.organizationId),
-      })
-    : null
+  const [org, moduleSettings] = await Promise.all([
+    session.user.organizationId
+      ? db.query.organizations.findFirst({
+          where: eq(organizations.id, session.user.organizationId),
+        })
+      : Promise.resolve(null),
+    getCurrentModuleSettings(),
+  ])
 
   const activeTheme = org?.theme ?? 'govea'
-  const enabledModules = org?.enabledModules ?? {}
+  const enabledModules = moduleSettings.orgEnabledModules
+  const instanceDisabledModules = moduleSettings.instanceDisabledModules
   const confidenceSettings = org?.confidenceSettings ?? DEFAULT_CONFIDENCE
 
   return (
@@ -53,10 +58,11 @@ export default async function SettingsPage() {
           <h2 className="text-base font-semibold">Modules</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Disable modules your organization does not use. Hidden modules are removed from navigation
-            — no data is deleted and you can re-enable them at any time.
+            — no data is deleted and you can re-enable them at any time. If a module is turned off
+            by the site admin for the whole instance, it will be locked here.
           </p>
         </div>
-        <ModuleToggles initialModules={enabledModules} />
+        <ModuleToggles initialModules={enabledModules} lockedModules={instanceDisabledModules} />
       </section>
 
       <hr />
@@ -68,7 +74,7 @@ export default async function SettingsPage() {
             Optional framework integrations. These are opt-in and off by default — enable only what your organization actively uses.
           </p>
         </div>
-        <FrameworkToggles initialModules={enabledModules} />
+        <FrameworkToggles initialModules={enabledModules} lockedModules={instanceDisabledModules} />
       </section>
 
       <hr />

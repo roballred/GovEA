@@ -14,11 +14,12 @@ import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
   grantBreakGlass, revokeBreakGlass,
   suspendOrg, unsuspendOrg,
-  promoteInstanceAdmin, demoteInstanceAdmin,
+  promoteInstanceAdmin, demoteInstanceAdmin, setInstanceModuleAvailability, createInstanceUser,
 } from '@/actions/instance'
 import { db } from '@/db/client'
-import { breakGlassSessions, auditLog } from '@/db/schema'
+import { breakGlassSessions, auditLog, instanceSettings, organizations } from '@/db/schema'
 import { eq, and, isNull, or } from 'drizzle-orm'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
 import {
   createTestOrg, createTestUser, cleanupOrg, makeSession, findOrg, findUser,
   type TestUser,
@@ -62,6 +63,7 @@ afterAll(async () => {
   )
   await cleanupOrg(orgId)
   await cleanupOrg(targetOrgId)
+  await db.delete(instanceSettings)
 })
 
 function asInstanceAdmin() {
@@ -223,6 +225,99 @@ describe('promoteInstanceAdmin', () => {
   it('throws Forbidden for non-instance-admin', async () => {
     asRegularAdmin()
     await expect(promoteInstanceAdmin(regularUser.id)).rejects.toThrow('Forbidden')
+  })
+})
+
+// ── Instance-wide module controls ────────────────────────────────────────────
+
+describe('setInstanceModuleAvailability', () => {
+  it('stores a global disable override and writes an audit log', async () => {
+    asInstanceAdmin()
+
+    await setInstanceModuleAvailability('personas', false)
+
+    const settings = await db.query.instanceSettings.findFirst()
+    expect(settings).toBeDefined()
+    expect(settings!.disabledModules.personas).toBe(true)
+
+    const entries = await db.select().from(auditLog)
+      .where(eq(auditLog.action, 'instance.settings.module_availability'))
+    expect(entries.length).toBeGreaterThan(0)
+  })
+
+  it('forces the module off for an org even when the org enabled it', async () => {
+    asInstanceAdmin()
+
+    await db.update(organizations)
+      .set({ enabledModules: { personas: true }, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
+
+    await setInstanceModuleAvailability('personas', false)
+
+    mockAuth.mockResolvedValue(makeSession(regularAdmin))
+    const effectiveModules = await getEnabledModules()
+    expect(effectiveModules.personas).toBe(false)
+  })
+
+  it('throws Forbidden for non-instance-admins', async () => {
+    asRegularAdmin()
+    await expect(setInstanceModuleAvailability('personas', false)).rejects.toThrow('Forbidden')
+  })
+})
+
+describe('createInstanceUser', () => {
+  it('creates a user account in the selected organization', async () => {
+    asInstanceAdmin()
+
+    const formData = new FormData()
+    formData.set('organizationId', targetOrgId)
+    formData.set('name', 'Platform-Created User')
+    formData.set('email', 'platform-created@test.example')
+    formData.set('password', 'test-password')
+    formData.set('role', 'viewer')
+
+    await createInstanceUser(formData)
+
+    const created = await db.query.users.findFirst({
+      where: eq(users.email, 'platform-created@test.example'),
+    })
+    expect(created).toBeDefined()
+    expect(created!.organizationId).toBe(targetOrgId)
+    expect(created!.role).toBe('viewer')
+    expect(created!.instanceRole).toBeNull()
+  })
+
+  it('can create a platform admin account directly', async () => {
+    asInstanceAdmin()
+
+    const formData = new FormData()
+    formData.set('organizationId', targetOrgId)
+    formData.set('name', 'Platform Admin User')
+    formData.set('email', 'platform-admin-created@test.example')
+    formData.set('password', 'test-password')
+    formData.set('role', 'admin')
+    formData.set('instanceAdmin', 'on')
+
+    await createInstanceUser(formData)
+
+    const created = await db.query.users.findFirst({
+      where: eq(users.email, 'platform-admin-created@test.example'),
+    })
+    expect(created).toBeDefined()
+    expect(created!.instanceRole).toBe('instance_admin')
+  })
+
+  it('throws Forbidden for non-instance-admins', async () => {
+    asRegularAdmin()
+
+    const formData = new FormData()
+    formData.set('organizationId', targetOrgId)
+    formData.set('name', 'Nope User')
+    formData.set('email', 'nope@test.example')
+    formData.set('password', 'test-password')
+    formData.set('role', 'viewer')
+
+    await expect(createInstanceUser(formData)).rejects.toThrow('Forbidden')
   })
 })
 
