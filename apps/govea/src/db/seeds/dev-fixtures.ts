@@ -303,6 +303,14 @@ export const DEV_CAPABILITIES = [
   },
 ]
 
+// ─── Capability hierarchy (City of Riverdale) ────────────────────────────────
+export const DEV_CAPABILITY_RELATIONSHIPS: { parentName: string; childName: string }[] = [
+  { parentName: 'Digital Identity & Authentication', childName: 'User and Role Management' },
+  { parentName: 'Digital Identity & Authentication', childName: 'Role-Based Access Control' },
+  { parentName: 'Digital Identity & Authentication', childName: 'SSO and Local Authentication' },
+  { parentName: 'Digital Identity & Authentication', childName: 'IAM Audit Trail' },
+]
+
 // ─── Applications (City of Riverdale) ────────────────────────────────────────
 // Coverage: lifecycleStatus = active ✓, sunset ✓, decommissioned ✓, planned ✓
 //           hostingModel = saas ✓, on-prem ✓, hybrid ✓

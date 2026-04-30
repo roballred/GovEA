@@ -5,7 +5,7 @@ import {
   DEV_USERS, STATE_USERS, SYSTEM_USERS,
   DEFAULT_PERSONA_TYPES, DEFAULT_PERSONA_TAGS,
   DEV_PERSONA_TAG_ASSIGNMENTS,
-  DEV_PERSONAS, DEV_CAPABILITIES, DEV_APPLICATIONS,
+  DEV_PERSONAS, DEV_CAPABILITIES, DEV_CAPABILITY_RELATIONSHIPS, DEV_APPLICATIONS,
   DEV_OBJECTIVES, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
   DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
@@ -223,6 +223,18 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${DEV_CAPABILITIES.length} capabilities`)
+
+  // Capability parent-child relationships
+  for (const rel of DEV_CAPABILITY_RELATIONSHIPS) {
+    const parentId = devCapabilityIds[rel.parentName]
+    const childId = devCapabilityIds[rel.childName]
+    if (!parentId || !childId) continue
+    const exists = await db.query.capabilityRelationships.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.parentId, parentId), e(t.childId, childId)),
+    })
+    if (!exists) await db.insert(capabilityRelationships).values({ parentId, childId })
+  }
+  console.log(`  ✓ ${DEV_CAPABILITY_RELATIONSHIPS.length} capability parent-child relationships`)
 
   // Applications + capability links
   const devApplicationIds: Record<string, string> = {}
