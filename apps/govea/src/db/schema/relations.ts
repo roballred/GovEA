@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { capabilities, capabilityPersonas } from './capabilities'
+import { capabilities, capabilityPersonas, capabilityRelationships } from './capabilities'
 import { applications, applicationCapabilities } from './applications'
 import { personas, personaTags } from './personas'
 import { taxonomyTerms } from './taxonomy'
@@ -27,6 +27,23 @@ export const capabilitiesRelations = relations(capabilities, ({ one, many }) => 
   applicationCapabilities: many(applicationCapabilities),
   adrCapabilities: many(adrCapabilities),
   principleCapabilities: many(principleCapabilities),
+  // Parent-child hierarchy: rows where this cap is the parent (→ its children)
+  childRelationships: many(capabilityRelationships, { relationName: 'cap_parent_side' }),
+  // Parent-child hierarchy: rows where this cap is the child (→ its parents)
+  parentRelationships: many(capabilityRelationships, { relationName: 'cap_child_side' }),
+}))
+
+export const capabilityRelationshipsRelations = relations(capabilityRelationships, ({ one }) => ({
+  parent: one(capabilities, {
+    fields: [capabilityRelationships.parentId],
+    references: [capabilities.id],
+    relationName: 'cap_parent_side',
+  }),
+  child: one(capabilities, {
+    fields: [capabilityRelationships.childId],
+    references: [capabilities.id],
+    relationName: 'cap_child_side',
+  }),
 }))
 
 export const capabilityPersonasRelations = relations(capabilityPersonas, ({ one }) => ({

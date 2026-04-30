@@ -28,7 +28,7 @@ import { db } from '../client'
 import {
   users, organizations,
   personas, personaTags, capabilities, applications,
-  capabilityPersonas, applicationCapabilities,
+  capabilityPersonas, applicationCapabilities, capabilityRelationships,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,

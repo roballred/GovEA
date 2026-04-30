@@ -21,12 +21,13 @@ function hashDomain(domain: string): number {
   return Math.abs(h) % PALETTE.length
 }
 
-export function DomainBadge({ domain }: { domain?: string | null }) {
+export function DomainBadge({ domain, className }: { domain?: string | null; className?: string }) {
   if (!domain) return null
   return (
     <span className={cn(
       'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap',
       PALETTE[hashDomain(domain)],
+      className,
     )}>
       {domain}
     </span>

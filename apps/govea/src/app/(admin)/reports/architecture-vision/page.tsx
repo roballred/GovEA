@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation'
 import { db } from '@/db/client'
 import {
   strategicObjectives, capabilities, personas, applications,
-  principles, adrs, initiatives, organizations,
+  principles, adrs, initiatives, organizations, capabilityRelationships,
 } from '@/db/schema'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
+import { resolveCapabilityDomain } from '@/lib/capability-tree'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { cn } from '@/lib/utils'
@@ -138,10 +139,22 @@ export default async function ArchitectureVisionPage() {
       : Promise.resolve([]),
   ])
 
+  // Fetch parent relationships separately for domain inheritance (avoids Drizzle self-referential caching issue)
+  const capIds = capabilityRows.map(c => c.id)
+  const parentRels = capIds.length > 0
+    ? await db.select({ parentId: capabilityRelationships.parentId, childId: capabilityRelationships.childId })
+        .from(capabilityRelationships).where(inArray(capabilityRelationships.childId, capIds))
+    : []
+  const capById = new Map(capabilityRows.map(c => ({
+    ...c,
+    childRelationships: [] as { parentId: string; childId: string }[],
+    parentRelationships: parentRels.filter(r => r.childId === c.id),
+  })).map(c => [c.id, c]))
+
   // Derived stats
   const capsWithObjective = capabilityRows.filter(c => c.objectiveCapabilities.length > 0).length
   const capsWithApp       = capabilityRows.filter(c => c.applicationCapabilities.length > 0).length
-  const capsWithNoDomain  = capabilityRows.filter(c => !c.domain)
+  const capsWithNoDomain  = capabilityRows.filter(c => !resolveCapabilityDomain(c.id, capById))
   const appsWithNoCap     = applicationRows.filter(a => a.applicationCapabilities.length === 0)
   const activeInitiatives = initiativeRows.filter(i => i.status === 'active' || i.status === 'proposed')
 
@@ -162,10 +175,10 @@ export default async function ArchitectureVisionPage() {
   ]
   const appsWithCapLink = applicationRows.length - appsWithNoCap.length
 
-  // Group capabilities by domain
+  // Group capabilities by resolved domain (walks ancestors if own domain is null)
   const capsByDomain = new Map<string, typeof capabilityRows>()
   for (const cap of capabilityRows) {
-    const key = cap.domain ?? '(No domain assigned)'
+    const key = resolveCapabilityDomain(cap.id, capById) ?? '(No domain assigned)'
     const existing = capsByDomain.get(key) ?? []
     existing.push(cap)
     capsByDomain.set(key, existing)
