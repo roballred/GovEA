@@ -44,6 +44,9 @@ RUN DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/govea \
     NEXT_PUBLIC_APP_URL=http://localhost:3000 \
     pnpm --filter govea build
 
+# Standalone output omits static assets — copy them in so the server can serve them.
+RUN cp -r apps/govea/.next/static apps/govea/.next/standalone/apps/govea/.next/static
+
 EXPOSE 3000
 
 ENTRYPOINT ["/entrypoint.dev.sh"]
