@@ -1,22 +1,15 @@
 'use server'
 
 import { db } from '@/db/client'
-<<<<<<< feat/instance-feature-controls-and-account-creation
-import { organizations, users, breakGlassSessions, instanceSettings } from '@/db/schema'
-=======
-import { organizations, users, breakGlassSessions, platformConfig } from '@/db/schema'
->>>>>>> main
+import { organizations, users, breakGlassSessions, instanceSettings, platformConfig } from '@/db/schema'
 import { eq, and, isNull, gt } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
-<<<<<<< feat/instance-feature-controls-and-account-creation
 import { MODULE_DEFS, type ModuleKey } from '@/lib/modules'
 import { validatePassword } from '@/lib/password'
 import bcrypt from 'bcryptjs'
-=======
 import { themes } from '@/lib/themes'
->>>>>>> main
 
 export async function grantBreakGlass(orgId: string, reason: string) {
   const session = await requireInstanceAdmin()

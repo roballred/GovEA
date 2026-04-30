@@ -17,7 +17,7 @@ import {
   promoteInstanceAdmin, demoteInstanceAdmin, setInstanceModuleAvailability, createInstanceUser,
 } from '@/actions/instance'
 import { db } from '@/db/client'
-import { breakGlassSessions, auditLog, instanceSettings, organizations } from '@/db/schema'
+import { breakGlassSessions, auditLog, instanceSettings, organizations, users } from '@/db/schema'
 import { eq, and, isNull, or } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import {
