@@ -5,7 +5,7 @@ import {
   capabilities, applications, applicationCapabilities,
   initiatives, strategicObjectives, organizations,
 } from '@/db/schema'
-import { and, count, desc, eq, isNull, lt } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, isNull, lt } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { cn } from '@/lib/utils'
@@ -86,9 +86,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export default async function ExecutiveDashboardPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (session.user.role === 'viewer') redirect('/dashboard')
 
   const orgId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
   const enabledModules = await getEnabledModules()
 
   const hasApps        = isModuleEnabled(enabledModules, 'applications')
@@ -159,11 +159,14 @@ export default async function ExecutiveDashboardPage() {
           ))
       : Promise.resolve([{ count: 0 }]),
 
-    // Initiative status counts
+    // Initiative status counts (viewers: active + complete only, per #202)
     hasInitiatives
       ? db.select({ status: initiatives.status, count: count() })
           .from(initiatives)
-          .where(eq(initiatives.organizationId, orgId))
+          .where(and(
+            eq(initiatives.organizationId, orgId),
+            ...(isViewer ? [inArray(initiatives.status, ['active', 'complete'])] : []),
+          ))
           .groupBy(initiatives.status)
       : Promise.resolve([]),
 
@@ -195,11 +198,14 @@ export default async function ExecutiveDashboardPage() {
           .limit(5)
       : Promise.resolve([]),
 
-    // Recent initiatives (any active status)
+    // Recent initiatives (viewers: active + complete only, per #202)
     hasInitiatives
       ? db.select({ id: initiatives.id, name: initiatives.name, updatedAt: initiatives.updatedAt })
           .from(initiatives)
-          .where(eq(initiatives.organizationId, orgId))
+          .where(and(
+            eq(initiatives.organizationId, orgId),
+            ...(isViewer ? [inArray(initiatives.status, ['active', 'complete'])] : []),
+          ))
           .orderBy(desc(initiatives.updatedAt))
           .limit(5)
       : Promise.resolve([]),
