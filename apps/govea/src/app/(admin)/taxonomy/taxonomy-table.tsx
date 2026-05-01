@@ -2,8 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { TaxonomyTerm } from '@/db/schema'
-import { createTaxonomyTerm, editTaxonomyTerm, deleteTaxonomyTerm } from '@/actions/taxonomy'
+import type { TaxonomyTerm, EntityTaxonomyDefinition } from '@/db/schema'
+import {
+  createTaxonomyTerm, editTaxonomyTerm, deleteTaxonomyTerm,
+  addEntityTaxonomyDefinition, removeEntityTaxonomyDefinition,
+} from '@/actions/taxonomy'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,18 +15,33 @@ import {
 } from '@/components/ui/dialog'
 import type { Role } from '@/lib/rbac'
 
+type EnrichedDefinition = EntityTaxonomyDefinition & { typeName: string; typeSlug: string }
+
+const ENTITY_TYPES: { value: string; label: string }[] = [
+  { value: 'application', label: 'Application' },
+  { value: 'capability', label: 'Capability' },
+  { value: 'persona', label: 'Persona' },
+  { value: 'service', label: 'Service' },
+  { value: 'value-stream', label: 'Value Stream' },
+  { value: 'initiative', label: 'Initiative' },
+  { value: 'adr', label: 'ADR' },
+  { value: 'principle', label: 'Principle' },
+  { value: 'glossary-term', label: 'Glossary Term' },
+]
+
 interface Props {
   types: TaxonomyTerm[]
   values: TaxonomyTerm[]
   role: Role
   /** termId → number of principles that reference that term's slug as their principleType */
   principleTypeUsage: Record<string, number>
+  definitions: EnrichedDefinition[]
 }
 
 type EditTarget = { term: TaxonomyTerm; kind: 'type' | 'value' }
 type DeleteTarget = { term: TaxonomyTerm; valueCount: number; principleCount: number }
 
-export function TaxonomyTable({ types, values, role, principleTypeUsage }: Props) {
+export function TaxonomyTable({ types, values, role, principleTypeUsage, definitions }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -31,10 +49,18 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage }: Props
   const [createValueTarget, setCreateValueTarget] = useState<TaxonomyTerm | null>(null)
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [wireTarget, setWireTarget] = useState<TaxonomyTerm | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
+
+  // Group definitions by taxonomyTypeId
+  const defsByType = definitions.reduce<Record<string, EnrichedDefinition[]>>((acc, d) => {
+    acc[d.taxonomyTypeId] = acc[d.taxonomyTypeId] ?? []
+    acc[d.taxonomyTypeId].push(d)
+    return acc
+  }, {})
 
   // Group values by parentId
   const valuesByType = values.reduce<Record<string, TaxonomyTerm[]>>((acc, v) => {
@@ -74,6 +100,23 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage }: Props
     startTransition(async () => {
       await deleteTaxonomyTerm(deleteTarget.term.id)
       setDeleteTarget(null)
+      refresh()
+    })
+  }
+
+  async function handleWire(fd: FormData) {
+    if (!wireTarget) return
+    startTransition(async () => {
+      fd.set('taxonomyTypeId', wireTarget.id)
+      await addEntityTaxonomyDefinition(fd)
+      setWireTarget(null)
+      refresh()
+    })
+  }
+
+  async function handleUnwire(definitionId: string) {
+    startTransition(async () => {
+      await removeEntityTaxonomyDefinition(definitionId)
       refresh()
     })
   }
@@ -166,6 +209,55 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage }: Props
                   </div>
                 )}
               </div>
+
+              {/* Used on */}
+              {(() => {
+                const typeDefs = defsByType[type.id] ?? []
+                const usedEntityTypes = typeDefs.map(d => d.entityType)
+                const availableToAdd = ENTITY_TYPES.filter(e => !usedEntityTypes.includes(e.value))
+                if (!canDelete && typeDefs.length === 0) return null
+                return (
+                  <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b bg-muted/20">
+                    <span className="text-xs text-muted-foreground shrink-0">Used on:</span>
+                    {typeDefs.length === 0 && (
+                      <span className="text-xs text-muted-foreground/50 italic">not wired to any entity type</span>
+                    )}
+                    {typeDefs.map(def => {
+                      const label = ENTITY_TYPES.find(e => e.value === def.entityType)?.label ?? def.entityType
+                      return (
+                        <span
+                          key={def.id}
+                          className="inline-flex items-center gap-1 rounded-full bg-violet-100 text-violet-700 border border-violet-200 px-2 py-0.5 text-xs font-medium"
+                        >
+                          {label}
+                          {def.selectionMode === 'multi' && <span className="opacity-60">(multi)</span>}
+                          {def.required && <span className="opacity-60">*</span>}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              className="ml-0.5 hover:text-violet-900 transition-colors"
+                              onClick={() => handleUnwire(def.id)}
+                              disabled={isPending}
+                              title={`Remove ${label} wiring`}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      )
+                    })}
+                    {canDelete && availableToAdd.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                        onClick={() => setWireTarget(type)}
+                      >
+                        + Wire to entity type
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Values */}
               {typeValues.length === 0 ? (
@@ -270,6 +362,56 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage }: Props
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Wire to Entity Type Dialog */}
+      <Dialog open={!!wireTarget} onOpenChange={open => { if (!open) setWireTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Wire &ldquo;{wireTarget?.name}&rdquo; to entity type</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-2">
+            This makes &ldquo;{wireTarget?.name}&rdquo; available as a classification field on the selected entity type.
+          </p>
+          <form action={handleWire} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="wire-entity-type">Entity type <span className="text-destructive">*</span></Label>
+              <select
+                id="wire-entity-type"
+                name="entityType"
+                required
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Select entity type…</option>
+                {ENTITY_TYPES
+                  .filter(e => !(defsByType[wireTarget?.id ?? ''] ?? []).some(d => d.entityType === e.value))
+                  .map(e => (
+                    <option key={e.value} value={e.value}>{e.label}</option>
+                  ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="wire-selection-mode">Selection mode</Label>
+              <select
+                id="wire-selection-mode"
+                name="selectionMode"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="single">Single select</option>
+                <option value="multi">Multi select</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="wire-required" name="required" value="true" className="rounded" />
+              <Label htmlFor="wire-required">Required</Label>
+            </div>
+            <input type="hidden" name="sortOrder" value="0" />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setWireTarget(null)}>Cancel</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? 'Wiring…' : 'Wire'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

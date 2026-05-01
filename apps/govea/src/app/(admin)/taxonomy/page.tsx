@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getTaxonomyTermsWithChildren, getPrincipleTypeValueUsage } from '@/actions/taxonomy'
+import { getTaxonomyTermsWithChildren, getPrincipleTypeValueUsage, getAllEntityTaxonomyDefinitions } from '@/actions/taxonomy'
 import { TaxonomyTable } from './taxonomy-table'
 
 export default async function TaxonomyPage() {
@@ -10,9 +10,10 @@ export default async function TaxonomyPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [{ types, values }, principleTypeUsage] = await Promise.all([
+  const [{ types, values }, principleTypeUsage, definitions] = await Promise.all([
     getTaxonomyTermsWithChildren(orgId),
     getPrincipleTypeValueUsage(orgId),
+    getAllEntityTaxonomyDefinitions(orgId),
   ])
 
   return (
@@ -23,7 +24,7 @@ export default async function TaxonomyPage() {
           Classification types and their values — used to organize capabilities, glossary entries, personas, and principles.
         </p>
       </div>
-      <TaxonomyTable types={types} values={values} role={role} principleTypeUsage={principleTypeUsage} />
+      <TaxonomyTable types={types} values={values} role={role} principleTypeUsage={principleTypeUsage} definitions={definitions} />
     </div>
   )
 }
