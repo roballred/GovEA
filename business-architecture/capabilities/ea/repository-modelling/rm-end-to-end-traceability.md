@@ -62,6 +62,7 @@ Traversal respects content visibility at every hop. A relationship link is only 
 - What is not yet implemented: reverse traversal UI, impact panel, broken chain indicators, cross-agency views
 - Technology layer (infrastructure, platforms) is a natural extension of this chain but is not in scope until the Technology Lifecycle capability set is defined
 - The traversal visibility gate must be validated with a security test matrix covering all role × visibility combinations before the impact panel ships (see ARB finding #129)
+- **Query performance:** Traversal depth is bounded at configurable depth (default 3, hard cap 5). Required indexes on relationship tables and a visited-node guard against cycles are pre-ship requirements. See `rm-query-performance-decision.md` for the full performance ADR (resolves ARB finding #134).
 
 ## Links
 
