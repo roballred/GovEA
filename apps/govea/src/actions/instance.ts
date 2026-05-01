@@ -11,6 +11,38 @@ import { validatePassword } from '@/lib/password'
 import bcrypt from 'bcryptjs'
 import { themes } from '@/lib/themes'
 
+export async function createOrg(formData: FormData): Promise<{ id: string }> {
+  const session = await requireInstanceAdmin()
+
+  const name = (formData.get('name') as string ?? '').trim()
+  const slug = (formData.get('slug') as string ?? '').trim()
+
+  if (!name) throw new Error('Name is required')
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
+    throw new Error('Slug must be lowercase letters, numbers, and hyphens only')
+  }
+
+  const conflict = await db.query.organizations.findFirst({
+    where: eq(organizations.slug, slug),
+    columns: { id: true },
+  })
+  if (conflict) throw new Error('An organisation with that slug already exists')
+
+  const [org] = await db.insert(organizations).values({ name, slug }).returning()
+
+  await writeAuditLog({
+    action: 'instance.org.create',
+    entityType: 'organization',
+    entityId: org.id,
+    userId: session.user.id,
+    organizationId: null,
+    after: { name, slug },
+  })
+
+  revalidatePath('/instance/orgs')
+  return { id: org.id }
+}
+
 export async function grantBreakGlass(orgId: string, reason: string) {
   const session = await requireInstanceAdmin()
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
