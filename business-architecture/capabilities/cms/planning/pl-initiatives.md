@@ -30,4 +30,4 @@ The system must allow organizations to document change programmes (initiatives, 
 ## Links
 - Depends on: Content Management — Content Workflow, Content Relationships
 - Related: Strategic Objectives, Capabilities, Roadmap
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director
+- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director, Business Stakeholder

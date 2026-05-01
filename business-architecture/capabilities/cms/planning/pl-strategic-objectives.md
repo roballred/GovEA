@@ -27,4 +27,4 @@ The system must allow organizations to define strategic business objectives, lin
 ## Links
 - Depends on: Content Management — Content Workflow, Content Relationships
 - Related: Capabilities, Value Streams, Initiatives, Roadmap
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director
+- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director, Business Stakeholder, Early-Maturity Practice Lead
