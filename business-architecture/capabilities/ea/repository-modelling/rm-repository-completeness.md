@@ -49,8 +49,7 @@ A repository where everything appears equally authoritative — regardless of wh
 ## Implementation Notes
 
 - The admin dashboard (`ac-admin-dashboard`) already surfaces system health and basic content counts; this capability extends it with EA-specific completeness signals
-- Completeness calculations require joining across object types and their relationship tables — performance implications should be evaluated before implementation
-- The trend line feature requires storing historical completeness snapshots; decide before implementation whether these are computed at query time or stored at a scheduled interval
+- **Query performance:** Completeness calculations use pre-computed snapshots triggered on write, not live joins. The dashboard reads a single snapshot row (< 500 ms SLO). The trend line reads from a time-series snapshot table with one row per org per day (36-month default retention). Required indexes on content and relationship tables are a pre-ship requirement. See `rm-query-performance-decision.md` for the full performance ADR (resolves ARB finding #134).
 
 ## Links
 

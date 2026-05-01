@@ -46,7 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Reports',
     items: [
       { href: '/reports',    label: 'Reports' },
-      { href: '/executive',  label: 'Executive Summary', contributorOnly: true },
+      { href: '/executive',  label: 'Executive Summary' },
     ],
   },
   {
