@@ -171,6 +171,7 @@ interface AppShellProps {
   roleBadgeClass: string
   themeStyle: string
   isDev: boolean
+  isInstanceAdmin: boolean
   enabledModules: Record<string, boolean>
   signOutSlot: ReactNode
   children: ReactNode
@@ -182,6 +183,7 @@ export function AppShell({
   roleBadgeClass,
   themeStyle,
   isDev,
+  isInstanceAdmin,
   enabledModules,
   signOutSlot,
   children,
@@ -337,6 +339,14 @@ export function AppShell({
 
           {/* User info */}
           <div className="flex items-center gap-3">
+            {isInstanceAdmin && (
+              <Link
+                href="/instance"
+                className="hidden sm:inline-flex items-center rounded-md border border-violet-400/40 bg-violet-500/20 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/30 transition-colors"
+              >
+                Platform Admin
+              </Link>
+            )}
             <span className="hidden sm:block text-sm text-white/70">{email}</span>
             <span
               data-tour="role-badge"
