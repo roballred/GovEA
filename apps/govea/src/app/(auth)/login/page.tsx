@@ -1,3 +1,4 @@
+import { AuthError } from 'next-auth'
 import { signIn } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
@@ -40,11 +41,18 @@ export default async function LoginPage({
           <form
             action={async (formData: FormData) => {
               'use server'
-              await signIn('credentials', {
-                email: formData.get('email'),
-                password: formData.get('password'),
-                redirectTo: params.callbackUrl ?? '/dashboard',
-              })
+              try {
+                await signIn('credentials', {
+                  email: formData.get('email'),
+                  password: formData.get('password'),
+                  redirectTo: params.callbackUrl ?? '/dashboard',
+                })
+              } catch (error) {
+                if (error instanceof AuthError) {
+                  redirect(`/login?error=${error.type}`)
+                }
+                throw error
+              }
             }}
             className="space-y-3"
           >
