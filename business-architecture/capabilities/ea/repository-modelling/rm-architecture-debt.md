@@ -95,4 +95,4 @@ The `security_sensitive` flag and the Security Classification Guidance section a
 
 - Depends on: `po-application-portfolio`, `po-capability-map`, `po-architecture-decisions`, `pl-initiatives`, `mo-content-visibility`, `mo-cross-org-linking`
 - Related: `rm-repository-completeness`, `rm-end-to-end-traceability`
-- Personas served: Enterprise Architect, Agency EA Coordinator
+- Personas served: Enterprise Architect, Agency EA Coordinator, Junior EA Analyst, Domain Architect
