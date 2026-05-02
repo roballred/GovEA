@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Service, Persona } from '@/db/schema'
+import type { Service, Persona, EntityTaxonomyValue } from '@/db/schema'
 import { createService, editService, deleteService } from '@/actions/services'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { TaxonomyInputs, TaxonomyFilters, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 
 type ServiceRow = Pick<Service, 'id' | 'name' | 'description' | 'serviceOwner' | 'channels' | 'status' | 'visibility' | 'organizationId'> & {
   organization: { id: string; name: string } | null
@@ -27,6 +28,8 @@ interface Props {
   services: ServiceRow[]
   personas: Pick<Persona, 'id' | 'name'>[]
   role: Role
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
 }
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -61,13 +64,14 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function ServiceTable({ services, personas, role }: Props) {
+export function ServiceTable({ services, personas, role, taxonomyDefinitions, taxonomyValueMap }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [channelFilter, setChannelFilter] = useState('all')
+  const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ServiceRow | null>(null)
@@ -82,7 +86,11 @@ export function ServiceTable({ services, personas, role }: Props) {
     const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || s.status === statusFilter
     const matchChannel = channelFilter === 'all' || s.channels.includes(channelFilter)
-    return matchSearch && matchStatus && matchChannel
+    const matchTaxonomy = Object.entries(taxonomyFilters).every(([, termId]) => {
+      if (termId === 'all') return true
+      return (taxonomyValueMap[s.id] ?? []).some(v => v.taxonomyTermId === termId)
+    })
+    return matchSearch && matchStatus && matchChannel && matchTaxonomy
   })
 
   async function handleCreate(formData: FormData) {
@@ -143,6 +151,11 @@ export function ServiceTable({ services, personas, role }: Props) {
           <option value="phone">Phone</option>
           <option value="mobile">Mobile</option>
         </select>
+        <TaxonomyFilters
+          defs={taxonomyDefinitions}
+          filters={taxonomyFilters}
+          onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
+        />
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
             + New Service
@@ -245,6 +258,7 @@ export function ServiceTable({ services, personas, role }: Props) {
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" />
             <ChannelCheckboxes />
             <PersonaCheckboxes personas={personas} selectedIds={[]} />
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <StatusVisibilityFields />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
@@ -266,6 +280,10 @@ export function ServiceTable({ services, personas, role }: Props) {
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" defaultValue={editTarget?.serviceOwner ?? ''} />
             <ChannelCheckboxes selected={editTarget?.channels ?? []} />
             <PersonaCheckboxes personas={personas} selectedIds={editTarget?.servicePersonas.map(sp => sp.persona.id) ?? []} />
+            <TaxonomyInputs
+              defs={taxonomyDefinitions}
+              currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
+            />
             <StatusVisibilityFields status={editTarget?.status} visibility={editTarget?.visibility} />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>

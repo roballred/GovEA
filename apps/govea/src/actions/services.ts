@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import {
   services, serviceCapabilities, servicePersonas,
-  serviceValueStreams,
+  serviceValueStreams, entityTaxonomyValues,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
@@ -11,6 +11,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
+import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from './taxonomy'
 
 async function requireContributor() {
   const session = await auth()
@@ -48,7 +49,13 @@ export async function getService(id: string) {
   const visible = await canReadFederatedEntity(service.organizationId, service.visibility, session.user.organizationId!)
   if (!visible) return null
   if (session.user.role === 'viewer' && service.status !== 'published') return null
-  return service
+
+  const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
+    getEntityTaxonomyValues(service.organizationId, 'service', id),
+    getEntityTaxonomyDefinitions(service.organizationId, 'service'),
+  ])
+
+  return { ...service, taxonomyValues, taxonomyDefinitions }
 }
 
 export async function getServices(organizationId: string, role?: string) {
@@ -84,6 +91,7 @@ export async function createService(formData: FormData) {
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const personaIds = formData.getAll('personaIds') as string[]
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
   const [service] = await db.insert(services).values({
     name,
@@ -101,6 +109,10 @@ export async function createService(formData: FormData) {
     await db.insert(servicePersonas).values(
       personaIds.map(personaId => ({ serviceId: service.id, personaId }))
     )
+  }
+
+  if (taxonomyTermIds.length > 0) {
+    await syncEntityTaxonomyValues(orgId, 'service', service.id, taxonomyTermIds)
   }
 
   await writeAuditLog({
@@ -124,6 +136,7 @@ export async function editService(serviceId: string, formData: FormData) {
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const personaIds = formData.getAll('personaIds') as string[]
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
   const before = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
   assertOwnership(before?.organizationId, orgId)
@@ -147,6 +160,9 @@ export async function editService(serviceId: string, formData: FormData) {
     )
   }
 
+  // Replace taxonomy values
+  await syncEntityTaxonomyValues(orgId, 'service', serviceId, taxonomyTermIds)
+
   await writeAuditLog({
     action: 'service.edit',
     entityType: 'service',
@@ -164,6 +180,14 @@ export async function deleteService(serviceId: string) {
 
   const before = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
   assertOwnership(before?.organizationId, orgId)
+
+  await db.delete(entityTaxonomyValues).where(
+    and(
+      eq(entityTaxonomyValues.organizationId, orgId),
+      eq(entityTaxonomyValues.entityType, 'service'),
+      eq(entityTaxonomyValues.entityId, serviceId),
+    )
+  )
 
   await db.delete(services).where(
     and(eq(services.id, serviceId), eq(services.organizationId, orgId))
