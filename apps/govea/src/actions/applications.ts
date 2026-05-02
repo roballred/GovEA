@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { applications, applicationCapabilities, objectiveCapabilities } from '@/db/schema'
+import { applications, applicationCapabilities, objectiveCapabilities, entityTaxonomyValues } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
@@ -9,6 +9,7 @@ import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from './taxonomy'
 
 async function requireContributor() {
   const session = await auth()
@@ -50,14 +51,18 @@ export async function getApplication(id: string) {
 
   // Fetch objectives linked through this application's capabilities as a flat query.
   const capabilityIds = application.applicationCapabilities.map(ac => ac.capabilityId)
-  const capabilityObjectives = capabilityIds.length > 0
-    ? await db.query.objectiveCapabilities.findMany({
-        where: inArray(objectiveCapabilities.capabilityId, capabilityIds),
-        with: { objective: true },
-      })
-    : []
+  const [capabilityObjectives, taxonomyValues, taxonomyDefinitions] = await Promise.all([
+    capabilityIds.length > 0
+      ? db.query.objectiveCapabilities.findMany({
+          where: inArray(objectiveCapabilities.capabilityId, capabilityIds),
+          with: { objective: true },
+        })
+      : Promise.resolve([]),
+    getEntityTaxonomyValues(application.organizationId, 'application', id),
+    getEntityTaxonomyDefinitions(application.organizationId, 'application'),
+  ])
 
-  return { ...application, capabilityObjectives }
+  return { ...application, capabilityObjectives, taxonomyValues, taxonomyDefinitions }
 }
 
 export async function getApplications(organizationId: string, role?: string) {
@@ -95,6 +100,7 @@ export async function createApplication(formData: FormData) {
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const capabilityIds = formData.getAll('capabilityIds') as string[]
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
   const [application] = await db.insert(applications).values({
     name,
@@ -114,6 +120,10 @@ export async function createApplication(formData: FormData) {
     await db.insert(applicationCapabilities).values(
       capabilityIds.map(capabilityId => ({ applicationId: application.id, capabilityId }))
     )
+  }
+
+  if (taxonomyTermIds.length > 0) {
+    await syncEntityTaxonomyValues(orgId, 'application', application.id, taxonomyTermIds)
   }
 
   await writeAuditLog({
@@ -139,6 +149,7 @@ export async function editApplication(applicationId: string, formData: FormData)
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const capabilityIds = formData.getAll('capabilityIds') as string[]
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
   const before = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(before?.organizationId, orgId)
@@ -164,6 +175,9 @@ export async function editApplication(applicationId: string, formData: FormData)
     )
   }
 
+  // Replace taxonomy values
+  await syncEntityTaxonomyValues(orgId, 'application', applicationId, taxonomyTermIds)
+
   await writeAuditLog({
     action: 'application.edit',
     entityType: 'application',
@@ -181,6 +195,14 @@ export async function deleteApplication(applicationId: string) {
 
   const before = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(before?.organizationId, orgId)
+
+  await db.delete(entityTaxonomyValues).where(
+    and(
+      eq(entityTaxonomyValues.organizationId, orgId),
+      eq(entityTaxonomyValues.entityType, 'application'),
+      eq(entityTaxonomyValues.entityId, applicationId),
+    )
+  )
 
   await db.delete(applications).where(
     and(eq(applications.id, applicationId), eq(applications.organizationId, orgId))

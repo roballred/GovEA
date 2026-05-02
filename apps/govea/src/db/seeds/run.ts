@@ -35,7 +35,7 @@ import {
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleAdrs, principleCapabilities,
   glossaryTerms, glossaryTermSources,
-  taxonomyTerms,
+  taxonomyTerms, entityTaxonomyDefinitions,
   services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
 } from '../schema'
@@ -644,6 +644,43 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${DEV_SERVICES.length} services with capability, persona, and value stream links`)
+
+  // Application Type taxonomy + entity definition (pilot for base-item taxonomy foundation)
+  let appTypeTermId: string
+  const existingAppTypeType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'application-type')),
+  })
+  if (existingAppTypeType) {
+    appTypeTermId = existingAppTypeType.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Application Type',
+      slug: 'application-type',
+      description: 'Classification of applications by their primary purpose or delivery model.',
+      sortOrder: '50',
+    }).returning()
+    appTypeTermId = inserted.id
+  }
+  const APP_TYPE_VALUES = ['Core Business System', 'Shared Service', 'Integration Platform', 'Reporting & Analytics', 'Public-Facing Service', 'Internal Tool']
+  for (const name of APP_TYPE_VALUES) {
+    await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      parentId: appTypeTermId,
+      name,
+      slug: toSlug(name),
+    }).onConflictDoNothing()
+  }
+  await db.insert(entityTaxonomyDefinitions).values({
+    organizationId: devOrgId,
+    entityType: 'application',
+    taxonomyTypeId: appTypeTermId,
+    selectionMode: 'single',
+    required: false,
+    sortOrder: 0,
+  }).onConflictDoNothing()
+  console.log('  ✓ Application Type taxonomy type + entity definition')
 
   // ── Org 2: Office of Digital Services (state agency) ────────────────────
 

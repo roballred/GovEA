@@ -130,6 +130,32 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </div>
       </div>
 
+      {/* Taxonomy classification chips */}
+      {application.taxonomyDefinitions.length > 0 && (
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {application.taxonomyDefinitions.map(def => {
+            const selectedTermIds = new Set(application.taxonomyValues.map(v => v.taxonomyTermId))
+            const selectedValues = def.values.filter(v => selectedTermIds.has(v.id))
+            if (selectedValues.length === 0) return null
+            return (
+              <div key={def.id} className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">{def.typeName}:</span>
+                <div className="flex flex-wrap gap-1">
+                  {selectedValues.map(v => (
+                    <span
+                      key={v.id}
+                      className="inline-flex items-center rounded-full border bg-violet-50 text-violet-700 border-violet-200 px-2 py-0.5 text-xs font-medium"
+                    >
+                      {v.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       <hr />
 
       {isModuleEnabled(enabledModules, 'capabilities') && (

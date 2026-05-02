@@ -2,7 +2,7 @@ import { relations } from 'drizzle-orm'
 import { capabilities, capabilityPersonas, capabilityRelationships } from './capabilities'
 import { applications, applicationCapabilities } from './applications'
 import { personas, personaTags } from './personas'
-import { taxonomyTerms } from './taxonomy'
+import { taxonomyTerms, entityTaxonomyDefinitions, entityTaxonomyValues } from './taxonomy'
 import { organizations } from './organizations'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas } from './value-streams'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from './objectives'
@@ -386,6 +386,47 @@ export const serviceValueStreamsRelations = relations(serviceValueStreams, ({ on
   valueStream: one(valueStreams, {
     fields: [serviceValueStreams.valueStreamId],
     references: [valueStreams.id],
+  }),
+}))
+
+// ─── Taxonomy ─────────────────────────────────────────────────────────────────
+
+export const taxonomyTermsRelations = relations(taxonomyTerms, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [taxonomyTerms.organizationId],
+    references: [organizations.id],
+  }),
+  parent: one(taxonomyTerms, {
+    fields: [taxonomyTerms.parentId],
+    references: [taxonomyTerms.id],
+    relationName: 'term_parent_child',
+  }),
+  children: many(taxonomyTerms, {
+    relationName: 'term_parent_child',
+  }),
+  entityDefinitions: many(entityTaxonomyDefinitions),
+  entityValues: many(entityTaxonomyValues),
+}))
+
+export const entityTaxonomyDefinitionsRelations = relations(entityTaxonomyDefinitions, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [entityTaxonomyDefinitions.organizationId],
+    references: [organizations.id],
+  }),
+  taxonomyType: one(taxonomyTerms, {
+    fields: [entityTaxonomyDefinitions.taxonomyTypeId],
+    references: [taxonomyTerms.id],
+  }),
+}))
+
+export const entityTaxonomyValuesRelations = relations(entityTaxonomyValues, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [entityTaxonomyValues.organizationId],
+    references: [organizations.id],
+  }),
+  term: one(taxonomyTerms, {
+    fields: [entityTaxonomyValues.taxonomyTermId],
+    references: [taxonomyTerms.id],
   }),
 }))
 

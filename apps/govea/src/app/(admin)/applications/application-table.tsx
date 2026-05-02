@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Application, Capability } from '@/db/schema'
+import type { Application, Capability, EntityTaxonomyValue, TaxonomyTerm } from '@/db/schema'
 import { createApplication, editApplication, deleteApplication } from '@/actions/applications'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -24,11 +24,25 @@ type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor'
   applicationCapabilities: { capability: Pick<Capability, 'id' | 'name' | 'domain'> }[]
 }
 
+type EnrichedTaxonomyDefinition = {
+  id: string
+  entityType: string
+  taxonomyTypeId: string
+  selectionMode: string
+  required: boolean
+  sortOrder: number
+  typeName: string
+  typeSlug: string
+  values: TaxonomyTerm[]
+}
+
 interface Props {
   applications: ApplicationRow[]
   capabilities: Pick<Capability, 'id' | 'name'>[]
   role: Role
   currentOrgId: string
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -236,7 +250,7 @@ function PortfolioCard({
 
 type ViewMode = 'table' | 'portfolio'
 
-export function ApplicationTable({ applications, capabilities, role, currentOrgId }: Props) {
+export function ApplicationTable({ applications, capabilities, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -247,6 +261,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
   const [domainFilter, setDomainFilter] = useState('all')
   const [hostingFilter, setHostingFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
+  const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
 
   const orgOptions = Array.from(new Map(
     applications.map(a => [a.organizationId, a.organization?.name ?? 'Unknown'])
@@ -281,7 +296,11 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
     const matchDomain = domainFilter === 'all' || a.applicationCapabilities.some(ac => ac.capability.domain === domainFilter)
     const matchHosting = hostingFilter === 'all' || a.hostingModel === hostingFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? a.organizationId === currentOrgId : a.organizationId === orgFilter)
-    return matchSearch && matchLifecycle && matchStatus && matchDomain && matchHosting && matchOrg
+    const matchTaxonomy = Object.entries(taxonomyFilters).every(([, termId]) => {
+      if (termId === 'all') return true
+      return (taxonomyValueMap[a.id] ?? []).some(v => v.taxonomyTermId === termId)
+    })
+    return matchSearch && matchLifecycle && matchStatus && matchDomain && matchHosting && matchOrg && matchTaxonomy
   })
 
   // Portfolio sort: attention items first, then alphabetical
@@ -382,6 +401,17 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
             ))}
           </select>
         )}
+        {taxonomyDefinitions.map(def => def.values.length > 0 && (
+          <select
+            key={def.id}
+            value={taxonomyFilters[def.id] ?? 'all'}
+            onChange={e => setTaxonomyFilters(prev => ({ ...prev, [def.id]: e.target.value }))}
+            className={selectClass}
+          >
+            <option value="all">All {def.typeName}</option>
+            {def.values.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </select>
+        ))}
         {orgOptions.length > 1 && (
           <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className={selectClass}>
             <option value="all">All organizations</option>
@@ -586,7 +616,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>New Application</DialogTitle></DialogHeader>
           <form action={handleCreate} className="space-y-3">
             <FormField label="Name" name="name" required />
@@ -637,6 +667,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
                 </select>
               </div>
             </div>
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <div className="space-y-1.5">
               <Label>Visibility</Label>
               <select name="visibility" defaultValue="org" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -655,7 +686,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
 
       {/* Edit Dialog */}
       <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Application</DialogTitle></DialogHeader>
           <form action={handleEdit} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
@@ -712,6 +743,10 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
                 </select>
               </div>
             </div>
+            <TaxonomyInputs
+              defs={taxonomyDefinitions}
+              currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
+            />
             <div className="space-y-1.5">
               <Label>Visibility</Label>
               <select name="visibility" defaultValue={editTarget?.visibility ?? 'org'} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -753,5 +788,60 @@ function FormField({ label, ...props }: { label: string } & React.InputHTMLAttri
       <Label>{label}</Label>
       <Input {...props} />
     </div>
+  )
+}
+
+function TaxonomyInputs({
+  defs,
+  currentValues,
+}: {
+  defs: EnrichedTaxonomyDefinition[]
+  currentValues: EntityTaxonomyValue[]
+}) {
+  if (defs.length === 0) return null
+  const currentTermIds = new Set(currentValues.map(v => v.taxonomyTermId))
+
+  return (
+    <>
+      {defs.map(def => (
+        <div key={def.id} className="space-y-1.5">
+          <Label>
+            {def.typeName}
+            {def.required && <span className="text-destructive ml-0.5">*</span>}
+          </Label>
+          {def.selectionMode === 'multi' ? (
+            <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">
+              {def.values.length === 0
+                ? <p className="text-sm text-muted-foreground">No values defined yet.</p>
+                : def.values.map(v => (
+                  <label key={v.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="taxonomyTermIds"
+                      value={v.id}
+                      defaultChecked={currentTermIds.has(v.id)}
+                      className="rounded"
+                    />
+                    {v.name}
+                  </label>
+                ))
+              }
+            </div>
+          ) : (
+            <select
+              name="taxonomyTermIds"
+              defaultValue={def.values.find(v => currentTermIds.has(v.id))?.id ?? ''}
+              required={def.required}
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              {!def.required && <option value="">— None —</option>}
+              {def.values.map(v => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      ))}
+    </>
   )
 }
