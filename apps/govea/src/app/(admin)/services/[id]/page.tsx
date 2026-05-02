@@ -17,6 +17,7 @@ import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
 import { MarkdownContent } from '@/components/markdown-content'
+import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const CHANNEL_LABELS: Record<string, string> = {
   online: 'Online',
@@ -137,6 +138,12 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
       </div>
+
+      {/* Taxonomy classification chips */}
+      <TaxonomyChips
+        definitions={service.taxonomyDefinitions}
+        selectedTermIds={service.taxonomyValues.map(v => v.taxonomyTermId)}
+      />
 
       <hr />
 

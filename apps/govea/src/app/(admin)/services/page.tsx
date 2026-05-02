@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getServices } from '@/actions/services'
 import { getPersonas } from '@/actions/personas'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
 import { ServiceTable } from './service-table'
 
 export default async function ServicesPage() {
@@ -11,10 +12,14 @@ export default async function ServicesPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [services, personas] = await Promise.all([
+  const [serviceList, personas, taxonomyDefinitions] = await Promise.all([
     getServices(orgId, role),
     getPersonas(orgId, role),
+    getEntityTaxonomyDefinitions(orgId, 'service'),
   ])
+
+  const serviceIds = serviceList.map(s => s.id)
+  const taxonomyValueMap = await getEntityTaxonomyValuesForMany(orgId, 'service', serviceIds)
 
   return (
     <div className="space-y-6">
@@ -24,7 +29,13 @@ export default async function ServicesPage() {
           Government-facing services that residents and staff interact with — the direct interface between personas and capabilities.
         </p>
       </div>
-      <ServiceTable services={services} personas={personas} role={role} />
+      <ServiceTable
+        services={serviceList}
+        personas={personas}
+        role={role}
+        taxonomyDefinitions={taxonomyDefinitions}
+        taxonomyValueMap={taxonomyValueMap}
+      />
     </div>
   )
 }
