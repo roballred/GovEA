@@ -128,16 +128,6 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
               <span className="font-medium">{application.hostingModel}</span>
             </div>
           )}
-          {application.customFieldDefs.map(field => {
-            const value = application.customData?.[field.name]
-            if (!value) return null
-            return (
-              <div key={field.name}>
-                <span className="text-muted-foreground">{field.name}: </span>
-                <span className="font-medium">{value}</span>
-              </div>
-            )
-          })}
         </div>
       </div>
 
@@ -200,6 +190,24 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           addAction={addAdr}
           removeAction={removeAdr}
         />
+      )}
+
+      {application.customFieldDefs.length > 0 && application.customFieldDefs.some(f => application.customData?.[f.name]) && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Custom Fields</h2>
+          <div className="flex flex-wrap gap-6 text-sm">
+            {application.customFieldDefs.map(field => {
+              const value = application.customData?.[field.name]
+              if (!value) return null
+              return (
+                <div key={field.name}>
+                  <span className="text-muted-foreground">{field.name}: </span>
+                  <span className="font-medium">{value}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       <div className="pt-4 border-t flex items-center justify-between gap-4">
