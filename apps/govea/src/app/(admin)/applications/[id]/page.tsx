@@ -128,6 +128,16 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
               <span className="font-medium">{application.hostingModel}</span>
             </div>
           )}
+          {application.customFieldDefs.map(field => {
+            const value = application.customData?.[field.name]
+            if (!value) return null
+            return (
+              <div key={field.name}>
+                <span className="text-muted-foreground">{field.name}: </span>
+                <span className="font-medium">{value}</span>
+              </div>
+            )
+          })}
         </div>
       </div>
 

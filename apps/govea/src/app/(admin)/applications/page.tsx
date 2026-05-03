@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getApplications } from '@/actions/applications'
 import { getCapabilities } from '@/actions/capabilities'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getCustomFieldSchema } from '@/actions/custom-fields'
 import { ApplicationTable } from './application-table'
 
 export default async function ApplicationsPage() {
@@ -12,10 +13,11 @@ export default async function ApplicationsPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [applicationList, capabilityList, taxonomyDefinitions] = await Promise.all([
+  const [applicationList, capabilityList, taxonomyDefinitions, customFieldDefs] = await Promise.all([
     getApplications(orgId, role),
     getCapabilities(orgId, role),
     getEntityTaxonomyDefinitions(orgId, 'application'),
+    getCustomFieldSchema(orgId, 'application'),
   ])
 
   const applicationIds = applicationList.map(a => a.id)
@@ -34,6 +36,7 @@ export default async function ApplicationsPage() {
         currentOrgId={orgId}
         taxonomyDefinitions={taxonomyDefinitions}
         taxonomyValueMap={taxonomyValueMap}
+        customFieldDefs={customFieldDefs}
       />
     </div>
   )

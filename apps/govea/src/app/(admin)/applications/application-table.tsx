@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import type { Application, Capability, EntityTaxonomyValue } from '@/db/schema'
-import { createApplication, editApplication, deleteApplication } from '@/actions/applications'
+import { createApplication, editApplication, deleteApplication, importApplications, type ImportResult } from '@/actions/applications'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -19,8 +19,10 @@ import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyInputs, TaxonomyFilters, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
+import { CustomFieldInputs } from '@/components/custom-field-inputs'
+import type { CustomFieldDefinition } from '@/db/schema'
 
-type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor' | 'version' | 'hostingModel' | 'lifecycleStatus' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
+type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor' | 'version' | 'hostingModel' | 'lifecycleStatus' | 'status' | 'visibility' | 'createdAt' | 'organizationId' | 'customData'> & {
   organization: { id: string; name: string } | null
   applicationCapabilities: { capability: Pick<Capability, 'id' | 'name' | 'domain'> }[]
 }
@@ -32,6 +34,7 @@ interface Props {
   currentOrgId: string
   taxonomyDefinitions: EnrichedTaxonomyDefinition[]
   taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
+  customFieldDefs: CustomFieldDefinition[]
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -239,11 +242,15 @@ function PortfolioCard({
 
 type ViewMode = 'table' | 'portfolio'
 
-export function ApplicationTable({ applications, capabilities, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
+export function ApplicationTable({ applications, capabilities, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap, customFieldDefs }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [importOpen, setImportOpen] = useState(false)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [importPreview, setImportPreview] = useState<ImportResult | null>(null)
+  const [importFile, setImportFile] = useState<File | null>(null)
   const [search, setSearch] = useState('')
   const [lifecycleFilter, setLifecycleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -329,6 +336,36 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       setDeleteTarget(null)
       refresh()
     })
+  }
+
+  async function handleImportPreview() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.append('csvFile', importFile)
+      const result = await importApplications(fd, true)
+      setImportPreview(result)
+    })
+  }
+
+  async function handleImportConfirm() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.append('csvFile', importFile)
+      const result = await importApplications(fd, false)
+      setImportResult(result)
+      setImportPreview(null)
+      setImportFile(null)
+      refresh()
+    })
+  }
+
+  function openImport() {
+    setImportOpen(true)
+    setImportResult(null)
+    setImportPreview(null)
+    setImportFile(null)
   }
 
   const selectClass = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
@@ -433,11 +470,17 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           </button>
         </div>
 
-        {canEdit && (
-          <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
-            + New Application
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          <a href="/api/applications/export">
+            <Button variant="outline" size="sm">Export CSV</Button>
+          </a>
+          {canEdit && (
+            <>
+              <Button variant="outline" size="sm" onClick={openImport}>Import CSV</Button>
+              <Button onClick={() => setCreateOpen(true)} size="sm">+ New Application</Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Portfolio summary banner */}
@@ -651,6 +694,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
               </div>
             </div>
             <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
+            <CustomFieldInputs fields={customFieldDefs} />
             <div className="space-y-1.5">
               <Label>Visibility</Label>
               <select name="visibility" defaultValue="org" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -730,6 +774,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
               defs={taxonomyDefinitions}
               currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
             />
+            <CustomFieldInputs fields={customFieldDefs} values={editTarget?.customData ?? {}} />
             <div className="space-y-1.5">
               <Label>Visibility</Label>
               <select name="visibility" defaultValue={editTarget?.visibility ?? 'org'} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -758,6 +803,71 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
             <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
               {isPending ? 'Deleting…' : 'Delete'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={importOpen} onOpenChange={open => { if (!open) setImportOpen(false) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Import Applications</DialogTitle></DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">
+              Upload a CSV with columns: <code className="bg-muted px-1 rounded">name</code>, <code className="bg-muted px-1 rounded">description</code>, <code className="bg-muted px-1 rounded">vendor</code>, <code className="bg-muted px-1 rounded">version</code>, <code className="bg-muted px-1 rounded">hosting_model</code>, <code className="bg-muted px-1 rounded">lifecycle_status</code>, <code className="bg-muted px-1 rounded">status</code>, <code className="bg-muted px-1 rounded">visibility</code>
+              {customFieldDefs.length > 0 && <>, plus custom fields: {customFieldDefs.map(f => <code key={f.name} className="bg-muted px-1 rounded ml-1">{f.name}</code>)}</>}.
+              Existing applications are matched by name and updated.
+            </p>
+
+            {!importResult && (
+              <div className="space-y-1.5">
+                <Label>CSV file</Label>
+                <Input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={e => { setImportFile(e.target.files?.[0] ?? null); setImportPreview(null) }}
+                />
+              </div>
+            )}
+
+            {importPreview && !importResult && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+                <p className="font-medium">Preview</p>
+                <p>Will create <strong>{importPreview.created}</strong> · update <strong>{importPreview.updated}</strong> · skip <strong>{importPreview.skipped}</strong></p>
+                {importPreview.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importPreview.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {importResult && (
+              <div className="rounded-md border bg-emerald-50 border-emerald-200 p-3 space-y-1">
+                <p className="font-medium text-emerald-800">Import complete</p>
+                <p className="text-emerald-700">Created <strong>{importResult.created}</strong> · updated <strong>{importResult.updated}</strong> · skipped <strong>{importResult.skipped}</strong></p>
+                {importResult.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setImportOpen(false)}>
+              {importResult ? 'Close' : 'Cancel'}
+            </Button>
+            {!importResult && !importPreview && (
+              <Button onClick={handleImportPreview} disabled={!importFile || isPending}>
+                {isPending ? 'Checking…' : 'Preview'}
+              </Button>
+            )}
+            {importPreview && !importResult && (
+              <Button onClick={handleImportConfirm} disabled={isPending || importPreview.created + importPreview.updated === 0}>
+                {isPending ? 'Importing…' : `Import ${importPreview.created + importPreview.updated} records`}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
