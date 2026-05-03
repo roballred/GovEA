@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
@@ -22,6 +22,7 @@ export const applications = pgTable('applications', {
   lifecycleStatus: lifecycleStatusEnum('lifecycle_status').notNull().default('active'),
   status: workflowStatusEnum('status').notNull().default('draft'),
   visibility: visibilityEnum('visibility').notNull().default('org'),
+  customData: jsonb('custom_data').$type<Record<string, string>>().notNull().default({}),
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),
   lastReviewedBy: uuid('last_reviewed_by').references(() => users.id),

@@ -10,6 +10,7 @@ import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from './taxonomy'
+import { getCustomFieldSchema } from './custom-fields'
 
 async function requireContributor() {
   const session = await auth()
@@ -23,6 +24,21 @@ async function requireAdmin() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) throw new Error('Forbidden')
   return session
+}
+
+// Extracts custom field values from FormData using the `customData.FieldName` prefix convention.
+function extractCustomData(formData: FormData, fieldNames: string[]): Record<string, string> {
+  const customData: Record<string, string> = {}
+  for (const name of fieldNames) {
+    const key = `customData.${name}`
+    const values = formData.getAll(key) as string[]
+    if (values.length > 1) {
+      customData[name] = values.join(',') // multiselect
+    } else if (values[0]) {
+      customData[name] = values[0]
+    }
+  }
+  return customData
 }
 
 export async function getApplication(id: string) {
@@ -49,9 +65,8 @@ export async function getApplication(id: string) {
   if (!visible) return null
   if (session.user.role === 'viewer' && application.status !== 'published') return null
 
-  // Fetch objectives linked through this application's capabilities as a flat query.
   const capabilityIds = application.applicationCapabilities.map(ac => ac.capabilityId)
-  const [capabilityObjectives, taxonomyValues, taxonomyDefinitions] = await Promise.all([
+  const [capabilityObjectives, taxonomyValues, taxonomyDefinitions, customFieldDefs] = await Promise.all([
     capabilityIds.length > 0
       ? db.query.objectiveCapabilities.findMany({
           where: inArray(objectiveCapabilities.capabilityId, capabilityIds),
@@ -60,9 +75,10 @@ export async function getApplication(id: string) {
       : Promise.resolve([]),
     getEntityTaxonomyValues(application.organizationId, 'application', id),
     getEntityTaxonomyDefinitions(application.organizationId, 'application'),
+    getCustomFieldSchema(application.organizationId, 'application'),
   ])
 
-  return { ...application, capabilityObjectives, taxonomyValues, taxonomyDefinitions }
+  return { ...application, capabilityObjectives, taxonomyValues, taxonomyDefinitions, customFieldDefs }
 }
 
 export async function getApplications(organizationId: string, role?: string) {
@@ -102,6 +118,9 @@ export async function createApplication(formData: FormData) {
   const capabilityIds = formData.getAll('capabilityIds') as string[]
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
+  const fieldDefs = await getCustomFieldSchema(orgId, 'application')
+  const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
+
   const [application] = await db.insert(applications).values({
     name,
     description,
@@ -111,6 +130,7 @@ export async function createApplication(formData: FormData) {
     lifecycleStatus,
     status,
     visibility,
+    customData,
     organizationId: orgId,
     createdBy: session.user.id,
     updatedBy: session.user.id,
@@ -154,6 +174,9 @@ export async function editApplication(applicationId: string, formData: FormData)
   const before = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(before?.organizationId, orgId)
 
+  const fieldDefs = await getCustomFieldSchema(orgId, 'application')
+  const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
+
   await db.update(applications).set({
     name,
     description,
@@ -163,11 +186,11 @@ export async function editApplication(applicationId: string, formData: FormData)
     lifecycleStatus,
     status,
     visibility,
+    customData,
     updatedBy: session.user.id,
     updatedAt: new Date(),
   }).where(and(eq(applications.id, applicationId), eq(applications.organizationId, orgId)))
 
-  // Replace capability links
   await db.delete(applicationCapabilities).where(eq(applicationCapabilities.applicationId, applicationId))
   if (capabilityIds.length > 0) {
     await db.insert(applicationCapabilities).values(
@@ -175,7 +198,6 @@ export async function editApplication(applicationId: string, formData: FormData)
     )
   }
 
-  // Replace taxonomy values
   await syncEntityTaxonomyValues(orgId, 'application', applicationId, taxonomyTermIds)
 
   await writeAuditLog({
@@ -241,4 +263,153 @@ export async function markApplicationReviewed(applicationId: string, _formData: 
   })
 
   revalidatePath(`/applications/${applicationId}`)
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+
+export type ImportResult = {
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}
+
+const FIXED_COLUMNS = new Set(['name', 'description', 'vendor', 'version', 'hosting_model', 'lifecycle_status', 'status', 'visibility'])
+const VALID_LIFECYCLE = new Set(['active', 'sunset', 'decommissioned', 'planned'])
+const VALID_STATUS = new Set(['draft', 'published', 'archived'])
+const VALID_VISIBILITY = new Set(['org', 'connections', 'instance'])
+
+function parseCsvLine(line: string): string[] {
+  const result: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }
+      else inQuotes = !inQuotes
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current); current = ''
+    } else {
+      current += ch
+    }
+  }
+  result.push(current)
+  return result
+}
+
+function parseCsv(text: string): Record<string, string>[] {
+  const lines = text.trim().split(/\r?\n/)
+  if (lines.length < 2) return []
+  const headers = parseCsvLine(lines[0]).map(h => h.trim())
+  return lines.slice(1)
+    .filter(l => l.trim())
+    .map(line => {
+      const values = parseCsvLine(line)
+      return Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? '').trim()]))
+    })
+}
+
+export async function importApplications(formData: FormData, dryRun = false): Promise<ImportResult> {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const file = formData.get('csvFile') as File | null
+  if (!file) return { created: 0, updated: 0, skipped: 0, errors: ['No file provided'] }
+
+  const text = await file.text()
+  const rows = parseCsv(text)
+  if (rows.length === 0) return { created: 0, updated: 0, skipped: 0, errors: ['CSV has no data rows'] }
+
+  const fieldDefs = await getCustomFieldSchema(orgId, 'application')
+  const customFieldNames = new Set(fieldDefs.map(f => f.name))
+
+  // Pre-fetch existing applications by name for conflict resolution
+  const existing = await db.query.applications.findMany({
+    where: eq(applications.organizationId, orgId),
+    columns: { id: true, name: true },
+  })
+  const existingByName = new Map(existing.map(a => [a.name.toLowerCase(), a.id]))
+
+  let created = 0, updated = 0, skipped = 0
+  const errors: string[] = []
+
+  for (const [i, row] of rows.entries()) {
+    const rowNum = i + 2 // 1-indexed, accounting for header row
+    const name = row['name']?.trim()
+    if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
+
+    const lifecycleStatus = row['lifecycle_status'] || 'active'
+    const status = row['status'] || 'draft'
+    const visibility = row['visibility'] || 'org'
+
+    if (!VALID_LIFECYCLE.has(lifecycleStatus)) {
+      errors.push(`Row ${rowNum}: invalid lifecycle_status "${lifecycleStatus}"`)
+      skipped++; continue
+    }
+    if (!VALID_STATUS.has(status)) {
+      errors.push(`Row ${rowNum}: invalid status "${status}"`)
+      skipped++; continue
+    }
+    if (!VALID_VISIBILITY.has(visibility)) {
+      errors.push(`Row ${rowNum}: invalid visibility "${visibility}"`)
+      skipped++; continue
+    }
+
+    const customData: Record<string, string> = {}
+    for (const [key, val] of Object.entries(row)) {
+      if (!FIXED_COLUMNS.has(key) && customFieldNames.has(key) && val) {
+        customData[key] = val
+      }
+    }
+
+    const existingId = existingByName.get(name.toLowerCase())
+
+    if (!dryRun) {
+      if (existingId) {
+        await db.update(applications).set({
+          description: row['description'] || null,
+          vendor: row['vendor'] || null,
+          version: row['version'] || null,
+          hostingModel: row['hosting_model'] || null,
+          lifecycleStatus: lifecycleStatus as 'active' | 'sunset' | 'decommissioned' | 'planned',
+          status: status as 'draft' | 'published' | 'archived',
+          visibility: visibility as 'org' | 'connections' | 'instance',
+          customData,
+          updatedBy: session.user.id,
+          updatedAt: new Date(),
+        }).where(and(eq(applications.id, existingId), eq(applications.organizationId, orgId)))
+      } else {
+        await db.insert(applications).values({
+          name,
+          description: row['description'] || null,
+          vendor: row['vendor'] || null,
+          version: row['version'] || null,
+          hostingModel: row['hosting_model'] || null,
+          lifecycleStatus: lifecycleStatus as 'active' | 'sunset' | 'decommissioned' | 'planned',
+          status: status as 'draft' | 'published' | 'archived',
+          visibility: visibility as 'org' | 'connections' | 'instance',
+          customData,
+          organizationId: orgId,
+          createdBy: session.user.id,
+          updatedBy: session.user.id,
+        })
+      }
+    }
+
+    if (existingId) updated++; else created++
+  }
+
+  if (!dryRun && (created > 0 || updated > 0)) {
+    await writeAuditLog({
+      action: 'application.import',
+      entityType: 'application',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { created, updated, skipped, dryRun },
+    })
+  }
+
+  return { created, updated, skipped, errors }
 }

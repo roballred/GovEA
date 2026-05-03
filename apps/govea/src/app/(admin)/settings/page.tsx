@@ -7,9 +7,11 @@ import { ThemeSelector } from '@/components/theme-selector'
 import { ModuleToggles } from '@/components/module-toggles'
 import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
+import { CustomFieldsManager } from '@/components/custom-fields-manager'
 import { isAdmin } from '@/lib/rbac'
 import type { ConfidenceSettings } from '@/db/schema'
 import { getCurrentModuleSettings } from '@/lib/get-enabled-modules'
+import { getCustomFieldSchema } from '@/actions/custom-fields'
 
 const DEFAULT_CONFIDENCE: ConfidenceSettings = {
   enabled: false,
@@ -22,13 +24,16 @@ export default async function SettingsPage() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) redirect('/dashboard')
 
-  const [org, moduleSettings] = await Promise.all([
+  const [org, moduleSettings, appCustomFields] = await Promise.all([
     session.user.organizationId
       ? db.query.organizations.findFirst({
           where: eq(organizations.id, session.user.organizationId),
         })
       : Promise.resolve(null),
     getCurrentModuleSettings(),
+    session.user.organizationId
+      ? getCustomFieldSchema(session.user.organizationId, 'application')
+      : Promise.resolve([]),
   ])
 
   const activeTheme = org?.theme ?? 'govea'
@@ -75,6 +80,18 @@ export default async function SettingsPage() {
           </p>
         </div>
         <FrameworkToggles initialModules={enabledModules} lockedModules={instanceDisabledModules} />
+      </section>
+
+      <hr />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Application Custom Fields</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Define additional fields for your application inventory. Values are stored per record and included in CSV exports.
+          </p>
+        </div>
+        <CustomFieldsManager entityType="application" initialFields={appCustomFields} />
       </section>
 
       <hr />
