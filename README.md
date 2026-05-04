@@ -129,6 +129,27 @@ podman compose version   # bundled with Podman Desktop
 pip install podman-compose
 ```
 
+### Named volumes and Podman compose providers
+
+The demo stack persists Postgres data in a named volume (`demo_postgres_data`). With rootless Podman, `podman compose` (bundled with Podman Desktop) and `podman-compose` (the pip/brew package) can manage named volumes differently. If you start the stack with one tool and later switch to the other, you may land on what appears to be an empty database with no error — the data is in a volume the other tool can't see.
+
+**Recommendation:** pick one provider and stick to it. The `container-compose.sh` helper prefers `podman compose` when both are available, so as long as you use `pnpm demo:*` commands you stay on the same provider.
+
+If you deliberately want a clean local database (to re-run seed data from scratch, for example), remove the volume explicitly:
+
+```bash
+# Stop the stack first
+pnpm demo:db:stop          # or pnpm demo:stop for the full stack
+
+# Remove the named volume
+podman volume rm demo_postgres_data   # or: docker volume rm demo_postgres_data
+
+# Start fresh — the volume is recreated automatically
+pnpm demo:db
+pnpm --filter govea db:migrate
+pnpm --filter govea db:seed
+```
+
 ### Azure container builds
 
 Azure deployments build images in the cloud via `az acr build` and do not require a local Docker daemon. See `scripts/azure-dev.sh` for details.
