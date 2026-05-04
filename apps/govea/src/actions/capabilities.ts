@@ -135,6 +135,7 @@ export async function createCapability(formData: FormData) {
   const domain = (formData.get('domain') as string) || null
   const behaviors = (formData.get('behaviors') as string) || null
   const rules = (formData.get('rules') as string) || null
+  const capabilityType = (formData.get('capabilityType') as 'business' | 'technical') || null
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const personaIds = formData.getAll('personaIds') as string[]
@@ -146,6 +147,7 @@ export async function createCapability(formData: FormData) {
     domain,
     behaviors,
     rules,
+    capabilityType,
     status,
     visibility,
     organizationId: orgId,
@@ -169,7 +171,7 @@ export async function createCapability(formData: FormData) {
     entityId: capability.id,
     userId: session.user.id,
     organizationId: orgId,
-    after: { name, description, domain, status, visibility, personaIds, parentId },
+    after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
   })
 }
 
@@ -182,6 +184,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
   const domain = (formData.get('domain') as string) || null
   const behaviors = (formData.get('behaviors') as string) || null
   const rules = (formData.get('rules') as string) || null
+  const capabilityType = (formData.get('capabilityType') as 'business' | 'technical') || null
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const personaIds = formData.getAll('personaIds') as string[]
@@ -196,6 +199,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     domain,
     behaviors,
     rules,
+    capabilityType,
     status,
     visibility,
     updatedBy: session.user.id,
@@ -223,7 +227,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     userId: session.user.id,
     organizationId: orgId,
     before: { name: before?.name, status: before?.status, visibility: before?.visibility },
-    after: { name, description, domain, status, visibility, personaIds, parentId },
+    after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
   })
 
   // Flag or clear cross-org links when visibility changes.

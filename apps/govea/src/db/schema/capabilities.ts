@@ -1,8 +1,10 @@
-import { pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgEnum, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
 import { personas } from './personas'
+
+export const capabilityTypeEnum = pgEnum('capability_type', ['business', 'technical'])
 
 export const capabilities = pgTable('capabilities', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -12,6 +14,7 @@ export const capabilities = pgTable('capabilities', {
   domain: text('domain'),       // top-level taxonomy domain
   behaviors: text('behaviors'), // what the capability must do — one behavior per line
   rules: text('rules'),         // constraints and invariants — one rule per line
+  capabilityType: capabilityTypeEnum('capability_type'),
   status: workflowStatusEnum('status').notNull().default('draft'),
   visibility: visibilityEnum('visibility').notNull().default('org'),
   createdBy: uuid('created_by').references(() => users.id),
