@@ -27,6 +27,7 @@ import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
 import { MarkdownContent } from '@/components/markdown-content'
 import { getCapabilityImpact } from '@/actions/impact'
 import { CapabilityImpactPanel } from '@/components/impact-panel'
+import { CapabilityEditButton } from '@/components/capability-edit-button'
 import {
   approveCrossOrgLink,
   getCrossOrgLinkContext,
@@ -130,6 +131,24 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
           </Link>
         </div>
       </div>
+
+      {canMutate && (
+        <CapabilityEditButton
+          capabilityId={id}
+          initial={{
+            name: capability.name,
+            description: capability.description,
+            domain: capability.domain,
+            capabilityType: capability.capabilityType,
+            behaviors: capability.behaviors,
+            rules: capability.rules,
+            status: capability.status,
+            visibility: capability.visibility,
+            personaIds: capability.capabilityPersonas.map(cp => cp.persona.id),
+            parentId: capability.parentRelationships[0]?.parentId ?? null,
+          }}
+        />
+      )}
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
