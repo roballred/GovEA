@@ -48,7 +48,7 @@ export async function getApplicationImpact(applicationId: string): Promise<Appli
   const capIds = linkedCapRows.map(r => r.capabilityId)
 
   let orphanedCapabilities: OrphanedCapability[] = []
-  let affectedPersonas: ImpactPersona[] = []
+  const affectedPersonas: ImpactPersona[] = []
 
   if (capIds.length > 0) {
     // All applications supporting those capabilities
