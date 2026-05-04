@@ -27,6 +27,7 @@ import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
 import { MarkdownContent } from '@/components/markdown-content'
 import { getCapabilityImpact } from '@/actions/impact'
 import { CapabilityImpactPanel } from '@/components/impact-panel'
+import { CapabilityEditButton } from '@/components/capability-edit-button'
 import {
   approveCrossOrgLink,
   getCrossOrgLinkContext,
