@@ -88,6 +88,26 @@ The helper detects the available runtime automatically:
 pnpm demo:start
 ```
 
+**Database only** (start Postgres without running migrations or the app server):
+
+```bash
+pnpm demo:db
+```
+
+Use this when you want to restart the Next.js layer or run migrations manually without disturbing the database. After the database is ready, run in a separate terminal:
+
+```bash
+pnpm --filter govea db:push   # sync schema
+pnpm --filter govea db:seed   # load seed data
+pnpm --filter govea dev       # start the app server
+```
+
+**Stop the database:**
+
+```bash
+pnpm demo:db:stop
+```
+
 **Full container stack** (auto-detected runtime):
 
 ```bash
