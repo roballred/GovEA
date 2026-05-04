@@ -196,6 +196,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         />
       )}
 
+      <ApplicationImpactPanel impact={impact} />
+
       {application.customFieldDefs.length > 0 && application.customFieldDefs.some(f => application.customData?.[f.name]) && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Custom Fields</h2>
