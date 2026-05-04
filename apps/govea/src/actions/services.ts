@@ -3,9 +3,9 @@
 import { db } from '@/db/client'
 import {
   services, serviceCapabilities, servicePersonas,
-  serviceValueStreams, entityTaxonomyValues,
+  serviceValueStreams, entityTaxonomyValues, applicationCapabilities,
 } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -37,7 +37,7 @@ export async function getService(id: string) {
       organization: true,
       serviceCapabilities: {
         with: {
-          capability: { with: { applicationCapabilities: { with: { application: true } } } },
+          capability: { columns: { id: true, name: true, domain: true } },
         },
       },
       servicePersonas: { with: { persona: true } },
@@ -50,12 +50,21 @@ export async function getService(id: string) {
   if (!visible) return null
   if (session.user.role === 'viewer' && service.status !== 'published') return null
 
+  // Fetch capability → application links in a separate query (Drizzle doesn't support 3-level deep joins)
+  const capIds = service.serviceCapabilities.map(sc => sc.capabilityId)
+  const capabilityApps = capIds.length > 0
+    ? await db.query.applicationCapabilities.findMany({
+        where: inArray(applicationCapabilities.capabilityId, capIds),
+        with: { application: { columns: { id: true, name: true, vendor: true } } },
+      })
+    : []
+
   const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
     getEntityTaxonomyValues(service.organizationId, 'service', id),
     getEntityTaxonomyDefinitions(service.organizationId, 'service'),
   ])
 
-  return { ...service, taxonomyValues, taxonomyDefinitions }
+  return { ...service, capabilityApps, taxonomyValues, taxonomyDefinitions }
 }
 
 export async function getServices(organizationId: string, role?: string) {

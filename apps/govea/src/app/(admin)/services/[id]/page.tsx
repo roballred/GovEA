@@ -18,6 +18,7 @@ import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
 import { MarkdownContent } from '@/components/markdown-content'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
+import { ServiceEditButton } from '@/components/service-edit-button'
 
 const CHANNEL_LABELS: Record<string, string> = {
   online: 'Online',
@@ -79,14 +80,12 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
   const removeValueStream = unlinkServiceValueStream.bind(null, id)
 
   const capabilityApps = dedupeById(
-    service.serviceCapabilities.flatMap(({ capability }) =>
-      capability.applicationCapabilities.map(({ application }) => ({
-        id: application.id,
-        name: application.name,
-        href: `/applications/${application.id}`,
-        meta: application.vendor ?? undefined,
-      }))
-    )
+    service.capabilityApps.map(({ application }) => ({
+      id: application.id,
+      name: application.name,
+      href: `/applications/${application.id}`,
+      meta: application.vendor ?? undefined,
+    }))
   )
 
   return (
@@ -138,6 +137,22 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
       </div>
+
+      {canMutate && (
+        <ServiceEditButton
+          serviceId={id}
+          initial={{
+            name: service.name,
+            description: service.description,
+            serviceOwner: service.serviceOwner,
+            channels: service.channels,
+            status: service.status,
+            visibility: service.visibility,
+          }}
+          taxonomyDefinitions={service.taxonomyDefinitions}
+          taxonomyValues={service.taxonomyValues}
+        />
+      )}
 
       {/* Taxonomy classification chips */}
       <TaxonomyChips

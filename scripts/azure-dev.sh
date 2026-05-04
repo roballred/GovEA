@@ -14,7 +14,7 @@
 #
 # Prerequisites:
 #   - az CLI installed and authenticated (az login)
-#   - Docker daemon running
+#   - No local Docker daemon required — image builds run in Azure via az acr build
 #   - Run from repo root
 
 set -euo pipefail

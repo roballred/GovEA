@@ -7,8 +7,10 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "demo:start": "bash scripts/demo-start.sh",
-    "demo:docker": "docker compose -f docker-compose.demo.yml up --build",
-    "demo:stop": "docker compose -f docker-compose.demo.yml down"
+    "demo:container": "bash scripts/container-compose.sh demo up --build",
+    "demo:docker": "CONTAINER_RUNTIME=docker bash scripts/container-compose.sh demo up --build",
+    "demo:podman": "CONTAINER_RUNTIME=podman bash scripts/container-compose.sh demo up --build",
+    "demo:stop": "bash scripts/container-compose.sh demo down"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

@@ -1,10 +1,12 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getGlossaryTerm } from '@/actions/glossary'
+import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { MarkdownContent } from '@/components/markdown-content'
 import { isSafeUrl } from '@/lib/url'
+import { GlossaryEditButton } from '@/components/glossary-edit-button'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -32,6 +34,10 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
   const term = await getGlossaryTerm(id)
   if (!term) notFound()
 
+  const editor = canEdit(session.user)
+  const orgId = session.user.organizationId!
+  const canMutate = editor && term.organizationId === orgId
+
   return (
     <div className="space-y-8 max-w-3xl">
       <Link href="/glossary" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -56,6 +62,22 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
           </div>
         </div>
       </div>
+
+      {canMutate && (
+        <GlossaryEditButton
+          termId={id}
+          initial={{
+            term: term.term,
+            definition: term.definition,
+            domain: term.domain,
+            definitionSource: term.definitionSource,
+            definitionSourceUrl: term.definitionSourceUrl,
+            notes: term.notes,
+            status: term.status,
+            visibility: term.visibility,
+          }}
+        />
+      )}
 
       <hr />
 

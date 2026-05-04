@@ -15,6 +15,7 @@ import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { getPrincipleTypes } from '@/actions/taxonomy'
 import { MarkdownContent } from '@/components/markdown-content'
+import { PrincipleEditButton } from '@/components/principle-edit-button'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -105,6 +106,23 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
           </div>
         </div>
       </div>
+
+      {canMutate && (
+        <PrincipleEditButton
+          principleId={id}
+          initial={{
+            name: principle.name,
+            description: principle.description,
+            title: principle.title,
+            rationale: principle.rationale,
+            implications: principle.implications,
+            principleType: principle.principleType,
+            status: principle.status,
+            visibility: principle.visibility,
+          }}
+          principleTypes={principleTypes}
+        />
+      )}
 
       <hr />
 
