@@ -69,6 +69,72 @@ Both must pass before merge.
 
 ---
 
+## Local Containers
+
+GovEA uses a runtime-agnostic compose helper (`scripts/container-compose.sh`) so local container workflows work with either Podman or Docker. Podman is the preferred default when installed.
+
+### Auto-detection
+
+The helper detects the available runtime automatically:
+- uses **Podman** when `podman` is found in PATH
+- falls back to **Docker** if Podman is not available
+- override with `CONTAINER_RUNTIME=docker` or `CONTAINER_RUNTIME=podman`
+
+### Common workflows
+
+**Host app + containerized Postgres** (fastest hot reload):
+
+```bash
+pnpm demo:start
+```
+
+**Full container stack** (auto-detected runtime):
+
+```bash
+pnpm demo:container
+```
+
+**Stop the container stack:**
+
+```bash
+pnpm demo:stop
+```
+
+**Explicit runtime override:**
+
+```bash
+CONTAINER_RUNTIME=docker pnpm demo:start
+CONTAINER_RUNTIME=podman pnpm demo:container
+```
+
+Or use the convenience aliases:
+
+```bash
+pnpm demo:docker   # forces Docker
+pnpm demo:podman   # forces Podman
+```
+
+### Podman setup (macOS)
+
+```bash
+brew install podman
+podman machine start
+```
+
+Ensure `podman compose` or `podman-compose` is available:
+
+```bash
+podman compose version   # bundled with Podman Desktop
+# or
+pip install podman-compose
+```
+
+### Azure container builds
+
+Azure deployments build images in the cloud via `az acr build` and do not require a local Docker daemon. See `scripts/azure-dev.sh` for details.
+
+---
+
 ## Capabilities
 
 GovEA's capability surface spans 9 groups, each driven by government EA practitioner personas and validated through the EasyEA workflow:
