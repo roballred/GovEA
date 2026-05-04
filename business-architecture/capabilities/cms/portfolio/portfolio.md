@@ -18,6 +18,7 @@ The system must allow contributors to maintain a structured inventory of the org
 | Architecture Decision Records | [po-architecture-decisions.md](./po-architecture-decisions.md) | Record, track, and supersede architecture decisions |
 | Principles | [po-principles.md](./po-principles.md) | Capture architecture principles and link them to capabilities and decisions |
 | Glossary | [po-glossary.md](./po-glossary.md) | Maintain shared terminology to support consistent EA language across the repository |
+| Value Streams | [po-value-streams.md](./po-value-streams.md) | Define value streams with ordered stages; link stages to capabilities and link streams to personas, objectives, and services |
 
 ## Rules
 - Portfolio records follow the standard content workflow: draft → published → archived
