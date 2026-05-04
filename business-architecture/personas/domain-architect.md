@@ -5,6 +5,9 @@
 ## Role Type
 Internal — Agency IT or Central IT (specialist contributor)
 
+## Government Equivalent
+Solution Architect, Data Architect, Security Architect, or Network Architect at a specific agency or central IT division. Deep technical expertise in one domain. Contributes to the EA repository as a specialist, not as its owner or administrator.
+
 ## Who They Are
 The Domain Architect is a specialist — a Data Architect, Security Architect, Network Architect, or Integration Architect — who contributes to the EA repository for their specific domain. They are not the owner of the overall EA practice; that responsibility belongs to the Enterprise Architect or Agency EA Coordinator. They are a domain expert contributing accurate, current records for their slice of the architecture.
 
@@ -26,6 +29,16 @@ In government, this role is most common in large agencies, central IT shops, or 
 
 ## Critical Insight
 Domain architects are the primary contributors to EA repository data quality in established practices, but they are rarely the primary audience in product design or vendor sales. Building contribution workflows, change notifications, and cross-domain relationship navigation for this persona is the most direct path to a repository that stays accurate and useful as the practice matures.
+
+## Distinction from Agency EA Coordinator
+
+| | Agency EA Coordinator | Domain Architect |
+|---|---|---|
+| Role type | Liaison / coordinator | Technical specialist |
+| Contribution type | General EA content for an agency | Deep domain-specific content (data, security, network, integration) |
+| Access need | Contributor access to agency content | Domain-scoped contribution; concerned with preventing inadvertent overwrites by others |
+| EA knowledge | Moderate — learns EasyEA methodology | Deep — brings existing architectural expertise to the repository |
+| Primary driver | Maintain the agency's full EA picture | Keep one domain layer accurate and consulted by delivery teams |
 
 ## Relevant Capabilities
 - Content authoring and editing within a defined domain scope
