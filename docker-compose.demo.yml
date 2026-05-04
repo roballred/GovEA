@@ -37,4 +37,10 @@ services:
       retries: 10
 
 volumes:
+  # Named volume for Postgres data. With rootless Podman, "podman compose" and
+  # "podman-compose" manage named volumes independently — mixing them makes the
+  # database appear empty. Use one provider consistently (the container-compose.sh
+  # helper prefers "podman compose" when both are installed).
+  # To reset: stop the stack, run `podman volume rm demo_postgres_data`, then
+  # restart and re-run db:migrate + db:seed.
   demo_postgres_data:
