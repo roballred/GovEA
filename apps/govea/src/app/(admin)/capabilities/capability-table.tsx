@@ -21,7 +21,7 @@ import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { buildCapabilityTree, flattenTree, collectDescendantIds, resolveCapabilityDomain } from '@/lib/capability-tree'
 
-type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
+type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'capabilityType' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
   organization: { id: string; name: string } | null
   capabilityPersonas: { persona: Pick<Persona, 'id' | 'name'> }[]
   childRelationships: { parentId: string; childId: string }[]
@@ -54,12 +54,18 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
+const TYPE_STYLES: Record<string, string> = {
+  business: 'bg-violet-100 text-violet-800 border-violet-200',
+  technical: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+}
+
 export function CapabilityTable({ capabilities, personas, domainTerms, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
   const [domainFilter, setDomainFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -83,7 +89,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
 
   const refresh = () => router.refresh()
 
-  const hasFilter = search || statusFilter !== 'all' || domainFilter !== 'all' || orgFilter !== 'all'
+  const hasFilter = search || statusFilter !== 'all' || typeFilter !== 'all' || domainFilter !== 'all' || orgFilter !== 'all'
 
   // Build tree from full capability list
   const tree = buildCapabilityTree(capabilities)
@@ -95,9 +101,10 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
         const resolvedDomain = resolveCapabilityDomain(c.id, capById)
         const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase())
         const matchStatus = statusFilter === 'all' || c.status === statusFilter
+        const matchType = typeFilter === 'all' || c.capabilityType === typeFilter
         const matchDomain = domainFilter === 'all' || resolvedDomain === domainFilter
         const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? c.organizationId === currentOrgId : c.organizationId === orgFilter)
-        return matchSearch && matchStatus && matchDomain && matchOrg
+        return matchSearch && matchStatus && matchType && matchDomain && matchOrg
       }).map(c => ({ cap: c, depth: 0, children: [] }))
     : flatTree
 
@@ -171,6 +178,15 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="all">All types</option>
+          <option value="business">Business</option>
+          <option value="technical">Technical</option>
+        </select>
         {domainOptions.length > 0 && (
           <select
             value={domainFilter}
@@ -203,6 +219,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Domain</TableHead>
               <TableHead>Personas</TableHead>
               <TableHead>Status</TableHead>
@@ -213,7 +230,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
           <TableBody>
             {displayRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-8">
                   {capabilities.length === 0
                     ? 'No capabilities yet. Add one to get started.'
                     : 'No capabilities match the current filters.'}
@@ -254,6 +271,14 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
                         )}
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {c.capabilityType
+                      ? <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', TYPE_STYLES[c.capabilityType])}>
+                          {c.capabilityType.charAt(0).toUpperCase() + c.capabilityType.slice(1)}
+                        </span>
+                      : <span className="text-muted-foreground">—</span>
+                    }
                   </TableCell>
                   <TableCell>
                     {resolvedDomain
@@ -331,6 +356,14 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
             <FormField label="Name" name="name" required />
             <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue="" />
+            <div className="space-y-1.5">
+              <Label>Capability Type</Label>
+              <select name="capabilityType" defaultValue="" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="">— Not set —</option>
+                <option value="business">Business</option>
+                <option value="technical">Technical</option>
+              </select>
+            </div>
             <ParentSelector
               options={getParentOptions()}
               defaultValue=""
@@ -386,6 +419,14 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue={editTarget?.domain ?? ''} />
+            <div className="space-y-1.5">
+              <Label>Capability Type</Label>
+              <select name="capabilityType" defaultValue={editTarget?.capabilityType ?? ''} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="">— Not set —</option>
+                <option value="business">Business</option>
+                <option value="technical">Technical</option>
+              </select>
+            </div>
             <ParentSelector
               options={getParentOptions(editTarget?.id)}
               defaultValue={editTargetParentId}

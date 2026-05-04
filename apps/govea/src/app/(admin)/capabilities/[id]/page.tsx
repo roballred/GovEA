@@ -54,6 +54,11 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
+const TYPE_STYLES: Record<string, string> = {
+  business: 'bg-violet-100 text-violet-800 border-violet-200',
+  technical: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+}
+
 export default async function CapabilityDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await auth()
@@ -130,6 +135,11 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight">{capability.name}</h1>
           <div className="flex items-center gap-2 shrink-0">
+            {capability.capabilityType && (
+              <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', TYPE_STYLES[capability.capabilityType])}>
+                {capability.capabilityType.charAt(0).toUpperCase() + capability.capabilityType.slice(1)}
+              </span>
+            )}
             <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[capability.status])}>
               {capability.status.charAt(0).toUpperCase() + capability.status.slice(1)}
             </span>
