@@ -235,7 +235,7 @@ GovEA's longer-horizon capability direction spans the major themes below, each d
 | Business & Capability Architecture | Capability heat maps, operating model views, typed principle sets |
 | Planning & Analysis | Scenario planning, value stream analytics |
 | Governance & Compliance | ARB review workflow, regulatory mapping |
-| Integration | ITSM/CMDB connectors, DevOps pipeline links |
+| Integration | Tier 1: ITSM/CMDB sync, DevOps pipeline links, cloud discovery — Tier 2 (critical gaps): PPM/project portfolio, ERP/financial, HR/org design — Tier 3: data governance platform, API management platform, BI analytics feed — Tier 4 (emerging): IaC, AI/ML registry, low-code platforms — Foundational: REST API |
 | Collaboration & Stakeholder Engagement | Stakeholder validation, repository confidence summaries, stakeholder-facing plain-language views |
 | Reporting & Documentation | Configurable reports, KPI tracking, elected-official summaries |
 | Framework Alignment | Optional TOGAF mapping, ADM phase alignment, and framework-aware reporting |
