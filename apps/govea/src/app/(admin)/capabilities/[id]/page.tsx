@@ -25,6 +25,8 @@ import { FrameworkMappingPanel } from '@/components/framework-mapping-panel'
 import { getFrameworkMappings } from '@/actions/framework-mappings'
 import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
 import { MarkdownContent } from '@/components/markdown-content'
+import { getCapabilityImpact } from '@/actions/impact'
+import { CapabilityImpactPanel } from '@/components/impact-panel'
 import {
   approveCrossOrgLink,
   getCrossOrgLinkContext,
@@ -59,6 +61,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
   const [capability, enabledModules] = await Promise.all([getCapability(id), getEnabledModules()])
   if (!capability) notFound()
+
+  const impact = await getCapabilityImpact(id)
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
@@ -272,6 +276,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
         withdrawAction={withdrawCrossOrgLink}
         revokeAction={revokeCrossOrgLink}
       />
+
+      <CapabilityImpactPanel impact={impact} />
 
       {isModuleEnabled(enabledModules, 'principles') && capability.principleCapabilities.length > 0 && (
         <RelationshipPanel

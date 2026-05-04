@@ -19,6 +19,8 @@ import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
 import { MarkdownContent } from '@/components/markdown-content'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
+import { getApplicationImpact } from '@/actions/impact'
+import { ApplicationImpactPanel } from '@/components/impact-panel'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -52,6 +54,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   const [application, enabledModules] = await Promise.all([getApplication(id), getEnabledModules()])
   if (!application) notFound()
+
+  const impact = await getApplicationImpact(id)
 
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
@@ -191,6 +195,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           removeAction={removeAdr}
         />
       )}
+
+      <ApplicationImpactPanel impact={impact} />
 
       {application.customFieldDefs.length > 0 && application.customFieldDefs.some(f => application.customData?.[f.name]) && (
         <div className="space-y-3">
