@@ -14,6 +14,7 @@ import {
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
+import { ValueStreamEditButton } from '@/components/value-stream-edit-button'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -93,6 +94,19 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
           </div>
         </div>
       </div>
+
+      {canMutate && (
+        <ValueStreamEditButton
+          valueStreamId={id}
+          initial={{
+            name: vs.name,
+            description: vs.description,
+            valueItem: vs.valueItem,
+            status: vs.status,
+            visibility: vs.visibility,
+          }}
+        />
+      )}
 
       <hr />
 

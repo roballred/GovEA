@@ -50,6 +50,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
 export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
 
@@ -65,9 +66,10 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
   const refresh = () => router.refresh()
 
   const filtered = valueStreams.filter(vs => {
+    const matchSearch = !search || vs.name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || vs.status === statusFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? vs.organizationId === currentOrgId : vs.organizationId === orgFilter)
-    return matchStatus && matchOrg
+    return matchSearch && matchStatus && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -100,6 +102,13 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
+        <Input
+          type="search"
+          placeholder="Search value streams…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-56"
+        />
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
