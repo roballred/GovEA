@@ -114,7 +114,6 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
 
       <RelationshipPanel
         title="Objectives"
-        description="Measurable, time-bounded targets that advance this goal."
         items={goal.goalObjectives.map(({ objective }) => ({
           id: objective.id,
           name: objective.name,
@@ -131,7 +130,6 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
       {initiatives.length > 0 && (
         <RelationshipPanel
           title="Initiatives"
-          description="Delivery work advancing this goal through its objectives."
           items={initiatives}
           canEdit={false}
         />
@@ -140,7 +138,6 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
       {capabilities.length > 0 && (
         <RelationshipPanel
           title="Capabilities"
-          description="Organisational capabilities linked through this goal's objectives."
           items={capabilities}
           canEdit={false}
         />

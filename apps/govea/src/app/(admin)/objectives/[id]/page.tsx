@@ -125,7 +125,6 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
 
       <RelationshipPanel
         title="Goals"
-        description="Strategic outcomes this objective advances."
         items={linkedGoals.map(g => ({
           id: g.id,
           name: g.name,
