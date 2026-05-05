@@ -28,6 +28,7 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { getCapabilityImpact } from '@/actions/impact'
 import { CapabilityImpactPanel } from '@/components/impact-panel'
 import { CapabilityEditButton } from '@/components/capability-edit-button'
+import { TaxonomyChips } from '@/components/taxonomy-ui'
 import {
   approveCrossOrgLink,
   getCrossOrgLinkContext,
@@ -147,6 +148,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             personaIds: capability.capabilityPersonas.map(cp => cp.persona.id),
             parentId: capability.parentRelationships[0]?.parentId ?? null,
           }}
+          taxonomyDefinitions={capability.taxonomyDefinitions}
+          currentTaxonomyValues={capability.taxonomyValues}
         />
       )}
 
@@ -180,6 +183,11 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
               : <span className="text-sm text-muted-foreground">No domain assigned</span>
           }
         </div>
+
+        <TaxonomyChips
+          definitions={capability.taxonomyDefinitions}
+          selectedTermIds={capability.taxonomyValues.map(v => v.taxonomyTermId)}
+        />
 
         {children.length > 0 && (
           <div className="pt-2 space-y-1.5">

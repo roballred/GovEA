@@ -682,6 +682,50 @@ async function seed() {
   }).onConflictDoNothing()
   console.log('  ✓ Application Type taxonomy type + entity definition')
 
+  // Capability Priority taxonomy + entity definition (base-item foundation: second entity pilot)
+  let capPriorityTermId: string
+  const existingCapPriority = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'capability-priority')),
+  })
+  if (existingCapPriority) {
+    capPriorityTermId = existingCapPriority.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Capability Priority',
+      slug: 'capability-priority',
+      description: 'Strategic importance of the capability to the organization.',
+      sortOrder: '60',
+    }).returning()
+    capPriorityTermId = inserted.id
+  }
+  const CAP_PRIORITY_VALUES = ['Critical', 'High', 'Medium', 'Low']
+  for (const name of CAP_PRIORITY_VALUES) {
+    const slug = toSlug(name)
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, devOrgId), e(t.parentId, capPriorityTermId), e(t.slug, slug)),
+    })
+    if (!existing) {
+      await db.insert(taxonomyTerms).values({
+        organizationId: devOrgId,
+        parentId: capPriorityTermId,
+        name,
+        slug,
+      })
+    }
+  }
+  await db.insert(entityTaxonomyDefinitions).values({
+    organizationId: devOrgId,
+    entityType: 'capability',
+    taxonomyTypeId: capPriorityTermId,
+    selectionMode: 'single',
+    required: false,
+    sortOrder: 0,
+  }).onConflictDoNothing()
+  console.log('  ✓ Capability Priority taxonomy type + entity definition')
+
   // ── Org 2: Office of Digital Services (state agency) ────────────────────
 
   console.log('\n[Org 2] Office of Digital Services')

@@ -1,8 +1,9 @@
 'use server'
 
 import { db } from '@/db/client'
-import { capabilities, capabilityPersonas, capabilityRelationships } from '@/db/schema'
+import { capabilities, capabilityPersonas, capabilityRelationships, entityTaxonomyValues } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
+import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/actions/taxonomy'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -67,10 +68,17 @@ export async function getCapability(id: string) {
     : []
   const capNameById = new Map(relatedCaps.map(c => [c.id, c.name]))
 
+  const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
+    getEntityTaxonomyValues(capability.organizationId, 'capability', id),
+    getEntityTaxonomyDefinitions(capability.organizationId, 'capability'),
+  ])
+
   return {
     ...capability,
     childRelationships: childRels.map(r => ({ ...r, child: { id: r.childId, name: capNameById.get(r.childId) ?? '' } })),
     parentRelationships: parentRels.map(r => ({ ...r, parent: { id: r.parentId, name: capNameById.get(r.parentId) ?? '' } })),
+    taxonomyValues,
+    taxonomyDefinitions,
   }
 }
 
@@ -140,6 +148,7 @@ export async function createCapability(formData: FormData) {
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const personaIds = formData.getAll('personaIds') as string[]
   const parentId = (formData.get('parentId') as string) || null
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
   const [capability] = await db.insert(capabilities).values({
     name,
@@ -163,6 +172,10 @@ export async function createCapability(formData: FormData) {
 
   if (parentId) {
     await db.insert(capabilityRelationships).values({ parentId, childId: capability.id }).onConflictDoNothing()
+  }
+
+  if (taxonomyTermIds.length > 0) {
+    await syncEntityTaxonomyValues(orgId, 'capability', capability.id, taxonomyTermIds)
   }
 
   await writeAuditLog({
@@ -189,6 +202,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const personaIds = formData.getAll('personaIds') as string[]
   const parentId = (formData.get('parentId') as string) || null
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(before?.organizationId, orgId)
@@ -220,6 +234,8 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     await db.insert(capabilityRelationships).values({ parentId, childId: capabilityId }).onConflictDoNothing()
   }
 
+  await syncEntityTaxonomyValues(orgId, 'capability', capabilityId, taxonomyTermIds)
+
   await writeAuditLog({
     action: 'capability.edit',
     entityType: 'capability',
@@ -244,6 +260,10 @@ export async function deleteCapability(capabilityId: string) {
 
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(before?.organizationId, orgId)
+
+  await db.delete(entityTaxonomyValues).where(
+    and(eq(entityTaxonomyValues.entityType, 'capability'), eq(entityTaxonomyValues.entityId, capabilityId))
+  )
 
   await db.delete(capabilities).where(
     and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId))
