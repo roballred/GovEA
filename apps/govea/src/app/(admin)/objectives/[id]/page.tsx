@@ -11,6 +11,7 @@ import {
   linkObjectiveCapability, unlinkObjectiveCapability,
   linkObjectiveValueStream, unlinkObjectiveValueStream,
 } from '@/actions/links'
+import { getGoals } from '@/actions/goals'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
@@ -46,17 +47,21 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
   const orgId = session.user.organizationId!
   const canMutate = editor && objective.organizationId === orgId
 
-  const [allCapabilities, allValueStreams] = editor
+  const [allCapabilities, allValueStreams, allGoals] = editor
     ? await Promise.all([
         getCapabilities(orgId),
         getValueStreams(orgId),
+        getGoals(orgId),
       ])
-    : [[], []]
+    : [[], [], []]
 
   const addCapability = linkObjectiveCapability.bind(null, id)
   const removeCapability = unlinkObjectiveCapability.bind(null, id)
   const addValueStream = linkObjectiveValueStream.bind(null, id)
   const removeValueStream = unlinkObjectiveValueStream.bind(null, id)
+
+  // Goals this objective belongs to — derived from allGoals
+  const linkedGoals = allGoals.filter(g => g.goalObjectives.some(go => go.objective.id === id))
 
   const capabilityApps = dedupeById(
     objective.objectiveCapabilities.flatMap(({ capability }) =>
@@ -117,6 +122,18 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
       </div>
 
       <hr />
+
+      <RelationshipPanel
+        title="Goals"
+        items={linkedGoals.map(g => ({
+          id: g.id,
+          name: g.name,
+          href: `/goals/${g.id}`,
+          meta: g.planningHorizon ?? undefined,
+        }))}
+        gapMessage="No goals linked — link this objective to a goal to show how it fits your strategic direction."
+        canEdit={false}
+      />
 
       {isModuleEnabled(enabledModules, 'capabilities') && (
         <RelationshipPanel

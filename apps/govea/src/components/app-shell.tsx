@@ -37,6 +37,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Strategy',
     items: [
+      { href: '/goals',       label: 'Goals',       moduleKey: 'objectives' },
       { href: '/objectives',  label: 'Objectives',  moduleKey: 'objectives' },
       { href: '/initiatives', label: 'Initiatives', moduleKey: 'initiatives' },
       { href: '/roadmap',     label: 'Roadmap',     moduleKey: 'roadmap' },

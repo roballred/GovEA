@@ -452,6 +452,41 @@ export const DEV_OBJECTIVES = [
   },
 ]
 
+// ─── Goals (City of Riverdale) ───────────────────────────────────────────────
+// Coverage: status = published ✓, draft ✓
+//           visibility = org ✓, connections ✓
+//           many-to-many: each goal links to one or more objectives
+
+export const DEV_GOALS = [
+  {
+    name: 'Modernise Resident-Facing Services',
+    description: 'Transform how residents interact with City of Riverdale by shifting from paper-based, in-person processes to seamless digital services that are accessible, fast, and trustworthy.',
+    planningHorizon: '2025–2027',
+    owner: 'Office of Digital Services',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    objectives: ['Improve Digital Service Delivery'],
+  },
+  {
+    name: 'Strengthen Technical Infrastructure',
+    description: 'Modernise ageing technology systems to improve reliability, security, and the city\'s capacity to adopt new digital capabilities as resident needs evolve.',
+    planningHorizon: '2025–2028',
+    owner: 'Department of Information Technology',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    objectives: ['Modernise Legacy Infrastructure', 'Migrate to Cloud-First Infrastructure'],
+  },
+  {
+    name: 'Enable Joined-Up Government',
+    description: 'Break down silos between City departments and state agencies to deliver services that feel seamless to residents regardless of which part of government is responsible.',
+    planningHorizon: '2026–2028',
+    owner: 'City Manager\'s Office',
+    status: 'draft' as const,
+    visibility: 'connections' as const,
+    objectives: ['Enable Cross-Agency Data Sharing'],
+  },
+]
+
 // ─── Value Streams (City of Riverdale) ───────────────────────────────────────
 // Coverage: status = published ✓, draft ✓
 //           visibility = org ✓, connections ✓

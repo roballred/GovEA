@@ -6,6 +6,7 @@ import { taxonomyTerms, entityTaxonomyDefinitions, entityTaxonomyValues } from '
 import { organizations } from './organizations'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas } from './value-streams'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from './objectives'
+import { goals, goalObjectives } from './goals'
 import { initiatives, initiativeCapabilities, initiativeObjectives, initiativeApplications } from './initiatives'
 import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives } from './adrs'
 import { principles, principleAdrs, principleCapabilities } from './principles'
@@ -122,6 +123,27 @@ export const valueStreamStageCapabilitiesRelations = relations(valueStreamStageC
   }),
 }))
 
+// ─── Goals ───────────────────────────────────────────────────────────────────
+
+export const goalsRelations = relations(goals, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [goals.organizationId],
+    references: [organizations.id],
+  }),
+  goalObjectives: many(goalObjectives),
+}))
+
+export const goalObjectivesRelations = relations(goalObjectives, ({ one }) => ({
+  goal: one(goals, {
+    fields: [goalObjectives.goalId],
+    references: [goals.id],
+  }),
+  objective: one(strategicObjectives, {
+    fields: [goalObjectives.objectiveId],
+    references: [strategicObjectives.id],
+  }),
+}))
+
 // ─── Strategic Objectives ────────────────────────────────────────────────────
 
 export const strategicObjectivesRelations = relations(strategicObjectives, ({ one, many }) => ({
@@ -133,6 +155,7 @@ export const strategicObjectivesRelations = relations(strategicObjectives, ({ on
   objectiveValueStreams: many(objectiveValueStreams),
   initiativeObjectives: many(initiativeObjectives),
   adrObjectives: many(adrObjectives),
+  goalObjectives: many(goalObjectives),
 }))
 
 export const objectiveCapabilitiesRelations = relations(objectiveCapabilities, ({ one }) => ({

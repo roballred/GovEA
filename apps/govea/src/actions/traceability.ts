@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import {
-  strategicObjectives, capabilities, services,
+  strategicObjectives, capabilities, services, goals,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -62,7 +62,77 @@ export interface ServiceTrace {
   capabilities: TraceCapability[]
 }
 
-export type TraceData = ObjectiveTrace | CapabilityTrace | ServiceTrace
+export interface GoalTrace {
+  kind: 'goal'
+  id: string; name: string; description: string | null
+  planningHorizon: string | null; owner: string | null; status: string
+  objectives: Array<{
+    id: string; name: string; timeHorizon: string | null
+    capabilities: TraceCapability[]
+    initiatives: TraceInitiative[]
+  }>
+}
+
+export type TraceData = GoalTrace | ObjectiveTrace | CapabilityTrace | ServiceTrace
+
+// ── Goal trace ────────────────────────────────────────────────────────────────
+
+export async function getGoalTrace(id: string): Promise<GoalTrace | null> {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const row = await db.query.goals.findFirst({
+    where: eq(goals.id, id),
+    with: {
+      goalObjectives: {
+        with: {
+          objective: {
+            with: {
+              objectiveCapabilities: {
+                with: {
+                  capability: {
+                    with: { applicationCapabilities: { with: { application: true } } },
+                  },
+                },
+              },
+              initiativeObjectives: { with: { initiative: true } },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!row) return null
+  const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
+  if (!visible) return null
+
+  return {
+    kind: 'goal',
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    planningHorizon: row.planningHorizon,
+    owner: row.owner,
+    status: row.status,
+    objectives: row.goalObjectives.map(({ objective: o }) => ({
+      id: o.id,
+      name: o.name,
+      timeHorizon: o.timeHorizon,
+      capabilities: o.objectiveCapabilities.map(({ capability: c }) => ({
+        id: c.id,
+        name: c.name,
+        domain: c.domain,
+        applications: c.applicationCapabilities.map(({ application: a }) => ({
+          id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
+        })),
+      })),
+      initiatives: o.initiativeObjectives.map(({ initiative: i }) => ({
+        id: i.id, name: i.name, status: i.status,
+      })),
+    })),
+  }
+}
 
 // ── Objective trace ───────────────────────────────────────────────────────────
 

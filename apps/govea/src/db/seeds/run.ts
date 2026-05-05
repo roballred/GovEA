@@ -6,7 +6,7 @@ import {
   DEFAULT_PERSONA_TYPES, DEFAULT_PERSONA_TAGS,
   DEV_PERSONA_TAG_ASSIGNMENTS,
   DEV_PERSONAS, DEV_CAPABILITIES, DEV_CAPABILITY_RELATIONSHIPS, DEV_APPLICATIONS,
-  DEV_OBJECTIVES, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
+  DEV_OBJECTIVES, DEV_GOALS, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
   DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
   DEV_CROSS_ORG_LINKS,
@@ -30,6 +30,7 @@ import {
   personas, personaTags, capabilities, applications,
   capabilityPersonas, applicationCapabilities, capabilityRelationships,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
+  goals, goalObjectives,
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
@@ -401,6 +402,45 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${DEV_OBJECTIVES.length} strategic objectives`)
+
+  // Goals + goalObjectives junction
+  for (const g of DEV_GOALS) {
+    const existing = await db.query.goals.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, g.name)),
+    })
+    let goalId: string
+    if (existing) {
+      await db.update(goals).set({
+        description: g.description,
+        planningHorizon: g.planningHorizon,
+        owner: g.owner,
+        status: g.status,
+        visibility: g.visibility,
+      }).where(eq(goals.id, existing.id))
+      goalId = existing.id
+    } else {
+      const [inserted] = await db.insert(goals).values({
+        organizationId: devOrgId,
+        name: g.name,
+        description: g.description,
+        planningHorizon: g.planningHorizon,
+        owner: g.owner,
+        status: g.status,
+        visibility: g.visibility,
+      }).returning()
+      goalId = inserted.id
+    }
+
+    for (const objName of g.objectives) {
+      const objId = devObjectiveIds[objName]
+      if (!objId) continue
+      const exists = await db.query.goalObjectives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.goalId, goalId), e(t.objectiveId, objId)),
+      })
+      if (!exists) await db.insert(goalObjectives).values({ goalId, objectiveId: objId })
+    }
+  }
+  console.log(`  ✓ ${DEV_GOALS.length} goals with objective links`)
 
   // Initiatives + capability / application / objective links
   const devInitiativeIds: Record<string, string> = {}
