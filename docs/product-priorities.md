@@ -1,6 +1,6 @@
 # Product Priority Shortlist
 
-Last groomed: 2026-04-28
+Last groomed: 2026-05-04
 
 This note summarizes the top next product moves from the current capability inventory, open issues, and recent pull requests. It is intentionally short so it can be reviewed during backlog planning without replacing GitHub issues as the source of execution detail.
 
@@ -8,43 +8,43 @@ This note summarizes the top next product moves from the current capability inve
 
 Recent merges materially changed the product surface:
 
-- PR #304 shipped the Application Portfolio risk view, giving GovEA a stronger leadership-facing application surface built from existing lifecycle and capability-link data.
-- PR #299 shipped the Reports hub and Architecture Vision output, proving GovEA can generate executive summaries directly from repository content rather than requiring duplicate documentation.
-- PR #301 shipped the first TOGAF overlay slice: org-level enablement, framework mappings on capability/application records, and a TOGAF Application Landscape report.
-- PR #303 documented the TOGAF/ADM boundary clearly: optional overlay in, ADM workflow enforcement out for v1/v2.
-- PR #309 clarified the instance-admin product boundary and made the persona/capability model match the already-shipped `/instance` console.
-- PR #310 reconciled several business-architecture docs, but a follow-up pass is still needed because top-level docs had drifted behind the newest product work.
+- PR #312 shipped the first instance-level platform configuration surface, turning `/instance` into a real operating console rather than only an audit/provisioning shell.
+- PR #314 and PR #316 shipped the Executive Summary and Heatmap Analysis reports, giving GovEA stronger stakeholder-facing reporting on top of the existing repository.
+- PR #357 shipped application and capability impact analysis, moving traceability from passive navigation toward real decision support.
+- PR #356 shipped application custom fields plus CSV import/export, reducing one of the biggest practical barriers to getting real portfolio data into the product.
+- PR #376 shipped a Mermaid-based diagram view on the capability map page, broadening how users can understand repository relationships without changing the underlying model.
+- PR #370 and the recent persona documentation passes strengthened the roadmap definition for integration and real government-practice fit, even where product implementation has not started yet.
 
 What this means for prioritization:
 
-- GovEA now has stronger admin, reporting, and leadership-demo foundations than it did a week ago.
-- The next best work is less about another isolated CRUD slice and more about turning the existing repository into decision support for platform admins, leadership audiences, and real-user feedback loops.
-- The repo still has important long-range ARB and market-research issues open, but the highest-leverage next moves are the ones that compound the product areas strengthened by the latest merges.
+- GovEA has now shipped most of the shortlist that was current at the end of April. The next best work is no longer "add the first report" or "define the instance surface" because those slices now exist.
+- The highest-leverage gap has shifted from feature presence to repository trust: completeness, confidence, decision traceability, and data freshness.
+- The repo also now has enough stakeholder-facing surface area that weak data quality or weak persona validation will be more damaging than another isolated demo-friendly page.
 
 ## Top 5 Next Things To Do
 
 | Rank | Recommended next thing | Why now | Primary issue(s) / PR |
 |---|---|---|---|
-| 1 | Define and ship instance-level platform configuration | The `/instance` console is now real, documented, and clearly separated from org admin scope. #308 is the immediate product follow-on that turns instance admin from an audit/provisioning console into a real platform-management surface. | #308, PR #309 |
-| 2 | Build the Executive Dashboard for non-architects | PR #304 and PR #299 already proved the underlying summary data and leadership framing. #84 is the clearest next stakeholder-facing screen and the strongest adoption move in the open backlog. | #84, PR #304, PR #299 |
-| 3 | Add Impact Analysis on application and capability detail pages | GovEA already has the traceability graph and now has better portfolio/risk storytelling. #83 is the next decision-support feature that helps users act on lifecycle and modernization questions instead of just viewing linked records. | #83 |
-| 4 | Add Heatmap Analysis views | With the application risk portfolio shipped, #82 becomes a natural companion view for portfolio exposure, maturity, and domain-level pattern detection using the same core data. | #82, PR #304 |
-| 5 | Start lightweight user feedback capture for practice fit | The product now has enough breadth that wrong assumptions will compound unless feedback is captured systematically. #103 has a low-cost Phase 1 that can start immediately without waiting for a full in-app workflow. | #103 |
+| 1 | Ship repository completeness drill-downs and a plain-language confidence summary | Reporting, heatmaps, impact views, and executive summaries now depend on users trusting the underlying repository. GovEA has early coverage signals, but not yet the fuller completeness workflow or stakeholder-facing confidence cues described in the repository-modelling capability docs. | `rm-repository-completeness`, `fd-repository-confidence-summary`, PR #357, PR #316, PR #314 |
+| 2 | Add architecture debt tracking and make ADRs a stronger decision-support surface | Impact analysis now surfaces consequences, but GovEA still lacks a first-class way to record persistent constraints, debt, and tradeoff accumulation. That leaves a gap between "what is affected" and "what should leadership worry about next." | `rm-architecture-debt`, `po-architecture-decisions`, PR #357 |
+| 3 | Start the operational integration foundation: REST API plus the first Tier 1 sync slice | Custom fields and CSV import/export help initial data load, but they do not solve staleness. The integration roadmap is now better defined, and the next meaningful trust move is to reduce manual reconciliation with operational systems. | `int-rest-api`, `integration/`, PR #356, PR #370 |
+| 4 | Generalize the shared item/taxonomy foundation beyond the current application-only extension points | GovEA now has proof that configurable fields are useful, but the current model still requires entity-specific wiring. The base-item/taxonomy direction is the platform move that prevents every future classification or metadata request from becoming bespoke per-entity work. | `docs/design/base-item-foundation.md`, PR #356, PR #350 |
+| 5 | Validate assumed personas and start a lightweight product feedback loop for the new analysis surfaces | Repository modelling and integration are still driven by assumed personas in several capability files. With executive reporting, impact analysis, and map views now shipped, the cost of building the wrong next analytic feature has gone up. Validate before compounding. | Persona docs, `docs/research/`, issue #103, PR #314, PR #357, PR #376 |
 
 ## Product Manager Notes
 
-- Treat #308 as the most concrete next product-management task. The repo now has a documented instance-admin boundary but not yet a clearly owned platform-config surface.
-- #84, #83, and #82 form a coherent sequence, not three isolated ideas: executive summary -> decision-support drill-down -> portfolio pattern visualization.
-- #306 is worth keeping warm as an input to future analysis and reporting work, but it is narrower than the five items above unless real users confirm it is blocking capability modelling today.
-- The ARB/research issues in the 90s and 130s still matter, but many are capability-definition or scope-decision work. The shortlist above favors moves that build directly on what the latest merged code already made possible.
-- Ship the Phase 1 manual feedback log from #103 before designing a full feedback table/UI. The process signal is more urgent than the schema.
+- The old shortlist is materially stale: platform configuration, executive reporting, heatmaps, and impact analysis are already shipped in `main`.
+- The new priority stack is intentionally trust-heavy. GovEA has crossed the point where more views are less valuable than better confidence in what those views are saying.
+- The most pragmatic sequence is: repository confidence -> debt/decision capture -> integration freshness. That is the shortest path from "useful demo" to "credible working repository."
+- Treat the shared item/taxonomy foundation as a platform multiplier, not a side quest. Recent custom-field work proved the demand; the next step is making reuse systematic.
+- Keep persona validation attached to these roadmap items, especially for repository-modelling and integration, where several capabilities still explicitly carry assumed-persona risk.
 
 ## Documentation Follow-up
 
 This grooming pass also updates product docs to match current repo reality:
 
-- `docs/product-priorities.md`: replaced the stale hardening shortlist with the current product-development sequence.
-- `README.md`: now reflects the shipped application risk portfolio, reports hub, and TOGAF overlay/reporting slice.
-- `capabilities.md`: now marks Application Risk Portfolio and the first framework-alignment slice accurately.
-- `business-architecture/capabilities/ea/framework-alignment/*.md`: implementation status now matches the shipped TOGAF overlay, mapping, and reporting behavior.
-- `business-architecture/capabilities/cms/frontend-display/fd-application-risk-portfolio.md`: now explicitly records the shipped v1 implementation status.
+- `docs/product-priorities.md`: replaced the stale late-April shortlist with a post-PR-#376 sequence based on what is actually shipped in `main`.
+- `README.md`: updated active work and near-term priorities so they stop pointing at already-completed items.
+- `capabilities.md`: refreshed the target-surface table so near-term priorities reflect the current product baseline.
+- `business-architecture/capabilities/ea/repository-modelling/repository-modelling.md`: end-to-end traceability now reads as partially implemented rather than absent.
+- `business-architecture/capabilities/ea/repository-modelling/rm-end-to-end-traceability.md`: implementation status now acknowledges the shipped application/capability impact analysis slice while preserving the remaining roadmap.

@@ -6,7 +6,7 @@ The system must allow any user to follow a chain of relationships across the ful
 
 ## Implementation Status
 
-**Not yet implemented.** Read-only traceability views for individual objectives, capabilities, and services exist in the product (see `fd-traceability-views.md`), but the cross-layer impact analysis, reverse traversal UI, broken chain indicators, and cross-agency views described in this document are not yet built. This document is the design specification for that future work.
+**Partially implemented.** GovEA already ships read-only traceability views for objectives, capabilities, and services, plus impact-analysis panels on application and capability detail pages. What remains unbuilt is the fuller cross-layer traversal surface described here: reverse traversal UI, broken-chain indicators, cross-agency views, and a unified repository-wide impact workflow.
 
 ## Personas
 
@@ -59,7 +59,8 @@ Traversal respects content visibility at every hop. A relationship link is only 
 ## Implementation Notes
 
 - The core chain (Personas → Capabilities → Applications) is already enforced in the data model and publish workflow
-- What is not yet implemented: reverse traversal UI, impact panel, broken chain indicators, cross-agency views
+- Shipped today: read-only traceability routes for objectives, capabilities, and services, plus application/capability impact panels for change and decommission analysis
+- What is not yet implemented: repository-wide reverse traversal UI, broken chain indicators, cross-agency views, and a unified impact workspace across all object types
 - Technology layer (infrastructure, platforms) is a natural extension of this chain but is not in scope until the Technology Lifecycle capability set is defined
 - The traversal visibility gate must be validated with a security test matrix covering all role × visibility combinations before the impact panel ships (see ARB finding #129)
 - **Query performance:** Traversal depth is bounded at configurable depth (default 3, hard cap 5). Required indexes on relationship tables and a visited-node guard against cycles are pre-ship requirements. See `rm-query-performance-decision.md` for the full performance ADR (resolves ARB finding #134).
