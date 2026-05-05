@@ -42,6 +42,7 @@ export async function getObjectives(organizationId: string, role?: string) {
       organization: true,
       objectiveCapabilities: { with: { capability: true } },
       objectiveValueStreams: { with: { valueStream: true } },
+      goalObjectives: { with: { goal: true } },
     },
   })
 }

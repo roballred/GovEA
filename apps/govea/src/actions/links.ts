@@ -22,6 +22,8 @@ import {
   strategicObjectives,
   objectiveCapabilities,
   objectiveValueStreams,
+  goals,
+  goalObjectives,
   initiatives,
   initiativeCapabilities,
   initiativeObjectives,
@@ -271,6 +273,28 @@ export async function unlinkValueStreamPersona(valueStreamId: string, personaId:
     and(eq(valueStreamPersonas.valueStreamId, valueStreamId), eq(valueStreamPersonas.personaId, personaId))
   )
   revalidatePath(`/value-streams/${valueStreamId}`)
+}
+
+// ── Goal ↔ Objective ───────────────────────────────────────────────────────
+
+export async function linkGoalObjective(goalId: string, objectiveId: string) {
+  const { user } = await requireContributor()
+  const goal = await db.query.goals.findFirst({ where: eq(goals.id, goalId) })
+  assertOwnership(goal?.organizationId, user.organizationId!)
+  await db.insert(goalObjectives).values({ goalId, objectiveId }).onConflictDoNothing()
+  revalidatePath(`/goals/${goalId}`)
+  revalidatePath(`/objectives/${objectiveId}`)
+}
+
+export async function unlinkGoalObjective(goalId: string, objectiveId: string) {
+  const { user } = await requireContributor()
+  const goal = await db.query.goals.findFirst({ where: eq(goals.id, goalId) })
+  assertOwnership(goal?.organizationId, user.organizationId!)
+  await db.delete(goalObjectives).where(
+    and(eq(goalObjectives.goalId, goalId), eq(goalObjectives.objectiveId, objectiveId))
+  )
+  revalidatePath(`/goals/${goalId}`)
+  revalidatePath(`/objectives/${objectiveId}`)
 }
 
 // ── Objective ↔ Capability ──────────────────────────────────────────────────
