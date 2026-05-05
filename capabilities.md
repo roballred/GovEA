@@ -152,7 +152,7 @@ Organization-level settings and administrative tools.
 | Persona Type Management | Implemented | Manage persona type categories as taxonomy terms under the `Persona Type` branch |
 | Persona Tags | Implemented | Manage persona tag values as taxonomy terms under the `Persona Tag` branch |
 | Admin Dashboard | Implemented | Live practitioner dashboard with repository activity, coverage signals, and navigation shortcuts |
-| Feature Management | Not implemented | Enable/disable optional product features per org |
+| Feature Management | Partially implemented | Org-level module toggles and instance-wide global disables are shipped; richer dependency and feature-flag behavior remains future work |
 | Email Configuration | Not implemented | SMTP setup for notifications and password reset |
 | Backup & Export | Not implemented | Data export and backup tooling |
 | Security Settings | Not implemented | Session timeouts, password policy, IP restrictions |
@@ -231,12 +231,12 @@ GovEA's longer-horizon capability direction spans the major themes below, each d
 |---|---|
 | Identity & Access Management | Tenant-boundary tests, production hardening for instance-admin operations |
 | Repository & Modelling | End-to-end traceability, architecture debt tracking, repository confidence summary |
-| Application & IT Portfolio | Technology lifecycle tracking, rationalization views, application risk portfolio |
-| Business & Capability Architecture | Capability heat maps, operating model views, typed principle sets |
+| Application & IT Portfolio | Technology lifecycle tracking, custom-field reuse, import/export maturation, richer rationalization views |
+| Business & Capability Architecture | Operating model views, typed principle sets, stronger cross-entity classification and relationship visualisation |
 | Planning & Analysis | Scenario planning, value stream analytics |
 | Governance & Compliance | ARB review workflow, regulatory mapping |
 | Integration | Tier 1: ITSM/CMDB sync, DevOps pipeline links, cloud discovery — Tier 2 (critical gaps): PPM/project portfolio, ERP/financial, HR/org design — Tier 3: data governance platform, API management platform, BI analytics feed — Tier 4 (emerging): IaC, AI/ML registry, low-code platforms — Foundational: REST API |
-| Collaboration & Stakeholder Engagement | Stakeholder validation, repository confidence summaries, stakeholder-facing plain-language views |
+| Collaboration & Stakeholder Engagement | Stakeholder validation, repository confidence summaries, stakeholder-facing plain-language views, feedback capture |
 | Reporting & Documentation | Configurable reports, KPI tracking, elected-official summaries |
 | Framework Alignment | Optional TOGAF mapping, ADM phase alignment, and framework-aware reporting |
 

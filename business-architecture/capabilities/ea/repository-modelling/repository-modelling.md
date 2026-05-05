@@ -14,7 +14,7 @@ The system must maintain a reliable, navigable, and self-auditing store of all a
 
 | Capability | File | Status | Description |
 |---|---|---|---|
-| End-to-End Traceability | [rm-end-to-end-traceability.md](./rm-end-to-end-traceability.md) | Not implemented | Cross-layer impact analysis from strategic goals through capabilities to applications |
+| End-to-End Traceability | [rm-end-to-end-traceability.md](./rm-end-to-end-traceability.md) | Partially implemented | Objective, capability, and service trace views exist, and application/capability impact analysis is shipped; broader cross-layer and cross-agency traversal remains future work |
 | Architecture Debt Tracking | [rm-architecture-debt.md](./rm-architecture-debt.md) | Not implemented | Surface and track decisions and conditions that constrain future options |
 | Repository Completeness | [rm-repository-completeness.md](./rm-repository-completeness.md) | Scaffolded | Early signals and dashboards showing where the EA object store has gaps |
 
