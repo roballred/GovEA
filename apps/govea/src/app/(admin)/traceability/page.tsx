@@ -2,8 +2,8 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { getObjectiveTrace, getCapabilityTrace, getServiceTrace } from '@/actions/traceability'
-import type { ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp, TraceCapability } from '@/actions/traceability'
+import { getGoalTrace, getObjectiveTrace, getCapabilityTrace, getServiceTrace } from '@/actions/traceability'
+import type { GoalTrace, ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp } from '@/actions/traceability'
 import { dedupeById } from '@/lib/dedup'
 
 // ── Status colours ────────────────────────────────────────────────────────────
@@ -125,6 +125,91 @@ function AppLayer({ apps }: { apps: TraceApp[] }) {
         />
       ))}
     </TraceCard>
+  )
+}
+
+// ── Goal trace view ───────────────────────────────────────────────────────────
+
+function GoalTraceView({ trace }: { trace: GoalTrace }) {
+  const allCapabilities = dedupeById(
+    trace.objectives.flatMap(o => o.capabilities.map(c => ({ ...c, href: `/capabilities/${c.id}` })))
+  )
+  const allInitiatives = dedupeById(
+    trace.objectives.flatMap(o => o.initiatives.map(i => ({ ...i, href: `/initiatives/${i.id}` })))
+  )
+
+  return (
+    <div className="space-y-1 max-w-2xl">
+      {/* Anchor: Goal */}
+      <LayerLabel>Goal</LayerLabel>
+      <TraceCard>
+        <div className="px-4 py-4">
+          <div className="font-semibold text-base">{trace.name}</div>
+          {trace.description && (
+            <p className="text-sm text-muted-foreground mt-1">{trace.description}</p>
+          )}
+          <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
+            {trace.planningHorizon && <span>Horizon: {trace.planningHorizon}</span>}
+            {trace.owner && <span>Owner: {trace.owner}</span>}
+          </div>
+        </div>
+      </TraceCard>
+
+      {/* Objectives */}
+      <Connector label="advanced by" />
+      <LayerLabel>Strategic Objectives</LayerLabel>
+      {trace.objectives.length === 0 ? (
+        <Gap message="No objectives linked — this goal has no measurable targets defined yet." />
+      ) : (
+        <TraceCard>
+          {trace.objectives.map(o => (
+            <TraceRow
+              key={o.id}
+              href={`/objectives/${o.id}`}
+              name={o.name}
+              meta={o.timeHorizon ?? undefined}
+            />
+          ))}
+        </TraceCard>
+      )}
+
+      {/* Capabilities */}
+      <Connector label="requires" />
+      <LayerLabel>Capabilities</LayerLabel>
+      {allCapabilities.length === 0 ? (
+        <Gap message="No capabilities linked — the organisational foundation for this goal is not yet mapped." />
+      ) : (
+        <TraceCard>
+          {allCapabilities.map(c => (
+            <TraceRow
+              key={c.id}
+              href={`/capabilities/${c.id}`}
+              name={c.name}
+              meta={c.domain}
+            />
+          ))}
+        </TraceCard>
+      )}
+
+      {/* Initiatives */}
+      {allInitiatives.length > 0 && (
+        <>
+          <Connector label="advanced by" />
+          <LayerLabel>Active Initiatives</LayerLabel>
+          <TraceCard>
+            {allInitiatives.map(i => (
+              <TraceRow
+                key={i.id}
+                href={`/initiatives/${i.id}`}
+                name={i.name}
+                badge={i.status}
+                badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
+              />
+            ))}
+          </TraceCard>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -399,7 +484,11 @@ export default async function TraceabilityPage({
   let backHref = '/'
   let backLabel = 'Back'
 
-  if (from === 'objective') {
+  if (from === 'goal') {
+    trace = await getGoalTrace(id)
+    backHref = `/goals/${id}`
+    backLabel = '← Goal'
+  } else if (from === 'objective') {
     trace = await getObjectiveTrace(id)
     backHref = `/objectives/${id}`
     backLabel = '← Strategic Objective'
@@ -423,6 +512,7 @@ export default async function TraceabilityPage({
     trace.name
 
   const subtitle =
+    trace.kind === 'goal'      ? 'Goal → Objectives → Capabilities → Technology Trace' :
     trace.kind === 'objective' ? 'Mission → Technology Trace' :
     trace.kind === 'capability' ? 'Objective → Capability → Delivery Trace' :
     'Persona → Service → Technology Trace'
@@ -444,6 +534,7 @@ export default async function TraceabilityPage({
 
       <hr />
 
+      {trace.kind === 'goal'      && <GoalTraceView trace={trace} />}
       {trace.kind === 'objective' && <ObjectiveTraceView trace={trace} />}
       {trace.kind === 'capability' && <CapabilityTraceView trace={trace} />}
       {trace.kind === 'service' && <ServiceTraceView trace={trace} />}
