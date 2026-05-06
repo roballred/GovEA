@@ -11,15 +11,17 @@ The system must allow organizations to document their strategic direction, track
 
 | Capability | File | Description |
 |---|---|---|
-| Strategic Objectives | [pl-strategic-objectives.md](./pl-strategic-objectives.md) | Define and track business goals using the standard content workflow; link to capabilities and value streams |
+| Goals | [pl-goals.md](./pl-goals.md) | Define broad strategic outcomes above objectives and roll up supporting planning context |
+| Strategic Objectives | [pl-strategic-objectives.md](./pl-strategic-objectives.md) | Define measurable objectives under goals using the standard content workflow; link to capabilities and value streams |
 | Initiatives | [pl-initiatives.md](./pl-initiatives.md) | Track change programmes using planning lifecycle states; link to capabilities and objectives with impact |
 | Roadmap | [pl-roadmap.md](./pl-roadmap.md) | Visualize initiatives and objectives in a read-only status-grouped roadmap view |
 
 ## Design Principle
-Planning capabilities are a lens on existing architecture content — they do not exist in isolation. Strategic objectives trace to capabilities and value streams. Initiatives trace to objectives and capabilities. The roadmap visualizes initiative timelines against the architecture they affect. Nothing in this capability group is meaningful unless the underlying capability and persona content is maintained.
+Planning capabilities are a lens on existing architecture content — they do not exist in isolation. Goals roll up strategic intent. Strategic objectives trace to capabilities and value streams. Initiatives trace to objectives and capabilities. The roadmap visualizes initiative timelines against the architecture they affect. Nothing in this capability group is meaningful unless the underlying capability and persona content is maintained.
 
 ## Current Semantic Model
-- Strategic objectives are treated like governed content: they use the standard workflow (`draft`, `published`, `archived`) plus visibility settings.
+- Goals and strategic objectives are treated like governed content: they use the standard workflow (`draft`, `published`, `archived`) plus visibility settings.
+- Goals sit above objectives in the shipped hierarchy: Goal -> Objective -> Initiative.
 - Initiatives are treated like planning records: they use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates.
 - The roadmap is a rendered view over initiative records. It groups initiatives by planning status and shows their linked objectives and capabilities.
-- This is intentionally good enough for demos and early-v1 use, but still evolving. A future iteration may unify planning semantics further, but the current docs should describe the shipped split model accurately.
+- This is still an evolving area, but the biggest early semantic blur has now been corrected by separating goals from objectives in the shipped planning model.
