@@ -17,6 +17,8 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
+import type { EntityTaxonomyValue } from '@/db/schema'
 
 type ADRRow = ADR & {
   organization: { id: string; name: string } | null
@@ -35,6 +37,8 @@ interface Props {
   objectives: Pick<StrategicObjective, 'id' | 'name'>[]
   role: Role
   currentOrgId: string
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -63,10 +67,11 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function ADRTable({ adrs, capabilities, applications, initiatives, objectives, role, currentOrgId }: Props) {
+export function ADRTable({ adrs, capabilities, applications, initiatives, objectives, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
+  const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ADRRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ADRRow | null>(null)
@@ -75,7 +80,15 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
-  const filtered = adrs.filter(a => statusFilter === 'all' || a.status === statusFilter)
+  const hasTaxonomyFilter = Object.values(taxonomyFilters).some(v => v !== 'all')
+
+  const filtered = adrs.filter(a => {
+    const matchStatus = statusFilter === 'all' || a.status === statusFilter
+    const matchTaxonomy = Object.entries(taxonomyFilters).every(([, termId]) =>
+      termId === 'all' || (taxonomyValueMap[a.id] ?? []).some(v => v.taxonomyTermId === termId)
+    )
+    return matchStatus && matchTaxonomy
+  })
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -121,6 +134,11 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
             <option value="superseded">Superseded</option>
           </select>
         )}
+        <TaxonomyFilters
+          defs={taxonomyDefinitions}
+          filters={taxonomyFilters}
+          onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
+        />
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New Architecture Decision Record
@@ -249,6 +267,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
               selectedInitiativeIds={[]}
               selectedObjectiveIds={[]}
             />
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <StatusVisibilitySupersededFields
               adrs={adrs}
               currentId={null}
@@ -289,6 +308,10 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
               selectedApplicationIds={editTarget?.adrApplications.map(aa => aa.application.id) ?? []}
               selectedInitiativeIds={editTarget?.adrInitiatives.map(ai => ai.initiative.id) ?? []}
               selectedObjectiveIds={editTarget?.adrObjectives.map(ao => ao.objective.id) ?? []}
+            />
+            <TaxonomyInputs
+              defs={taxonomyDefinitions}
+              currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
             />
             <StatusVisibilitySupersededFields
               adrs={adrs}

@@ -17,6 +17,8 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
+import type { EntityTaxonomyValue } from '@/db/schema'
 
 type InitiativeRow = Initiative & {
   organization: { id: string; name: string } | null
@@ -30,6 +32,8 @@ interface Props {
   objectives: StrategicObjective[]
   role: Role
   currentOrgId: string
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -50,11 +54,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 const IMPACT_OPTIONS = ['build', 'improve', 'retire']
 
-export function InitiativeTable({ initiatives, capabilities, objectives, role, currentOrgId }: Props) {
+export function InitiativeTable({ initiatives, capabilities, objectives, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
+  const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
 
   const orgOptions = Array.from(new Map(
     initiatives.map(i => [i.organizationId, i.organization?.name ?? 'Unknown'])
@@ -69,10 +74,15 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
+  const hasTaxonomyFilter = Object.values(taxonomyFilters).some(v => v !== 'all')
+
   const filtered = initiatives.filter(i => {
     const matchStatus = statusFilter === 'all' || i.status === statusFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? i.organizationId === currentOrgId : i.organizationId === orgFilter)
-    return matchStatus && matchOrg
+    const matchTaxonomy = Object.entries(taxonomyFilters).every(([, termId]) =>
+      termId === 'all' || (taxonomyValueMap[i.id] ?? []).some(v => v.taxonomyTermId === termId)
+    )
+    return matchStatus && matchOrg && matchTaxonomy
   })
 
   function openCreate() {
@@ -141,6 +151,11 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
             ))}
           </select>
         )}
+        <TaxonomyFilters
+          defs={taxonomyDefinitions}
+          filters={taxonomyFilters}
+          onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
+        />
         {canEdit && (
           <Button onClick={openCreate} size="sm" className="ml-auto">
             + New Initiative
@@ -273,6 +288,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
                 </div>
               </div>
             )}
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <StatusAndVisibilityFields defaultStatus="proposed" />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); setSelectedCaps([]) }}>Cancel</Button>
@@ -315,6 +331,10 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
                 </div>
               </div>
             )}
+            <TaxonomyInputs
+              defs={taxonomyDefinitions}
+              currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
+            />
             <StatusAndVisibilityFields defaultStatus={editTarget?.status ?? 'proposed'} defaultVisibility={editTarget?.visibility ?? 'org'} />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setEditTarget(null); setSelectedCaps([]) }}>Cancel</Button>

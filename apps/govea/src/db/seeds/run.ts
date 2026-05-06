@@ -766,6 +766,150 @@ async function seed() {
   }).onConflictDoNothing()
   console.log('  ✓ Capability Priority taxonomy type + entity definition')
 
+  // Objective Category taxonomy + entity definition
+  let objCategoryTermId: string
+  const existingObjCategory = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'objective-category')),
+  })
+  if (existingObjCategory) {
+    objCategoryTermId = existingObjCategory.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Objective Category',
+      slug: 'objective-category',
+      description: 'Classification of strategic objectives by organisational scope.',
+      sortOrder: '70',
+    }).returning()
+    objCategoryTermId = inserted.id
+  }
+  for (const name of ['Strategic', 'Operational', 'Tactical']) {
+    const slug = toSlug(name)
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, devOrgId), e(t.parentId, objCategoryTermId), e(t.slug, slug)),
+    })
+    if (!existing) await db.insert(taxonomyTerms).values({ organizationId: devOrgId, parentId: objCategoryTermId, name, slug })
+  }
+  await db.insert(entityTaxonomyDefinitions).values({
+    organizationId: devOrgId,
+    entityType: 'objective',
+    taxonomyTypeId: objCategoryTermId,
+    selectionMode: 'single',
+    required: false,
+    sortOrder: 0,
+  }).onConflictDoNothing()
+  console.log('  ✓ Objective Category taxonomy type + entity definition')
+
+  // Initiative Type taxonomy + entity definition
+  let initiativeTypeTermId: string
+  const existingInitiativeType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'initiative-type')),
+  })
+  if (existingInitiativeType) {
+    initiativeTypeTermId = existingInitiativeType.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Initiative Type',
+      slug: 'initiative-type',
+      description: 'Nature of the work being undertaken by the initiative.',
+      sortOrder: '80',
+    }).returning()
+    initiativeTypeTermId = inserted.id
+  }
+  for (const name of ['Transformation', 'Compliance', 'Maintenance', 'Innovation']) {
+    const slug = toSlug(name)
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, devOrgId), e(t.parentId, initiativeTypeTermId), e(t.slug, slug)),
+    })
+    if (!existing) await db.insert(taxonomyTerms).values({ organizationId: devOrgId, parentId: initiativeTypeTermId, name, slug })
+  }
+  await db.insert(entityTaxonomyDefinitions).values({
+    organizationId: devOrgId,
+    entityType: 'initiative',
+    taxonomyTypeId: initiativeTypeTermId,
+    selectionMode: 'single',
+    required: false,
+    sortOrder: 0,
+  }).onConflictDoNothing()
+  console.log('  ✓ Initiative Type taxonomy type + entity definition')
+
+  // Decision Category taxonomy + entity definition (for ADRs)
+  let decisionCategoryTermId: string
+  const existingDecisionCategory = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'decision-category')),
+  })
+  if (existingDecisionCategory) {
+    decisionCategoryTermId = existingDecisionCategory.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Decision Category',
+      slug: 'decision-category',
+      description: 'Domain of the architecture decision record.',
+      sortOrder: '90',
+    }).returning()
+    decisionCategoryTermId = inserted.id
+  }
+  for (const name of ['Technology', 'Architecture', 'Process', 'Security', 'Data']) {
+    const slug = toSlug(name)
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, devOrgId), e(t.parentId, decisionCategoryTermId), e(t.slug, slug)),
+    })
+    if (!existing) await db.insert(taxonomyTerms).values({ organizationId: devOrgId, parentId: decisionCategoryTermId, name, slug })
+  }
+  await db.insert(entityTaxonomyDefinitions).values({
+    organizationId: devOrgId,
+    entityType: 'adr',
+    taxonomyTypeId: decisionCategoryTermId,
+    selectionMode: 'single',
+    required: false,
+    sortOrder: 0,
+  }).onConflictDoNothing()
+  console.log('  ✓ Decision Category taxonomy type + entity definition (ADR)')
+
+  // Principle Scope taxonomy + entity definition
+  let principleScopeTermId: string
+  const existingPrincipleScope = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'principle-scope')),
+  })
+  if (existingPrincipleScope) {
+    principleScopeTermId = existingPrincipleScope.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Principle Scope',
+      slug: 'principle-scope',
+      description: 'How broadly this principle applies within the organisation.',
+      sortOrder: '100',
+    }).returning()
+    principleScopeTermId = inserted.id
+  }
+  for (const name of ['Enterprise', 'Domain', 'Team']) {
+    const slug = toSlug(name)
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, devOrgId), e(t.parentId, principleScopeTermId), e(t.slug, slug)),
+    })
+    if (!existing) await db.insert(taxonomyTerms).values({ organizationId: devOrgId, parentId: principleScopeTermId, name, slug })
+  }
+  await db.insert(entityTaxonomyDefinitions).values({
+    organizationId: devOrgId,
+    entityType: 'principle',
+    taxonomyTypeId: principleScopeTermId,
+    selectionMode: 'single',
+    required: false,
+    sortOrder: 0,
+  }).onConflictDoNothing()
+  console.log('  ✓ Principle Scope taxonomy type + entity definition')
+
   // ── Org 2: Office of Digital Services (state agency) ────────────────────
 
   console.log('\n[Org 2] Office of Digital Services')

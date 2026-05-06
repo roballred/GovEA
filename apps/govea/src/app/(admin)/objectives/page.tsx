@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getObjectives } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
 import { ObjectiveTable } from './objective-table'
 export default async function ObjectivesPage() {
   const session = await auth()
@@ -11,11 +12,17 @@ export default async function ObjectivesPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [objectiveList, capabilityList, valueStreamList] = await Promise.all([
+  const [objectiveList, capabilityList, valueStreamList, taxonomyDefinitions] = await Promise.all([
     getObjectives(orgId, role),
     getCapabilities(orgId, role),
     getValueStreams(orgId, role),
+    getEntityTaxonomyDefinitions(orgId, 'objective'),
   ])
+
+  const objectiveIds = objectiveList.map(o => o.id)
+  const taxonomyValueMap = objectiveIds.length > 0
+    ? await getEntityTaxonomyValuesForMany(orgId, 'objective', objectiveIds)
+    : {}
 
   return (
     <div className="space-y-6">
@@ -31,6 +38,8 @@ export default async function ObjectivesPage() {
         valueStreams={valueStreamList}
         role={role}
         currentOrgId={orgId}
+        taxonomyDefinitions={taxonomyDefinitions}
+        taxonomyValueMap={taxonomyValueMap}
       />
     </div>
   )

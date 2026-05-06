@@ -5,6 +5,7 @@ import { getCapabilities } from '@/actions/capabilities'
 import { getApplications } from '@/actions/applications'
 import { getInitiatives } from '@/actions/initiatives'
 import { getObjectives } from '@/actions/objectives'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
 import { ADRTable } from './adr-table'
 
 export default async function ADRsPage() {
@@ -14,13 +15,19 @@ export default async function ADRsPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [adrList, capabilityList, applicationList, initiativeList, objectiveList] = await Promise.all([
+  const [adrList, capabilityList, applicationList, initiativeList, objectiveList, taxonomyDefinitions] = await Promise.all([
     getADRs(orgId, role),
     getCapabilities(orgId),
     getApplications(orgId),
     getInitiatives(orgId),
     getObjectives(orgId),
+    getEntityTaxonomyDefinitions(orgId, 'adr'),
   ])
+
+  const adrIds = adrList.map(a => a.id)
+  const taxonomyValueMap = adrIds.length > 0
+    ? await getEntityTaxonomyValuesForMany(orgId, 'adr', adrIds)
+    : {}
 
   return (
     <div className="space-y-6">
@@ -38,6 +45,8 @@ export default async function ADRsPage() {
         objectives={objectiveList}
         role={role}
         currentOrgId={orgId}
+        taxonomyDefinitions={taxonomyDefinitions}
+        taxonomyValueMap={taxonomyValueMap}
       />
     </div>
   )

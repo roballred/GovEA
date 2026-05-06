@@ -17,6 +17,8 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
+import type { EntityTaxonomyValue } from '@/db/schema'
 
 type ObjectiveRow = StrategicObjective & {
   organization: { id: string; name: string } | null
@@ -31,6 +33,8 @@ interface Props {
   valueStreams: ValueStream[]
   role: Role
   currentOrgId: string
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -39,11 +43,12 @@ const STATUS_STYLES: Record<string, string> = {
   archived: 'bg-amber-100 text-amber-800 border-amber-200',
 }
 
-export function ObjectiveTable({ objectives, capabilities, valueStreams, role, currentOrgId }: Props) {
+export function ObjectiveTable({ objectives, capabilities, valueStreams, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
+  const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
 
   const orgOptions = Array.from(new Map(
     objectives.map(o => [o.organizationId, o.organization?.name ?? 'Unknown'])
@@ -56,10 +61,15 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
+  const hasTaxonomyFilter = Object.values(taxonomyFilters).some(v => v !== 'all')
+
   const filtered = objectives.filter(o => {
     const matchStatus = statusFilter === 'all' || o.status === statusFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? o.organizationId === currentOrgId : o.organizationId === orgFilter)
-    return matchStatus && matchOrg
+    const matchTaxonomy = Object.entries(taxonomyFilters).every(([, termId]) =>
+      termId === 'all' || (taxonomyValueMap[o.id] ?? []).some(v => v.taxonomyTermId === termId)
+    )
+    return matchStatus && matchOrg && matchTaxonomy
   })
 
   async function handleCreate(formData: FormData) {
@@ -111,6 +121,11 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
             ))}
           </select>
         )}
+        <TaxonomyFilters
+          defs={taxonomyDefinitions}
+          filters={taxonomyFilters}
+          onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
+        />
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New objective
@@ -248,6 +263,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
                 </div>
               </div>
             )}
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <div className="space-y-1.5">
               <Label>Status</Label>
               <select name="status" defaultValue="draft"
@@ -312,6 +328,10 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
                 </div>
               </div>
             )}
+            <TaxonomyInputs
+              defs={taxonomyDefinitions}
+              currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
+            />
             <div className="space-y-1.5">
               <Label>Status</Label>
               <select name="status" defaultValue={editTarget?.status}

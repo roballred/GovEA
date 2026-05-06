@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getInitiatives } from '@/actions/initiatives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getObjectives } from '@/actions/objectives'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
 import { InitiativeTable } from './initiative-table'
 export default async function InitiativesPage() {
   const session = await auth()
@@ -11,11 +12,17 @@ export default async function InitiativesPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [initiativeList, capabilityList, objectiveList] = await Promise.all([
+  const [initiativeList, capabilityList, objectiveList, taxonomyDefinitions] = await Promise.all([
     getInitiatives(orgId, role),
     getCapabilities(orgId),
     getObjectives(orgId),
+    getEntityTaxonomyDefinitions(orgId, 'initiative'),
   ])
+
+  const initiativeIds = initiativeList.map(i => i.id)
+  const taxonomyValueMap = initiativeIds.length > 0
+    ? await getEntityTaxonomyValuesForMany(orgId, 'initiative', initiativeIds)
+    : {}
 
   return (
     <div className="space-y-6">
@@ -31,6 +38,8 @@ export default async function InitiativesPage() {
         objectives={objectiveList}
         role={role}
         currentOrgId={orgId}
+        taxonomyDefinitions={taxonomyDefinitions}
+        taxonomyValueMap={taxonomyValueMap}
       />
     </div>
   )

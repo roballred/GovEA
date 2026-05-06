@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { getPrinciples } from '@/actions/principles'
 import { getADRs } from '@/actions/adrs'
 import { getCapabilities } from '@/actions/capabilities'
-import { getPrincipleTypes } from '@/actions/taxonomy'
+import { getPrincipleTypes, getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
 import { PrincipleTable } from './principle-table'
 
 export default async function PrinciplesPage() {
@@ -13,12 +13,18 @@ export default async function PrinciplesPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [principleList, adrList, capabilityList, principleTypes] = await Promise.all([
+  const [principleList, adrList, capabilityList, principleTypes, taxonomyDefinitions] = await Promise.all([
     getPrinciples(orgId, role),
     getADRs(orgId, role),
     getCapabilities(orgId, role),
     getPrincipleTypes(orgId),
+    getEntityTaxonomyDefinitions(orgId, 'principle'),
   ])
+
+  const principleIds = principleList.map(p => p.id)
+  const taxonomyValueMap = principleIds.length > 0
+    ? await getEntityTaxonomyValuesForMany(orgId, 'principle', principleIds)
+    : {}
 
   return (
     <div className="space-y-6">
@@ -35,6 +41,8 @@ export default async function PrinciplesPage() {
         principleTypes={principleTypes}
         role={role}
         currentOrgId={orgId}
+        taxonomyDefinitions={taxonomyDefinitions}
+        taxonomyValueMap={taxonomyValueMap}
       />
     </div>
   )
