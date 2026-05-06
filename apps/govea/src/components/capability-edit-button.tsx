@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
+import type { EntityTaxonomyValue } from '@/db/schema'
 
 interface CapabilityEditButtonProps {
   capabilityId: string
@@ -22,9 +24,11 @@ interface CapabilityEditButtonProps {
     personaIds: string[]
     parentId: string | null
   }
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  currentTaxonomyValues: EntityTaxonomyValue[]
 }
 
-export function CapabilityEditButton({ capabilityId, initial }: CapabilityEditButtonProps) {
+export function CapabilityEditButton({ capabilityId, initial, taxonomyDefinitions, currentTaxonomyValues }: CapabilityEditButtonProps) {
   const [editing, setEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -107,6 +111,12 @@ export function CapabilityEditButton({ capabilityId, initial }: CapabilityEditBu
         <div className="space-y-1 sm:col-span-2">
           <MarkdownEditor label="Rules" name="rules" defaultValue={initial.rules ?? ''} rows={3} placeholder="Markdown supported — use - bullets, **bold**, etc." />
         </div>
+
+        {taxonomyDefinitions.length > 0 && (
+          <div className="sm:col-span-2">
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={currentTaxonomyValues} />
+          </div>
+        )}
 
         <div className="space-y-1">
           <Label>Status</Label>

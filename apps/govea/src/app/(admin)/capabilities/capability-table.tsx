@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Capability, Persona } from '@/db/schema'
+import type { Capability, Persona, EntityTaxonomyValue } from '@/db/schema'
 import { createCapability, editCapability, deleteCapability } from '@/actions/capabilities'
+import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,8 @@ interface Props {
   capabilities: CapabilityRow[]
   personas: Pick<Persona, 'id' | 'name'>[]
   domainTerms: { id: string; name: string }[]
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
   role: Role
   currentOrgId: string
 }
@@ -59,7 +62,7 @@ const TYPE_STYLES: Record<string, string> = {
   technical: 'bg-cyan-100 text-cyan-800 border-cyan-200',
 }
 
-export function CapabilityTable({ capabilities, personas, domainTerms, role, currentOrgId }: Props) {
+export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyDefinitions, taxonomyValueMap, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -68,6 +71,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
   const [typeFilter, setTypeFilter] = useState('all')
   const [domainFilter, setDomainFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
+  const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   const orgOptions = Array.from(new Map(
@@ -89,7 +93,8 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
 
   const refresh = () => router.refresh()
 
-  const hasFilter = search || statusFilter !== 'all' || typeFilter !== 'all' || domainFilter !== 'all' || orgFilter !== 'all'
+  const hasTaxonomyFilter = Object.values(taxonomyFilters).some(v => v !== 'all')
+  const hasFilter = search || statusFilter !== 'all' || typeFilter !== 'all' || domainFilter !== 'all' || orgFilter !== 'all' || hasTaxonomyFilter
 
   // Build tree from full capability list
   const tree = buildCapabilityTree(capabilities)
@@ -104,7 +109,10 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
         const matchType = typeFilter === 'all' || c.capabilityType === typeFilter
         const matchDomain = domainFilter === 'all' || resolvedDomain === domainFilter
         const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? c.organizationId === currentOrgId : c.organizationId === orgFilter)
-        return matchSearch && matchStatus && matchType && matchDomain && matchOrg
+        const matchTaxonomy = Object.entries(taxonomyFilters).every(([, termId]) =>
+          termId === 'all' || (taxonomyValueMap[c.id] ?? []).some(v => v.taxonomyTermId === termId)
+        )
+        return matchSearch && matchStatus && matchType && matchDomain && matchOrg && matchTaxonomy
       }).map(c => ({ cap: c, depth: 0, children: [] }))
     : flatTree
 
@@ -206,6 +214,11 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
             ))}
           </select>
         )}
+        <TaxonomyFilters
+          defs={taxonomyDefinitions}
+          filters={taxonomyFilters}
+          onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
+        />
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
             + New Capability
@@ -385,6 +398,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
                 }
               </div>
             </div>
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <div className="space-y-1.5">
               <Label>Status</Label>
               <select name="status" defaultValue="draft" className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -454,6 +468,10 @@ export function CapabilityTable({ capabilities, personas, domainTerms, role, cur
                 }
               </div>
             </div>
+            <TaxonomyInputs
+              defs={taxonomyDefinitions}
+              currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
+            />
             <div className="space-y-1.5">
               <Label>Status</Label>
               <select name="status" defaultValue={editTarget?.status} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">

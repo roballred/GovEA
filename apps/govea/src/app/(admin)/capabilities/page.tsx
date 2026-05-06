@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getCapabilities } from '@/actions/capabilities'
 import { getPersonas } from '@/actions/personas'
-import { getTaxonomyDomains } from '@/actions/taxonomy'
+import { getTaxonomyDomains, getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
 import { CapabilityTable } from './capability-table'
 export default async function CapabilitiesPage() {
   const session = await auth()
@@ -11,11 +11,17 @@ export default async function CapabilitiesPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [capabilityList, personaList, domainTerms] = await Promise.all([
+  const [capabilityList, personaList, domainTerms, taxonomyDefinitions] = await Promise.all([
     getCapabilities(orgId, role),
     getPersonas(orgId, role),
     getTaxonomyDomains(orgId),
+    getEntityTaxonomyDefinitions(orgId, 'capability'),
   ])
+
+  const capabilityIds = capabilityList.map(c => c.id)
+  const taxonomyValueMap = capabilityIds.length > 0
+    ? await getEntityTaxonomyValuesForMany(orgId, 'capability', capabilityIds)
+    : {}
 
   return (
     <div className="space-y-6">
@@ -23,7 +29,15 @@ export default async function CapabilitiesPage() {
         <h1 className="text-2xl font-bold tracking-tight">Capabilities</h1>
         <p className="text-muted-foreground mt-1">What your organization must be able to do, traced back to persona needs.</p>
       </div>
-      <CapabilityTable capabilities={capabilityList} personas={personaList} domainTerms={domainTerms} role={role} currentOrgId={orgId} />
+      <CapabilityTable
+        capabilities={capabilityList}
+        personas={personaList}
+        domainTerms={domainTerms}
+        taxonomyDefinitions={taxonomyDefinitions}
+        taxonomyValueMap={taxonomyValueMap}
+        role={role}
+        currentOrgId={orgId}
+      />
     </div>
   )
 }
