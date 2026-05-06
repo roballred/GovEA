@@ -2,6 +2,7 @@ import { AuthError } from 'next-auth'
 import { signIn } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { safeCallbackUrl } from '@/lib/auth-redirect'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,7 +46,7 @@ export default async function LoginPage({
                 await signIn('credentials', {
                   email: formData.get('email'),
                   password: formData.get('password'),
-                  redirectTo: params.callbackUrl ?? '/dashboard',
+                  redirectTo: safeCallbackUrl(params.callbackUrl),
                 })
               } catch (error) {
                 if (error instanceof AuthError) {

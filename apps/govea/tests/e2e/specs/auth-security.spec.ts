@@ -1,13 +1,12 @@
 /**
  * Auth security regression tests.
  *
- * Covers the deactivated-user login bug:
- *   - A deactivated user cannot authenticate via local (credentials) login
- *   - A deactivated user's existing session is invalidated within the
- *     re-validation window (5 minutes) — verified immediately via the
- *     jwt callback returning null on the next request after deactivation
+ * Covers:
+ *   - Deactivated-user login (pre-existing)
+ *   - Auth redirect consistency (#386): sign-out always lands on /login;
+ *     /error always redirects to /login; dead-end callbackUrls are rejected
  *
- * Capability: iam-user-management, iam-sso-authentication
+ * Capability: iam-user-management, iam-sso-authentication, iam-local-authentication
  * Persona: CMS Administrator
  */
 
@@ -122,5 +121,50 @@ test.describe('deactivated user cannot log in', () => {
     await expect(userPage).toHaveURL(/\/login/, { timeout: 10_000 })
 
     await userCtx.close()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Auth redirect consistency (#386)
+// ---------------------------------------------------------------------------
+
+test.describe('sign-out redirects to /login', () => {
+  test('sign-out from admin area lands on /login', async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: 'tests/e2e/.auth/admin.json' })
+    const page = await ctx.newPage()
+    await page.goto('/dashboard')
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 })
+    await ctx.close()
+  })
+})
+
+test.describe('/error page redirects to /login', () => {
+  test('/error without query string redirects to /login', async ({ page }) => {
+    await page.goto('/error')
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 })
+  })
+
+  test('/error?error=AccessDenied redirects to /login and preserves error code', async ({ page }) => {
+    await page.goto('/error?error=AccessDenied')
+    await expect(page).toHaveURL(/\/login\?error=AccessDenied/, { timeout: 10_000 })
+  })
+})
+
+test.describe('callbackUrl loop prevention', () => {
+  test('/login?callbackUrl=/login redirects to /dashboard after sign-in', async ({ page }) => {
+    await page.goto('/login?callbackUrl=%2Flogin')
+    await page.getByLabel('Email').fill('alice@govea.dev')
+    await page.getByLabel('Password').fill('dev-password')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 })
+  })
+
+  test('/login?callbackUrl=/error redirects to /dashboard after sign-in', async ({ page }) => {
+    await page.goto('/login?callbackUrl=%2Ferror')
+    await page.getByLabel('Email').fill('alice@govea.dev')
+    await page.getByLabel('Password').fill('dev-password')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 })
   })
 })
