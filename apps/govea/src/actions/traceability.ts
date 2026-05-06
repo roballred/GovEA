@@ -62,17 +62,13 @@ export interface ServiceTrace {
   capabilities: TraceCapability[]
 }
 
-export interface GoalTraceCapability {
-  id: string; name: string; domain: string | null
-}
-
 export interface GoalTrace {
   kind: 'goal'
   id: string; name: string; description: string | null
   planningHorizon: string | null; owner: string | null; status: string
   objectives: Array<{
     id: string; name: string; timeHorizon: string | null
-    capabilities: GoalTraceCapability[]
+    capabilities: TraceCapability[]
     initiatives: TraceInitiative[]
   }>
 }
@@ -92,7 +88,13 @@ export async function getGoalTrace(id: string): Promise<GoalTrace | null> {
         with: {
           objective: {
             with: {
-              objectiveCapabilities: { with: { capability: true } },
+              objectiveCapabilities: {
+                with: {
+                  capability: {
+                    with: { applicationCapabilities: { with: { application: true } } },
+                  },
+                },
+              },
               initiativeObjectives: { with: { initiative: true } },
             },
           },
@@ -121,6 +123,9 @@ export async function getGoalTrace(id: string): Promise<GoalTrace | null> {
         id: c.id,
         name: c.name,
         domain: c.domain,
+        applications: c.applicationCapabilities.map(({ application: a }) => ({
+          id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
+        })),
       })),
       initiatives: o.initiativeObjectives.map(({ initiative: i }) => ({
         id: i.id, name: i.name, status: i.status,

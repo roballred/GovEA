@@ -5,6 +5,9 @@
 ## Role Type
 Internal — Agency IT / Central IT (junior contributor)
 
+## Government Equivalent
+New IT staff or business analyst assigned part-time to EA repository maintenance. May be the Enterprise Architect's only direct support. Does not yet have a clear model of what a capability map is or why relationship integrity matters — learning on the job.
+
 ## Who They Are
 The Junior EA Analyst is typically 1–3 years into an architecture role, often having transitioned from business analysis, project management, or application support. They work within an established EA team — often a team of 2–5 led by a more senior architect — and are responsible for the day-to-day maintenance of the EA repository: updating the capability map, adding new applications, recording relationship links, and producing views for stakeholder reviews.
 
@@ -27,6 +30,15 @@ In government, this role is common in medium-to-large agencies and central IT sh
 
 ## Critical Insight
 The Junior EA Analyst is the fastest-growing segment of EA tool users as practices mature and repository maintenance scales beyond what a single senior architect can manage alone. They are also the group most likely to degrade repository quality if the tool does not provide guidance, validation, and soft guardrails. Designing for this persona is not about simplification — it is about making correct contribution the path of least resistance.
+
+## Most Valuable Capabilities
+
+| Capability | What it solves |
+|---|---|
+| Guided templates and starter patterns | Reduces first-contribution errors by showing what a complete record looks like before the analyst has internalised the methodology |
+| Impact visualisation before committing changes | Allows the analyst to see downstream effects of a relationship or status change before they propagate — replaces the senior architect review as the first line of quality control |
+| Automated data validation | Catches misclassified records, broken relationship chains, and missing required fields at save time, not at the next stakeholder review |
+| Role-based access with guardrails | Limits the blast radius of mistakes without blocking contribution — Contributor role limits delete access; workflow gates require publish confirmation |
 
 ## Relevant Capabilities
 - Content authoring and editing with relationship validation

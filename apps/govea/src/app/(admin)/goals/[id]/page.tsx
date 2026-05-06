@@ -75,12 +75,6 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
         <Link href="/goals" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           ← Goals
         </Link>
-        <Link
-          href={`/traceability?from=goal&id=${id}`}
-          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          View traceability →
-        </Link>
       </div>
 
       <div className="space-y-3">

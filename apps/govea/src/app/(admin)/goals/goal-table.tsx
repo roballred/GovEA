@@ -39,27 +39,18 @@ const STATUS_STYLES: Record<string, string> = {
 export function GoalTable({ goals, objectives, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [orgFilter, setOrgFilter] = useState('all')
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<GoalRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<GoalRow | null>(null)
-
-  const orgOptions = Array.from(new Map(
-    goals.map(g => [g.organizationId, g.organization?.name ?? 'Unknown'])
-  ).entries())
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
-  const filtered = goals.filter(g => {
-    const matchSearch = !search || g.name.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || g.status === statusFilter
-    const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? g.organizationId === currentOrgId : g.organizationId === orgFilter)
-    return matchSearch && matchStatus && matchOrg
-  })
+  const filtered = goals.filter(g =>
+    statusFilter === 'all' || g.status === statusFilter
+  )
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -90,12 +81,6 @@ export function GoalTable({ goals, objectives, role, currentOrgId }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder="Search goals…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="h-9 w-48"
-        />
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
@@ -106,15 +91,6 @@ export function GoalTable({ goals, objectives, role, currentOrgId }: Props) {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        {orgOptions.length > 1 && (
-          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All organizations</option>
-            <option value="own">My organization</option>
-            {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
-              <option key={id} value={id}>{name}</option>
-            ))}
-          </select>
-        )}
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New goal
@@ -147,14 +123,7 @@ export function GoalTable({ goals, objectives, role, currentOrgId }: Props) {
             {filtered.map(g => (
               <TableRow key={g.id}>
                 <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <Link href={`/goals/${g.id}`} className="hover:underline">{g.name}</Link>
-                    {g.organizationId !== currentOrgId && g.organization && (
-                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
-                        {g.organization.name}
-                      </span>
-                    )}
-                  </div>
+                  <Link href={`/goals/${g.id}`} className="hover:underline">{g.name}</Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {g.planningHorizon ?? '—'}
@@ -186,13 +155,6 @@ export function GoalTable({ goals, objectives, role, currentOrgId }: Props) {
                         </Button>
                       )}
                     </div>
-                  </TableCell>
-                )}
-                {canEdit && g.organizationId !== currentOrgId && (
-                  <TableCell>
-                    <Link href={`/goals/${g.id}`}>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
-                    </Link>
                   </TableCell>
                 )}
               </TableRow>

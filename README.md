@@ -210,15 +210,18 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Contributor-friendly relationship panels across detail pages, including in-context persona editing
 - Markdown-rendered long-form detail pages across the portfolio model, with shared prose styling for descriptions and other narrative fields
 - Leadership-friendly application risk portfolio view on the Applications page, highlighting retiring systems that still support active capability work
+- Application custom fields with CSV import/export so agencies can extend and load portfolio metadata without schema changes
+- Impact analysis on application and capability detail pages to surface decommission and change consequences from existing relationship data
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
 - Demo-ready planning module: strategic objectives plus initiatives with roadmap grid and executive timeline views
-- Reports hub with generated Architecture Vision output from existing repository content
+- Reports hub with generated Architecture Vision, Executive Summary, Heatmap Analysis, and TOGAF Application Landscape outputs from existing repository content
+- Capability relationship map with both focused SVG navigation and Mermaid diagram views
 - Repository-wide search across the core content model
 - Guided product tour with role-aware coach marks for the main application areas
 - Audit trail: immutable before/after log of all changes
 - Taxonomy management: org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Identity & access management: SSO via Microsoft Entra ID (OIDC) with admin-managed pre-provisioned access, local auth fallback, Admin/Contributor/Viewer roles
-- Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, and audited break-glass sessions
+- Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, audited break-glass sessions, and instance-level platform configuration
 - Clear product boundary: org admins manage their own workspace settings; instance admins govern the shared platform and tenant lifecycle
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
@@ -236,18 +239,19 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
-- Defining the true instance-level configuration surface for the `/instance` console
-- Turning the new reporting and portfolio foundations into stronger stakeholder-facing decision support
+- Turning early repository signals into fuller completeness and confidence workflows
+- Maturing ADRs and decision support into stronger architecture-debt and tradeoff visibility
+- Defining the first operational integration slices so repository data stays current without manual reconciliation
 - Expanding automated test coverage
 - Improving local bootstrap and demo workflows
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
-- Define and ship instance-level platform configuration in `/instance`
-- Add an executive dashboard for non-architect leadership audiences
-- Add impact analysis on application and capability detail pages
-- Add heatmap analysis views over existing portfolio data
-- Start lightweight user feedback capture for EA practice fit
+- Ship repository completeness drill-downs and a stakeholder-facing confidence summary
+- Add architecture debt tracking tied to ADRs, impact analysis, and reporting
+- Start the integration foundation with a REST API plus the first Tier 1 operational sync slice
+- Generalize shared item/taxonomy behavior beyond the current per-entity wiring
+- Start lightweight user feedback capture and persona validation for the new analysis surfaces
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking
