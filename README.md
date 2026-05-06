@@ -38,7 +38,7 @@ Personas -> Capabilities -> Applications
 - **Persona Type** and **Persona Tag** values are managed through **Taxonomy**, not through persona-specific admin tables.
 - **Organization** is the top-level tenant boundary.
 - **Instance Admin** is a separate instance-scoped operating role used for platform administration. It does not automatically make a user the owner or editor of every agency's EA content, and it should not absorb routine org-scoped settings like themes or module choices.
-- Additional core entities include **Architecture Decision Records (ADRs)**, **Strategic Objectives**, **Initiatives**, **Principles**, and the **Glossary**.
+- Additional core entities include **Goals**, **Architecture Decision Records (ADRs)**, **Strategic Objectives**, **Initiatives**, **Principles**, and the **Glossary**.
 - Single-org use is still the default operating mode, but GovEA now also ships a prototype multi-organization model with org-scoped visibility and approval-based cross-org links.
 
 For the implementation-level schema reference, including field metadata, enums, and junction tables, see [`docs/data-model.md`](./docs/data-model.md).
@@ -213,13 +213,15 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Application custom fields with CSV import/export so agencies can extend and load portfolio metadata without schema changes
 - Impact analysis on application and capability detail pages to surface decommission and change consequences from existing relationship data
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
-- Demo-ready planning module: strategic objectives plus initiatives with roadmap grid and executive timeline views
+- Demo-ready planning module: goals, strategic objectives, and initiatives with roadmap grid and executive timeline views
+- Goals layer above strategic objectives, with objective rollup and traceability into initiatives and capabilities
 - Reports hub with generated Architecture Vision, Executive Summary, Heatmap Analysis, and TOGAF Application Landscape outputs from existing repository content
 - Capability relationship map with both focused SVG navigation and Mermaid diagram views
 - Repository-wide search across the core content model
 - Guided product tour with role-aware coach marks for the main application areas
 - Audit trail: immutable before/after log of all changes
 - Taxonomy management: org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
+- Shared taxonomy foundation now proven across applications and capabilities, including capability-priority classification as the second pilot
 - Identity & access management: SSO via Microsoft Entra ID (OIDC) with admin-managed pre-provisioned access, local auth fallback, Admin/Contributor/Viewer roles
 - Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, audited break-glass sessions, and instance-level platform configuration
 - Clear product boundary: org admins manage their own workspace settings; instance admins govern the shared platform and tenant lifecycle
@@ -250,7 +252,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Ship repository completeness drill-downs and a stakeholder-facing confidence summary
 - Add architecture debt tracking tied to ADRs, impact analysis, and reporting
 - Start the integration foundation with a REST API plus the first Tier 1 operational sync slice
-- Generalize shared item/taxonomy behavior beyond the current per-entity wiring
+- Extend shared item/taxonomy behavior beyond the current applications-and-capabilities pilots
 - Start lightweight user feedback capture and persona validation for the new analysis surfaces
 
 **Longer-term:**

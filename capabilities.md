@@ -108,13 +108,14 @@ Strategic direction, change initiatives, and timeline visualization.
 
 | Capability | Status | Description |
 |---|---|---|
-| Strategic Objectives | Implemented | Define and track business goals; link to capabilities and value streams |
+| Goals | Implemented | Define broad strategic goals above objectives, with objective rollup and traceability into initiatives and capabilities |
+| Strategic Objectives | Implemented | Define measurable objectives under goals; link to capabilities and value streams |
 | Initiatives | Implemented | Track change programmes with planning lifecycle statuses; link to capabilities and objectives with impact labels (build / improve / retire / migrate) |
 | Roadmap View | Implemented | Visualize initiatives in an executive timeline or planning grid, with linked objectives, date ranges, capability impact labels, and role-aware viewer filtering |
 
-**Design principle:** Planning capabilities are a lens on existing architecture content. Strategic objectives trace to capabilities. Initiatives trace to objectives and capabilities. Nothing here is meaningful unless the underlying capability and persona content is maintained.
+**Design principle:** Planning capabilities are a lens on existing architecture content. Goals capture broad strategic intent. Strategic objectives trace to capabilities and value streams as measurable targets under those goals. Initiatives trace to objectives and capabilities. Nothing here is meaningful unless the underlying capability and persona content is maintained.
 
-**Current semantic model:** Strategic objectives follow the standard content workflow (`draft`, `published`, `archived`). Initiatives do not. They use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates. The roadmap is a read-only view over initiative records, shown either as an executive timeline or grouped planning grid.
+**Current semantic model:** Goals and strategic objectives follow the standard content workflow (`draft`, `published`, `archived`). Objectives now sit under goals in the shipped hierarchy. Initiatives do not use the governed-content workflow; they use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates. The roadmap is a read-only view over initiative records, shown either as an executive timeline or grouped planning grid.
 
 This area is strong enough for demos and early v1 use, but the planning model should still be treated as evolving rather than fully settled.
 

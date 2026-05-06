@@ -1,7 +1,7 @@
 # Base Item Foundation for Reusable Taxonomy and Shared Content Behavior
 
 **Related issue:** [#349](https://github.com/roballred/GovEA/issues/349)  
-**Status:** Proposed for review
+**Status:** Partially implemented
 
 ---
 
@@ -9,13 +9,20 @@
 
 GovEA currently supports taxonomy-backed fields only where a specific entity has been wired for them in code. That works for today's hardcoded cases, but it does not scale to the broader product direction where administrators can define reusable classification structures and apply them across multiple item types without developer intervention.
 
-This document proposes a **base item foundation** for GovEA. The key idea is:
+This document proposes and now partially validates a **base item foundation** for GovEA. The key idea is:
 
 - treat core content records as a shared family of **items**
 - move reusable concerns such as taxonomy assignment onto that shared layer
 - keep entity-specific tables for entity-specific fields
 
 This is intentionally **foundational**, not a full meta-model rewrite. The near-term goal is to create a shared platform layer that lets applications, capabilities, initiatives, ADRs, and similar records opt into common behaviors without bespoke one-off implementation each time.
+
+Since this note was first drafted, GovEA has shipped the first two real pilots of the shared taxonomy model:
+
+- applications as the initial shared taxonomy-backed extension surface
+- capabilities as the second entity pilot, including `Capability Priority`
+
+The broader multi-entity rollout is still future work, but the direction is no longer only conceptual.
 
 ---
 
