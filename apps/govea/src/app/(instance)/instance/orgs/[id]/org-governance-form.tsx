@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { updateOrgGovernance, SUPPORT_TIERS } from '@/actions/instance'
+import { updateOrgGovernance } from '@/actions/instance'
+import { SUPPORT_TIERS } from '@/lib/support-tiers'
 
 const TIER_LABELS: Record<string, string> = {
   community: 'Community',

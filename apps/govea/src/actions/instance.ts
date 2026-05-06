@@ -292,9 +292,6 @@ export async function createInstanceUser(formData: FormData) {
   revalidatePath('/instance/users')
 }
 
-export const SUPPORT_TIERS = ['community', 'standard', 'premium', 'enterprise'] as const
-export type SupportTier = typeof SUPPORT_TIERS[number]
-
 export async function updateOrgGovernance(
   orgId: string,
   data: { supportTier: string | null; internalNotes: string | null },
