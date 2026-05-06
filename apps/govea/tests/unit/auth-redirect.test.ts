@@ -1,0 +1,87 @@
+/**
+ * Unit tests for auth redirect utilities (#386)
+ *
+ * safeCallbackUrl — prevents callbackUrl values from trapping users in
+ * auth/error route loops after a successful login.
+ *
+ * Capability: iam-sso-authentication, iam-local-authentication
+ */
+
+import { describe, it, expect } from 'vitest'
+import { safeCallbackUrl } from '@/lib/auth-redirect'
+
+describe('safeCallbackUrl', () => {
+  describe('valid destinations — returned as-is', () => {
+    it('accepts a normal app route', () => {
+      expect(safeCallbackUrl('/dashboard')).toBe('/dashboard')
+    })
+
+    it('accepts a deep app route', () => {
+      expect(safeCallbackUrl('/capabilities/abc-123')).toBe('/capabilities/abc-123')
+    })
+
+    it('accepts a route with query string', () => {
+      expect(safeCallbackUrl('/capabilities?status=published')).toBe('/capabilities?status=published')
+    })
+  })
+
+  describe('empty / null input — falls back to /dashboard', () => {
+    it('returns fallback for null', () => {
+      expect(safeCallbackUrl(null)).toBe('/dashboard')
+    })
+
+    it('returns fallback for undefined', () => {
+      expect(safeCallbackUrl(undefined)).toBe('/dashboard')
+    })
+
+    it('returns fallback for empty string', () => {
+      expect(safeCallbackUrl('')).toBe('/dashboard')
+    })
+  })
+
+  describe('auth dead-end routes — redirected to fallback', () => {
+    it('rejects /login', () => {
+      expect(safeCallbackUrl('/login')).toBe('/dashboard')
+    })
+
+    it('rejects /login with query string', () => {
+      expect(safeCallbackUrl('/login?error=AccessDenied')).toBe('/dashboard')
+    })
+
+    it('rejects /error', () => {
+      expect(safeCallbackUrl('/error')).toBe('/dashboard')
+    })
+
+    it('rejects /error with query string', () => {
+      expect(safeCallbackUrl('/error?error=AccessDenied')).toBe('/dashboard')
+    })
+
+    it('rejects /api/auth and sub-paths', () => {
+      expect(safeCallbackUrl('/api/auth/signin')).toBe('/dashboard')
+    })
+
+    it('rejects /api/auth/error', () => {
+      expect(safeCallbackUrl('/api/auth/error')).toBe('/dashboard')
+    })
+  })
+
+  describe('external URLs — rejected', () => {
+    it('rejects https external URL', () => {
+      expect(safeCallbackUrl('https://evil.example.com/phish')).toBe('/dashboard')
+    })
+
+    it('rejects protocol-relative URL', () => {
+      expect(safeCallbackUrl('//evil.example.com')).toBe('/dashboard')
+    })
+  })
+
+  describe('custom fallback', () => {
+    it('uses the supplied fallback when provided', () => {
+      expect(safeCallbackUrl(null, '/home')).toBe('/home')
+    })
+
+    it('uses the supplied fallback for dead-end routes', () => {
+      expect(safeCallbackUrl('/login', '/home')).toBe('/home')
+    })
+  })
+})
