@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
-import { DevToolbar } from '@/components/dev-toolbar'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
 import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
@@ -171,7 +170,6 @@ interface AppShellProps {
   email: string
   roleBadgeClass: string
   themeStyle: string
-  isDev: boolean
   isInstanceAdmin: boolean
   enabledModules: Record<string, boolean>
   signOutSlot: ReactNode
@@ -183,7 +181,6 @@ export function AppShell({
   email,
   roleBadgeClass,
   themeStyle,
-  isDev,
   isInstanceAdmin,
   enabledModules,
   signOutSlot,
@@ -365,12 +362,10 @@ export function AppShell({
         </header>
 
         {/* Page content */}
-        <main className={cn('flex-1 p-4 lg:p-6', isDev && 'pb-16')}>
+        <main className="flex-1 p-4 lg:p-6">
           {children}
         </main>
       </div>
-
-      {isDev && <DevToolbar />}
     </div>
   )
 }

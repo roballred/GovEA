@@ -2,16 +2,26 @@ import { auth } from '@/lib/auth'
 import { db } from '@/db/client'
 import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
-import { mergeModuleSettings, type ModuleStateMap } from '@/lib/modules'
+import { mergeModuleSettings, MODULE_DEFS, type ModuleStateMap } from '@/lib/modules'
+
+/**
+ * The instance-level default: all modules disabled until an admin opts in.
+ * Used when no instanceSettings row exists yet.
+ */
+const ALL_DISABLED: ModuleStateMap = Object.fromEntries(MODULE_DEFS.map(m => [m.key, true]))
 
 /**
  * Server-only helper: returns the instance-wide disabled module map.
+ *
+ * When no instanceSettings row exists yet (fresh instance), every module is
+ * treated as disabled — the instance admin must explicitly enable each one.
  */
 export async function getInstanceDisabledModules(): Promise<ModuleStateMap> {
   const row = await db.query.instanceSettings.findFirst({
     columns: { disabledModules: true },
   })
-  return row?.disabledModules ?? {}
+  if (!row) return ALL_DISABLED
+  return row.disabledModules ?? {}
 }
 
 /**

@@ -19,6 +19,8 @@ export const organizations = pgTable('organizations', {
   parentId: uuid('parent_id').references((): AnyPgColumn => organizations.id, { onDelete: 'set null' }),
   suspendedAt: timestamp('suspended_at'),
   suspendedReason: text('suspended_reason'),
+  supportTier: text('support_tier'),
+  internalNotes: text('internal_notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })

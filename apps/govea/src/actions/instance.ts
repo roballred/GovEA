@@ -1,8 +1,8 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations, users, breakGlassSessions, instanceSettings, platformConfig } from '@/db/schema'
-import { eq, and, isNull, gt } from 'drizzle-orm'
+import { organizations, users, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
+import { eq, and, isNull, gt, like, desc } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
@@ -292,6 +292,48 @@ export async function createInstanceUser(formData: FormData) {
   revalidatePath('/instance/users')
 }
 
+export const SUPPORT_TIERS = ['community', 'standard', 'premium', 'enterprise'] as const
+export type SupportTier = typeof SUPPORT_TIERS[number]
+
+export async function updateOrgGovernance(
+  orgId: string,
+  data: { supportTier: string | null; internalNotes: string | null },
+) {
+  const session = await requireInstanceAdmin()
+
+  const before = await db.query.organizations.findFirst({ where: eq(organizations.id, orgId) })
+  if (!before) throw new Error('Organisation not found')
+
+  const supportTier = data.supportTier?.trim() || null
+  const internalNotes = data.internalNotes?.trim() || null
+
+  await db.update(organizations)
+    .set({ supportTier, internalNotes, updatedAt: new Date() })
+    .where(eq(organizations.id, orgId))
+
+  await writeAuditLog({
+    action: 'instance.org.governance.update',
+    entityType: 'organization',
+    entityId: orgId,
+    userId: session.user.id,
+    organizationId: null,
+    before: { supportTier: before.supportTier, internalNotes: before.internalNotes },
+    after: { supportTier, internalNotes },
+  })
+
+  revalidatePath('/instance/orgs')
+  revalidatePath(`/instance/orgs/${orgId}`)
+}
+
+export async function getOrgGovernanceHistory(orgId: string) {
+  await requireInstanceAdmin()
+
+  return db.select().from(auditLog)
+    .where(and(eq(auditLog.entityId, orgId), like(auditLog.action, 'instance.org.%')))
+    .orderBy(desc(auditLog.createdAt))
+    .limit(10)
+}
+
 /**
  * Controls whether a module is available anywhere on the instance.
  * When unavailable, the module is forced OFF for every organization.
@@ -301,7 +343,9 @@ export async function setInstanceModuleAvailability(key: ModuleKey, available: b
   if (!MODULE_DEFS.find(m => m.key === key)) throw new Error('Unknown module')
 
   const before = await db.query.instanceSettings.findFirst()
-  const beforeDisabledModules = before?.disabledModules ?? {}
+  // When no row exists yet, start from all-disabled (same default as getInstanceDisabledModules).
+  const allDisabled = Object.fromEntries(MODULE_DEFS.map(m => [m.key, true]))
+  const beforeDisabledModules = before?.disabledModules ?? allDisabled
   const afterDisabledModules = { ...beforeDisabledModules }
   if (available) {
     delete afterDisabledModules[key]

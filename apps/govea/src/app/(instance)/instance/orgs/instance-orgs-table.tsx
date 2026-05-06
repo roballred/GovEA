@@ -15,6 +15,13 @@ import {
 import { cn } from '@/lib/utils'
 import { createOrg } from '@/actions/instance'
 
+const TIER_BADGE: Record<string, { label: string; cls: string }> = {
+  community: { label: 'Community', cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
+  standard:  { label: 'Standard',  cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
+  premium:   { label: 'Premium',   cls: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' },
+  enterprise:{ label: 'Enterprise',cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' },
+}
+
 type OrgRow = {
   id: string
   name: string
@@ -23,6 +30,7 @@ type OrgRow = {
   createdAt: Date
   suspendedAt: Date | null
   isSystemOrg: boolean | null
+  supportTier: string | null
 }
 
 interface Props {
@@ -87,6 +95,7 @@ export function InstanceOrgsTable({ orgs }: Props) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Slug</TableHead>
+              <TableHead>Tier</TableHead>
               <TableHead>Users</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Status</TableHead>
@@ -104,6 +113,18 @@ export function InstanceOrgsTable({ orgs }: Props) {
                   )}
                 </TableCell>
                 <TableCell className="font-mono text-sm text-muted-foreground">{org.slug}</TableCell>
+                <TableCell>
+                  {org.supportTier && TIER_BADGE[org.supportTier] ? (
+                    <span className={cn(
+                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                      TIER_BADGE[org.supportTier].cls,
+                    )}>
+                      {TIER_BADGE[org.supportTier].label}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                  )}
+                </TableCell>
                 <TableCell>{org.userCount}</TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {org.createdAt.toLocaleDateString()}
@@ -122,7 +143,7 @@ export function InstanceOrgsTable({ orgs }: Props) {
             ))}
             {orgs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No organisations yet — create one to get started.
                 </TableCell>
               </TableRow>

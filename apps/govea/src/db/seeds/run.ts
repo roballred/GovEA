@@ -39,7 +39,9 @@ import {
   taxonomyTerms, entityTaxonomyDefinitions,
   services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
+  instanceSettings,
 } from '../schema'
+import { MODULE_DEFS } from '../../lib/modules'
 import bcrypt from 'bcryptjs'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1778,6 +1780,20 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${SYSTEM_USERS.length} users (ivan@govea.dev / dev-password, instanceRole=instance_admin)`)
+
+  // ── Instance settings — enable all modules for dev ────────────────────────
+  // Production instances start with every module disabled (opt-in). For dev,
+  // we ensure the singleton row exists with all modules available so the full
+  // app is reachable without manual toggling.
+  const existingInstanceSettings = await db.query.instanceSettings.findFirst()
+  if (existingInstanceSettings) {
+    await db.update(instanceSettings)
+      .set({ disabledModules: {}, updatedAt: new Date() })
+      .where(eq(instanceSettings.id, existingInstanceSettings.id))
+  } else {
+    await db.insert(instanceSettings).values({ disabledModules: {} })
+  }
+  console.log(`  ✓ instanceSettings: all ${MODULE_DEFS.length} modules enabled`)
 
   console.log('\nSeed complete.')
   process.exit(0)
