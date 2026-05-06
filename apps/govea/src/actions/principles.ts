@@ -1,8 +1,9 @@
 'use server'
 
 import { db } from '@/db/client'
-import { principles, principleAdrs, principleCapabilities } from '@/db/schema'
+import { principles, principleAdrs, principleCapabilities, entityTaxonomyValues } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/actions/taxonomy'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -70,7 +71,12 @@ export async function getPrinciple(id: string) {
   const visible = await canReadFederatedEntity(principle.organizationId, principle.visibility, session.user.organizationId!)
   if (!visible) return null
   if (session.user.role === 'viewer' && principle.status !== 'published') return null
-  return principle
+
+  const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
+    getEntityTaxonomyValues(principle.organizationId, 'principle', id),
+    getEntityTaxonomyDefinitions(principle.organizationId, 'principle'),
+  ])
+  return { ...principle, taxonomyValues, taxonomyDefinitions }
 }
 
 export async function createPrinciple(formData: FormData) {
@@ -96,6 +102,9 @@ export async function createPrinciple(formData: FormData) {
   }).returning()
 
   await insertJunctions(principle.id, adrIds, capabilityIds)
+
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'principle', principle.id, taxonomyTermIds)
 
   await writeAuditLog({
     action: 'principle.create',
@@ -135,6 +144,9 @@ export async function editPrinciple(principleId: string, formData: FormData) {
   await db.delete(principleCapabilities).where(eq(principleCapabilities.principleId, principleId))
   await insertJunctions(principleId, adrIds, capabilityIds)
 
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'principle', principleId, taxonomyTermIds)
+
   await writeAuditLog({
     action: 'principle.edit',
     entityType: 'principle',
@@ -152,6 +164,10 @@ export async function deletePrinciple(principleId: string) {
 
   const before = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
   assertOwnership(before?.organizationId, orgId)
+
+  await db.delete(entityTaxonomyValues).where(
+    and(eq(entityTaxonomyValues.entityType, 'principle'), eq(entityTaxonomyValues.entityId, principleId))
+  )
 
   await db.delete(principles).where(
     and(eq(principles.id, principleId), eq(principles.organizationId, orgId))

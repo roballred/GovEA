@@ -16,8 +16,9 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
-import type { TaxonomyTerm } from '@/db/schema'
+import type { TaxonomyTerm, EntityTaxonomyValue } from '@/db/schema'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 
 type PrincipleRow = Principle & {
   organization: { id: string; name: string } | null
@@ -32,6 +33,8 @@ interface Props {
   principleTypes: Pick<TaxonomyTerm, 'id' | 'name' | 'slug'>[]
   role: Role
   currentOrgId: string
+  taxonomyDefinitions: EnrichedTaxonomyDefinition[]
+  taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
 }
 
 // Stable colour palette — cycles through when more than 2 types exist
@@ -69,11 +72,12 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function PrincipleTable({ principles, adrs, capabilities, principleTypes, role, currentOrgId }: Props) {
+export function PrincipleTable({ principles, adrs, capabilities, principleTypes, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PrincipleRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<PrincipleRow | null>(null)
@@ -82,10 +86,16 @@ export function PrincipleTable({ principles, adrs, capabilities, principleTypes,
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
 
-  const filtered = principles.filter(p =>
-    (statusFilter === 'all' || p.status === statusFilter) &&
-    (typeFilter === 'all' || p.principleType === typeFilter)
-  )
+  const hasTaxonomyFilter = Object.values(taxonomyFilters).some(v => v !== 'all')
+
+  const filtered = principles.filter(p => {
+    const matchStatus = statusFilter === 'all' || p.status === statusFilter
+    const matchType = typeFilter === 'all' || p.principleType === typeFilter
+    const matchTaxonomy = Object.entries(taxonomyFilters).every(([, termId]) =>
+      termId === 'all' || (taxonomyValueMap[p.id] ?? []).some(v => v.taxonomyTermId === termId)
+    )
+    return matchStatus && matchType && matchTaxonomy
+  })
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -149,6 +159,11 @@ export function PrincipleTable({ principles, adrs, capabilities, principleTypes,
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
+        <TaxonomyFilters
+          defs={taxonomyDefinitions}
+          filters={taxonomyFilters}
+          onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
+        />
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New Principle
@@ -290,6 +305,7 @@ export function PrincipleTable({ principles, adrs, capabilities, principleTypes,
               selectedAdrIds={[]}
               selectedCapabilityIds={[]}
             />
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <PrincipleTypeField defaultType="architecture" types={principleTypes} />
             <StatusVisibilityFields defaultStatus="draft" defaultVisibility="org" />
             <DialogFooter>
@@ -317,6 +333,10 @@ export function PrincipleTable({ principles, adrs, capabilities, principleTypes,
               capabilities={capabilities}
               selectedAdrIds={editTarget?.principleAdrs.map(pa => pa.adr.id) ?? []}
               selectedCapabilityIds={editTarget?.principleCapabilities.map(pc => pc.capability.id) ?? []}
+            />
+            <TaxonomyInputs
+              defs={taxonomyDefinitions}
+              currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
             />
             <PrincipleTypeField defaultType={editTarget?.principleType ?? 'architecture'} types={principleTypes} />
             <StatusVisibilityFields

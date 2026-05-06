@@ -17,6 +17,7 @@ import {
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
+import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -117,6 +118,11 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
         {initiative.description && (
           <MarkdownContent>{initiative.description}</MarkdownContent>
         )}
+
+        <TaxonomyChips
+          definitions={initiative.taxonomyDefinitions}
+          selectedTermIds={initiative.taxonomyValues.map(v => v.taxonomyTermId)}
+        />
 
         {(initiative.startDate || initiative.endDate) && (
           <div className="flex items-center gap-2 text-sm">

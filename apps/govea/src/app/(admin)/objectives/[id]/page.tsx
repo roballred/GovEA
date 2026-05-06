@@ -16,6 +16,7 @@ import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
 import { MarkdownContent } from '@/components/markdown-content'
+import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -104,6 +105,11 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
         {objective.description && (
           <MarkdownContent>{objective.description}</MarkdownContent>
         )}
+
+        <TaxonomyChips
+          definitions={objective.taxonomyDefinitions}
+          selectedTermIds={objective.taxonomyValues.map(v => v.taxonomyTermId)}
+        />
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">
           {objective.successMetric && (

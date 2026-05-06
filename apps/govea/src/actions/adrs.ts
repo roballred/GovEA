@@ -2,9 +2,10 @@
 
 import { db } from '@/db/client'
 import {
-  adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
+  adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives, entityTaxonomyValues,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/actions/taxonomy'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -76,7 +77,12 @@ export async function getADR(id: string) {
   if (!visible) return null
   // Viewer status gate — enforced in the action so all callers inherit the rule (#208)
   if (session.user.role === 'viewer' && adr.status !== VIEWER_ADR_STATUS) return null
-  return adr
+
+  const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
+    getEntityTaxonomyValues(adr.organizationId, 'adr', id),
+    getEntityTaxonomyDefinitions(adr.organizationId, 'adr'),
+  ])
+  return { ...adr, taxonomyValues, taxonomyDefinitions }
 }
 
 export async function createADR(formData: FormData) {
@@ -112,6 +118,9 @@ export async function createADR(formData: FormData) {
   }).returning()
 
   await insertJunctions(adr.id, capabilityIds, applicationIds, initiativeIds, objectiveIds)
+
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'adr', adr.id, taxonomyTermIds)
 
   await writeAuditLog({
     action: 'adr.create',
@@ -163,6 +172,9 @@ export async function editADR(id: string, formData: FormData) {
   await db.delete(adrObjectives).where(eq(adrObjectives.adrId, id))
   await insertJunctions(id, capabilityIds, applicationIds, initiativeIds, objectiveIds)
 
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'adr', id, taxonomyTermIds)
+
   await writeAuditLog({
     action: 'adr.edit',
     entityType: 'adr',
@@ -180,6 +192,10 @@ export async function deleteADR(id: string) {
 
   const before = await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
   assertOwnership(before?.organizationId, orgId)
+
+  await db.delete(entityTaxonomyValues).where(
+    and(eq(entityTaxonomyValues.entityType, 'adr'), eq(entityTaxonomyValues.entityId, id))
+  )
 
   await db.delete(adrs).where(and(eq(adrs.id, id), eq(adrs.organizationId, orgId)))
 

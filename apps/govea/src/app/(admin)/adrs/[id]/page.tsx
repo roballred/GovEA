@@ -18,6 +18,7 @@ import {
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
+import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -106,6 +107,11 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
             </Link>
           </div>
         )}
+
+        <TaxonomyChips
+          definitions={adr.taxonomyDefinitions}
+          selectedTermIds={adr.taxonomyValues.map(v => v.taxonomyTermId)}
+        />
       </div>
 
       <hr />

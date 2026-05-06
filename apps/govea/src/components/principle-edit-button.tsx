@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
+import type { EntityTaxonomyValue } from '@/db/schema'
 
 interface PrincipleType {
   id: string
@@ -27,9 +29,11 @@ interface PrincipleEditButtonProps {
     visibility: 'org' | 'connections' | 'instance'
   }
   principleTypes: PrincipleType[]
+  taxonomyDefinitions?: EnrichedTaxonomyDefinition[]
+  currentTaxonomyValues?: EntityTaxonomyValue[]
 }
 
-export function PrincipleEditButton({ principleId, initial, principleTypes }: PrincipleEditButtonProps) {
+export function PrincipleEditButton({ principleId, initial, principleTypes, taxonomyDefinitions = [], currentTaxonomyValues = [] }: PrincipleEditButtonProps) {
   const [editing, setEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -103,6 +107,12 @@ export function PrincipleEditButton({ principleId, initial, principleTypes }: Pr
                 <option key={t.id} value={t.slug}>{t.name}</option>
               ))}
             </select>
+          </div>
+        )}
+
+        {taxonomyDefinitions.length > 0 && (
+          <div className="sm:col-span-2">
+            <TaxonomyInputs defs={taxonomyDefinitions} currentValues={currentTaxonomyValues} />
           </div>
         )}
 

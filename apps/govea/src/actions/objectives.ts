@@ -1,8 +1,9 @@
 'use server'
 
 import { db } from '@/db/client'
-import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from '@/db/schema'
+import { strategicObjectives, objectiveCapabilities, objectiveValueStreams, entityTaxonomyValues } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/actions/taxonomy'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -68,7 +69,12 @@ export async function getObjective(id: string) {
   const visible = await canReadFederatedEntity(objective.organizationId, objective.visibility, session.user.organizationId!)
   if (!visible) return null
   if (session.user.role === 'viewer' && objective.status !== 'published') return null
-  return objective
+
+  const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
+    getEntityTaxonomyValues(objective.organizationId, 'objective', id),
+    getEntityTaxonomyDefinitions(objective.organizationId, 'objective'),
+  ])
+  return { ...objective, taxonomyValues, taxonomyDefinitions }
 }
 
 export async function createObjective(formData: FormData) {
@@ -101,6 +107,9 @@ export async function createObjective(formData: FormData) {
       valueStreamIds.map(vId => ({ objectiveId: obj.id, valueStreamId: vId }))
     )
   }
+
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'objective', obj.id, taxonomyTermIds)
 
   await writeAuditLog({
     action: 'objective.create', entityType: 'objective', entityId: obj.id,
@@ -145,6 +154,9 @@ export async function editObjective(objectiveId: string, formData: FormData) {
     )
   }
 
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'objective', objectiveId, taxonomyTermIds)
+
   await writeAuditLog({
     action: 'objective.edit', entityType: 'objective', entityId: objectiveId,
     userId: session.user.id, organizationId: orgId,
@@ -161,6 +173,10 @@ export async function deleteObjective(objectiveId: string) {
     where: eq(strategicObjectives.id, objectiveId),
   })
   assertOwnership(before?.organizationId, orgId)
+
+  await db.delete(entityTaxonomyValues).where(
+    and(eq(entityTaxonomyValues.entityType, 'objective'), eq(entityTaxonomyValues.entityId, objectiveId))
+  )
 
   await db.delete(strategicObjectives).where(
     and(eq(strategicObjectives.id, objectiveId), eq(strategicObjectives.organizationId, orgId))

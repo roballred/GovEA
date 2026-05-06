@@ -16,6 +16,7 @@ import { isModuleEnabled } from '@/lib/modules'
 import { getPrincipleTypes } from '@/actions/taxonomy'
 import { MarkdownContent } from '@/components/markdown-content'
 import { PrincipleEditButton } from '@/components/principle-edit-button'
+import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -105,6 +106,11 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
             </span>
           </div>
         </div>
+
+        <TaxonomyChips
+          definitions={principle.taxonomyDefinitions}
+          selectedTermIds={principle.taxonomyValues.map(v => v.taxonomyTermId)}
+        />
       </div>
 
       {canMutate && (
@@ -121,6 +127,8 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
             visibility: principle.visibility,
           }}
           principleTypes={principleTypes}
+          taxonomyDefinitions={principle.taxonomyDefinitions}
+          currentTaxonomyValues={principle.taxonomyValues}
         />
       )}
 

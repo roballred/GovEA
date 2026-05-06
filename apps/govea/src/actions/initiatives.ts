@@ -2,9 +2,10 @@
 
 import { db } from '@/db/client'
 import {
-  initiatives, initiativeCapabilities, initiativeObjectives,
+  initiatives, initiativeCapabilities, initiativeObjectives, entityTaxonomyValues,
 } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
+import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/actions/taxonomy'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
@@ -69,7 +70,12 @@ export async function getInitiative(id: string) {
   if (!visible) return null
   // Viewer status gate — enforced in the action so all callers inherit the rule (#208)
   if (session.user.role === 'viewer' && !VIEWER_INITIATIVE_STATUSES.includes(initiative.status)) return null
-  return initiative
+
+  const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
+    getEntityTaxonomyValues(initiative.organizationId, 'initiative', id),
+    getEntityTaxonomyDefinitions(initiative.organizationId, 'initiative'),
+  ])
+  return { ...initiative, taxonomyValues, taxonomyDefinitions }
 }
 
 export async function createInitiative(formData: FormData) {
@@ -101,6 +107,9 @@ export async function createInitiative(formData: FormData) {
       .values(objectiveIds.map(objectiveId => ({ initiativeId: row.id, objectiveId })))
       .onConflictDoNothing()
   }
+
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'initiative', row.id, taxonomyTermIds)
 
   await writeAuditLog({
     action: 'initiative.create',
@@ -151,6 +160,9 @@ export async function editInitiative(id: string, formData: FormData) {
       .onConflictDoNothing()
   }
 
+  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  await syncEntityTaxonomyValues(orgId, 'initiative', id, taxonomyTermIds)
+
   await writeAuditLog({
     action: 'initiative.edit',
     entityType: 'initiative',
@@ -168,6 +180,10 @@ export async function deleteInitiative(id: string) {
 
   const before = await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
   assertOwnership(before?.organizationId, orgId)
+
+  await db.delete(entityTaxonomyValues).where(
+    and(eq(entityTaxonomyValues.entityType, 'initiative'), eq(entityTaxonomyValues.entityId, id))
+  )
 
   await db.delete(initiatives).where(eq(initiatives.id, id))
 
