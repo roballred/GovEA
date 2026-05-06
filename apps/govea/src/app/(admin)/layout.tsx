@@ -63,7 +63,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       email={session.user.email ?? ''}
       roleBadgeClass={ROLE_BADGE_CLASS[role]}
       themeStyle={themeStyle}
-      isDev={isInstanceAdmin(session.user)}
       isInstanceAdmin={isInstanceAdmin(session.user)}
       enabledModules={enabledModules}
       signOutSlot={signOutSlot}

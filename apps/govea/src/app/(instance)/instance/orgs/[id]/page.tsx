@@ -7,16 +7,33 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ConfirmWithReason } from '@/components/confirm-with-reason'
-import { suspendOrg, unsuspendOrg, grantBreakGlass, revokeBreakGlass } from '@/actions/instance'
+import { suspendOrg, unsuspendOrg, grantBreakGlass, revokeBreakGlass, getOrgGovernanceHistory } from '@/actions/instance'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { OrgGovernanceForm } from './org-governance-form'
+
+const TIER_BADGE: Record<string, { label: string; cls: string }> = {
+  community: { label: 'Community', cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
+  standard:  { label: 'Standard',  cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
+  premium:   { label: 'Premium',   cls: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' },
+  enterprise:{ label: 'Enterprise',cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' },
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  'instance.org.create':              'Created',
+  'instance.org.suspend':             'Suspended',
+  'instance.org.unsuspend':           'Unsuspended',
+  'instance.org.governance.update':   'Governance updated',
+  'instance.break_glass.grant':       'Break-glass granted',
+  'instance.break_glass.revoke':      'Break-glass revoked',
+}
 
 export default async function OrgDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await requireInstanceAdmin()
 
-  const [org, orgUsers, activeBG, bgHistory] = await Promise.all([
+  const [org, orgUsers, activeBG, bgHistory, govHistory] = await Promise.all([
     db.query.organizations.findFirst({ where: eq(organizations.id, id) }),
     db.query.users.findMany({
       where: eq(users.organizationId, id),
@@ -35,9 +52,12 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
       orderBy: [desc(breakGlassSessions.grantedAt)],
       limit: 10,
     }),
+    getOrgGovernanceHistory(id),
   ])
 
   if (!org) notFound()
+
+  const tierBadge = org.supportTier ? TIER_BADGE[org.supportTier] : null
 
   return (
     <div className="space-y-8">
@@ -50,7 +70,17 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
             <span>{org.name}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight">{org.name}</h1>
-          <p className="text-muted-foreground font-mono text-sm mt-0.5">{org.slug}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-muted-foreground font-mono text-sm">{org.slug}</p>
+            {tierBadge && (
+              <span className={cn(
+                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                tierBadge.cls,
+              )}>
+                {tierBadge.label}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={cn(
@@ -104,6 +134,40 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <div><dt className="text-muted-foreground">System org</dt><dd className="mt-0.5 font-medium">{org.isSystemOrg ? 'Yes' : 'No'}</dd></div>
           <div><dt className="text-muted-foreground">Users</dt><dd className="mt-0.5 font-medium">{orgUsers.length}</dd></div>
         </dl>
+      </section>
+
+      {/* Governance */}
+      <section className="rounded-lg border bg-card p-5">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold">Governance</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Internal-only metadata. Support tier and notes are never shown to the tenant.
+          </p>
+        </div>
+
+        <OrgGovernanceForm
+          orgId={id}
+          initialTier={org.supportTier}
+          initialNotes={org.internalNotes}
+        />
+
+        {govHistory.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Governance history</h3>
+            <div className="divide-y rounded-md border text-sm">
+              {govHistory.map(entry => (
+                <div key={entry.id} className="flex items-center gap-3 px-3 py-2">
+                  <span className="flex-1 text-muted-foreground">
+                    {ACTION_LABELS[entry.action] ?? entry.action}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {entry.createdAt.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Break-glass */}

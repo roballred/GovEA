@@ -27,6 +27,7 @@ export default async function InstanceOrgsPage() {
         createdAt: org.createdAt,
         suspendedAt: org.suspendedAt,
         isSystemOrg: org.isSystemOrg,
+        supportTier: org.supportTier,
       }))}
     />
   )
