@@ -53,7 +53,7 @@ import {
 } from '@/db/schema'
 import { eq, and, isNull, or } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
-import { MODULE_DEFS } from '@/lib/modules'
+import { MODULE_DEFS, type ModuleKey } from '@/lib/modules'
 import {
   createTestOrg,
   createTestUser,
@@ -359,7 +359,7 @@ describe('setInstanceModuleAvailability — re-enable', () => {
   it('rejects an unknown module key', async () => {
     asAdmin(adminA)
     await expect(
-      setInstanceModuleAvailability('not-a-real-module' as any, false),
+      setInstanceModuleAvailability('not-a-real-module' as unknown as ModuleKey, false),
     ).rejects.toThrow('Unknown module')
   })
 })
