@@ -3,8 +3,16 @@
 import { useTransition, useState } from 'react'
 import { updatePlatformConfig } from '@/actions/instance'
 import { themes } from '@/lib/themes'
+import { SUPPORT_TIERS } from '@/lib/support-tiers'
 import { cn } from '@/lib/utils'
 import type { PlatformConfig } from '@/db/schema'
+
+const TIER_LABELS: Record<string, string> = {
+  community: 'Community',
+  standard: 'Standard',
+  premium: 'Premium',
+  enterprise: 'Enterprise',
+}
 
 type Props = {
   initial: PlatformConfig | null
@@ -18,6 +26,9 @@ export function PlatformConfigForm({ initial }: Props) {
   const [instanceName, setInstanceName] = useState(initial?.instanceName ?? 'GovEA')
   const [defaultTheme, setDefaultTheme] = useState(initial?.defaultTheme ?? 'govea')
   const [allowLocalAuth, setAllowLocalAuth] = useState(initial?.allowLocalAuth ?? true)
+  const [defaultSupportTier, setDefaultSupportTier] = useState<string>(
+    initial?.defaultSupportTier ?? '',
+  )
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -25,7 +36,12 @@ export function PlatformConfigForm({ initial }: Props) {
     setSaved(false)
     startTransition(async () => {
       try {
-        await updatePlatformConfig({ instanceName, defaultTheme, allowLocalAuth })
+        await updatePlatformConfig({
+          instanceName,
+          defaultTheme,
+          allowLocalAuth,
+          defaultSupportTier: defaultSupportTier || null,
+        })
         setSaved(true)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Save failed')
@@ -67,9 +83,10 @@ export function PlatformConfigForm({ initial }: Props) {
         <div>
           <h2 className="text-base font-semibold">New Organisation Defaults</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Settings applied when a new organisation is provisioned. Existing orgs are not affected.
+            Settings stamped on new organisations at provisioning time. Existing orgs are not affected.
           </p>
         </div>
+
         <div className="space-y-1.5">
           <label htmlFor="default-theme" className="text-sm font-medium">
             Default theme
@@ -84,6 +101,26 @@ export function PlatformConfigForm({ initial }: Props) {
               <option key={t.id} value={t.id}>{t.name} — {t.description}</option>
             ))}
           </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="default-support-tier" className="text-sm font-medium">
+            Default support tier
+          </label>
+          <select
+            id="default-support-tier"
+            value={defaultSupportTier}
+            onChange={e => { setDefaultSupportTier(e.target.value); setSaved(false) }}
+            className="flex h-9 w-52 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="">None</option>
+            {SUPPORT_TIERS.map(t => (
+              <option key={t} value={t}>{TIER_LABELS[t]}</option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Stamped on each new organisation when it is provisioned. Can be changed per-org later.
+          </p>
         </div>
       </section>
 
