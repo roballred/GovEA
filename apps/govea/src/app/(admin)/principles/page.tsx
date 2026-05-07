@@ -14,10 +14,10 @@ export default async function PrinciplesPage() {
   const role = session.user.role
 
   const [principleList, adrList, capabilityList, principleTypes, taxonomyDefinitions] = await Promise.all([
-    getPrinciples(orgId, role),
-    getADRs(orgId, role),
-    getCapabilities(orgId, role),
-    getPrincipleTypes(orgId),
+    getPrinciples(),
+    getADRs(),
+    getCapabilities(),
+    getPrincipleTypes(),
     getEntityTaxonomyDefinitions(orgId, 'principle'),
   ])
 

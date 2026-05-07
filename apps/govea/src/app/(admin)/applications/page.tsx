@@ -14,8 +14,8 @@ export default async function ApplicationsPage() {
   const role = session.user.role
 
   const [applicationList, capabilityList, taxonomyDefinitions, customFieldDefs] = await Promise.all([
-    getApplications(orgId, role),
-    getCapabilities(orgId, role),
+    getApplications(),
+    getCapabilities(),
     getEntityTaxonomyDefinitions(orgId, 'application'),
     getCustomFieldSchema(orgId, 'application'),
   ])

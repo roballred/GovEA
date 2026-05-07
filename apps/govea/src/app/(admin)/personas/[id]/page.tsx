@@ -58,10 +58,10 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
 
   const [allCapabilities, allValueStreams, personaTypes, allTags, crossOrgLinks] = editor
     ? await Promise.all([
-        getCapabilities(orgId),
-        getValueStreams(orgId),
-        getPersonaTypesFromTaxonomy(orgId),
-        getPersonaTagsFromTaxonomy(orgId),
+        getCapabilities(),
+        getValueStreams(),
+        getPersonaTypesFromTaxonomy(),
+        getPersonaTagsFromTaxonomy(),
         getCrossOrgLinkContext('persona', id),
       ])
     : [[], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }]

@@ -13,8 +13,8 @@ export default async function ServicesPage() {
   const role = session.user.role
 
   const [serviceList, personas, taxonomyDefinitions] = await Promise.all([
-    getServices(orgId, role),
-    getPersonas(orgId, role),
+    getServices(),
+    getPersonas(),
     getEntityTaxonomyDefinitions(orgId, 'service'),
   ])
 

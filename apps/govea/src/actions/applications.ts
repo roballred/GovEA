@@ -81,9 +81,13 @@ export async function getApplication(id: string) {
   return { ...application, capabilityObjectives, taxonomyValues, taxonomyDefinitions, customFieldDefs }
 }
 
-export async function getApplications(organizationId: string, role?: string) {
+export async function getApplications() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
-  const isViewer = role === 'viewer'
 
   return db.query.applications.findMany({
     where: (a, { eq, or, and, inArray }) => {

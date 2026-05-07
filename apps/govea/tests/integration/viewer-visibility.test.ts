@@ -67,7 +67,8 @@ describe('viewer visibility — ADRs', () => {
 
   describe('getADRs — list', () => {
     it('viewer sees only accepted ADRs', async () => {
-      const result = await getADRs(orgId, 'viewer')
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getADRs()
       const ids = result.map(a => a.id)
       expect(ids).toContain(acceptedId)
       expect(ids).not.toContain(proposedId)
@@ -76,7 +77,8 @@ describe('viewer visibility — ADRs', () => {
     })
 
     it('contributor sees all statuses', async () => {
-      const result = await getADRs(orgId, 'contributor')
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const result = await getADRs()
       const ids = result.map(a => a.id)
       expect(ids).toContain(acceptedId)
       expect(ids).toContain(proposedId)
@@ -85,7 +87,8 @@ describe('viewer visibility — ADRs', () => {
     })
 
     it('admin sees all statuses', async () => {
-      const result = await getADRs(orgId, 'admin')
+      mockAuth.mockResolvedValue(makeSession(admin))
+      const result = await getADRs()
       const ids = result.map(a => a.id)
       expect(ids).toContain(acceptedId)
       expect(ids).toContain(proposedId)
@@ -177,7 +180,8 @@ describe('viewer visibility — Initiatives', () => {
 
   describe('getInitiatives — list', () => {
     it('viewer sees only active and complete initiatives', async () => {
-      const result = await getInitiatives(orgId, 'viewer')
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getInitiatives()
       const ids = result.map(i => i.id)
       expect(ids).toContain(activeId)
       expect(ids).toContain(completeId)
@@ -187,7 +191,8 @@ describe('viewer visibility — Initiatives', () => {
     })
 
     it('contributor sees all statuses', async () => {
-      const result = await getInitiatives(orgId, 'contributor')
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const result = await getInitiatives()
       const ids = result.map(i => i.id)
       expect(ids).toContain(activeId)
       expect(ids).toContain(completeId)
@@ -197,7 +202,8 @@ describe('viewer visibility — Initiatives', () => {
     })
 
     it('admin sees all statuses', async () => {
-      const result = await getInitiatives(orgId, 'admin')
+      mockAuth.mockResolvedValue(makeSession(admin))
+      const result = await getInitiatives()
       const ids = result.map(i => i.id)
       expect(ids).toContain(activeId)
       expect(ids).toContain(proposedId)
@@ -289,7 +295,8 @@ describe('viewer visibility — Capabilities', () => {
 
   describe('getCapabilities — list', () => {
     it('viewer sees only published capabilities', async () => {
-      const result = await getCapabilities(orgId, 'viewer')
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getCapabilities()
       const ids = result.map(c => c.id)
       expect(ids).toContain(publishedId)
       expect(ids).not.toContain(draftId)
@@ -297,7 +304,8 @@ describe('viewer visibility — Capabilities', () => {
     })
 
     it('contributor sees all statuses', async () => {
-      const result = await getCapabilities(orgId, 'contributor')
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const result = await getCapabilities()
       const ids = result.map(c => c.id)
       expect(ids).toContain(publishedId)
       expect(ids).toContain(draftId)
@@ -305,7 +313,8 @@ describe('viewer visibility — Capabilities', () => {
     })
 
     it('admin sees all statuses', async () => {
-      const result = await getCapabilities(orgId, 'admin')
+      mockAuth.mockResolvedValue(makeSession(admin))
+      const result = await getCapabilities()
       const ids = result.map(c => c.id)
       expect(ids).toContain(publishedId)
       expect(ids).toContain(draftId)
@@ -381,7 +390,8 @@ describe('viewer visibility — Personas', () => {
 
   describe('getPersonas — list', () => {
     it('viewer sees only published personas', async () => {
-      const result = await getPersonas(orgId, 'viewer')
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getPersonas()
       const ids = result.map(p => p.id)
       expect(ids).toContain(publishedId)
       expect(ids).not.toContain(draftId)
@@ -389,7 +399,8 @@ describe('viewer visibility — Personas', () => {
     })
 
     it('contributor sees all statuses', async () => {
-      const result = await getPersonas(orgId, 'contributor')
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const result = await getPersonas()
       const ids = result.map(p => p.id)
       expect(ids).toContain(publishedId)
       expect(ids).toContain(draftId)
@@ -397,7 +408,8 @@ describe('viewer visibility — Personas', () => {
     })
 
     it('admin sees all statuses', async () => {
-      const result = await getPersonas(orgId, 'admin')
+      mockAuth.mockResolvedValue(makeSession(admin))
+      const result = await getPersonas()
       const ids = result.map(p => p.id)
       expect(ids).toContain(publishedId)
       expect(ids).toContain(draftId)
@@ -473,7 +485,8 @@ describe('viewer visibility — Glossary', () => {
 
   describe('getGlossaryTerms — list', () => {
     it('viewer sees only published terms', async () => {
-      const result = await getGlossaryTerms(orgId, 'viewer')
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      const result = await getGlossaryTerms()
       const ids = result.map(t => t.id)
       expect(ids).toContain(publishedId)
       expect(ids).not.toContain(draftId)
@@ -481,7 +494,8 @@ describe('viewer visibility — Glossary', () => {
     })
 
     it('contributor sees all statuses', async () => {
-      const result = await getGlossaryTerms(orgId, 'contributor')
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      const result = await getGlossaryTerms()
       const ids = result.map(t => t.id)
       expect(ids).toContain(publishedId)
       expect(ids).toContain(draftId)
@@ -489,7 +503,8 @@ describe('viewer visibility — Glossary', () => {
     })
 
     it('admin sees all statuses', async () => {
-      const result = await getGlossaryTerms(orgId, 'admin')
+      mockAuth.mockResolvedValue(makeSession(admin))
+      const result = await getGlossaryTerms()
       const ids = result.map(t => t.id)
       expect(ids).toContain(publishedId)
       expect(ids).toContain(draftId)

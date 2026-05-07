@@ -63,9 +63,9 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
 
   const [allCapabilities, allObjectives, allApplications] = editor
     ? await Promise.all([
-        getCapabilities(orgId),
-        getObjectives(orgId),
-        getApplications(orgId),
+        getCapabilities(),
+        getObjectives(),
+        getApplications(),
       ])
     : [[], [], []]
 

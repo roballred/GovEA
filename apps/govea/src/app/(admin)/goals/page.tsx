@@ -13,7 +13,7 @@ export default async function GoalsPage() {
 
   const [goalList, objectiveList] = await Promise.all([
     getGoals(orgId, role),
-    getObjectives(orgId, role),
+    getObjectives(),
   ])
 
   return (

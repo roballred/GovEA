@@ -16,14 +16,22 @@ async function requireAdmin() {
   return session
 }
 
-export async function getConnections(orgId: string) {
+export async function getConnections() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const orgId = session.user.organizationId!
+
   return db.query.orgConnections.findMany({
     where: or(eq(orgConnections.fromOrgId, orgId), eq(orgConnections.toOrgId, orgId)),
   })
 }
 
-// All orgs on the instance except the current org
-export async function getOtherOrganizations(orgId: string) {
+// All orgs on the instance except the caller's own org. Used for the connection-target picker.
+// Restricted to admins because non-admins do not need to discover other tenants on the instance.
+export async function getOtherOrganizations() {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
   return db.query.organizations.findMany({
     where: ne(organizations.id, orgId),
     orderBy: (o, { asc }) => [asc(o.name)],

@@ -66,9 +66,9 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
   const [allCapabilities, allPersonas, allValueStreams] = editor
     ? await Promise.all([
-        getCapabilities(orgId),
-        getPersonas(orgId),
-        getValueStreams(orgId),
+        getCapabilities(),
+        getPersonas(),
+        getValueStreams(),
       ])
     : [[], [], []]
 

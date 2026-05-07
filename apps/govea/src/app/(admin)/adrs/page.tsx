@@ -16,11 +16,11 @@ export default async function ADRsPage() {
   const role = session.user.role
 
   const [adrList, capabilityList, applicationList, initiativeList, objectiveList, taxonomyDefinitions] = await Promise.all([
-    getADRs(orgId, role),
-    getCapabilities(orgId),
-    getApplications(orgId),
-    getInitiatives(orgId),
-    getObjectives(orgId),
+    getADRs(),
+    getCapabilities(),
+    getApplications(),
+    getInitiatives(),
+    getObjectives(),
     getEntityTaxonomyDefinitions(orgId, 'adr'),
   ])
 

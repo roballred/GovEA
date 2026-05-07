@@ -63,9 +63,9 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   const [allCapabilities, allInitiatives, allAdrs] = editor
     ? await Promise.all([
-        getCapabilities(orgId),
-        getInitiatives(orgId),
-        getADRs(orgId),
+        getCapabilities(),
+        getInitiatives(),
+        getADRs(),
       ])
     : [[], [], []]
 

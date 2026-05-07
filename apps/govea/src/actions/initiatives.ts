@@ -29,9 +29,13 @@ async function requireAdmin() {
 // Viewer-visible initiative statuses — Option B decision from #202
 const VIEWER_INITIATIVE_STATUSES: Array<'active' | 'proposed' | 'on-hold' | 'complete' | 'cancelled'> = ['active', 'complete']
 
-export async function getInitiatives(orgId: string, role?: string) {
+export async function getInitiatives() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const orgId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(orgId)
-  const isViewer = role === 'viewer'
 
   return db.query.initiatives.findMany({
     where: (i, { eq, or, and, inArray }) => {

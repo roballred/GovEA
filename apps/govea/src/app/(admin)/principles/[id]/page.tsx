@@ -54,7 +54,7 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
   const [principle, enabledModules, principleTypes] = await Promise.all([
     getPrinciple(id),
     getEnabledModules(),
-    getPrincipleTypes(orgId),
+    getPrincipleTypes(),
   ])
   if (!principle) notFound()
 
@@ -63,8 +63,8 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
 
   const [allCapabilities, allAdrs] = editor
     ? await Promise.all([
-        getCapabilities(orgId),
-        getADRs(orgId),
+        getCapabilities(),
+        getADRs(),
       ])
     : [[], []]
 

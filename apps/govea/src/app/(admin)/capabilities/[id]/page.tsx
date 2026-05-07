@@ -80,11 +80,11 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
 
   const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks, frameworkMappings] = editor
     ? await Promise.all([
-        getPersonas(orgId),
-        getApplications(orgId),
-        getObjectives(orgId),
-        getInitiatives(orgId),
-        getADRs(orgId),
+        getPersonas(),
+        getApplications(),
+        getObjectives(),
+        getInitiatives(),
+        getADRs(),
         getCrossOrgLinkContext('capability', id),
         frameworkOverlay ? getFrameworkMappings('capability', id) : Promise.resolve([]),
       ])

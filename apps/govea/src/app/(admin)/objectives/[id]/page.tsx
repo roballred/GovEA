@@ -50,8 +50,8 @@ export default async function ObjectiveDetailPage({ params }: { params: Promise<
 
   const [allCapabilities, allValueStreams, allGoals] = editor
     ? await Promise.all([
-        getCapabilities(orgId),
-        getValueStreams(orgId),
+        getCapabilities(),
+        getValueStreams(),
         getGoals(orgId),
       ])
     : [[], [], []]
