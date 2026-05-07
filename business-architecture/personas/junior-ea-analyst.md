@@ -31,18 +31,10 @@ In government, this role is common in medium-to-large agencies and central IT sh
 ## Critical Insight
 The Junior EA Analyst is the fastest-growing segment of EA tool users as practices mature and repository maintenance scales beyond what a single senior architect can manage alone. They are also the group most likely to degrade repository quality if the tool does not provide guidance, validation, and soft guardrails. Designing for this persona is not about simplification — it is about making correct contribution the path of least resistance.
 
-## Most Valuable Capabilities
-
-| Capability | What it solves |
-|---|---|
-| Guided templates and starter patterns | Reduces first-contribution errors by showing what a complete record looks like before the analyst has internalised the methodology |
-| Impact visualisation before committing changes | Allows the analyst to see downstream effects of a relationship or status change before they propagate — replaces the senior architect review as the first line of quality control |
-| Automated data validation | Catches misclassified records, broken relationship chains, and missing required fields at save time, not at the next stakeholder review |
-| Role-based access with guardrails | Limits the blast radius of mistakes without blocking contribution — Contributor role limits delete access; workflow gates require publish confirmation |
-
 ## Relevant Capabilities
-- Content authoring and editing with relationship validation
+- Guided templates and starter patterns — reduces first-contribution errors before the analyst has internalised the methodology
+- Content authoring and editing with relationship validation — catches misclassified records, broken chains, and missing required fields at save time, not at the next stakeholder review
 - Content workflow (draft → review → publish) as a quality gate
-- Repository completeness signals (to know what is missing before being asked)
-- Relationship navigation (to understand downstream impact before making changes)
-- Role-based access control (limits blast radius without blocking contribution)
+- Repository completeness signals — to know what is missing before being asked
+- Relationship navigation and impact visualisation — see downstream effects before changes propagate; replaces the senior architect review as the first line of quality control
+- Role-based access with guardrails — limits blast radius without blocking contribution; Contributor role limits delete access, workflow gates require publish confirmation

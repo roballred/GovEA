@@ -32,16 +32,6 @@ Unlike the Department Director, who asks strategic investment questions over a 3
 ## Critical Insight
 The Programme Director will engage with GovEA only if dependency lookups and impact analysis are self-service, filtered to their scope, and written in plain language. If the EA team is still required as an interpreter between the architecture repository and delivery decision-making, this persona will default to asking colleagues or making assumptions. The value of EA to programme delivery is unlocked exactly at the point where the Programme Director can answer their own questions.
 
-## Most Valuable Capabilities
-
-| Capability | What it solves |
-|---|---|
-| Self-service dependency lookup | Replaces ad-hoc EA team queries with direct repository access |
-| Programme-scoped impact view | Filters the portfolio to applications and capabilities relevant to their programme |
-| Plain-language architecture summaries | Translates EA content into delivery-relevant language without requiring EA training |
-| Technology lifecycle visibility | Surfaces decommission timelines and lifecycle states before they become programme risks |
-| Change notification | Alerts the Programme Director when a platform their programme depends on changes state |
-
 ## Distinction from Department Director
 
 | | Department Director | Programme Director |
