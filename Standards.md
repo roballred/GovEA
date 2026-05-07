@@ -34,6 +34,10 @@ Capabilities are organized hierarchically:
 
 Capability groups should be organized by module or product area under `business-architecture/capabilities/`.
 
+### Documentation Format
+
+The structural format for persona and capability files — required sections, optional sections, link vocabulary, and naming conventions — is defined in [`business-architecture/STYLE.md`](business-architecture/STYLE.md). All persona and capability documentation must follow that format.
+
 ### Reference Sources vs. Capability Definitions
 
 Reference sources (external frameworks, existing products, prior art used as inputs to capability design) must be clearly distinguished from capability definitions (the authoritative outputs of EasyEA work).
