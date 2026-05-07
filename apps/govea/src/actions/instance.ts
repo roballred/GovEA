@@ -28,7 +28,17 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
   })
   if (conflict) throw new Error('An organisation with that slug already exists')
 
-  const [org] = await db.insert(organizations).values({ name, slug }).returning()
+  // Apply instance-level defaults so new orgs inherit operator-configured settings
+  const defaults = await db.query.platformConfig.findFirst({
+    columns: { defaultTheme: true, defaultSupportTier: true },
+  })
+  const theme = defaults?.defaultTheme ?? 'govea'
+  const supportTier = defaults?.defaultSupportTier ?? null
+
+  const [org] = await db
+    .insert(organizations)
+    .values({ name, slug, theme, supportTier })
+    .returning()
 
   await writeAuditLog({
     action: 'instance.org.create',
@@ -36,7 +46,7 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
     entityId: org.id,
     userId: session.user.id,
     organizationId: null,
-    after: { name, slug },
+    after: { name, slug, theme, supportTier },
   })
 
   revalidatePath('/instance/orgs')
@@ -182,12 +192,19 @@ export async function updatePlatformConfig(data: {
   instanceName: string
   defaultTheme: string
   allowLocalAuth: boolean
+  defaultSupportTier: string | null
 }) {
   const session = await requireInstanceAdmin()
 
   const trimmed = data.instanceName.trim()
   if (!trimmed) throw new Error('Instance name is required')
   if (!themes.find(t => t.id === data.defaultTheme)) throw new Error('Invalid theme')
+
+  const { SUPPORT_TIERS } = await import('@/lib/support-tiers')
+  const defaultSupportTier = data.defaultSupportTier?.trim() || null
+  if (defaultSupportTier && !(SUPPORT_TIERS as readonly string[]).includes(defaultSupportTier)) {
+    throw new Error('Invalid support tier')
+  }
 
   const before = await db.query.platformConfig.findFirst()
 
@@ -197,6 +214,7 @@ export async function updatePlatformConfig(data: {
       instanceName: trimmed,
       defaultTheme: data.defaultTheme,
       allowLocalAuth: data.allowLocalAuth,
+      defaultSupportTier,
       updatedAt: new Date(),
       updatedBy: session.user.id,
     })
@@ -206,6 +224,7 @@ export async function updatePlatformConfig(data: {
         instanceName: trimmed,
         defaultTheme: data.defaultTheme,
         allowLocalAuth: data.allowLocalAuth,
+        defaultSupportTier,
         updatedAt: new Date(),
         updatedBy: session.user.id,
       },
@@ -218,9 +237,19 @@ export async function updatePlatformConfig(data: {
     userId: session.user.id,
     organizationId: null,
     before: before
-      ? { instanceName: before.instanceName, defaultTheme: before.defaultTheme, allowLocalAuth: before.allowLocalAuth }
+      ? {
+          instanceName: before.instanceName,
+          defaultTheme: before.defaultTheme,
+          allowLocalAuth: before.allowLocalAuth,
+          defaultSupportTier: before.defaultSupportTier,
+        }
       : null,
-    after: { instanceName: trimmed, defaultTheme: data.defaultTheme, allowLocalAuth: data.allowLocalAuth },
+    after: {
+      instanceName: trimmed,
+      defaultTheme: data.defaultTheme,
+      allowLocalAuth: data.allowLocalAuth,
+      defaultSupportTier,
+    },
   })
 
   revalidatePath('/instance/config')
