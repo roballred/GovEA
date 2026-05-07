@@ -68,11 +68,13 @@ function SidebarContent({
   role,
   pathname,
   enabledModules,
+  isInstanceAdmin,
   onClose,
 }: {
   role: Role
   pathname: string
   enabledModules: Record<string, boolean>
+  isInstanceAdmin?: boolean
   onClose?: () => void
 }) {
   const isAdmin = role === 'admin'
@@ -159,6 +161,36 @@ function SidebarContent({
           )
         })}
       </div>
+
+      {/* Platform Admin section — instance admins only */}
+      {isInstanceAdmin && (
+        <div className="mt-auto pt-4">
+          <div
+            className="mx-0 border-t border-white/10 pt-4"
+          >
+            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none">
+              Platform
+            </p>
+            <div className="mt-0.5 space-y-0.5">
+              <Link
+                href="/instance"
+                onClick={onClose}
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
+                  pathname.startsWith('/instance')
+                    ? 'bg-violet-500/30 text-violet-200 font-medium'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                )}
+              >
+                <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.955 11.955 0 013 12c0 6.627 5.373 12 12 12s12-5.373 12-12c0-2.032-.507-3.947-1.399-5.625" />
+                </svg>
+                Platform Admin
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }
@@ -241,7 +273,7 @@ export function AppShell({
             GovEA
           </Link>
         </div>
-        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} />
+        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} />
       </aside>
 
       {/* ── Mobile overlay backdrop ── */}
@@ -278,7 +310,7 @@ export function AppShell({
             </svg>
           </button>
         </div>
-        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} onClose={() => setSidebarOpen(false)} />
+        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} onClose={() => setSidebarOpen(false)} />
       </aside>
 
       {/* ── Main content area ── */}
