@@ -7,7 +7,7 @@ import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
-import { removeLinksForConnection } from './cross-org-links'
+import { removeLinksForConnection } from '@/lib/cross-org-link-helpers'
 
 async function requireAdmin() {
   const session = await auth()
@@ -117,7 +117,7 @@ export async function removeConnection(connectionId: string) {
   })
   if (!connection) throw new Error('Connection not found or not authorized')
 
-  await removeLinksForConnection(connection.fromOrgId, connection.toOrgId)
+  await removeLinksForConnection(connection.fromOrgId, connection.toOrgId, session.user.id, orgId)
   await db.delete(orgConnections).where(eq(orgConnections.id, connectionId))
 
   await writeAuditLog({
