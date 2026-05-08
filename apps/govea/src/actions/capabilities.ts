@@ -4,7 +4,7 @@ import { db } from '@/db/client'
 import { capabilities, capabilityPersonas, capabilityRelationships, entityTaxonomyValues } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -154,6 +154,15 @@ export async function createCapability(formData: FormData) {
   const parentId = (formData.get('parentId') as string) || null
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
+  // Verify every supplied junction target belongs to the caller's org.
+  // Cross-org references are only allowed through crossOrgLinks (#415).
+  for (const personaId of personaIds) {
+    await assertEntityInOrg('persona', personaId, orgId)
+  }
+  if (parentId) {
+    await assertEntityInOrg('capability', parentId, orgId)
+  }
+
   const [capability] = await db.insert(capabilities).values({
     name,
     description,
@@ -210,6 +219,15 @@ export async function editCapability(capabilityId: string, formData: FormData) {
 
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(before?.organizationId, orgId)
+
+  // Verify every supplied junction target belongs to the caller's org.
+  // Cross-org references are only allowed through crossOrgLinks (#415).
+  for (const personaId of personaIds) {
+    await assertEntityInOrg('persona', personaId, orgId)
+  }
+  if (parentId) {
+    await assertEntityInOrg('capability', parentId, orgId)
+  }
 
   await db.update(capabilities).set({
     name,

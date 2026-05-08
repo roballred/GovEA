@@ -42,7 +42,7 @@ import {
   serviceValueStreams,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership } from '@/lib/federation'
+import { assertOwnership, assertEntityInOrg } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit } from '@/lib/rbac'
 import { revalidatePath } from 'next/cache'
@@ -61,6 +61,7 @@ export async function linkCapabilityPersona(capabilityId: string, personaId: str
   const { user } = await requireContributor()
   const cap = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(cap?.organizationId, user.organizationId!)
+  await assertEntityInOrg('persona', personaId, user.organizationId!)
   await db.insert(capabilityPersonas).values({ capabilityId, personaId }).onConflictDoNothing()
   revalidatePath(`/capabilities/${capabilityId}`)
 }
@@ -81,6 +82,7 @@ export async function linkCapabilityApplication(capabilityId: string, applicatio
   const { user } = await requireContributor()
   const cap = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(cap?.organizationId, user.organizationId!)
+  await assertEntityInOrg('application', applicationId, user.organizationId!)
   await db.insert(applicationCapabilities).values({ capabilityId, applicationId }).onConflictDoNothing()
   revalidatePath(`/capabilities/${capabilityId}`)
 }
@@ -101,6 +103,7 @@ export async function linkCapabilityObjective(capabilityId: string, objectiveId:
   const { user } = await requireContributor()
   const cap = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(cap?.organizationId, user.organizationId!)
+  await assertEntityInOrg('objective', objectiveId, user.organizationId!)
   await db.insert(objectiveCapabilities).values({ capabilityId, objectiveId }).onConflictDoNothing()
   revalidatePath(`/capabilities/${capabilityId}`)
 }
@@ -121,6 +124,7 @@ export async function linkCapabilityInitiative(capabilityId: string, initiativeI
   const { user } = await requireContributor()
   const cap = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(cap?.organizationId, user.organizationId!)
+  await assertEntityInOrg('initiative', initiativeId, user.organizationId!)
   await db.insert(initiativeCapabilities).values({ capabilityId, initiativeId }).onConflictDoNothing()
   revalidatePath(`/capabilities/${capabilityId}`)
 }
@@ -141,6 +145,7 @@ export async function linkCapabilityAdr(capabilityId: string, adrId: string) {
   const { user } = await requireContributor()
   const cap = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(cap?.organizationId, user.organizationId!)
+  await assertEntityInOrg('adr', adrId, user.organizationId!)
   await db.insert(adrCapabilities).values({ capabilityId, adrId }).onConflictDoNothing()
   revalidatePath(`/capabilities/${capabilityId}`)
 }
@@ -161,6 +166,7 @@ export async function linkApplicationCapability(applicationId: string, capabilit
   const { user } = await requireContributor()
   const app = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(app?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
   await db.insert(applicationCapabilities).values({ applicationId, capabilityId }).onConflictDoNothing()
   revalidatePath(`/applications/${applicationId}`)
 }
@@ -181,6 +187,7 @@ export async function linkApplicationInitiative(applicationId: string, initiativ
   const { user } = await requireContributor()
   const app = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(app?.organizationId, user.organizationId!)
+  await assertEntityInOrg('initiative', initiativeId, user.organizationId!)
   await db.insert(initiativeApplications).values({ applicationId, initiativeId }).onConflictDoNothing()
   revalidatePath(`/applications/${applicationId}`)
 }
@@ -201,6 +208,7 @@ export async function linkApplicationAdr(applicationId: string, adrId: string) {
   const { user } = await requireContributor()
   const app = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(app?.organizationId, user.organizationId!)
+  await assertEntityInOrg('adr', adrId, user.organizationId!)
   await db.insert(adrApplications).values({ applicationId, adrId }).onConflictDoNothing()
   revalidatePath(`/applications/${applicationId}`)
 }
@@ -221,6 +229,7 @@ export async function linkPersonaCapability(personaId: string, capabilityId: str
   const { user } = await requireContributor()
   const p = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
   assertOwnership(p?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
   await db.insert(capabilityPersonas).values({ personaId, capabilityId }).onConflictDoNothing()
   revalidatePath(`/personas/${personaId}`)
 }
@@ -241,6 +250,7 @@ export async function linkPersonaValueStream(personaId: string, valueStreamId: s
   const { user } = await requireContributor()
   const p = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
   assertOwnership(p?.organizationId, user.organizationId!)
+  await assertEntityInOrg('value_stream', valueStreamId, user.organizationId!)
   await db.insert(valueStreamPersonas).values({ personaId, valueStreamId }).onConflictDoNothing()
   revalidatePath(`/personas/${personaId}`)
 }
@@ -261,6 +271,7 @@ export async function linkValueStreamPersona(valueStreamId: string, personaId: s
   const { user } = await requireContributor()
   const vs = await db.query.valueStreams.findFirst({ where: eq(valueStreams.id, valueStreamId) })
   assertOwnership(vs?.organizationId, user.organizationId!)
+  await assertEntityInOrg('persona', personaId, user.organizationId!)
   await db.insert(valueStreamPersonas).values({ valueStreamId, personaId }).onConflictDoNothing()
   revalidatePath(`/value-streams/${valueStreamId}`)
 }
@@ -281,6 +292,7 @@ export async function linkGoalObjective(goalId: string, objectiveId: string) {
   const { user } = await requireContributor()
   const goal = await db.query.goals.findFirst({ where: eq(goals.id, goalId) })
   assertOwnership(goal?.organizationId, user.organizationId!)
+  await assertEntityInOrg('objective', objectiveId, user.organizationId!)
   await db.insert(goalObjectives).values({ goalId, objectiveId }).onConflictDoNothing()
   revalidatePath(`/goals/${goalId}`)
   revalidatePath(`/objectives/${objectiveId}`)
@@ -303,6 +315,7 @@ export async function linkObjectiveCapability(objectiveId: string, capabilityId:
   const { user } = await requireContributor()
   const obj = await db.query.strategicObjectives.findFirst({ where: eq(strategicObjectives.id, objectiveId) })
   assertOwnership(obj?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
   await db.insert(objectiveCapabilities).values({ objectiveId, capabilityId }).onConflictDoNothing()
   revalidatePath(`/objectives/${objectiveId}`)
 }
@@ -323,6 +336,7 @@ export async function linkObjectiveValueStream(objectiveId: string, valueStreamI
   const { user } = await requireContributor()
   const obj = await db.query.strategicObjectives.findFirst({ where: eq(strategicObjectives.id, objectiveId) })
   assertOwnership(obj?.organizationId, user.organizationId!)
+  await assertEntityInOrg('value_stream', valueStreamId, user.organizationId!)
   await db.insert(objectiveValueStreams).values({ objectiveId, valueStreamId }).onConflictDoNothing()
   revalidatePath(`/objectives/${objectiveId}`)
 }
@@ -343,6 +357,7 @@ export async function linkInitiativeCapability(initiativeId: string, capabilityI
   const { user } = await requireContributor()
   const init = await db.query.initiatives.findFirst({ where: eq(initiatives.id, initiativeId) })
   assertOwnership(init?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
   await db.insert(initiativeCapabilities).values({ initiativeId, capabilityId }).onConflictDoNothing()
   revalidatePath(`/initiatives/${initiativeId}`)
 }
@@ -363,6 +378,7 @@ export async function linkInitiativeObjective(initiativeId: string, objectiveId:
   const { user } = await requireContributor()
   const init = await db.query.initiatives.findFirst({ where: eq(initiatives.id, initiativeId) })
   assertOwnership(init?.organizationId, user.organizationId!)
+  await assertEntityInOrg('objective', objectiveId, user.organizationId!)
   await db.insert(initiativeObjectives).values({ initiativeId, objectiveId }).onConflictDoNothing()
   revalidatePath(`/initiatives/${initiativeId}`)
 }
@@ -383,6 +399,7 @@ export async function linkInitiativeApplication(initiativeId: string, applicatio
   const { user } = await requireContributor()
   const init = await db.query.initiatives.findFirst({ where: eq(initiatives.id, initiativeId) })
   assertOwnership(init?.organizationId, user.organizationId!)
+  await assertEntityInOrg('application', applicationId, user.organizationId!)
   await db.insert(initiativeApplications).values({ initiativeId, applicationId }).onConflictDoNothing()
   revalidatePath(`/initiatives/${initiativeId}`)
 }
@@ -403,6 +420,7 @@ export async function linkAdrCapability(adrId: string, capabilityId: string) {
   const { user } = await requireContributor()
   const adr = await db.query.adrs.findFirst({ where: eq(adrs.id, adrId) })
   assertOwnership(adr?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
   await db.insert(adrCapabilities).values({ adrId, capabilityId }).onConflictDoNothing()
   revalidatePath(`/adrs/${adrId}`)
 }
@@ -423,6 +441,7 @@ export async function linkAdrApplication(adrId: string, applicationId: string) {
   const { user } = await requireContributor()
   const adr = await db.query.adrs.findFirst({ where: eq(adrs.id, adrId) })
   assertOwnership(adr?.organizationId, user.organizationId!)
+  await assertEntityInOrg('application', applicationId, user.organizationId!)
   await db.insert(adrApplications).values({ adrId, applicationId }).onConflictDoNothing()
   revalidatePath(`/adrs/${adrId}`)
 }
@@ -443,6 +462,7 @@ export async function linkAdrInitiative(adrId: string, initiativeId: string) {
   const { user } = await requireContributor()
   const adr = await db.query.adrs.findFirst({ where: eq(adrs.id, adrId) })
   assertOwnership(adr?.organizationId, user.organizationId!)
+  await assertEntityInOrg('initiative', initiativeId, user.organizationId!)
   await db.insert(adrInitiatives).values({ adrId, initiativeId }).onConflictDoNothing()
   revalidatePath(`/adrs/${adrId}`)
 }
@@ -463,6 +483,7 @@ export async function linkAdrObjective(adrId: string, objectiveId: string) {
   const { user } = await requireContributor()
   const adr = await db.query.adrs.findFirst({ where: eq(adrs.id, adrId) })
   assertOwnership(adr?.organizationId, user.organizationId!)
+  await assertEntityInOrg('objective', objectiveId, user.organizationId!)
   await db.insert(adrObjectives).values({ adrId, objectiveId }).onConflictDoNothing()
   revalidatePath(`/adrs/${adrId}`)
 }
@@ -483,6 +504,7 @@ export async function linkPrincipleCapability(principleId: string, capabilityId:
   const { user } = await requireContributor()
   const p = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
   assertOwnership(p?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
   await db.insert(principleCapabilities).values({ principleId, capabilityId }).onConflictDoNothing()
   revalidatePath(`/principles/${principleId}`)
 }
@@ -503,6 +525,7 @@ export async function linkPrincipleAdr(principleId: string, adrId: string) {
   const { user } = await requireContributor()
   const p = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
   assertOwnership(p?.organizationId, user.organizationId!)
+  await assertEntityInOrg('adr', adrId, user.organizationId!)
   await db.insert(principleAdrs).values({ principleId, adrId }).onConflictDoNothing()
   revalidatePath(`/principles/${principleId}`)
 }
@@ -523,6 +546,7 @@ export async function linkServiceCapability(serviceId: string, capabilityId: str
   const { user } = await requireContributor()
   const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
   assertOwnership(svc?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
   await db.insert(serviceCapabilities).values({ serviceId, capabilityId }).onConflictDoNothing()
   revalidatePath(`/services/${serviceId}`)
 }
@@ -543,6 +567,7 @@ export async function linkServicePersona(serviceId: string, personaId: string) {
   const { user } = await requireContributor()
   const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
   assertOwnership(svc?.organizationId, user.organizationId!)
+  await assertEntityInOrg('persona', personaId, user.organizationId!)
   await db.insert(servicePersonas).values({ serviceId, personaId }).onConflictDoNothing()
   revalidatePath(`/services/${serviceId}`)
 }
@@ -563,6 +588,7 @@ export async function linkServiceValueStream(serviceId: string, valueStreamId: s
   const { user } = await requireContributor()
   const svc = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
   assertOwnership(svc?.organizationId, user.organizationId!)
+  await assertEntityInOrg('value_stream', valueStreamId, user.organizationId!)
   await db.insert(serviceValueStreams).values({ serviceId, valueStreamId }).onConflictDoNothing()
   revalidatePath(`/services/${serviceId}`)
 }
