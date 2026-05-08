@@ -106,35 +106,37 @@ export async function createService(formData: FormData) {
   const personaIds = formData.getAll('personaIds') as string[]
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
-  const [service] = await db.insert(services).values({
-    name,
-    description,
-    serviceOwner,
-    channels,
-    status,
-    visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [service] = await tx.insert(services).values({
+      name,
+      description,
+      serviceOwner,
+      channels,
+      status,
+      visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  if (personaIds.length > 0) {
-    await db.insert(servicePersonas).values(
-      personaIds.map(personaId => ({ serviceId: service.id, personaId }))
-    )
-  }
+    if (personaIds.length > 0) {
+      await tx.insert(servicePersonas).values(
+        personaIds.map(personaId => ({ serviceId: service.id, personaId }))
+      )
+    }
 
-  if (taxonomyTermIds.length > 0) {
-    await syncEntityTaxonomyValues(orgId, 'service', service.id, taxonomyTermIds)
-  }
+    if (taxonomyTermIds.length > 0) {
+      await syncEntityTaxonomyValues(tx, orgId, 'service', service.id, taxonomyTermIds)
+    }
 
-  await writeAuditLog({
-    action: 'service.create',
-    entityType: 'service',
-    entityId: service.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, description, serviceOwner, channels, status, visibility, personaIds },
+    await writeAuditLog(tx, {
+      action: 'service.create',
+      entityType: 'service',
+      entityId: service.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, description, serviceOwner, channels, status, visibility, personaIds },
+    })
   })
 }
 
@@ -154,36 +156,38 @@ export async function editService(serviceId: string, formData: FormData) {
   const before = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.update(services).set({
-    name,
-    description,
-    serviceOwner,
-    channels,
-    status,
-    visibility,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(services.id, serviceId), eq(services.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(services).set({
+      name,
+      description,
+      serviceOwner,
+      channels,
+      status,
+      visibility,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(services.id, serviceId), eq(services.organizationId, orgId)))
 
-  // Replace persona links
-  await db.delete(servicePersonas).where(eq(servicePersonas.serviceId, serviceId))
-  if (personaIds.length > 0) {
-    await db.insert(servicePersonas).values(
-      personaIds.map(personaId => ({ serviceId, personaId }))
-    )
-  }
+    // Replace persona links
+    await tx.delete(servicePersonas).where(eq(servicePersonas.serviceId, serviceId))
+    if (personaIds.length > 0) {
+      await tx.insert(servicePersonas).values(
+        personaIds.map(personaId => ({ serviceId, personaId }))
+      )
+    }
 
-  // Replace taxonomy values
-  await syncEntityTaxonomyValues(orgId, 'service', serviceId, taxonomyTermIds)
+    // Replace taxonomy values
+    await syncEntityTaxonomyValues(tx, orgId, 'service', serviceId, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'service.edit',
-    entityType: 'service',
-    entityId: serviceId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name, status: before?.status, visibility: before?.visibility },
-    after: { name, description, serviceOwner, channels, status, visibility, personaIds },
+    await writeAuditLog(tx, {
+      action: 'service.edit',
+      entityType: 'service',
+      entityId: serviceId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name, status: before?.status, visibility: before?.visibility },
+      after: { name, description, serviceOwner, channels, status, visibility, personaIds },
+    })
   })
 }
 
@@ -194,24 +198,26 @@ export async function deleteService(serviceId: string) {
   const before = await db.query.services.findFirst({ where: eq(services.id, serviceId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(entityTaxonomyValues).where(
-    and(
-      eq(entityTaxonomyValues.organizationId, orgId),
-      eq(entityTaxonomyValues.entityType, 'service'),
-      eq(entityTaxonomyValues.entityId, serviceId),
+  await db.transaction(async (tx) => {
+    await tx.delete(entityTaxonomyValues).where(
+      and(
+        eq(entityTaxonomyValues.organizationId, orgId),
+        eq(entityTaxonomyValues.entityType, 'service'),
+        eq(entityTaxonomyValues.entityId, serviceId),
+      )
     )
-  )
 
-  await db.delete(services).where(
-    and(eq(services.id, serviceId), eq(services.organizationId, orgId))
-  )
+    await tx.delete(services).where(
+      and(eq(services.id, serviceId), eq(services.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'service.delete',
-    entityType: 'service',
-    entityId: serviceId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name },
+    await writeAuditLog(tx, {
+      action: 'service.delete',
+      entityType: 'service',
+      entityId: serviceId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name },
+    })
   })
 }

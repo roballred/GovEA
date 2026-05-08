@@ -84,32 +84,36 @@ export async function createGlossaryTerm(formData: FormData) {
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
 
-  const [entry] = await db.insert(glossaryTerms).values({
-    term, definition, definitionSource, definitionSourceUrl,
-    domain, notes, status, visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
-
-  // Insert reference sources if provided — validate each URL before storage
+  // Parse sources outside the transaction so a JSON parse error doesn't
+  // happen inside the tx callback.
   const sourcesJson = formData.get('sources') as string | null
-  if (sourcesJson) {
-    const sources: { name: string; url?: string; definition: string }[] = JSON.parse(sourcesJson)
-    if (sources.length > 0) {
-      await db.insert(glossaryTermSources).values(
-        sources.map(s => ({ termId: entry.id, name: s.name, url: validateWebUrl(s.url ?? null), definition: s.definition }))
+  const parsedSources: { name: string; url?: string; definition: string }[] | null =
+    sourcesJson ? JSON.parse(sourcesJson) : null
+
+  await db.transaction(async (tx) => {
+    const [entry] = await tx.insert(glossaryTerms).values({
+      term, definition, definitionSource, definitionSourceUrl,
+      domain, notes, status, visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
+
+    // Insert reference sources if provided — validate each URL before storage
+    if (parsedSources && parsedSources.length > 0) {
+      await tx.insert(glossaryTermSources).values(
+        parsedSources.map(s => ({ termId: entry.id, name: s.name, url: validateWebUrl(s.url ?? null), definition: s.definition }))
       )
     }
-  }
 
-  await writeAuditLog({
-    action: 'glossary.create',
-    entityType: 'glossary',
-    entityId: entry.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { term, status, visibility },
+    await writeAuditLog(tx, {
+      action: 'glossary.create',
+      entityType: 'glossary',
+      entityId: entry.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { term, status, visibility },
+    })
   })
 }
 
@@ -129,33 +133,37 @@ export async function editGlossaryTerm(termId: string, formData: FormData) {
   const before = await db.query.glossaryTerms.findFirst({ where: eq(glossaryTerms.id, termId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.update(glossaryTerms).set({
-    term, definition, definitionSource, definitionSourceUrl,
-    domain, notes, status, visibility,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(glossaryTerms.id, termId), eq(glossaryTerms.organizationId, orgId)))
-
-  // Replace reference sources: delete all existing, re-insert — validate each URL
   const sourcesJson = formData.get('sources') as string | null
-  if (sourcesJson !== null) {
-    await db.delete(glossaryTermSources).where(eq(glossaryTermSources.termId, termId))
-    const sources: { name: string; url?: string; definition: string }[] = JSON.parse(sourcesJson)
-    if (sources.length > 0) {
-      await db.insert(glossaryTermSources).values(
-        sources.map(s => ({ termId, name: s.name, url: validateWebUrl(s.url ?? null), definition: s.definition }))
-      )
-    }
-  }
+  const parsedSources: { name: string; url?: string; definition: string }[] | null =
+    sourcesJson !== null ? JSON.parse(sourcesJson) : null
 
-  await writeAuditLog({
-    action: 'glossary.edit',
-    entityType: 'glossary',
-    entityId: termId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { term: before?.term, status: before?.status },
-    after: { term, status, visibility },
+  await db.transaction(async (tx) => {
+    await tx.update(glossaryTerms).set({
+      term, definition, definitionSource, definitionSourceUrl,
+      domain, notes, status, visibility,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(glossaryTerms.id, termId), eq(glossaryTerms.organizationId, orgId)))
+
+    // Replace reference sources: delete all existing, re-insert — validate each URL
+    if (parsedSources !== null) {
+      await tx.delete(glossaryTermSources).where(eq(glossaryTermSources.termId, termId))
+      if (parsedSources.length > 0) {
+        await tx.insert(glossaryTermSources).values(
+          parsedSources.map(s => ({ termId, name: s.name, url: validateWebUrl(s.url ?? null), definition: s.definition }))
+        )
+      }
+    }
+
+    await writeAuditLog(tx, {
+      action: 'glossary.edit',
+      entityType: 'glossary',
+      entityId: termId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { term: before?.term, status: before?.status },
+      after: { term, status, visibility },
+    })
   })
 }
 
@@ -166,16 +174,18 @@ export async function deleteGlossaryTerm(termId: string) {
   const before = await db.query.glossaryTerms.findFirst({ where: eq(glossaryTerms.id, termId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(glossaryTerms).where(
-    and(eq(glossaryTerms.id, termId), eq(glossaryTerms.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(glossaryTerms).where(
+      and(eq(glossaryTerms.id, termId), eq(glossaryTerms.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'glossary.delete',
-    entityType: 'glossary',
-    entityId: termId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { term: before?.term },
+    await writeAuditLog(tx, {
+      action: 'glossary.delete',
+      entityType: 'glossary',
+      entityId: termId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { term: before?.term },
+    })
   })
 }

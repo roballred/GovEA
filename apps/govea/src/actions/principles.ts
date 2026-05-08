@@ -24,11 +24,13 @@ async function requireAdmin() {
   return session
 }
 
-async function insertJunctions(principleId: string, adrIds: string[], capabilityIds: string[]) {
+type DBOrTx = Pick<typeof db, 'insert'>
+
+async function insertJunctions(tx: DBOrTx, principleId: string, adrIds: string[], capabilityIds: string[]) {
   if (adrIds.length > 0)
-    await db.insert(principleAdrs).values(adrIds.map(adrId => ({ principleId, adrId }))).onConflictDoNothing()
+    await tx.insert(principleAdrs).values(adrIds.map(adrId => ({ principleId, adrId }))).onConflictDoNothing()
   if (capabilityIds.length > 0)
-    await db.insert(principleCapabilities).values(capabilityIds.map(capabilityId => ({ principleId, capabilityId }))).onConflictDoNothing()
+    await tx.insert(principleCapabilities).values(capabilityIds.map(capabilityId => ({ principleId, capabilityId }))).onConflictDoNothing()
 }
 
 export async function getPrinciples() {
@@ -98,25 +100,27 @@ export async function createPrinciple(formData: FormData) {
   const adrIds = formData.getAll('adrIds') as string[]
   const capabilityIds = formData.getAll('capabilityIds') as string[]
 
-  const [principle] = await db.insert(principles).values({
-    name, description, title, rationale, implications, principleType, status, visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [principle] = await tx.insert(principles).values({
+      name, description, title, rationale, implications, principleType, status, visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  await insertJunctions(principle.id, adrIds, capabilityIds)
+    await insertJunctions(tx, principle.id, adrIds, capabilityIds)
 
-  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
-  await syncEntityTaxonomyValues(orgId, 'principle', principle.id, taxonomyTermIds)
+    const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+    await syncEntityTaxonomyValues(tx, orgId, 'principle', principle.id, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'principle.create',
-    entityType: 'principle',
-    entityId: principle.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, status, visibility },
+    await writeAuditLog(tx, {
+      action: 'principle.create',
+      entityType: 'principle',
+      entityId: principle.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, status, visibility },
+    })
   })
 }
 
@@ -138,27 +142,29 @@ export async function editPrinciple(principleId: string, formData: FormData) {
   const before = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.update(principles).set({
-    name, description, title, rationale, implications, principleType, status, visibility,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(principles.id, principleId), eq(principles.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(principles).set({
+      name, description, title, rationale, implications, principleType, status, visibility,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(principles.id, principleId), eq(principles.organizationId, orgId)))
 
-  await db.delete(principleAdrs).where(eq(principleAdrs.principleId, principleId))
-  await db.delete(principleCapabilities).where(eq(principleCapabilities.principleId, principleId))
-  await insertJunctions(principleId, adrIds, capabilityIds)
+    await tx.delete(principleAdrs).where(eq(principleAdrs.principleId, principleId))
+    await tx.delete(principleCapabilities).where(eq(principleCapabilities.principleId, principleId))
+    await insertJunctions(tx, principleId, adrIds, capabilityIds)
 
-  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
-  await syncEntityTaxonomyValues(orgId, 'principle', principleId, taxonomyTermIds)
+    const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+    await syncEntityTaxonomyValues(tx, orgId, 'principle', principleId, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'principle.edit',
-    entityType: 'principle',
-    entityId: principleId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name, status: before?.status },
-    after: { name, status, visibility },
+    await writeAuditLog(tx, {
+      action: 'principle.edit',
+      entityType: 'principle',
+      entityId: principleId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name, status: before?.status },
+      after: { name, status, visibility },
+    })
   })
 }
 
@@ -169,20 +175,22 @@ export async function deletePrinciple(principleId: string) {
   const before = await db.query.principles.findFirst({ where: eq(principles.id, principleId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(entityTaxonomyValues).where(
-    and(eq(entityTaxonomyValues.entityType, 'principle'), eq(entityTaxonomyValues.entityId, principleId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(entityTaxonomyValues).where(
+      and(eq(entityTaxonomyValues.entityType, 'principle'), eq(entityTaxonomyValues.entityId, principleId))
+    )
 
-  await db.delete(principles).where(
-    and(eq(principles.id, principleId), eq(principles.organizationId, orgId))
-  )
+    await tx.delete(principles).where(
+      and(eq(principles.id, principleId), eq(principles.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'principle.delete',
-    entityType: 'principle',
-    entityId: principleId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { title: before?.title },
+    await writeAuditLog(tx, {
+      action: 'principle.delete',
+      entityType: 'principle',
+      entityId: principleId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { title: before?.title },
+    })
   })
 }

@@ -163,41 +163,45 @@ export async function createCapability(formData: FormData) {
     await assertEntityInOrg('capability', parentId, orgId)
   }
 
-  const [capability] = await db.insert(capabilities).values({
-    name,
-    description,
-    domain,
-    behaviors,
-    rules,
-    capabilityType,
-    status,
-    visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  // Mutation + audit are wrapped in a single transaction so a DB-layer audit
+  // failure rolls back the capability insert and its junction rows (#416).
+  await db.transaction(async (tx) => {
+    const [capability] = await tx.insert(capabilities).values({
+      name,
+      description,
+      domain,
+      behaviors,
+      rules,
+      capabilityType,
+      status,
+      visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  if (personaIds.length > 0) {
-    await db.insert(capabilityPersonas).values(
-      personaIds.map(personaId => ({ capabilityId: capability.id, personaId }))
-    )
-  }
+    if (personaIds.length > 0) {
+      await tx.insert(capabilityPersonas).values(
+        personaIds.map(personaId => ({ capabilityId: capability.id, personaId }))
+      )
+    }
 
-  if (parentId) {
-    await db.insert(capabilityRelationships).values({ parentId, childId: capability.id }).onConflictDoNothing()
-  }
+    if (parentId) {
+      await tx.insert(capabilityRelationships).values({ parentId, childId: capability.id }).onConflictDoNothing()
+    }
 
-  if (taxonomyTermIds.length > 0) {
-    await syncEntityTaxonomyValues(orgId, 'capability', capability.id, taxonomyTermIds)
-  }
+    if (taxonomyTermIds.length > 0) {
+      await syncEntityTaxonomyValues(tx, orgId, 'capability', capability.id, taxonomyTermIds)
+    }
 
-  await writeAuditLog({
-    action: 'capability.create',
-    entityType: 'capability',
-    entityId: capability.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
+    await writeAuditLog(tx, {
+      action: 'capability.create',
+      entityType: 'capability',
+      entityId: capability.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
+    })
   })
 }
 
@@ -229,51 +233,55 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     await assertEntityInOrg('capability', parentId, orgId)
   }
 
-  await db.update(capabilities).set({
-    name,
-    description,
-    domain,
-    behaviors,
-    rules,
-    capabilityType,
-    status,
-    visibility,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId)))
+  // Mutation + audit + cross-org-link flag/clear are all in one transaction
+  // so a failure anywhere rolls back the entire edit (#416).
+  await db.transaction(async (tx) => {
+    await tx.update(capabilities).set({
+      name,
+      description,
+      domain,
+      behaviors,
+      rules,
+      capabilityType,
+      status,
+      visibility,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId)))
 
-  // Replace persona links
-  await db.delete(capabilityPersonas).where(eq(capabilityPersonas.capabilityId, capabilityId))
-  if (personaIds.length > 0) {
-    await db.insert(capabilityPersonas).values(
-      personaIds.map(personaId => ({ capabilityId, personaId }))
-    )
-  }
+    // Replace persona links
+    await tx.delete(capabilityPersonas).where(eq(capabilityPersonas.capabilityId, capabilityId))
+    if (personaIds.length > 0) {
+      await tx.insert(capabilityPersonas).values(
+        personaIds.map(personaId => ({ capabilityId, personaId }))
+      )
+    }
 
-  // Replace parent relationship (remove existing, add new if set)
-  await db.delete(capabilityRelationships).where(eq(capabilityRelationships.childId, capabilityId))
-  if (parentId) {
-    await db.insert(capabilityRelationships).values({ parentId, childId: capabilityId }).onConflictDoNothing()
-  }
+    // Replace parent relationship (remove existing, add new if set)
+    await tx.delete(capabilityRelationships).where(eq(capabilityRelationships.childId, capabilityId))
+    if (parentId) {
+      await tx.insert(capabilityRelationships).values({ parentId, childId: capabilityId }).onConflictDoNothing()
+    }
 
-  await syncEntityTaxonomyValues(orgId, 'capability', capabilityId, taxonomyTermIds)
+    await syncEntityTaxonomyValues(tx, orgId, 'capability', capabilityId, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'capability.edit',
-    entityType: 'capability',
-    entityId: capabilityId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name, status: before?.status, visibility: before?.visibility },
-    after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
+    await writeAuditLog(tx, {
+      action: 'capability.edit',
+      entityType: 'capability',
+      entityId: capabilityId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name, status: before?.status, visibility: before?.visibility },
+      after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
+    })
+
+    // Flag or clear cross-org links when visibility changes.
+    const prevVis = before?.visibility
+    const visDropped = (prevVis === 'connections' || prevVis === 'instance') && visibility === 'org'
+    const visRaised = prevVis === 'org' && (visibility === 'connections' || visibility === 'instance')
+    if (visDropped) await flagLinksForVisibilityDrop(tx, 'capability', capabilityId, `"${name}" visibility was restricted to org-only — this link may no longer be accessible to the other org`)
+    if (visRaised)  await clearLinksFlag(tx, 'capability', capabilityId)
   })
-
-  // Flag or clear cross-org links when visibility changes.
-  const prevVis = before?.visibility
-  const visDropped = (prevVis === 'connections' || prevVis === 'instance') && visibility === 'org'
-  const visRaised = prevVis === 'org' && (visibility === 'connections' || visibility === 'instance')
-  if (visDropped) await flagLinksForVisibilityDrop('capability', capabilityId, `"${name}" visibility was restricted to org-only — this link may no longer be accessible to the other org`)
-  if (visRaised)  await clearLinksFlag('capability', capabilityId)
 }
 
 export async function deleteCapability(capabilityId: string) {
@@ -283,21 +291,23 @@ export async function deleteCapability(capabilityId: string) {
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(entityTaxonomyValues).where(
-    and(eq(entityTaxonomyValues.entityType, 'capability'), eq(entityTaxonomyValues.entityId, capabilityId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(entityTaxonomyValues).where(
+      and(eq(entityTaxonomyValues.entityType, 'capability'), eq(entityTaxonomyValues.entityId, capabilityId))
+    )
 
-  await db.delete(capabilities).where(
-    and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId))
-  )
+    await tx.delete(capabilities).where(
+      and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'capability.delete',
-    entityType: 'capability',
-    entityId: capabilityId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name },
+    await writeAuditLog(tx, {
+      action: 'capability.delete',
+      entityType: 'capability',
+      entityId: capabilityId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name },
+    })
   })
 }
 
@@ -309,18 +319,20 @@ export async function markCapabilityReviewed(capabilityId: string, _formData: Fo
   assertOwnership(record?.organizationId, orgId)
 
   const now = new Date()
-  await db.update(capabilities).set({
-    lastReviewedBy: session.user.id,
-    lastReviewedAt: now,
-  }).where(and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(capabilities).set({
+      lastReviewedBy: session.user.id,
+      lastReviewedAt: now,
+    }).where(and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'capability.reviewed',
-    entityType: 'capability',
-    entityId: capabilityId,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { lastReviewedAt: now.toISOString() },
+    await writeAuditLog(tx, {
+      action: 'capability.reviewed',
+      entityType: 'capability',
+      entityId: capabilityId,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { lastReviewedAt: now.toISOString() },
+    })
   })
 
   revalidatePath(`/capabilities/${capabilityId}`)

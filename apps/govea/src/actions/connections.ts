@@ -51,20 +51,22 @@ export async function requestConnection(targetOrgId: string) {
   })
   if (existing) throw new Error('Connection already exists or is pending')
 
-  const [connection] = await db.insert(orgConnections).values({
-    fromOrgId: orgId,
-    toOrgId: targetOrgId,
-    status: 'pending',
-    createdBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [connection] = await tx.insert(orgConnections).values({
+      fromOrgId: orgId,
+      toOrgId: targetOrgId,
+      status: 'pending',
+      createdBy: session.user.id,
+    }).returning()
 
-  await writeAuditLog({
-    action: 'connection.request',
-    entityType: 'org_connection',
-    entityId: connection.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { targetOrgId },
+    await writeAuditLog(tx, {
+      action: 'connection.request',
+      entityType: 'org_connection',
+      entityId: connection.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { targetOrgId },
+    })
   })
 }
 
@@ -78,15 +80,17 @@ export async function acceptConnection(connectionId: string) {
   })
   if (!connection) throw new Error('Connection not found or not authorized')
 
-  await db.update(orgConnections).set({ status: 'active', updatedAt: new Date() })
-    .where(eq(orgConnections.id, connectionId))
+  await db.transaction(async (tx) => {
+    await tx.update(orgConnections).set({ status: 'active', updatedAt: new Date() })
+      .where(eq(orgConnections.id, connectionId))
 
-  await writeAuditLog({
-    action: 'connection.accept',
-    entityType: 'org_connection',
-    entityId: connectionId,
-    userId: session.user.id,
-    organizationId: orgId,
+    await writeAuditLog(tx, {
+      action: 'connection.accept',
+      entityType: 'org_connection',
+      entityId: connectionId,
+      userId: session.user.id,
+      organizationId: orgId,
+    })
   })
 }
 
@@ -100,15 +104,17 @@ export async function rejectConnection(connectionId: string) {
   })
   if (!connection) throw new Error('Connection not found or not authorized')
 
-  await db.update(orgConnections).set({ status: 'rejected', updatedAt: new Date() })
-    .where(eq(orgConnections.id, connectionId))
+  await db.transaction(async (tx) => {
+    await tx.update(orgConnections).set({ status: 'rejected', updatedAt: new Date() })
+      .where(eq(orgConnections.id, connectionId))
 
-  await writeAuditLog({
-    action: 'connection.reject',
-    entityType: 'org_connection',
-    entityId: connectionId,
-    userId: session.user.id,
-    organizationId: orgId,
+    await writeAuditLog(tx, {
+      action: 'connection.reject',
+      entityType: 'org_connection',
+      entityId: connectionId,
+      userId: session.user.id,
+      organizationId: orgId,
+    })
   })
 }
 
@@ -125,14 +131,16 @@ export async function removeConnection(connectionId: string) {
   })
   if (!connection) throw new Error('Connection not found or not authorized')
 
-  await removeLinksForConnection(connection.fromOrgId, connection.toOrgId, session.user.id, orgId)
-  await db.delete(orgConnections).where(eq(orgConnections.id, connectionId))
+  await db.transaction(async (tx) => {
+    await removeLinksForConnection(tx, connection.fromOrgId, connection.toOrgId, session.user.id, orgId)
+    await tx.delete(orgConnections).where(eq(orgConnections.id, connectionId))
 
-  await writeAuditLog({
-    action: 'connection.remove',
-    entityType: 'org_connection',
-    entityId: connectionId,
-    userId: session.user.id,
-    organizationId: orgId,
+    await writeAuditLog(tx, {
+      action: 'connection.remove',
+      entityType: 'org_connection',
+      entityId: connectionId,
+      userId: session.user.id,
+      organizationId: orgId,
+    })
   })
 }

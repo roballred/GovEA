@@ -125,38 +125,40 @@ export async function createApplication(formData: FormData) {
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
 
-  const [application] = await db.insert(applications).values({
-    name,
-    description,
-    vendor,
-    version,
-    hostingModel,
-    lifecycleStatus,
-    status,
-    visibility,
-    customData,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [application] = await tx.insert(applications).values({
+      name,
+      description,
+      vendor,
+      version,
+      hostingModel,
+      lifecycleStatus,
+      status,
+      visibility,
+      customData,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  if (capabilityIds.length > 0) {
-    await db.insert(applicationCapabilities).values(
-      capabilityIds.map(capabilityId => ({ applicationId: application.id, capabilityId }))
-    )
-  }
+    if (capabilityIds.length > 0) {
+      await tx.insert(applicationCapabilities).values(
+        capabilityIds.map(capabilityId => ({ applicationId: application.id, capabilityId }))
+      )
+    }
 
-  if (taxonomyTermIds.length > 0) {
-    await syncEntityTaxonomyValues(orgId, 'application', application.id, taxonomyTermIds)
-  }
+    if (taxonomyTermIds.length > 0) {
+      await syncEntityTaxonomyValues(tx, orgId, 'application', application.id, taxonomyTermIds)
+    }
 
-  await writeAuditLog({
-    action: 'application.create',
-    entityType: 'application',
-    entityId: application.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
+    await writeAuditLog(tx, {
+      action: 'application.create',
+      entityType: 'application',
+      entityId: application.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
+    })
   })
 }
 
@@ -181,37 +183,39 @@ export async function editApplication(applicationId: string, formData: FormData)
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
 
-  await db.update(applications).set({
-    name,
-    description,
-    vendor,
-    version,
-    hostingModel,
-    lifecycleStatus,
-    status,
-    visibility,
-    customData,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(applications.id, applicationId), eq(applications.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(applications).set({
+      name,
+      description,
+      vendor,
+      version,
+      hostingModel,
+      lifecycleStatus,
+      status,
+      visibility,
+      customData,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(applications.id, applicationId), eq(applications.organizationId, orgId)))
 
-  await db.delete(applicationCapabilities).where(eq(applicationCapabilities.applicationId, applicationId))
-  if (capabilityIds.length > 0) {
-    await db.insert(applicationCapabilities).values(
-      capabilityIds.map(capabilityId => ({ applicationId, capabilityId }))
-    )
-  }
+    await tx.delete(applicationCapabilities).where(eq(applicationCapabilities.applicationId, applicationId))
+    if (capabilityIds.length > 0) {
+      await tx.insert(applicationCapabilities).values(
+        capabilityIds.map(capabilityId => ({ applicationId, capabilityId }))
+      )
+    }
 
-  await syncEntityTaxonomyValues(orgId, 'application', applicationId, taxonomyTermIds)
+    await syncEntityTaxonomyValues(tx, orgId, 'application', applicationId, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'application.edit',
-    entityType: 'application',
-    entityId: applicationId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name, status: before?.status, visibility: before?.visibility },
-    after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
+    await writeAuditLog(tx, {
+      action: 'application.edit',
+      entityType: 'application',
+      entityId: applicationId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name, status: before?.status, visibility: before?.visibility },
+      after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
+    })
   })
 }
 
@@ -222,25 +226,27 @@ export async function deleteApplication(applicationId: string) {
   const before = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(entityTaxonomyValues).where(
-    and(
-      eq(entityTaxonomyValues.organizationId, orgId),
-      eq(entityTaxonomyValues.entityType, 'application'),
-      eq(entityTaxonomyValues.entityId, applicationId),
+  await db.transaction(async (tx) => {
+    await tx.delete(entityTaxonomyValues).where(
+      and(
+        eq(entityTaxonomyValues.organizationId, orgId),
+        eq(entityTaxonomyValues.entityType, 'application'),
+        eq(entityTaxonomyValues.entityId, applicationId),
+      )
     )
-  )
 
-  await db.delete(applications).where(
-    and(eq(applications.id, applicationId), eq(applications.organizationId, orgId))
-  )
+    await tx.delete(applications).where(
+      and(eq(applications.id, applicationId), eq(applications.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'application.delete',
-    entityType: 'application',
-    entityId: applicationId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name },
+    await writeAuditLog(tx, {
+      action: 'application.delete',
+      entityType: 'application',
+      entityId: applicationId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name },
+    })
   })
 }
 
@@ -252,18 +258,20 @@ export async function markApplicationReviewed(applicationId: string, _formData: 
   assertOwnership(record?.organizationId, orgId)
 
   const now = new Date()
-  await db.update(applications).set({
-    lastReviewedBy: session.user.id,
-    lastReviewedAt: now,
-  }).where(and(eq(applications.id, applicationId), eq(applications.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(applications).set({
+      lastReviewedBy: session.user.id,
+      lastReviewedAt: now,
+    }).where(and(eq(applications.id, applicationId), eq(applications.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'application.reviewed',
-    entityType: 'application',
-    entityId: applicationId,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { lastReviewedAt: now.toISOString() },
+    await writeAuditLog(tx, {
+      action: 'application.reviewed',
+      entityType: 'application',
+      entityId: applicationId,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { lastReviewedAt: now.toISOString() },
+    })
   })
 
   revalidatePath(`/applications/${applicationId}`)
@@ -338,6 +346,21 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
   let created = 0, updated = 0, skipped = 0
   const errors: string[] = []
 
+  // Validate all rows up front so counters reflect a complete pass before opening a tx.
+  type ValidRow = {
+    name: string
+    description: string | null
+    vendor: string | null
+    version: string | null
+    hostingModel: string | null
+    lifecycleStatus: 'active' | 'sunset' | 'decommissioned' | 'planned'
+    status: 'draft' | 'published' | 'archived'
+    visibility: 'org' | 'connections' | 'instance'
+    customData: Record<string, string>
+    existingId: string | undefined
+  }
+  const validRows: ValidRow[] = []
+
   for (const [i, row] of rows.entries()) {
     const rowNum = i + 2 // 1-indexed, accounting for header row
     const name = row['name']?.trim()
@@ -368,50 +391,63 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
     }
 
     const existingId = existingByName.get(name.toLowerCase())
-
-    if (!dryRun) {
-      if (existingId) {
-        await db.update(applications).set({
-          description: row['description'] || null,
-          vendor: row['vendor'] || null,
-          version: row['version'] || null,
-          hostingModel: row['hosting_model'] || null,
-          lifecycleStatus: lifecycleStatus as 'active' | 'sunset' | 'decommissioned' | 'planned',
-          status: status as 'draft' | 'published' | 'archived',
-          visibility: visibility as 'org' | 'connections' | 'instance',
-          customData,
-          updatedBy: session.user.id,
-          updatedAt: new Date(),
-        }).where(and(eq(applications.id, existingId), eq(applications.organizationId, orgId)))
-      } else {
-        await db.insert(applications).values({
-          name,
-          description: row['description'] || null,
-          vendor: row['vendor'] || null,
-          version: row['version'] || null,
-          hostingModel: row['hosting_model'] || null,
-          lifecycleStatus: lifecycleStatus as 'active' | 'sunset' | 'decommissioned' | 'planned',
-          status: status as 'draft' | 'published' | 'archived',
-          visibility: visibility as 'org' | 'connections' | 'instance',
-          customData,
-          organizationId: orgId,
-          createdBy: session.user.id,
-          updatedBy: session.user.id,
-        })
-      }
-    }
-
     if (existingId) updated++; else created++
+    validRows.push({
+      name,
+      description: row['description'] || null,
+      vendor: row['vendor'] || null,
+      version: row['version'] || null,
+      hostingModel: row['hosting_model'] || null,
+      lifecycleStatus: lifecycleStatus as 'active' | 'sunset' | 'decommissioned' | 'planned',
+      status: status as 'draft' | 'published' | 'archived',
+      visibility: visibility as 'org' | 'connections' | 'instance',
+      customData,
+      existingId,
+    })
   }
 
   if (!dryRun && (created > 0 || updated > 0)) {
-    await writeAuditLog({
-      action: 'application.import',
-      entityType: 'application',
-      entityId: orgId,
-      userId: session.user.id,
-      organizationId: orgId,
-      after: { created, updated, skipped, dryRun },
+    await db.transaction(async (tx) => {
+      for (const r of validRows) {
+        if (r.existingId) {
+          await tx.update(applications).set({
+            description: r.description,
+            vendor: r.vendor,
+            version: r.version,
+            hostingModel: r.hostingModel,
+            lifecycleStatus: r.lifecycleStatus,
+            status: r.status,
+            visibility: r.visibility,
+            customData: r.customData,
+            updatedBy: session.user.id,
+            updatedAt: new Date(),
+          }).where(and(eq(applications.id, r.existingId), eq(applications.organizationId, orgId)))
+        } else {
+          await tx.insert(applications).values({
+            name: r.name,
+            description: r.description,
+            vendor: r.vendor,
+            version: r.version,
+            hostingModel: r.hostingModel,
+            lifecycleStatus: r.lifecycleStatus,
+            status: r.status,
+            visibility: r.visibility,
+            customData: r.customData,
+            organizationId: orgId,
+            createdBy: session.user.id,
+            updatedBy: session.user.id,
+          })
+        }
+      }
+
+      await writeAuditLog(tx, {
+        action: 'application.import',
+        entityType: 'application',
+        entityId: orgId,
+        userId: session.user.id,
+        organizationId: orgId,
+        after: { created, updated, skipped, dryRun },
+      })
     })
   }
 

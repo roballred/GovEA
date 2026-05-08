@@ -87,30 +87,32 @@ export async function createPersona(formData: FormData) {
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const tagIds = formData.getAll('tagIds') as string[]
 
-  const [persona] = await db.insert(personas).values({
-    name,
-    description,
-    type,
-    status,
-    visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [persona] = await tx.insert(personas).values({
+      name,
+      description,
+      type,
+      status,
+      visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  if (tagIds.length > 0) {
-    await db.insert(personaTags).values(
-      tagIds.map(tagId => ({ personaId: persona.id, tagId }))
-    )
-  }
+    if (tagIds.length > 0) {
+      await tx.insert(personaTags).values(
+        tagIds.map(tagId => ({ personaId: persona.id, tagId }))
+      )
+    }
 
-  await writeAuditLog({
-    action: 'persona.create',
-    entityType: 'persona',
-    entityId: persona.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, description, type, status, tagIds },
+    await writeAuditLog(tx, {
+      action: 'persona.create',
+      entityType: 'persona',
+      entityId: persona.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, description, type, status, tagIds },
+    })
   })
 }
 
@@ -128,40 +130,42 @@ export async function editPersona(personaId: string, formData: FormData) {
   const before = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.update(personas).set({
-    name,
-    description,
-    type,
-    status,
-    visibility,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(personas).set({
+      name,
+      description,
+      type,
+      status,
+      visibility,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
 
-  // Replace junction rows
-  await db.delete(personaTags).where(eq(personaTags.personaId, personaId))
-  if (tagIds.length > 0) {
-    await db.insert(personaTags).values(
-      tagIds.map(tagId => ({ personaId, tagId }))
-    )
-  }
+    // Replace junction rows
+    await tx.delete(personaTags).where(eq(personaTags.personaId, personaId))
+    if (tagIds.length > 0) {
+      await tx.insert(personaTags).values(
+        tagIds.map(tagId => ({ personaId, tagId }))
+      )
+    }
 
-  await writeAuditLog({
-    action: 'persona.edit',
-    entityType: 'persona',
-    entityId: personaId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name, description: before?.description, type: before?.type, status: before?.status },
-    after: { name, description, type, status, tagIds },
+    await writeAuditLog(tx, {
+      action: 'persona.edit',
+      entityType: 'persona',
+      entityId: personaId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name, description: before?.description, type: before?.type, status: before?.status },
+      after: { name, description, type, status, tagIds },
+    })
+
+    // Flag or clear cross-org links when visibility changes.
+    const prevVis = before?.visibility
+    const visDropped = (prevVis === 'connections' || prevVis === 'instance') && visibility === 'org'
+    const visRaised = prevVis === 'org' && (visibility === 'connections' || visibility === 'instance')
+    if (visDropped) await flagLinksForVisibilityDrop(tx, 'persona', personaId, `"${name}" visibility was restricted to org-only — this link may no longer be accessible to the other org`)
+    if (visRaised)  await clearLinksFlag(tx, 'persona', personaId)
   })
-
-  // Flag or clear cross-org links when visibility changes.
-  const prevVis = before?.visibility
-  const visDropped = (prevVis === 'connections' || prevVis === 'instance') && visibility === 'org'
-  const visRaised = prevVis === 'org' && (visibility === 'connections' || visibility === 'instance')
-  if (visDropped) await flagLinksForVisibilityDrop('persona', personaId, `"${name}" visibility was restricted to org-only — this link may no longer be accessible to the other org`)
-  if (visRaised)  await clearLinksFlag('persona', personaId)
 }
 
 export async function deletePersona(personaId: string) {
@@ -171,17 +175,19 @@ export async function deletePersona(personaId: string) {
   const before = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(personas).where(
-    and(eq(personas.id, personaId), eq(personas.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(personas).where(
+      and(eq(personas.id, personaId), eq(personas.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'persona.delete',
-    entityType: 'persona',
-    entityId: personaId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name },
+    await writeAuditLog(tx, {
+      action: 'persona.delete',
+      entityType: 'persona',
+      entityId: personaId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name },
+    })
   })
 }
 
@@ -193,18 +199,20 @@ export async function markPersonaReviewed(personaId: string, _formData: FormData
   assertOwnership(record?.organizationId, orgId)
 
   const now = new Date()
-  await db.update(personas).set({
-    lastReviewedBy: session.user.id,
-    lastReviewedAt: now,
-  }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(personas).set({
+      lastReviewedBy: session.user.id,
+      lastReviewedAt: now,
+    }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'persona.reviewed',
-    entityType: 'persona',
-    entityId: personaId,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { lastReviewedAt: now.toISOString() },
+    await writeAuditLog(tx, {
+      action: 'persona.reviewed',
+      entityType: 'persona',
+      entityId: personaId,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { lastReviewedAt: now.toISOString() },
+    })
   })
 
   revalidatePath(`/personas/${personaId}`)

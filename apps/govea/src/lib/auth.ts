@@ -49,7 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: eq(users.email, email),
         })
         if (!user || !user.passwordHash || user.isActive !== 'true') {
-          await writeAuditLog({
+          await writeAuditLog(db, {
             action: 'auth.login_failed',
             entityType: 'user',
             organizationId: user?.organizationId,
@@ -59,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         const valid = await bcrypt.compare(credentials.password as string, user.passwordHash)
         if (!valid) {
-          await writeAuditLog({
+          await writeAuditLog(db, {
             action: 'auth.login_failed',
             entityType: 'user',
             organizationId: user.organizationId,
@@ -145,17 +145,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         where: eq(users.id, user.id!),
       })
       if (dbUser && !dbUser.organizationId) {
-        await db.update(users).set({ isActive: 'false' }).where(eq(users.id, user.id!))
-        await writeAuditLog({
-          action: 'auth.sso_org_binding_failed',
-          entityType: 'user',
-          entityId: user.id,
-          metadata: { email: user.email, reason: 'no_organization_binding' },
+        await db.transaction(async (tx) => {
+          await tx.update(users).set({ isActive: 'false' }).where(eq(users.id, user.id!))
+          await writeAuditLog(tx, {
+            action: 'auth.sso_org_binding_failed',
+            entityType: 'user',
+            entityId: user.id,
+            metadata: { email: user.email, reason: 'no_organization_binding' },
+          })
         })
       }
     },
     async signIn({ user }) {
-      await writeAuditLog({
+      await writeAuditLog(db, {
         action: 'auth.login',
         entityType: 'user',
         entityId: user.id,
@@ -165,7 +167,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async signOut(message) {
       const token = 'token' in message ? message.token : null
-      await writeAuditLog({
+      await writeAuditLog(db, {
         action: 'auth.logout',
         entityType: 'user',
         entityId: token?.id as string | undefined,

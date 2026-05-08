@@ -135,22 +135,24 @@ export async function createTaxonomyTerm(formData: FormData) {
   const parentId = (formData.get('parentId') as string) || null
   const sortOrder = (formData.get('sortOrder') as string)?.trim() || null
 
-  const [entry] = await db.insert(taxonomyTerms).values({
-    organizationId: orgId,
-    name,
-    slug: toSlug(name),
-    description,
-    parentId,
-    sortOrder,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [entry] = await tx.insert(taxonomyTerms).values({
+      organizationId: orgId,
+      name,
+      slug: toSlug(name),
+      description,
+      parentId,
+      sortOrder,
+    }).returning()
 
-  await writeAuditLog({
-    action: 'taxonomy.create',
-    entityType: 'taxonomy_term',
-    entityId: entry.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, parentId },
+    await writeAuditLog(tx, {
+      action: 'taxonomy.create',
+      entityType: 'taxonomy_term',
+      entityId: entry.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, parentId },
+    })
   })
 }
 
@@ -167,18 +169,20 @@ export async function editTaxonomyTerm(termId: string, formData: FormData) {
   const description = (formData.get('description') as string)?.trim() || null
   const sortOrder = (formData.get('sortOrder') as string)?.trim() || null
 
-  await db.update(taxonomyTerms)
-    .set({ name, slug: toSlug(name), description, sortOrder, updatedAt: new Date() })
-    .where(and(eq(taxonomyTerms.id, termId), eq(taxonomyTerms.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(taxonomyTerms)
+      .set({ name, slug: toSlug(name), description, sortOrder, updatedAt: new Date() })
+      .where(and(eq(taxonomyTerms.id, termId), eq(taxonomyTerms.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'taxonomy.edit',
-    entityType: 'taxonomy_term',
-    entityId: termId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: existing?.name },
-    after: { name },
+    await writeAuditLog(tx, {
+      action: 'taxonomy.edit',
+      entityType: 'taxonomy_term',
+      entityId: termId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: existing?.name },
+      after: { name },
+    })
   })
 }
 
@@ -235,23 +239,25 @@ export async function deleteTaxonomyTerm(termId: string) {
     }
   }
 
-  // When deleting a type, also delete its values (not promote — orphaned values are useless)
-  // When deleting a value, just delete it
-  if (existing?.parentId === null) {
-    await db.delete(taxonomyTerms)
-      .where(and(eq(taxonomyTerms.parentId, termId), eq(taxonomyTerms.organizationId, orgId)))
-  }
+  await db.transaction(async (tx) => {
+    // When deleting a type, also delete its values (not promote — orphaned values are useless)
+    // When deleting a value, just delete it
+    if (existing?.parentId === null) {
+      await tx.delete(taxonomyTerms)
+        .where(and(eq(taxonomyTerms.parentId, termId), eq(taxonomyTerms.organizationId, orgId)))
+    }
 
-  await db.delete(taxonomyTerms)
-    .where(and(eq(taxonomyTerms.id, termId), eq(taxonomyTerms.organizationId, orgId)))
+    await tx.delete(taxonomyTerms)
+      .where(and(eq(taxonomyTerms.id, termId), eq(taxonomyTerms.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'taxonomy.delete',
-    entityType: 'taxonomy_term',
-    entityId: termId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: existing?.name },
+    await writeAuditLog(tx, {
+      action: 'taxonomy.delete',
+      entityType: 'taxonomy_term',
+      entityId: termId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: existing?.name },
+    })
   })
 }
 
@@ -363,48 +369,51 @@ export async function createDomainValue(name: string): Promise<string> {
 
   const trimmed = name.trim()
 
-  // Find or create the "Domain" type
-  let domainType = await db.query.taxonomyTerms.findFirst({
-    where: (t, { eq, isNull, and }) =>
-      and(eq(t.organizationId, orgId), isNull(t.parentId), eq(t.slug, 'domain')),
-  })
+  // Find or create the "Domain" type, then add the value, all in one transaction
+  // so the audit row is consistent with the inserted value (#416).
+  return db.transaction(async (tx) => {
+    let domainType = await tx.query.taxonomyTerms.findFirst({
+      where: (t, { eq, isNull, and }) =>
+        and(eq(t.organizationId, orgId), isNull(t.parentId), eq(t.slug, 'domain')),
+    })
 
-  if (!domainType) {
-    const [created] = await db.insert(taxonomyTerms).values({
+    if (!domainType) {
+      const [created] = await tx.insert(taxonomyTerms).values({
+        organizationId: orgId,
+        name: 'Domain',
+        slug: 'domain',
+        parentId: null,
+      }).returning()
+      domainType = created
+    }
+
+    // Avoid duplicates (case-insensitive)
+    const existing = await tx.query.taxonomyTerms.findFirst({
+      where: (t, { eq, and, sql }) =>
+        and(
+          eq(t.organizationId, orgId),
+          eq(t.parentId, domainType!.id),
+          sql`lower(${t.name}) = lower(${trimmed})`
+        ),
+    })
+    if (existing) return existing.name
+
+    const [entry] = await tx.insert(taxonomyTerms).values({
       organizationId: orgId,
-      name: 'Domain',
-      slug: 'domain',
-      parentId: null,
+      name: trimmed,
+      slug: toSlug(trimmed),
+      parentId: domainType.id,
     }).returning()
-    domainType = created
-  }
 
-  // Avoid duplicates (case-insensitive)
-  const existing = await db.query.taxonomyTerms.findFirst({
-    where: (t, { eq, and, sql }) =>
-      and(
-        eq(t.organizationId, orgId),
-        eq(t.parentId, domainType!.id),
-        sql`lower(${t.name}) = lower(${trimmed})`
-      ),
+    await writeAuditLog(tx, {
+      action: 'taxonomy.create',
+      entityType: 'taxonomy_term',
+      entityId: entry.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name: trimmed, parentId: domainType.id },
+    })
+
+    return entry.name
   })
-  if (existing) return existing.name
-
-  const [entry] = await db.insert(taxonomyTerms).values({
-    organizationId: orgId,
-    name: trimmed,
-    slug: toSlug(trimmed),
-    parentId: domainType.id,
-  }).returning()
-
-  await writeAuditLog({
-    action: 'taxonomy.create',
-    entityType: 'taxonomy_term',
-    entityId: entry.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name: trimmed, parentId: domainType.id },
-  })
-
-  return entry.name
 }
