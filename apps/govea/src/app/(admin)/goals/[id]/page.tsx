@@ -40,7 +40,7 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
   const orgId = session.user.organizationId!
   const canMutate = editor && goal.organizationId === orgId
 
-  const allObjectives = editor ? await getObjectives(orgId) : []
+  const allObjectives = editor ? await getObjectives() : []
 
   const addObjective = linkGoalObjective.bind(null, id)
   const removeObjective = unlinkGoalObjective.bind(null, id)

@@ -67,9 +67,13 @@ export async function getService(id: string) {
   return { ...service, capabilityApps, taxonomyValues, taxonomyDefinitions }
 }
 
-export async function getServices(organizationId: string, role?: string) {
+export async function getServices() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
-  const isViewer = role === 'viewer'
 
   return db.query.services.findMany({
     where: (s, { eq, or, and, inArray }) => {

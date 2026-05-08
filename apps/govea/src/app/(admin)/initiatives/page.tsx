@@ -13,9 +13,9 @@ export default async function InitiativesPage() {
   const role = session.user.role
 
   const [initiativeList, capabilityList, objectiveList, taxonomyDefinitions] = await Promise.all([
-    getInitiatives(orgId, role),
-    getCapabilities(orgId),
-    getObjectives(orgId),
+    getInitiatives(),
+    getCapabilities(),
+    getObjectives(),
     getEntityTaxonomyDefinitions(orgId, 'initiative'),
   ])
 

@@ -25,9 +25,13 @@ async function requireAdmin() {
 
 // ── Value Streams ─────────────────────────────────────────────────────────────
 
-export async function getValueStreams(organizationId: string, role?: string) {
+export async function getValueStreams() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
-  const isViewer = role === 'viewer'
 
   return db.query.valueStreams.findMany({
     where: (vs, { eq, or, and, inArray }) => {

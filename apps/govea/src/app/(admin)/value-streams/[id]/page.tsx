@@ -44,8 +44,8 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
 
   const [vs, capabilityList, allPersonas, enabledModules] = await Promise.all([
     getValueStream(id),
-    getCapabilities(orgId),
-    editor ? getPersonas(orgId) : Promise.resolve([]),
+    getCapabilities(),
+    editor ? getPersonas() : Promise.resolve([]),
     getEnabledModules(),
   ])
 

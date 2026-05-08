@@ -60,10 +60,10 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
 
   const [allCapabilities, allApplications, allInitiatives, allObjectives] = editor
     ? await Promise.all([
-        getCapabilities(orgId),
-        getApplications(orgId),
-        getInitiatives(orgId),
-        getObjectives(orgId),
+        getCapabilities(),
+        getApplications(),
+        getInitiatives(),
+        getObjectives(),
       ])
     : [[], [], [], []]
 

@@ -252,7 +252,7 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
 
   const orgId = session.user.organizationId!
   const role = session.user.role
-  const allInitiatives = await getInitiatives(orgId, role)
+  const allInitiatives = await getInitiatives()
   const hasInitiatives = allInitiatives.length > 0
 
   // Grid view: group by status in display order

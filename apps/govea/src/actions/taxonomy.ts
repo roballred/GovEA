@@ -29,7 +29,11 @@ function toSlug(name: string) {
 
 // ── Reads ─────────────────────────────────────────────────────────────────────
 
-export async function getTaxonomyTerms(organizationId: string) {
+export async function getTaxonomyTerms() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+
   return db.query.taxonomyTerms.findMany({
     where: (t, { eq }) => eq(t.organizationId, organizationId),
     orderBy: (t, { asc }) => [asc(t.domain), asc(t.sortOrder), asc(t.name)],
@@ -41,7 +45,11 @@ export async function getTaxonomyTerms(organizationId: string) {
  * These are the options shown in the capability/glossary domain selects.
  * Returns an empty array if no "Domain" type has been defined yet.
  */
-export async function getTaxonomyDomains(organizationId: string) {
+export async function getTaxonomyDomains() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+
   const domainType = await db.query.taxonomyTerms.findFirst({
     where: (t, { eq, isNull, and }) =>
       and(eq(t.organizationId, organizationId), isNull(t.parentId), eq(t.slug, 'domain')),
@@ -56,7 +64,11 @@ export async function getTaxonomyDomains(organizationId: string) {
 }
 
 /** Returns all terms for the taxonomy management page — types at top, values as children. */
-export async function getTaxonomyTermsWithChildren(organizationId: string) {
+export async function getTaxonomyTermsWithChildren() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+
   const allTerms = await db.query.taxonomyTerms.findMany({
     where: (t, { eq }) => eq(t.organizationId, organizationId),
     orderBy: (t, { asc }) => [asc(t.sortOrder), asc(t.name)],
@@ -75,7 +87,11 @@ export async function getTaxonomyTermsWithChildren(organizationId: string) {
  * Used by the taxonomy management page to show blocking warnings before deletion.
  * Returns an empty object if the "Principle Type" type doesn't exist or has no values.
  */
-export async function getPrincipleTypeValueUsage(organizationId: string): Promise<Record<string, number>> {
+export async function getPrincipleTypeValueUsage(): Promise<Record<string, number>> {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+
   const principleType = await db.query.taxonomyTerms.findFirst({
     where: (t, { eq, and, isNull }) =>
       and(eq(t.organizationId, organizationId), isNull(t.parentId), eq(t.slug, 'principle-type')),
@@ -240,7 +256,11 @@ export async function deleteTaxonomyTerm(termId: string) {
 }
 
 /** Returns values (children) of the "Principle Type" taxonomy type. */
-export async function getPrincipleTypes(organizationId: string) {
+export async function getPrincipleTypes() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+
   const type = await db.query.taxonomyTerms.findFirst({
     where: (t, { eq, and }) =>
       and(eq(t.organizationId, organizationId), isNull(t.parentId), eq(t.slug, 'principle-type')),
@@ -254,7 +274,11 @@ export async function getPrincipleTypes(organizationId: string) {
 }
 
 /** Returns values (children) of the "Persona Type" taxonomy type. */
-export async function getPersonaTypesFromTaxonomy(organizationId: string) {
+export async function getPersonaTypesFromTaxonomy() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+
   const type = await db.query.taxonomyTerms.findFirst({
     where: (t, { eq, and }) =>
       and(eq(t.organizationId, organizationId), isNull(t.parentId), eq(t.slug, 'persona-type')),
@@ -268,7 +292,11 @@ export async function getPersonaTypesFromTaxonomy(organizationId: string) {
 }
 
 /** Returns values (children) of the "Persona Tag" taxonomy type. */
-export async function getPersonaTagsFromTaxonomy(organizationId: string) {
+export async function getPersonaTagsFromTaxonomy() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+
   const type = await db.query.taxonomyTerms.findFirst({
     where: (t, { eq, and }) =>
       and(eq(t.organizationId, organizationId), isNull(t.parentId), eq(t.slug, 'persona-tag')),

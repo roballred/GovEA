@@ -11,9 +11,9 @@ export default async function PersonasPage() {
   const role = session.user.role
 
   const [personaList, typeList, tagList] = await Promise.all([
-    getPersonas(orgId, role),
-    getPersonaTypesFromTaxonomy(orgId),
-    getPersonaTagsFromTaxonomy(orgId),
+    getPersonas(),
+    getPersonaTypesFromTaxonomy(),
+    getPersonaTagsFromTaxonomy(),
   ])
 
   return (

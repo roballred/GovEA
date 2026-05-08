@@ -11,8 +11,8 @@ export default async function TaxonomyPage() {
   const role = session.user.role
 
   const [{ types, values }, principleTypeUsage, definitions] = await Promise.all([
-    getTaxonomyTermsWithChildren(orgId),
-    getPrincipleTypeValueUsage(orgId),
+    getTaxonomyTermsWithChildren(),
+    getPrincipleTypeValueUsage(),
     getAllEntityTaxonomyDefinitions(orgId),
   ])
 

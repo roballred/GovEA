@@ -9,7 +9,7 @@ export default async function ValueStreamsPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const valueStreamList = await getValueStreams(orgId, role)
+  const valueStreamList = await getValueStreams()
 
   return (
     <div className="space-y-6">

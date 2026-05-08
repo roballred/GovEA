@@ -31,9 +31,13 @@ async function insertJunctions(principleId: string, adrIds: string[], capability
     await db.insert(principleCapabilities).values(capabilityIds.map(capabilityId => ({ principleId, capabilityId }))).onConflictDoNothing()
 }
 
-export async function getPrinciples(orgId: string, role?: string) {
+export async function getPrinciples() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const orgId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(orgId)
-  const isViewer = role === 'viewer'
 
   return db.query.principles.findMany({
     where: (p, { eq, or, and, inArray }) => {

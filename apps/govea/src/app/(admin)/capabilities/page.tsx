@@ -12,9 +12,9 @@ export default async function CapabilitiesPage() {
   const role = session.user.role
 
   const [capabilityList, personaList, domainTerms, taxonomyDefinitions] = await Promise.all([
-    getCapabilities(orgId, role),
-    getPersonas(orgId, role),
-    getTaxonomyDomains(orgId),
+    getCapabilities(),
+    getPersonas(),
+    getTaxonomyDomains(),
     getEntityTaxonomyDefinitions(orgId, 'capability'),
   ])
 

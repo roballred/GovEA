@@ -48,9 +48,13 @@ export async function getPersona(id: string) {
   return persona
 }
 
-export async function getPersonas(organizationId: string, role?: string) {
+export async function getPersonas() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
-  const isViewer = role === 'viewer'
 
   return db.query.personas.findMany({
     where: (p, { eq, or, and, inArray }) => {

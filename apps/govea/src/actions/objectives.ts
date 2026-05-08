@@ -24,9 +24,13 @@ async function requireAdmin() {
   return session
 }
 
-export async function getObjectives(organizationId: string, role?: string) {
+export async function getObjectives() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
-  const isViewer = role === 'viewer'
 
   return db.query.strategicObjectives.findMany({
     where: (o, { eq, or, and, inArray }) => {

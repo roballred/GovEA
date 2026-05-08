@@ -12,8 +12,8 @@ export default async function ConnectionsPage() {
   const orgId = session.user.organizationId!
 
   const [connections, otherOrgs] = await Promise.all([
-    getConnections(orgId),
-    getOtherOrganizations(orgId),
+    getConnections(),
+    getOtherOrganizations(),
   ])
 
   return (

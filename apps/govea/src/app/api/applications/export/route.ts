@@ -69,7 +69,7 @@ export async function GET() {
   const orgId = session.user.organizationId!
 
   const [apps, fieldDefs, taxDefs] = await Promise.all([
-    getApplications(orgId),
+    getApplications(),
     getCustomFieldSchema(orgId, 'application'),
     getEntityTaxonomyDefinitions(orgId, 'application'),
   ])

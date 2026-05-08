@@ -24,9 +24,13 @@ async function requireAdmin() {
   return session
 }
 
-export async function getGlossaryTerms(orgId: string, role?: string) {
+export async function getGlossaryTerms() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const orgId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(orgId)
-  const isViewer = role === 'viewer'
 
   return db.query.glossaryTerms.findMany({
     where: (g, { eq, or, and, inArray }) => {

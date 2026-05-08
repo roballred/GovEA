@@ -82,9 +82,13 @@ export async function getCapability(id: string) {
   }
 }
 
-export async function getCapabilities(organizationId: string, role?: string) {
+export async function getCapabilities() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const organizationId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
   const connectedOrgIds = await getConnectedOrgIds(organizationId)
-  const isViewer = role === 'viewer'
 
   const rows = await db.query.capabilities.findMany({
     where: (c, { eq, or, and, inArray }) => {
