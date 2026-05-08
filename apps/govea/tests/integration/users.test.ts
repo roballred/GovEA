@@ -8,7 +8,7 @@
  *  - Audit log written with correct before/after for each mutation
  */
 import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { createUser, updateUserRole, deactivateUser, deleteUser, editUser } from '@/actions/users'
+import { createUser, updateUserRole, deactivateUser, deleteUser, editUser, getUsers } from '@/actions/users'
 import { db } from '@/db/client'
 import { users } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -59,6 +59,73 @@ describe('user management actions', () => {
 
   beforeEach(() => {
     mockAuth.mockResolvedValue(makeSession(admin))
+  })
+
+  // ── getUsers ───────────────────────────────────────────────────────────────
+  // Locks in the security fix from #411: server action requires admin session,
+  // ignores any caller-supplied parameter, and never returns passwordHash.
+
+  describe('getUsers', () => {
+    it('admin in own org receives the org user list', async () => {
+      const list = await getUsers()
+      const ids = list.map(u => u.id)
+      expect(ids).toContain(admin.id)
+      expect(ids).toContain(contributor.id)
+      expect(ids).toContain(viewer.id)
+    })
+
+    it('returned rows never include passwordHash or other secret fields', async () => {
+      const list = await getUsers()
+      expect(list.length).toBeGreaterThan(0)
+      for (const row of list) {
+        expect(row).not.toHaveProperty('passwordHash')
+        expect(row).not.toHaveProperty('emailVerified')
+        expect(row).not.toHaveProperty('image')
+      }
+    })
+
+    it('contributor session → throws Forbidden', async () => {
+      mockAuth.mockResolvedValue(makeSession(contributor))
+      await expect(getUsers()).rejects.toThrow('Forbidden')
+    })
+
+    it('viewer session → throws Forbidden', async () => {
+      mockAuth.mockResolvedValue(makeSession(viewer))
+      await expect(getUsers()).rejects.toThrow('Forbidden')
+    })
+
+    it('no session → redirects to /login', async () => {
+      mockAuth.mockResolvedValue(null)
+      await expect(getUsers()).rejects.toThrow('REDIRECT:/login')
+    })
+
+    it('cross-tenant isolation: admin only ever sees their own org users', async () => {
+      // Set up a second org with its own admin and a viewer
+      const otherOrg = await createTestOrg()
+      try {
+        const otherAdmin = await createTestUser(otherOrg.id, 'admin')
+        const otherViewer = await createTestUser(otherOrg.id, 'viewer')
+
+        // Even when authenticated as otherAdmin, getUsers returns only otherOrg
+        mockAuth.mockResolvedValue(makeSession(otherAdmin))
+        const otherList = await getUsers()
+        const otherIds = otherList.map(u => u.id)
+        expect(otherIds).toContain(otherAdmin.id)
+        expect(otherIds).toContain(otherViewer.id)
+        expect(otherIds).not.toContain(admin.id)
+        expect(otherIds).not.toContain(contributor.id)
+        expect(otherIds).not.toContain(viewer.id)
+
+        // And the original admin still sees only their own org
+        mockAuth.mockResolvedValue(makeSession(admin))
+        const ownList = await getUsers()
+        const ownIds = ownList.map(u => u.id)
+        expect(ownIds).not.toContain(otherAdmin.id)
+        expect(ownIds).not.toContain(otherViewer.id)
+      } finally {
+        await cleanupOrg(otherOrg.id)
+      }
+    })
   })
 
   // ── createUser ─────────────────────────────────────────────────────────────

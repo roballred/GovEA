@@ -9,7 +9,7 @@ export default async function UsersPage() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) redirect('/dashboard')
 
-  const userList = await getUsers(session.user.organizationId!)
+  const userList = await getUsers()
 
   return (
     <div className="space-y-4">

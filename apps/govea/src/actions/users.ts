@@ -17,9 +17,19 @@ async function requireAdmin() {
   return session
 }
 
-export async function getUsers(organizationId: string) {
+export async function getUsers() {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
   return db.query.users.findMany({
-    where: eq(users.organizationId, organizationId),
+    where: eq(users.organizationId, orgId),
+    columns: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      isActive: true,
+    },
     orderBy: (u, { asc }) => [asc(u.name)],
   })
 }
