@@ -241,19 +241,19 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
+- Closing open high-severity security findings from the 2026-05-07 static scan (audit trail integrity, break-glass TTL controls, junction cross-tenant writes — see SECURITY.md and the security remediation table in `docs/product-priorities.md`)
+- Adding regression tests to lock in the server-action auth invariants hardened this week
 - Turning early repository signals into fuller completeness and confidence workflows
 - Maturing ADRs and decision support into stronger architecture-debt and tradeoff visibility
-- Defining the first operational integration slices so repository data stays current without manual reconciliation
 - Expanding automated test coverage
-- Improving local bootstrap and demo workflows
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
+- Close remaining high-severity security findings (#416, #417, #418) and merge open security PRs (#428, #429)
 - Ship repository completeness drill-downs and a stakeholder-facing confidence summary
 - Add architecture debt tracking tied to ADRs, impact analysis, and reporting
 - Start the integration foundation with a REST API plus the first Tier 1 operational sync slice
-- Extend shared item/taxonomy behavior beyond the current applications-and-capabilities pilots
-- Start lightweight user feedback capture and persona validation for the new analysis surfaces
+- Start lightweight user feedback capture and persona validation for the analysis surfaces
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking
