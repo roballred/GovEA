@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { canEdit } from '@/lib/rbac'
 import { getApplications } from '@/actions/applications'
 import { getCustomFieldSchema } from '@/actions/custom-fields'
-import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import type { CustomFieldDefinition } from '@/db/schema'
 import type { EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 

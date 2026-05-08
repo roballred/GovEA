@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { getInitiatives } from '@/actions/initiatives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getObjectives } from '@/actions/objectives'
-import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { InitiativeTable } from './initiative-table'
 export default async function InitiativesPage() {
   const session = await auth()

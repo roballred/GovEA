@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getApplications } from '@/actions/applications'
 import { getCapabilities } from '@/actions/capabilities'
-import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { getCustomFieldSchema } from '@/actions/custom-fields'
 import { ApplicationTable } from './application-table'
 

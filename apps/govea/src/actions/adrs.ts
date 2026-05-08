@@ -5,7 +5,7 @@ import {
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives, entityTaxonomyValues,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/actions/taxonomy'
+import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'

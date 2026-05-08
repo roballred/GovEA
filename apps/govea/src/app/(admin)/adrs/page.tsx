@@ -5,7 +5,7 @@ import { getCapabilities } from '@/actions/capabilities'
 import { getApplications } from '@/actions/applications'
 import { getInitiatives } from '@/actions/initiatives'
 import { getObjectives } from '@/actions/objectives'
-import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { ADRTable } from './adr-table'
 
 export default async function ADRsPage() {

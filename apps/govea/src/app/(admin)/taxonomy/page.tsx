@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getTaxonomyTermsWithChildren, getPrincipleTypeValueUsage, getAllEntityTaxonomyDefinitions } from '@/actions/taxonomy'
+import { getTaxonomyTermsWithChildren, getPrincipleTypeValueUsage } from '@/actions/taxonomy'
+import { getAllEntityTaxonomyDefinitions } from '@/lib/entity-taxonomy-helpers'
 import { TaxonomyTable } from './taxonomy-table'
 
 export default async function TaxonomyPage() {
