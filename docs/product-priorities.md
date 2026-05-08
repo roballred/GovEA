@@ -1,52 +1,57 @@
 # Product Priority Shortlist
 
-Last groomed: 2026-05-06
+Last groomed: 2026-05-08
 
 This note summarizes the top next product moves from the current capability inventory, open issues, and recent pull requests. It is intentionally short so it can be reviewed during backlog planning without replacing GitHub issues as the source of execution detail.
 
 ## Current Signal
 
-Recent merges materially changed the product surface:
+A security scan on 2026-05-07 surfaced nine high-severity findings. Four have already been fixed (PRs #424–#426); two have open PRs (#428, #429); three remain fully open (#416, #417, #418). This wave temporarily supersedes the feature roadmap — the hardening must close before feature work compounds on top of a vulnerable surface.
 
-- PR #312 shipped the first instance-level platform configuration surface, turning `/instance` into a real operating console rather than only an audit/provisioning shell.
-- PR #314 and PR #316 shipped the Executive Summary and Heatmap Analysis reports, giving GovEA stronger stakeholder-facing reporting on top of the existing repository.
-- PR #357 shipped application and capability impact analysis, moving traceability from passive navigation toward real decision support.
-- PR #356 shipped application custom fields plus CSV import/export, reducing one of the biggest practical barriers to getting real portfolio data into the product.
-- PR #376 shipped a Mermaid-based diagram view on the capability map page, broadening how users can understand repository relationships without changing the underlying model.
-- PR #387 shipped a Goals layer above Strategic Objectives, correcting an important planning-model blur before more reporting and roadmap behavior compounds it.
-- PR #393 shipped the capabilities pilot for the shared taxonomy/base-item direction, proving cross-entity reuse beyond the earlier application-only slice.
-- PR #370 and the recent persona documentation passes strengthened the roadmap definition for integration and real government-practice fit, even where product implementation has not started yet.
+Other significant merges since the last grooming pass (2026-05-06):
+
+- PRs #397–#401 shipped richer tenant-governance controls and instance-level platform defaults (theme, module defaults, org provisioning stamps), fully closing the instance-config surface defined in #308.
+- PRs #424–#426 fixed four critical findings: unauthenticated `getUsers`, cross-org-link helpers reachable as RPC, and read actions trusting caller-supplied `organizationId`/`role`.
+- PRs #428–#429 are open and awaiting review (entity-taxonomy RPC exposure, junction cross-tenant writes).
+- PR #410 and PR #423 landed the business-architecture STYLE.md standard and retrofitted all personas to match it.
 
 What this means for prioritization:
 
-- GovEA has now shipped most of the shortlist that was current at the end of April. The next best work is no longer "add the first report" or "define the instance surface" because those slices now exist.
-- The highest-leverage gap has shifted from feature presence to repository trust: completeness, confidence, decision traceability, and data freshness.
-- The repo also now has enough stakeholder-facing surface area that weak data quality or weak persona validation will be more damaging than another isolated demo-friendly page.
+- Security hardening is the immediate unblocking concern. GovEA now supports multi-tenant data for real orgs. Three high-severity findings still leave meaningful attack surface open.
+- The feature roadmap below the security work is unchanged: repository trust, debt tracking, integration freshness, and persona validation are still the right next moves once the surface is clean.
+- The instance admin surface is now solid enough to plan the deferred platform defaults (#402) as the next platform-management task.
 
 ## Top 5 Next Things To Do
 
-| Rank | Recommended next thing | Why now | Primary issue(s) / PR |
+| Rank | Recommended next thing | Why now | Primary issue(s) |
 |---|---|---|---|
-| 1 | Ship repository completeness drill-downs and a plain-language confidence summary | Reporting, heatmaps, impact views, and executive summaries now depend on users trusting the underlying repository. GovEA has early coverage signals, but not yet the fuller completeness workflow or stakeholder-facing confidence cues described in the repository-modelling capability docs. | `rm-repository-completeness`, `fd-repository-confidence-summary`, PR #357, PR #316, PR #314 |
-| 2 | Add architecture debt tracking and make ADRs a stronger decision-support surface | Impact analysis now surfaces consequences, but GovEA still lacks a first-class way to record persistent constraints, debt, and tradeoff accumulation. That leaves a gap between "what is affected" and "what should leadership worry about next." | `rm-architecture-debt`, `po-architecture-decisions`, PR #357 |
-| 3 | Start the operational integration foundation: REST API plus the first Tier 1 sync slice | Custom fields and CSV import/export help initial data load, but they do not solve staleness. The integration roadmap is now better defined, and the next meaningful trust move is to reduce manual reconciliation with operational systems. | `int-rest-api`, `integration/`, PR #356, PR #370 |
-| 4 | Extend the shared item/taxonomy foundation beyond the current applications-and-capabilities pilots | GovEA now has proof that shared taxonomy assignment works across more than one entity, but the rollout is still too narrow. The next platform move is to keep future classification and metadata work from turning into bespoke per-entity wiring again. | #383, PR #393, `docs/design/base-item-foundation.md` |
-| 5 | Validate assumed personas and start a lightweight product feedback loop for the new analysis surfaces | Repository modelling and integration are still driven by assumed personas in several capability files. With executive reporting, impact analysis, and map views now shipped, the cost of building the wrong next analytic feature has gone up. Validate before compounding. | Persona docs, `docs/research/`, issue #103, PR #314, PR #357, PR #376 |
+| 1 | Merge open security PRs and close the remaining high-severity findings | PRs #428 and #429 are ready to review. Issues #416 (non-transactional audit writes), #417 (mutable `audit_log`), and #418 (break-glass TTL, no dual control) remain fully open. #416 and #417 can ship as a paired migration. #418 has the most design complexity — ship the TTL reduction (1h default) as a quick patch first, then plan dual control separately. | #415 → PR #429, #427 → PR #428, #416, #417, #418 |
+| 2 | Add security regression tests for the hardened server actions | Issues #421 and #422 lock in the invariants fixed this week. Without them, a developer who widens the middleware matcher or reintroduces a caller-supplied `organizationId` param will be uncaught in CI. Straightforward integration tests against existing auth machinery. | #421, #422 |
+| 3 | Ship repository completeness drill-downs and a plain-language confidence summary | Reporting, heatmaps, impact views, and executive summaries now depend on users trusting the underlying repository. GovEA has early coverage signals but not yet the fuller completeness workflow or stakeholder-facing confidence cues. | `rm-repository-completeness`, `fd-repository-confidence-summary`, #380 |
+| 4 | Add architecture debt tracking and make ADRs a stronger decision-support surface | Impact analysis surfaces consequences, but GovEA still lacks a first-class way to record persistent constraints and tradeoff accumulation. That is the gap between "what is affected" and "what should leadership worry about next." | `rm-architecture-debt`, `po-architecture-decisions`, #381 |
+| 5 | Validate assumed personas and start a lightweight product feedback loop | Repository modelling and integration are still driven by assumed personas. With multi-tenant hardening done and executive-facing surfaces shipped, the cost of building the wrong next analytic feature has gone up. | Persona docs, `docs/research/`, #103, #384 |
 
 ## Product Manager Notes
 
-- The old shortlist is materially stale: platform configuration, executive reporting, heatmaps, and impact analysis are already shipped in `main`.
-- The new priority stack is intentionally trust-heavy. GovEA has crossed the point where more views are less valuable than better confidence in what those views are saying.
-- The most pragmatic sequence is: repository confidence -> debt/decision capture -> integration freshness. That is the shortest path from "useful demo" to "credible working repository."
-- Treat the shared item/taxonomy foundation as a platform multiplier, not a side quest. Recent custom-field work and the new capabilities pilot proved the demand; the next step is making reuse systematic across more entities.
-- Keep persona validation attached to these roadmap items, especially for repository-modelling and integration, where several capabilities still explicitly carry assumed-persona risk.
+- Security items 1 and 2 are not optional. Do not let feature PRs merge on top of open high-severity findings.
+- For #418 (break-glass): ship the TTL cap (1h default) immediately as a one-line config change; plan dual-control approval as a follow-on design issue linked to #391 (platform endpoint config). Do not block the TTL fix waiting for the full design.
+- #402 (configurable platform defaults — deferred from #390) is the next concrete platform-admin task after security. Schema impact is small and well-defined in the issue.
+- The feature roadmap (items 3–5) is unchanged from the 2026-05-06 grooming: repository trust → debt/decision capture → persona validation. Security did not make these wrong; it just moved ahead of them.
+- Issue #363 (Data Architecture Metamodel) is a community contribution request still without labels or a triage response. It deserves a reply clarifying whether it fits v1 scope before it builds expectations.
+- The ARB/research issues (90s, 130s, 300s) remain important but are capability-definition work. None are blocking the items above.
 
-## Documentation Follow-up
+## Security Remediation Status (as of 2026-05-08)
 
-This grooming pass also updates product docs to match current repo reality:
-
-- `docs/product-priorities.md`: replaced the stale late-April shortlist with a post-PR-#376 sequence based on what is actually shipped in `main`.
-- `README.md`: updated active work and near-term priorities so they stop pointing at already-completed items.
-- `capabilities.md`: refreshed the target-surface table so near-term priorities reflect the current product baseline.
-- `business-architecture/capabilities/ea/repository-modelling/repository-modelling.md`: end-to-end traceability now reads as partially implemented rather than absent.
-- `business-architecture/capabilities/ea/repository-modelling/rm-end-to-end-traceability.md`: implementation status now acknowledges the shipped application/capability impact analysis slice while preserving the remaining roadmap.
+| Issue | Severity | Status |
+|---|---|---|
+| #411 — `getUsers` cross-tenant + secret exposure | High | ✅ Fixed (PR #424) |
+| #412 — cross-org-link helpers reachable as RPC | High | ✅ Fixed (PR #425) |
+| #413 — read actions trust caller `organizationId` | High | ✅ Fixed (PR #426) |
+| #414 — read actions trust caller `role` | High | ✅ Fixed (PR #426) |
+| #427 — entity-taxonomy helpers reachable as RPC | High | PR #428 open |
+| #415 — junction writes skip target-entity org check | High | PR #429 open |
+| #416 — audit writes not transactional with mutation | High | Open |
+| #417 — `audit_log` has no DB-level append-only constraint | High | Open |
+| #418 — break-glass TTL 24h; no dual control | High | Open |
+| #421 — test: unauthenticated server-action POSTs blocked | Enhancement | Open |
+| #422 — test: read actions ignore caller-supplied orgId/role | Enhancement | Open |
