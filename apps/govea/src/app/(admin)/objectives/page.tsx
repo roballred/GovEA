@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { getObjectives } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
-import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { ObjectiveTable } from './objective-table'
 export default async function ObjectivesPage() {
   const session = await auth()

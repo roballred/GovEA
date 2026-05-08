@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { getPrinciples } from '@/actions/principles'
 import { getADRs } from '@/actions/adrs'
 import { getCapabilities } from '@/actions/capabilities'
-import { getPrincipleTypes, getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getPrincipleTypes } from '@/actions/taxonomy'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { PrincipleTable } from './principle-table'
 
 export default async function PrinciplesPage() {
