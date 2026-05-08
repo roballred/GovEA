@@ -2,7 +2,8 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getCapabilities } from '@/actions/capabilities'
 import { getPersonas } from '@/actions/personas'
-import { getTaxonomyDomains, getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/actions/taxonomy'
+import { getTaxonomyDomains } from '@/actions/taxonomy'
+import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { CapabilityTable } from './capability-table'
 export default async function CapabilitiesPage() {
   const session = await auth()

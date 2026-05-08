@@ -5,7 +5,7 @@ import {
   initiatives, initiativeCapabilities, initiativeObjectives, entityTaxonomyValues,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/actions/taxonomy'
+import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'

@@ -11,7 +11,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
-import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from './taxonomy'
+import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from '@/lib/entity-taxonomy-helpers'
 
 async function requireContributor() {
   const session = await auth()
