@@ -9,7 +9,7 @@ import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/actions/cross-org-links'
+import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
 
 async function requireContributor() {
   const session = await auth()

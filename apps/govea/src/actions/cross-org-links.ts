@@ -251,47 +251,9 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
   return { approved, inboundPending, outboundPending, outboundRejected, availableTargets }
 }
 
-// Called by editCapability / editPersona when an entity's visibility drops to 'org'.
-// Flags all active and pending links involving that entity so both orgs are alerted.
-export async function flagLinksForVisibilityDrop(
-  entityType: CrossOrgEntityType,
-  entityId: string,
-  reason: string,
-) {
-  await db.update(crossOrgLinks).set({
-    flaggedForReview: true,
-    flagReason: reason,
-    updatedAt: new Date(),
-  }).where(
-    and(
-      or(
-        and(eq(crossOrgLinks.sourceEntityType, entityType), eq(crossOrgLinks.sourceEntityId, entityId)),
-        and(eq(crossOrgLinks.targetEntityType, entityType), eq(crossOrgLinks.targetEntityId, entityId)),
-      ),
-      inArray(crossOrgLinks.status, ['pending', 'active']),
-    )
-  )
-}
-
-// Called when visibility is raised back to 'connections' or 'instance', clearing stale flags.
-export async function clearLinksFlag(
-  entityType: CrossOrgEntityType,
-  entityId: string,
-) {
-  await db.update(crossOrgLinks).set({
-    flaggedForReview: false,
-    flagReason: null,
-    updatedAt: new Date(),
-  }).where(
-    and(
-      or(
-        and(eq(crossOrgLinks.sourceEntityType, entityType), eq(crossOrgLinks.sourceEntityId, entityId)),
-        and(eq(crossOrgLinks.targetEntityType, entityType), eq(crossOrgLinks.targetEntityId, entityId)),
-      ),
-      eq(crossOrgLinks.flaggedForReview, true),
-    )
-  )
-}
+// Note: flagLinksForVisibilityDrop and clearLinksFlag previously lived here as
+// exported 'use server' functions. They are now internal helpers in
+// lib/cross-org-link-helpers.ts so they cannot be reached as RPC endpoints. See #412.
 
 export async function requestCrossOrgLink(
   type: CrossOrgEntityType,
@@ -453,38 +415,7 @@ export async function revokeCrossOrgLink(linkId: string) {
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
 }
 
-export async function removeLinksForConnection(orgAId: string, orgBId: string) {
-  const affectedLinks = await db.query.crossOrgLinks.findMany({
-    where: or(
-      and(eq(crossOrgLinks.sourceOrgId, orgAId), eq(crossOrgLinks.targetOrgId, orgBId)),
-      and(eq(crossOrgLinks.sourceOrgId, orgBId), eq(crossOrgLinks.targetOrgId, orgAId)),
-    ),
-  })
-
-  await db.delete(crossOrgLinks).where(
-    or(
-      and(eq(crossOrgLinks.sourceOrgId, orgAId), eq(crossOrgLinks.targetOrgId, orgBId)),
-      and(eq(crossOrgLinks.sourceOrgId, orgBId), eq(crossOrgLinks.targetOrgId, orgAId)),
-    )
-  )
-
-  if (affectedLinks.length > 0) {
-    await writeAuditLog({
-      action: 'cross_org_link.remove_for_connection',
-      entityType: 'org_connection',
-      organizationId: orgAId,
-      before: {
-        orgAId,
-        orgBId,
-        removedLinkIds: affectedLinks.map(link => link.id),
-        removedLinks: affectedLinks.map(link => ({
-          id: link.id,
-          sourceEntityId: link.sourceEntityId,
-          targetEntityId: link.targetEntityId,
-          status: link.status,
-          linkType: link.linkType,
-        })),
-      },
-    })
-  }
-}
+// Note: removeLinksForConnection previously lived here as an exported 'use server'
+// function with no auth check. It is now an internal helper in
+// lib/cross-org-link-helpers.ts that requires the caller to pass actor identity
+// (so audit rows are not anonymous). See #412.
