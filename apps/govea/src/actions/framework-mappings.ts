@@ -8,6 +8,22 @@ import { redirect } from 'next/navigation'
 import { canEdit } from '@/lib/rbac'
 import { revalidatePath } from 'next/cache'
 import { writeAuditLog } from '@/lib/audit'
+import { assertEntityInOrg, type EntityKind } from '@/lib/federation'
+
+// entityType strings that addFrameworkMapping accepts must map to a known EntityKind
+// so we can verify the target belongs to the caller's org. Reject anything else.
+const FRAMEWORK_TARGET_KINDS: Record<string, EntityKind> = {
+  capability: 'capability',
+  application: 'application',
+  service: 'service',
+  initiative: 'initiative',
+  objective: 'objective',
+  adr: 'adr',
+  principle: 'principle',
+  persona: 'persona',
+  goal: 'goal',
+  value_stream: 'value_stream',
+}
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
@@ -45,6 +61,13 @@ export async function addFrameworkMapping(
   }
 
   const orgId = session.user.organizationId!
+
+  // Verify the target entity belongs to the caller's org. Reject any entityType
+  // we do not recognize so attacker-controlled rationale text cannot be attached
+  // to a foreign or untyped record (#415).
+  const targetKind = FRAMEWORK_TARGET_KINDS[entityType]
+  if (!targetKind) throw new Error('Invalid entity type')
+  await assertEntityInOrg(targetKind, entityId, orgId)
 
   const [row] = await db
     .insert(frameworkMappings)
