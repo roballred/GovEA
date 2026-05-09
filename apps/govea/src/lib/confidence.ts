@@ -28,6 +28,23 @@ const DEFAULT_SETTINGS: ConfidenceSettings = {
   suppressBelowPercent: 50,
 }
 
+/** Controls which visibility flag gates the response. */
+export type ConfidenceAudience = 'authenticated' | 'public'
+
+/**
+ * Resolve which visibility flag this audience consults. Legacy rows without the
+ * `authenticatedVisibility` field fall back to the `enabled` boolean —
+ * preserving v1 behavior where `enabled=true` meant "show to admin dashboard".
+ * `publicVisibility` is always explicit (defaults to false) — no implicit
+ * promotion from `enabled`.
+ */
+export function isVisibleToAudience(settings: ConfidenceSettings, audience: ConfidenceAudience): boolean {
+  if (audience === 'public') {
+    return settings.publicVisibility === true
+  }
+  return settings.authenticatedVisibility ?? settings.enabled
+}
+
 function scoreToLabel(score: number): ConfidenceLabel {
   if (score >= 70) return 'actively maintained'
   if (score >= 40) return 'under development'
@@ -38,7 +55,10 @@ function isSnapshotPathEnabled(): boolean {
   return process.env.COMPLETENESS_SNAPSHOT_ENABLED === 'true'
 }
 
-export async function getConfidenceSummary(orgId: string): Promise<ConfidenceSummary> {
+export async function getConfidenceSummary(
+  orgId: string,
+  audience: ConfidenceAudience = 'authenticated',
+): Promise<ConfidenceSummary> {
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
     columns: { confidenceSettings: true },
@@ -46,7 +66,7 @@ export async function getConfidenceSummary(orgId: string): Promise<ConfidenceSum
 
   const settings: ConfidenceSettings = org?.confidenceSettings ?? DEFAULT_SETTINGS
 
-  if (!settings.enabled) {
+  if (!isVisibleToAudience(settings, audience)) {
     return { label: 'getting started', score: 0, lastUpdated: null, shouldShow: false, narrative: null, settings }
   }
 

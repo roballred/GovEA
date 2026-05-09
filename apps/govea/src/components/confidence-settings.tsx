@@ -10,16 +10,32 @@ interface ConfidenceSettingsFormProps {
 }
 
 export function ConfidenceSettingsForm({ initial }: ConfidenceSettingsFormProps) {
-  const [enabled, setEnabled] = useState(initial.enabled)
+  // Default the visibility split from the legacy `enabled` flag for orgs
+  // that pre-date the split. New rows always store both fields explicitly.
+  const [authenticatedVisibility, setAuthVis] = useState(
+    initial.authenticatedVisibility ?? initial.enabled,
+  )
+  const [publicVisibility, setPubVis] = useState(initial.publicVisibility ?? false)
   const [narrative, setNarrative] = useState(initial.narrative ?? '')
   const [suppressBelowPercent, setSuppressBelowPercent] = useState(initial.suppressBelowPercent)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [isPending, startTransition] = useTransition()
 
+  // Defensive UX: public visibility should not be on while authenticated is off.
+  // Disabling authenticated visibility also clears public visibility client-side;
+  // the server enforces the same invariant on save.
+  const effectivePub = authenticatedVisibility ? publicVisibility : false
+
   function save() {
     setStatus('saving')
     startTransition(async () => {
-      await updateConfidenceSettings({ enabled, narrative: narrative || null, suppressBelowPercent })
+      await updateConfidenceSettings({
+        enabled: authenticatedVisibility,
+        authenticatedVisibility,
+        publicVisibility: effectivePub,
+        narrative: narrative || null,
+        suppressBelowPercent,
+      })
       setStatus('saved')
       setTimeout(() => setStatus('idle'), 2000)
     })
@@ -29,38 +45,73 @@ export function ConfidenceSettingsForm({ initial }: ConfidenceSettingsFormProps)
 
   return (
     <div className="space-y-5">
-      {/* Enable toggle */}
+      {/* Authenticated visibility toggle */}
       <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
         <div>
-          <p className="text-sm font-medium">Show confidence summary</p>
+          <p className="text-sm font-medium">Show to authenticated viewers</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Display a plain-language status label on stakeholder-facing pages.
+            Display the confidence summary on stakeholder-facing pages for signed-in users (Admins, Contributors, Viewers).
           </p>
         </div>
         <button
           type="button"
           role="switch"
-          aria-checked={enabled}
-          aria-label={enabled ? 'Disable confidence summary' : 'Enable confidence summary'}
+          aria-checked={authenticatedVisibility}
+          aria-label={authenticatedVisibility ? 'Disable for authenticated viewers' : 'Enable for authenticated viewers'}
           disabled={isBusy}
-          onClick={() => setEnabled(v => !v)}
+          onClick={() => setAuthVis(v => !v)}
           className={cn(
             'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             'disabled:cursor-not-allowed disabled:opacity-60',
-            enabled ? 'bg-primary' : 'bg-input',
+            authenticatedVisibility ? 'bg-primary' : 'bg-input',
           )}
         >
           <span
             className={cn(
               'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-150',
-              enabled ? 'translate-x-4' : 'translate-x-0',
+              authenticatedVisibility ? 'translate-x-4' : 'translate-x-0',
             )}
           />
         </button>
       </div>
 
-      {enabled && (
+      {/* Public visibility toggle — gated on authenticated being on */}
+      <div className={cn(
+        'flex items-center justify-between rounded-lg border bg-card px-4 py-3',
+        !authenticatedVisibility && 'opacity-60',
+      )}>
+        <div>
+          <p className="text-sm font-medium">Also show to unauthenticated viewers</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Make the confidence summary visible to the public without signing in. This is an explicit second step
+            — turn this on only after confirming the summary is appropriate for an external audience.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={effectivePub}
+          aria-label={effectivePub ? 'Disable for public viewers' : 'Enable for public viewers'}
+          disabled={isBusy || !authenticatedVisibility}
+          onClick={() => setPubVis(v => !v)}
+          className={cn(
+            'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            'disabled:cursor-not-allowed disabled:opacity-60',
+            effectivePub ? 'bg-primary' : 'bg-input',
+          )}
+        >
+          <span
+            className={cn(
+              'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-150',
+              effectivePub ? 'translate-x-4' : 'translate-x-0',
+            )}
+          />
+        </button>
+      </div>
+
+      {authenticatedVisibility && (
         <>
           {/* Narrative */}
           <div className="space-y-1.5">
