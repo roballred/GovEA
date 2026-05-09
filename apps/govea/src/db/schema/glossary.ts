@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations } from './organizations'
 import { workflowStatusEnum } from './personas'
 import { visibilityEnum } from './organizations'
@@ -20,7 +20,10 @@ export const glossaryTerms = pgTable('glossary_terms', {
   updatedBy: uuid('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+}, (t) => [
+  index('glossary_terms_org_status_idx').on(t.organizationId, t.status),
+  index('glossary_terms_org_updated_at_idx').on(t.organizationId, t.updatedAt),
+])
 
 // Reference definitions from authoritative sources (e.g. TOGAF, NIST, ISO)
 export const glossaryTermSources = pgTable('glossary_term_sources', {

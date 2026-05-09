@@ -6,6 +6,10 @@ import {
 } from '@/db/schema'
 import { and, count, eq, inArray, max } from 'drizzle-orm'
 import type { ConfidenceSettings } from '@/db/schema'
+import {
+  readTodayCompletenessSnapshot,
+  triggerSnapshotRecompute,
+} from './completeness-snapshot'
 
 export type ConfidenceLabel = 'actively maintained' | 'under development' | 'getting started'
 
@@ -30,6 +34,10 @@ function scoreToLabel(score: number): ConfidenceLabel {
   return 'getting started'
 }
 
+function isSnapshotPathEnabled(): boolean {
+  return process.env.COMPLETENESS_SNAPSHOT_ENABLED === 'true'
+}
+
 export async function getConfidenceSummary(orgId: string): Promise<ConfidenceSummary> {
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
@@ -42,6 +50,48 @@ export async function getConfidenceSummary(orgId: string): Promise<ConfidenceSum
     return { label: 'getting started', score: 0, lastUpdated: null, shouldShow: false, narrative: null, settings }
   }
 
+  if (isSnapshotPathEnabled()) {
+    const snapshot = await readTodayCompletenessSnapshot(orgId)
+    if (snapshot) {
+      return summaryFromSnapshot(snapshot.counts, snapshot.lastUpdated, settings)
+    }
+    // No snapshot for today — fire async recompute (so the next read hits the snapshot)
+    // and fall through to the live calc for this request.
+    void triggerSnapshotRecompute(orgId)
+  }
+
+  return summaryFromLiveQuery(orgId, settings)
+}
+
+function summaryFromSnapshot(
+  counts: import('@/db/schema').SnapshotCounts,
+  lastUpdated: Date | null,
+  settings: ConfidenceSettings,
+): ConfidenceSummary {
+  const totalAll =
+    counts.capabilities.total + counts.applications.total + counts.personas.total +
+    counts.valueStreams.total + counts.strategicObjectives.total + counts.initiatives.total +
+    counts.adrs.total + counts.principles.total + counts.glossaryTerms.total
+
+  const totalMature =
+    counts.capabilities.mature + counts.applications.mature + counts.personas.mature +
+    counts.valueStreams.mature + counts.strategicObjectives.mature + counts.initiatives.mature +
+    counts.adrs.mature + counts.principles.mature + counts.glossaryTerms.mature
+
+  const score = totalAll === 0 ? 0 : Math.round((totalMature / totalAll) * 100)
+  const shouldShow = score >= settings.suppressBelowPercent
+
+  return {
+    label: scoreToLabel(score),
+    score,
+    lastUpdated: lastUpdated ?? null,
+    shouldShow,
+    narrative: settings.narrative ?? null,
+    settings,
+  }
+}
+
+async function summaryFromLiveQuery(orgId: string, settings: ConfidenceSettings): Promise<ConfidenceSummary> {
   const [
     totalCaps, pubCaps,
     totalApps, pubApps,
