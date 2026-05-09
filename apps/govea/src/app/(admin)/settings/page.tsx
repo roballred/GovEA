@@ -7,9 +7,11 @@ import { ThemeSelector } from '@/components/theme-selector'
 import { ModuleToggles } from '@/components/module-toggles'
 import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
+import { CompletenessSettingsForm } from '@/components/completeness-settings'
 import { CustomFieldsManager } from '@/components/custom-fields-manager'
 import { isAdmin } from '@/lib/rbac'
-import type { ConfidenceSettings } from '@/db/schema'
+import type { ConfidenceSettings, CompletenessSettings } from '@/db/schema'
+import { DEFAULT_COMPLETENESS_SETTINGS } from '@/db/schema'
 import { getCurrentModuleSettings } from '@/lib/get-enabled-modules'
 import { getCustomFieldSchema } from '@/actions/custom-fields'
 
@@ -17,7 +19,11 @@ const DEFAULT_CONFIDENCE: ConfidenceSettings = {
   enabled: false,
   narrative: null,
   suppressBelowPercent: 50,
+  authenticatedVisibility: false,
+  publicVisibility: false,
 }
+
+const DEFAULT_COMPLETENESS: CompletenessSettings = DEFAULT_COMPLETENESS_SETTINGS
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -40,6 +46,7 @@ export default async function SettingsPage() {
   const enabledModules = moduleSettings.orgEnabledModules
   const instanceDisabledModules = moduleSettings.instanceDisabledModules
   const confidenceSettings = org?.confidenceSettings ?? DEFAULT_CONFIDENCE
+  const completenessSettings = org?.completenessSettings ?? DEFAULT_COMPLETENESS
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -92,6 +99,18 @@ export default async function SettingsPage() {
           </p>
         </div>
         <CustomFieldsManager entityType="application" initialFields={appCustomFields} />
+      </section>
+
+      <hr />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Repository Completeness</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Tune how completeness signals are calculated for your organization.
+          </p>
+        </div>
+        <CompletenessSettingsForm initial={completenessSettings} />
       </section>
 
       <hr />

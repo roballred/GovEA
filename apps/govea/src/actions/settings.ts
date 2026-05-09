@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations, type ConfidenceSettings } from '@/db/schema'
+import { organizations, type ConfidenceSettings, type CompletenessSettings, DEFAULT_COMPLETENESS_SETTINGS } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
@@ -90,7 +90,7 @@ export async function updateConfidenceSettings(input: ConfidenceSettings) {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) throw new Error('Forbidden')
 
-  const { enabled, narrative, suppressBelowPercent } = input
+  const { enabled, narrative, suppressBelowPercent, authenticatedVisibility, publicVisibility } = input
 
   if (suppressBelowPercent < 0 || suppressBelowPercent > 100) {
     throw new Error('suppressBelowPercent must be between 0 and 100')
@@ -103,10 +103,18 @@ export async function updateConfidenceSettings(input: ConfidenceSettings) {
     columns: { confidenceSettings: true },
   })
 
+  // Resolve `enabled` for back-compat: if the form submits new visibility
+  // fields, derive `enabled` from `authenticatedVisibility`. Otherwise honor
+  // whatever the form provided.
+  const resolvedAuthVis = authenticatedVisibility ?? enabled
+  const resolvedPubVis = publicVisibility ?? false
+
   const next: ConfidenceSettings = {
-    enabled,
+    enabled: resolvedAuthVis,
     narrative: narrative?.trim() || null,
     suppressBelowPercent,
+    authenticatedVisibility: resolvedAuthVis,
+    publicVisibility: resolvedPubVis,
   }
 
   await db.transaction(async (tx) => {
@@ -126,4 +134,57 @@ export async function updateConfidenceSettings(input: ConfidenceSettings) {
   })
 
   revalidatePath('/', 'layout')
+}
+
+export async function updateCompletenessSettings(input: Partial<CompletenessSettings>) {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
+
+  const orgId = session.user.organizationId!
+
+  const before = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: { completenessSettings: true },
+  })
+  const current = before?.completenessSettings ?? DEFAULT_COMPLETENESS_SETTINGS
+
+  const stalenessDays = input.stalenessDays ?? current.stalenessDays
+  if (![3 * 30, 6 * 30, 12 * 30, 24 * 30, 90].includes(stalenessDays) && (stalenessDays < 30 || stalenessDays > 730)) {
+    throw new Error('stalenessDays must be between 30 and 730')
+  }
+
+  const domainTargets = input.domainTargets ?? current.domainTargets
+  for (const [domain, target] of Object.entries(domainTargets)) {
+    if (typeof target !== 'number' || target < 0 || target > 100) {
+      throw new Error(`domainTargets[${domain}] must be 0–100`)
+    }
+  }
+
+  const rankingWeights = input.rankingWeights ?? current.rankingWeights
+
+  const next: CompletenessSettings = {
+    stalenessDays,
+    domainTargets,
+    rankingWeights,
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ completenessSettings: next, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
+
+    await writeAuditLog(tx, {
+      action: 'settings.completeness_updated',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { completenessSettings: before?.completenessSettings },
+      after: { completenessSettings: next },
+    })
+  })
+
+  revalidatePath('/dashboard')
+  revalidatePath('/settings')
 }

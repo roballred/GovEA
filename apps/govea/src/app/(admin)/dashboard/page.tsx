@@ -5,6 +5,8 @@ import {
   personas, capabilities, applications, adrs, initiatives,
   strategicObjectives, valueStreams, principles, glossaryTerms,
   auditLog, users, crossOrgLinks,
+  organizations,
+  DEFAULT_COMPLETENESS_SETTINGS,
 } from '@/db/schema'
 import { and, count, eq, gt, isNotNull, desc, asc, inArray, or } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,8 +15,6 @@ import { CoverageTileLabel } from './coverage-tile-label'
 import { DomainBadge } from '@/components/domain-badge'
 import { ConfidenceSummary } from '@/components/confidence-summary'
 import Link from 'next/link'
-
-const REVIEW_WINDOW_DAYS = 90
 
 function pivotCounts(rows: { status: string; count: number | string }[]) {
   const byStatus: Record<string, number> = {}
@@ -57,8 +57,14 @@ export default async function DashboardPage() {
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
 
+  const orgRow = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+    columns: { completenessSettings: true },
+  })
+  const stalenessDays = orgRow?.completenessSettings?.stalenessDays ?? DEFAULT_COMPLETENESS_SETTINGS.stalenessDays
+
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is intentional
-  const staleThreshold = new Date(Date.now() - REVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+  const staleThreshold = new Date(Date.now() - stalenessDays * 24 * 60 * 60 * 1000)
 
   const [
     personaRows, capabilityRows, applicationRows, adrRows,
@@ -284,7 +290,7 @@ export default async function DashboardPage() {
       {/* Review Health */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Review Health <span className="font-normal normal-case">({REVIEW_WINDOW_DAYS}-day window)</span>
+          Review Health <span className="font-normal normal-case">({stalenessDays}-day window)</span>
         </p>
         <Card>
           <CardContent className="pt-4 pb-2">
