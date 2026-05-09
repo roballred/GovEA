@@ -284,37 +284,39 @@ export async function requestCrossOrgLink(
     throw new Error('A cross-org link already exists or is awaiting approval')
   }
 
-  let auditLinkId = existing?.id ?? null
+  await db.transaction(async (tx) => {
+    let auditLinkId = existing?.id ?? null
 
-  if (existing?.status === 'rejected') {
-    await db.update(crossOrgLinks).set({
-      linkType,
-      status: 'pending',
-      rejectionReason: null,
-      updatedAt: new Date(),
-    }).where(eq(crossOrgLinks.id, existing.id))
-  } else {
-    const [created] = await db.insert(crossOrgLinks).values({
-      sourceOrgId: source.organizationId,
-      sourceEntityType: type,
-      sourceEntityId,
-      targetOrgId: target.organizationId,
-      targetEntityType: type,
-      targetEntityId,
-      linkType,
-      status: 'pending',
-      createdBy: session.user.id,
-    }).returning()
-    auditLinkId = created.id
-  }
+    if (existing?.status === 'rejected') {
+      await tx.update(crossOrgLinks).set({
+        linkType,
+        status: 'pending',
+        rejectionReason: null,
+        updatedAt: new Date(),
+      }).where(eq(crossOrgLinks.id, existing.id))
+    } else {
+      const [created] = await tx.insert(crossOrgLinks).values({
+        sourceOrgId: source.organizationId,
+        sourceEntityType: type,
+        sourceEntityId,
+        targetOrgId: target.organizationId,
+        targetEntityType: type,
+        targetEntityId,
+        linkType,
+        status: 'pending',
+        createdBy: session.user.id,
+      }).returning()
+      auditLinkId = created.id
+    }
 
-  await writeAuditLog({
-    action: 'cross_org_link.request',
-    entityType: 'cross_org_link',
-    entityId: auditLinkId ?? undefined,
-    userId: session.user.id,
-    organizationId: source.organizationId,
-    after: { sourceEntityId, targetEntityId, linkType, targetOrgId: target.organizationId, type },
+    await writeAuditLog(tx, {
+      action: 'cross_org_link.request',
+      entityType: 'cross_org_link',
+      entityId: auditLinkId ?? undefined,
+      userId: session.user.id,
+      organizationId: source.organizationId,
+      after: { sourceEntityId, targetEntityId, linkType, targetOrgId: target.organizationId, type },
+    })
   })
 
   await revalidateLinkPaths(type, sourceEntityId, targetEntityId)
@@ -328,19 +330,21 @@ export async function approveCrossOrgLink(linkId: string) {
   if (!link) throw new Error('Cross-org link not found or not authorized')
   if (link.status !== 'pending') throw new Error('Only pending links can be approved')
 
-  await db.update(crossOrgLinks).set({
-    status: 'active',
-    rejectionReason: null,
-    updatedAt: new Date(),
-  }).where(eq(crossOrgLinks.id, linkId))
+  await db.transaction(async (tx) => {
+    await tx.update(crossOrgLinks).set({
+      status: 'active',
+      rejectionReason: null,
+      updatedAt: new Date(),
+    }).where(eq(crossOrgLinks.id, linkId))
 
-  await writeAuditLog({
-    action: 'cross_org_link.approve',
-    entityType: 'cross_org_link',
-    entityId: linkId,
-    userId: session.user.id,
-    organizationId: session.user.organizationId!,
-    after: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, type: link.sourceEntityType },
+    await writeAuditLog(tx, {
+      action: 'cross_org_link.approve',
+      entityType: 'cross_org_link',
+      entityId: linkId,
+      userId: session.user.id,
+      organizationId: session.user.organizationId!,
+      after: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, type: link.sourceEntityType },
+    })
   })
 
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
@@ -354,19 +358,21 @@ export async function rejectCrossOrgLink(linkId: string, reason?: string) {
   if (!link) throw new Error('Cross-org link not found or not authorized')
   if (link.status !== 'pending') throw new Error('Only pending links can be rejected')
 
-  await db.update(crossOrgLinks).set({
-    status: 'rejected',
-    rejectionReason: reason?.trim() ? reason.trim() : null,
-    updatedAt: new Date(),
-  }).where(eq(crossOrgLinks.id, linkId))
+  await db.transaction(async (tx) => {
+    await tx.update(crossOrgLinks).set({
+      status: 'rejected',
+      rejectionReason: reason?.trim() ? reason.trim() : null,
+      updatedAt: new Date(),
+    }).where(eq(crossOrgLinks.id, linkId))
 
-  await writeAuditLog({
-    action: 'cross_org_link.reject',
-    entityType: 'cross_org_link',
-    entityId: linkId,
-    userId: session.user.id,
-    organizationId: session.user.organizationId!,
-    after: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, type: link.sourceEntityType },
+    await writeAuditLog(tx, {
+      action: 'cross_org_link.reject',
+      entityType: 'cross_org_link',
+      entityId: linkId,
+      userId: session.user.id,
+      organizationId: session.user.organizationId!,
+      after: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, type: link.sourceEntityType },
+    })
   })
 
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
@@ -379,15 +385,17 @@ export async function withdrawCrossOrgLink(linkId: string) {
   })
   if (!link) throw new Error('Cross-org link not found or not authorized')
 
-  await db.delete(crossOrgLinks).where(eq(crossOrgLinks.id, linkId))
+  await db.transaction(async (tx) => {
+    await tx.delete(crossOrgLinks).where(eq(crossOrgLinks.id, linkId))
 
-  await writeAuditLog({
-    action: 'cross_org_link.withdraw',
-    entityType: 'cross_org_link',
-    entityId: linkId,
-    userId: session.user.id,
-    organizationId: session.user.organizationId!,
-    before: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, status: link.status },
+    await writeAuditLog(tx, {
+      action: 'cross_org_link.withdraw',
+      entityType: 'cross_org_link',
+      entityId: linkId,
+      userId: session.user.id,
+      organizationId: session.user.organizationId!,
+      before: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, status: link.status },
+    })
   })
 
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)
@@ -401,15 +409,17 @@ export async function revokeCrossOrgLink(linkId: string) {
   if (!link) throw new Error('Cross-org link not found or not authorized')
   if (link.status !== 'active') throw new Error('Only active links can be revoked')
 
-  await db.delete(crossOrgLinks).where(eq(crossOrgLinks.id, linkId))
+  await db.transaction(async (tx) => {
+    await tx.delete(crossOrgLinks).where(eq(crossOrgLinks.id, linkId))
 
-  await writeAuditLog({
-    action: 'cross_org_link.revoke',
-    entityType: 'cross_org_link',
-    entityId: linkId,
-    userId: session.user.id,
-    organizationId: session.user.organizationId!,
-    before: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, status: link.status, type: link.sourceEntityType },
+    await writeAuditLog(tx, {
+      action: 'cross_org_link.revoke',
+      entityType: 'cross_org_link',
+      entityId: linkId,
+      userId: session.user.id,
+      organizationId: session.user.organizationId!,
+      before: { sourceEntityId: link.sourceEntityId, targetEntityId: link.targetEntityId, status: link.status, type: link.sourceEntityType },
+    })
   })
 
   await revalidateLinkPaths(link.sourceEntityType as CrossOrgEntityType, link.sourceEntityId, link.targetEntityId)

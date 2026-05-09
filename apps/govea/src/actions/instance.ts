@@ -35,42 +35,48 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
   const theme = defaults?.defaultTheme ?? 'govea'
   const supportTier = defaults?.defaultSupportTier ?? null
 
-  const [org] = await db
-    .insert(organizations)
-    .values({ name, slug, theme, supportTier })
-    .returning()
+  const orgId = await db.transaction(async (tx) => {
+    const [org] = await tx
+      .insert(organizations)
+      .values({ name, slug, theme, supportTier })
+      .returning()
 
-  await writeAuditLog({
-    action: 'instance.org.create',
-    entityType: 'organization',
-    entityId: org.id,
-    userId: session.user.id,
-    organizationId: null,
-    after: { name, slug, theme, supportTier },
+    await writeAuditLog(tx, {
+      action: 'instance.org.create',
+      entityType: 'organization',
+      entityId: org.id,
+      userId: session.user.id,
+      organizationId: null,
+      after: { name, slug, theme, supportTier },
+    })
+
+    return org.id
   })
 
   revalidatePath('/instance/orgs')
-  return { id: org.id }
+  return { id: orgId }
 }
 
 export async function grantBreakGlass(orgId: string, reason: string) {
   const session = await requireInstanceAdmin()
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
-  const [row] = await db.insert(breakGlassSessions).values({
-    instanceAdminId: session.user.id,
-    targetOrgId: orgId,
-    reason,
-    expiresAt,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [row] = await tx.insert(breakGlassSessions).values({
+      instanceAdminId: session.user.id,
+      targetOrgId: orgId,
+      reason,
+      expiresAt,
+    }).returning()
 
-  await writeAuditLog({
-    action: 'instance.break_glass.grant',
-    entityType: 'organization',
-    entityId: orgId,
-    userId: session.user.id,
-    organizationId: null,
-    after: { reason, expiresAt, sessionId: row.id },
+    await writeAuditLog(tx, {
+      action: 'instance.break_glass.grant',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: null,
+      after: { reason, expiresAt, sessionId: row.id },
+    })
   })
 
   revalidatePath(`/instance/orgs/${orgId}`)
@@ -80,19 +86,21 @@ export async function grantBreakGlass(orgId: string, reason: string) {
 export async function revokeBreakGlass(sessionId: string, orgId: string) {
   const session = await requireInstanceAdmin()
 
-  await db.update(breakGlassSessions)
-    .set({ revokedAt: new Date(), revokedBy: session.user.id })
-    .where(and(
-      eq(breakGlassSessions.id, sessionId),
-      eq(breakGlassSessions.instanceAdminId, session.user.id),
-    ))
+  await db.transaction(async (tx) => {
+    await tx.update(breakGlassSessions)
+      .set({ revokedAt: new Date(), revokedBy: session.user.id })
+      .where(and(
+        eq(breakGlassSessions.id, sessionId),
+        eq(breakGlassSessions.instanceAdminId, session.user.id),
+      ))
 
-  await writeAuditLog({
-    action: 'instance.break_glass.revoke',
-    entityType: 'break_glass_session',
-    entityId: sessionId,
-    userId: session.user.id,
-    organizationId: null,
+    await writeAuditLog(tx, {
+      action: 'instance.break_glass.revoke',
+      entityType: 'break_glass_session',
+      entityId: sessionId,
+      userId: session.user.id,
+      organizationId: null,
+    })
   })
 
   revalidatePath(`/instance/orgs/${orgId}`)
@@ -106,18 +114,20 @@ export async function suspendOrg(orgId: string, reason: string) {
   if (!before) throw new Error('Organisation not found')
   if (before.isSystemOrg) throw new Error('Cannot suspend the system org')
 
-  await db.update(organizations)
-    .set({ suspendedAt: new Date(), suspendedReason: reason, updatedAt: new Date() })
-    .where(eq(organizations.id, orgId))
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ suspendedAt: new Date(), suspendedReason: reason, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
 
-  await writeAuditLog({
-    action: 'instance.org.suspend',
-    entityType: 'organization',
-    entityId: orgId,
-    userId: session.user.id,
-    organizationId: null,
-    before: { suspendedAt: before.suspendedAt },
-    after: { suspendedAt: new Date(), reason },
+    await writeAuditLog(tx, {
+      action: 'instance.org.suspend',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: null,
+      before: { suspendedAt: before.suspendedAt },
+      after: { suspendedAt: new Date(), reason },
+    })
   })
 
   revalidatePath('/instance/orgs')
@@ -127,16 +137,18 @@ export async function suspendOrg(orgId: string, reason: string) {
 export async function unsuspendOrg(orgId: string) {
   const session = await requireInstanceAdmin()
 
-  await db.update(organizations)
-    .set({ suspendedAt: null, suspendedReason: null, updatedAt: new Date() })
-    .where(eq(organizations.id, orgId))
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ suspendedAt: null, suspendedReason: null, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
 
-  await writeAuditLog({
-    action: 'instance.org.unsuspend',
-    entityType: 'organization',
-    entityId: orgId,
-    userId: session.user.id,
-    organizationId: null,
+    await writeAuditLog(tx, {
+      action: 'instance.org.unsuspend',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: null,
+    })
   })
 
   revalidatePath('/instance/orgs')
@@ -146,17 +158,19 @@ export async function unsuspendOrg(orgId: string) {
 export async function promoteInstanceAdmin(userId: string, reason?: string) {
   const session = await requireInstanceAdmin()
 
-  await db.update(users)
-    .set({ instanceRole: 'instance_admin', updatedAt: new Date() })
-    .where(eq(users.id, userId))
+  await db.transaction(async (tx) => {
+    await tx.update(users)
+      .set({ instanceRole: 'instance_admin', updatedAt: new Date() })
+      .where(eq(users.id, userId))
 
-  await writeAuditLog({
-    action: 'instance.user.promote',
-    entityType: 'user',
-    entityId: userId,
-    userId: session.user.id,
-    organizationId: null,
-    after: { instanceRole: 'instance_admin', reason: reason?.trim() || null },
+    await writeAuditLog(tx, {
+      action: 'instance.user.promote',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: null,
+      after: { instanceRole: 'instance_admin', reason: reason?.trim() || null },
+    })
   })
 
   revalidatePath('/instance/users')
@@ -166,18 +180,20 @@ export async function demoteInstanceAdmin(userId: string, reason?: string) {
   const session = await requireInstanceAdmin()
   if (userId === session.user.id) throw new Error('Cannot demote yourself')
 
-  await db.update(users)
-    .set({ instanceRole: null, updatedAt: new Date() })
-    .where(eq(users.id, userId))
+  await db.transaction(async (tx) => {
+    await tx.update(users)
+      .set({ instanceRole: null, updatedAt: new Date() })
+      .where(eq(users.id, userId))
 
-  await writeAuditLog({
-    action: 'instance.user.demote',
-    entityType: 'user',
-    entityId: userId,
-    userId: session.user.id,
-    organizationId: null,
-    before: { instanceRole: 'instance_admin' },
-    after: { instanceRole: null, reason: reason?.trim() || null },
+    await writeAuditLog(tx, {
+      action: 'instance.user.demote',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: null,
+      before: { instanceRole: 'instance_admin' },
+      after: { instanceRole: null, reason: reason?.trim() || null },
+    })
   })
 
   revalidatePath('/instance/users')
@@ -208,48 +224,50 @@ export async function updatePlatformConfig(data: {
 
   const before = await db.query.platformConfig.findFirst()
 
-  await db.insert(platformConfig)
-    .values({
-      id: 'singleton',
-      instanceName: trimmed,
-      defaultTheme: data.defaultTheme,
-      allowLocalAuth: data.allowLocalAuth,
-      defaultSupportTier,
-      updatedAt: new Date(),
-      updatedBy: session.user.id,
-    })
-    .onConflictDoUpdate({
-      target: platformConfig.id,
-      set: {
+  await db.transaction(async (tx) => {
+    await tx.insert(platformConfig)
+      .values({
+        id: 'singleton',
         instanceName: trimmed,
         defaultTheme: data.defaultTheme,
         allowLocalAuth: data.allowLocalAuth,
         defaultSupportTier,
         updatedAt: new Date(),
         updatedBy: session.user.id,
+      })
+      .onConflictDoUpdate({
+        target: platformConfig.id,
+        set: {
+          instanceName: trimmed,
+          defaultTheme: data.defaultTheme,
+          allowLocalAuth: data.allowLocalAuth,
+          defaultSupportTier,
+          updatedAt: new Date(),
+          updatedBy: session.user.id,
+        },
+      })
+
+    await writeAuditLog(tx, {
+      action: 'instance.config.update',
+      entityType: 'platform_config',
+      entityId: 'singleton',
+      userId: session.user.id,
+      organizationId: null,
+      before: before
+        ? {
+            instanceName: before.instanceName,
+            defaultTheme: before.defaultTheme,
+            allowLocalAuth: before.allowLocalAuth,
+            defaultSupportTier: before.defaultSupportTier,
+          }
+        : null,
+      after: {
+        instanceName: trimmed,
+        defaultTheme: data.defaultTheme,
+        allowLocalAuth: data.allowLocalAuth,
+        defaultSupportTier,
       },
     })
-
-  await writeAuditLog({
-    action: 'instance.config.update',
-    entityType: 'platform_config',
-    entityId: 'singleton',
-    userId: session.user.id,
-    organizationId: null,
-    before: before
-      ? {
-          instanceName: before.instanceName,
-          defaultTheme: before.defaultTheme,
-          allowLocalAuth: before.allowLocalAuth,
-          defaultSupportTier: before.defaultSupportTier,
-        }
-      : null,
-    after: {
-      instanceName: trimmed,
-      defaultTheme: data.defaultTheme,
-      allowLocalAuth: data.allowLocalAuth,
-      defaultSupportTier,
-    },
   })
 
   revalidatePath('/instance/config')
@@ -292,30 +310,32 @@ export async function createInstanceUser(formData: FormData) {
   if (!pwValidation.valid) throw new Error(pwValidation.message)
 
   const passwordHash = await bcrypt.hash(password, 12)
-  const [user] = await db.insert(users).values({
-    organizationId,
-    name,
-    email,
-    passwordHash,
-    role,
-    instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
-    isActive: 'true',
-  }).returning()
-
-  await writeAuditLog({
-    action: 'instance.user.create',
-    entityType: 'user',
-    entityId: user.id,
-    userId: session.user.id,
-    organizationId: null,
-    after: {
+  await db.transaction(async (tx) => {
+    const [user] = await tx.insert(users).values({
+      organizationId,
       name,
       email,
+      passwordHash,
       role,
-      organizationId,
-      organizationName: organization.name,
       instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
-    },
+      isActive: 'true',
+    }).returning()
+
+    await writeAuditLog(tx, {
+      action: 'instance.user.create',
+      entityType: 'user',
+      entityId: user.id,
+      userId: session.user.id,
+      organizationId: null,
+      after: {
+        name,
+        email,
+        role,
+        organizationId,
+        organizationName: organization.name,
+        instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
+      },
+    })
   })
 
   revalidatePath('/instance/users')
@@ -333,18 +353,20 @@ export async function updateOrgGovernance(
   const supportTier = data.supportTier?.trim() || null
   const internalNotes = data.internalNotes?.trim() || null
 
-  await db.update(organizations)
-    .set({ supportTier, internalNotes, updatedAt: new Date() })
-    .where(eq(organizations.id, orgId))
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ supportTier, internalNotes, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
 
-  await writeAuditLog({
-    action: 'instance.org.governance.update',
-    entityType: 'organization',
-    entityId: orgId,
-    userId: session.user.id,
-    organizationId: null,
-    before: { supportTier: before.supportTier, internalNotes: before.internalNotes },
-    after: { supportTier, internalNotes },
+    await writeAuditLog(tx, {
+      action: 'instance.org.governance.update',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: null,
+      before: { supportTier: before.supportTier, internalNotes: before.internalNotes },
+      after: { supportTier, internalNotes },
+    })
   })
 
   revalidatePath('/instance/orgs')
@@ -379,23 +401,25 @@ export async function setInstanceModuleAvailability(key: ModuleKey, available: b
     afterDisabledModules[key] = true
   }
 
-  const [row] = before
-    ? await db.update(instanceSettings)
-        .set({ disabledModules: afterDisabledModules, updatedAt: new Date() })
-        .where(eq(instanceSettings.id, before.id))
-        .returning()
-    : await db.insert(instanceSettings)
-        .values({ disabledModules: afterDisabledModules })
-        .returning()
+  await db.transaction(async (tx) => {
+    const [row] = before
+      ? await tx.update(instanceSettings)
+          .set({ disabledModules: afterDisabledModules, updatedAt: new Date() })
+          .where(eq(instanceSettings.id, before.id))
+          .returning()
+      : await tx.insert(instanceSettings)
+          .values({ disabledModules: afterDisabledModules })
+          .returning()
 
-  await writeAuditLog({
-    action: 'instance.settings.module_availability',
-    entityType: 'instance_settings',
-    entityId: row.id,
-    userId: session.user.id,
-    organizationId: null,
-    before: { [key]: beforeDisabledModules[key] ? 'disabled' : 'available' },
-    after: { [key]: available ? 'available' : 'disabled' },
+    await writeAuditLog(tx, {
+      action: 'instance.settings.module_availability',
+      entityType: 'instance_settings',
+      entityId: row.id,
+      userId: session.user.id,
+      organizationId: null,
+      before: { [key]: beforeDisabledModules[key] ? 'disabled' : 'available' },
+      after: { [key]: available ? 'available' : 'disabled' },
+    })
   })
 
   revalidatePath('/', 'layout')

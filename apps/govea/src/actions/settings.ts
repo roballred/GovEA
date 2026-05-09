@@ -26,18 +26,20 @@ export async function updateOrgTheme(themeId: string) {
     where: eq(organizations.id, orgId),
   })
 
-  await db.update(organizations)
-    .set({ theme: themeId, updatedAt: new Date() })
-    .where(eq(organizations.id, orgId))
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ theme: themeId, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
 
-  await writeAuditLog({
-    action: 'settings.theme_changed',
-    entityType: 'organization',
-    entityId: orgId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { theme: before?.theme },
-    after: { theme: themeId },
+    await writeAuditLog(tx, {
+      action: 'settings.theme_changed',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { theme: before?.theme },
+      after: { theme: themeId },
+    })
   })
 
   revalidatePath('/', 'layout')
@@ -64,18 +66,20 @@ export async function setModuleEnabled(key: ModuleKey, enabled: boolean) {
   const before = org?.enabledModules ?? {}
   const after = { ...before, [key]: enabled }
 
-  await db.update(organizations)
-    .set({ enabledModules: after, updatedAt: new Date() })
-    .where(eq(organizations.id, orgId))
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ enabledModules: after, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
 
-  await writeAuditLog({
-    action: 'settings.module_toggled',
-    entityType: 'organization',
-    entityId: orgId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { [key]: before[key] ?? true },
-    after: { [key]: enabled },
+    await writeAuditLog(tx, {
+      action: 'settings.module_toggled',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { [key]: before[key] ?? true },
+      after: { [key]: enabled },
+    })
   })
 
   revalidatePath('/', 'layout')
@@ -105,18 +109,20 @@ export async function updateConfidenceSettings(input: ConfidenceSettings) {
     suppressBelowPercent,
   }
 
-  await db.update(organizations)
-    .set({ confidenceSettings: next, updatedAt: new Date() })
-    .where(eq(organizations.id, orgId))
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ confidenceSettings: next, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
 
-  await writeAuditLog({
-    action: 'settings.confidence_updated',
-    entityType: 'organization',
-    entityId: orgId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { confidenceSettings: before?.confidenceSettings },
-    after: { confidenceSettings: next },
+    await writeAuditLog(tx, {
+      action: 'settings.confidence_updated',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { confidenceSettings: before?.confidenceSettings },
+      after: { confidenceSettings: next },
+    })
   })
 
   revalidatePath('/', 'layout')

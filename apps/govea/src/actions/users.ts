@@ -51,19 +51,21 @@ export async function createUser(formData: FormData) {
   if (existing) throw new Error('A user with that email address already exists.')
 
   const passwordHash = await bcrypt.hash(password, 12)
-  const [user] = await db.insert(users).values({
-    name, email, passwordHash, role,
-    organizationId: orgId,
-    isActive: 'true',
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [user] = await tx.insert(users).values({
+      name, email, passwordHash, role,
+      organizationId: orgId,
+      isActive: 'true',
+    }).returning()
 
-  await writeAuditLog({
-    action: 'user.create',
-    entityType: 'user',
-    entityId: user.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, email, role },
+    await writeAuditLog(tx, {
+      action: 'user.create',
+      entityType: 'user',
+      entityId: user.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, email, role },
+    })
   })
 }
 
@@ -72,18 +74,20 @@ export async function updateUserRole(userId: string, role: 'admin' | 'contributo
   const orgId = session.user.organizationId!
 
   const before = await db.query.users.findFirst({ where: eq(users.id, userId) })
-  await db.update(users).set({ role, updatedAt: new Date() }).where(
-    and(eq(users.id, userId), eq(users.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ role, updatedAt: new Date() }).where(
+      and(eq(users.id, userId), eq(users.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'user.role_changed',
-    entityType: 'user',
-    entityId: userId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { role: before?.role },
-    after: { role },
+    await writeAuditLog(tx, {
+      action: 'user.role_changed',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { role: before?.role },
+      after: { role },
+    })
   })
 }
 
@@ -99,16 +103,18 @@ export async function deactivateUser(userId: string) {
     throw new Error('Cannot deactivate the last admin')
   }
 
-  await db.update(users).set({ isActive: 'false', updatedAt: new Date() }).where(
-    and(eq(users.id, userId), eq(users.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ isActive: 'false', updatedAt: new Date() }).where(
+      and(eq(users.id, userId), eq(users.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'user.deactivate',
-    entityType: 'user',
-    entityId: userId,
-    userId: session.user.id,
-    organizationId: orgId,
+    await writeAuditLog(tx, {
+      action: 'user.deactivate',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: orgId,
+    })
   })
 }
 
@@ -124,15 +130,17 @@ export async function deleteUser(userId: string) {
     throw new Error('Cannot delete the last admin')
   }
 
-  await db.delete(users).where(and(eq(users.id, userId), eq(users.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.delete(users).where(and(eq(users.id, userId), eq(users.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'user.delete',
-    entityType: 'user',
-    entityId: userId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: target?.name, email: target?.email },
+    await writeAuditLog(tx, {
+      action: 'user.delete',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: target?.name, email: target?.email },
+    })
   })
 }
 
@@ -140,16 +148,18 @@ export async function reactivateUser(userId: string) {
   const session = await requireAdmin()
   const orgId = session.user.organizationId!
 
-  await db.update(users).set({ isActive: 'true', updatedAt: new Date() }).where(
-    and(eq(users.id, userId), eq(users.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ isActive: 'true', updatedAt: new Date() }).where(
+      and(eq(users.id, userId), eq(users.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'user.reactivate',
-    entityType: 'user',
-    entityId: userId,
-    userId: session.user.id,
-    organizationId: orgId,
+    await writeAuditLog(tx, {
+      action: 'user.reactivate',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: orgId,
+    })
   })
 }
 
@@ -191,17 +201,19 @@ export async function editUser(userId: string, formData: FormData) {
     updates.passwordHash = await bcrypt.hash(newPassword, 12)
   }
 
-  await db.update(users).set(updates).where(
-    and(eq(users.id, userId), eq(users.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.update(users).set(updates).where(
+      and(eq(users.id, userId), eq(users.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'user.edit',
-    entityType: 'user',
-    entityId: userId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name, email: before?.email, role: before?.role },
-    after: { name, email, role },
+    await writeAuditLog(tx, {
+      action: 'user.edit',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name, email: before?.email, role: before?.role },
+      after: { name, email, role },
+    })
   })
 }

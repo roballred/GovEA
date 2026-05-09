@@ -31,26 +31,28 @@ export async function runSetup(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(password, 12)
 
-  const [org] = await db.insert(organizations).values({
-    name: orgName,
-    slug: orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [org] = await tx.insert(organizations).values({
+      name: orgName,
+      slug: orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+    }).returning()
 
-  const [user] = await db.insert(users).values({
-    name,
-    email,
-    passwordHash,
-    role: 'admin',
-    organizationId: org.id,
-    isActive: 'true',
-  }).returning()
+    const [user] = await tx.insert(users).values({
+      name,
+      email,
+      passwordHash,
+      role: 'admin',
+      organizationId: org.id,
+      isActive: 'true',
+    }).returning()
 
-  await writeAuditLog({
-    action: 'setup.complete',
-    entityType: 'user',
-    entityId: user.id,
-    organizationId: org.id,
-    after: { name: user.name, email: user.email, role: user.role },
+    await writeAuditLog(tx, {
+      action: 'setup.complete',
+      entityType: 'user',
+      entityId: user.id,
+      organizationId: org.id,
+      after: { name: user.name, email: user.email, role: user.role },
+    })
   })
 
   redirect('/login')

@@ -69,26 +69,30 @@ export async function addFrameworkMapping(
   if (!targetKind) throw new Error('Invalid entity type')
   await assertEntityInOrg(targetKind, entityId, orgId)
 
-  const [row] = await db
-    .insert(frameworkMappings)
-    .values({
-      organizationId: orgId,
+  const row = await db.transaction(async (tx) => {
+    const [r] = await tx
+      .insert(frameworkMappings)
+      .values({
+        organizationId: orgId,
+        entityType,
+        entityId,
+        framework: 'togaf',
+        conceptLabel,
+        rationale,
+        createdBy: session.user.id,
+      })
+      .returning()
+
+    await writeAuditLog(tx, {
+      action: 'framework_mapping.add',
       entityType,
       entityId,
-      framework: 'togaf',
-      conceptLabel,
-      rationale,
-      createdBy: session.user.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { conceptLabel, rationale },
     })
-    .returning()
 
-  await writeAuditLog({
-    action: 'framework_mapping.add',
-    entityType,
-    entityId,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { conceptLabel, rationale },
+    return r
   })
 
   revalidatePath(`/${entityType === 'capability' ? 'capabilities' : entityType}/${entityId}`)
@@ -103,23 +107,27 @@ export async function removeFrameworkMapping(mappingId: string) {
 
   const orgId = session.user.organizationId!
 
-  const [row] = await db
-    .delete(frameworkMappings)
-    .where(and(
-      eq(frameworkMappings.id, mappingId),
-      eq(frameworkMappings.organizationId, orgId),  // org boundary
-    ))
-    .returning()
+  const row = await db.transaction(async (tx) => {
+    const [r] = await tx
+      .delete(frameworkMappings)
+      .where(and(
+        eq(frameworkMappings.id, mappingId),
+        eq(frameworkMappings.organizationId, orgId),  // org boundary
+      ))
+      .returning()
 
-  if (!row) throw new Error('Not found')
+    if (!r) throw new Error('Not found')
 
-  await writeAuditLog({
-    action: 'framework_mapping.remove',
-    entityType: row.entityType,
-    entityId: row.entityId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { conceptLabel: row.conceptLabel, rationale: row.rationale },
+    await writeAuditLog(tx, {
+      action: 'framework_mapping.remove',
+      entityType: r.entityType,
+      entityId: r.entityId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { conceptLabel: r.conceptLabel, rationale: r.rationale },
+    })
+
+    return r
   })
 
   revalidatePath(`/${row.entityType === 'capability' ? 'capabilities' : row.entityType}/${row.entityId}`)

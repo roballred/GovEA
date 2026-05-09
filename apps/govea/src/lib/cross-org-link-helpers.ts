@@ -3,6 +3,12 @@ import { crossOrgLinks } from '@/db/schema'
 import { and, eq, inArray, or } from 'drizzle-orm'
 import { writeAuditLog } from '@/lib/audit'
 
+/**
+ * Structural type accepting either the top-level db client or a Drizzle tx
+ * handle. Mutating helpers participate in the caller's transaction (#416).
+ */
+type DBOrTx = Pick<typeof db, 'delete' | 'insert' | 'update' | 'query'>
+
 export type CrossOrgEntityType = 'capability' | 'persona'
 
 // Internal helpers used by mutations in actions/capabilities.ts, actions/personas.ts,
@@ -20,13 +26,16 @@ export type CrossOrgEntityType = 'capability' | 'persona'
  * a link may no longer be accessible.
  *
  * Caller MUST have already verified that the entity belongs to the actor's org.
+ * Pass the caller's transaction handle as `tx` so this helper participates in
+ * the same transaction as the surrounding mutation and audit write (#416).
  */
 export async function flagLinksForVisibilityDrop(
+  tx: DBOrTx,
   entityType: CrossOrgEntityType,
   entityId: string,
   reason: string,
 ) {
-  await db.update(crossOrgLinks).set({
+  await tx.update(crossOrgLinks).set({
     flaggedForReview: true,
     flagReason: reason,
     updatedAt: new Date(),
@@ -46,12 +55,15 @@ export async function flagLinksForVisibilityDrop(
  * Called when visibility is raised back to 'connections' or 'instance'.
  *
  * Caller MUST have already verified that the entity belongs to the actor's org.
+ * Pass the caller's transaction handle as `tx` so this helper participates in
+ * the same transaction as the surrounding mutation and audit write (#416).
  */
 export async function clearLinksFlag(
+  tx: DBOrTx,
   entityType: CrossOrgEntityType,
   entityId: string,
 ) {
-  await db.update(crossOrgLinks).set({
+  await tx.update(crossOrgLinks).set({
     flaggedForReview: false,
     flagReason: null,
     updatedAt: new Date(),
@@ -72,21 +84,25 @@ export async function clearLinksFlag(
  *
  * `actorUserId` and `actorOrgId` are required so the audit row identifies who
  * performed the removal. Caller MUST be an admin of one of the two orgs.
+ *
+ * Pass the caller's transaction handle as `tx` so the SELECT, the DELETE, and
+ * the audit write all commit atomically (#416).
  */
 export async function removeLinksForConnection(
+  tx: DBOrTx,
   orgAId: string,
   orgBId: string,
   actorUserId: string,
   actorOrgId: string,
 ) {
-  const affectedLinks = await db.query.crossOrgLinks.findMany({
+  const affectedLinks = await tx.query.crossOrgLinks.findMany({
     where: or(
       and(eq(crossOrgLinks.sourceOrgId, orgAId), eq(crossOrgLinks.targetOrgId, orgBId)),
       and(eq(crossOrgLinks.sourceOrgId, orgBId), eq(crossOrgLinks.targetOrgId, orgAId)),
     ),
   })
 
-  await db.delete(crossOrgLinks).where(
+  await tx.delete(crossOrgLinks).where(
     or(
       and(eq(crossOrgLinks.sourceOrgId, orgAId), eq(crossOrgLinks.targetOrgId, orgBId)),
       and(eq(crossOrgLinks.sourceOrgId, orgBId), eq(crossOrgLinks.targetOrgId, orgAId)),
@@ -94,7 +110,7 @@ export async function removeLinksForConnection(
   )
 
   if (affectedLinks.length > 0) {
-    await writeAuditLog({
+    await writeAuditLog(tx, {
       action: 'cross_org_link.remove_for_connection',
       entityType: 'org_connection',
       userId: actorUserId,

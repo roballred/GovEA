@@ -95,24 +95,26 @@ export async function createValueStream(formData: FormData) {
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
 
-  const [vs] = await db.insert(valueStreams).values({
-    name,
-    description,
-    valueItem,
-    status,
-    visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [vs] = await tx.insert(valueStreams).values({
+      name,
+      description,
+      valueItem,
+      status,
+      visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  await writeAuditLog({
-    action: 'value_stream.create',
-    entityType: 'value_stream',
-    entityId: vs.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { name, status },
+    await writeAuditLog(tx, {
+      action: 'value_stream.create',
+      entityType: 'value_stream',
+      entityId: vs.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { name, status },
+    })
   })
 }
 
@@ -128,24 +130,26 @@ export async function editValueStream(valueStreamId: string, formData: FormData)
 
   const before = await db.query.valueStreams.findFirst({ where: eq(valueStreams.id, valueStreamId) })
 
-  await db.update(valueStreams).set({
-    name,
-    description,
-    valueItem,
-    status,
-    visibility,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(valueStreams.id, valueStreamId), eq(valueStreams.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(valueStreams).set({
+      name,
+      description,
+      valueItem,
+      status,
+      visibility,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(valueStreams.id, valueStreamId), eq(valueStreams.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'value_stream.edit',
-    entityType: 'value_stream',
-    entityId: valueStreamId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name, status: before?.status },
-    after: { name, status },
+    await writeAuditLog(tx, {
+      action: 'value_stream.edit',
+      entityType: 'value_stream',
+      entityId: valueStreamId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name, status: before?.status },
+      after: { name, status },
+    })
   })
 }
 
@@ -155,17 +159,19 @@ export async function deleteValueStream(valueStreamId: string) {
 
   const before = await db.query.valueStreams.findFirst({ where: eq(valueStreams.id, valueStreamId) })
 
-  await db.delete(valueStreams).where(
-    and(eq(valueStreams.id, valueStreamId), eq(valueStreams.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(valueStreams).where(
+      and(eq(valueStreams.id, valueStreamId), eq(valueStreams.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'value_stream.delete',
-    entityType: 'value_stream',
-    entityId: valueStreamId,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { name: before?.name },
+    await writeAuditLog(tx, {
+      action: 'value_stream.delete',
+      entityType: 'value_stream',
+      entityId: valueStreamId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before?.name },
+    })
   })
 }
 

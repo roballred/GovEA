@@ -85,22 +85,24 @@ export async function createGoal(formData: FormData) {
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const objectiveIds = formData.getAll('objectiveIds') as string[]
 
-  const [goal] = await db.insert(goals).values({
-    name, description, planningHorizon, owner, status, visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [goal] = await tx.insert(goals).values({
+      name, description, planningHorizon, owner, status, visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  if (objectiveIds.length > 0) {
-    await db.insert(goalObjectives).values(
-      objectiveIds.map(oId => ({ goalId: goal.id, objectiveId: oId }))
-    )
-  }
+    if (objectiveIds.length > 0) {
+      await tx.insert(goalObjectives).values(
+        objectiveIds.map(oId => ({ goalId: goal.id, objectiveId: oId }))
+      )
+    }
 
-  await writeAuditLog({
-    action: 'goal.create', entityType: 'goal', entityId: goal.id,
-    userId: session.user.id, organizationId: orgId, after: { name, status },
+    await writeAuditLog(tx, {
+      action: 'goal.create', entityType: 'goal', entityId: goal.id,
+      userId: session.user.id, organizationId: orgId, after: { name, status },
+    })
   })
 
   revalidatePath('/goals')
@@ -121,23 +123,25 @@ export async function editGoal(goalId: string, formData: FormData) {
   const before = await db.query.goals.findFirst({ where: eq(goals.id, goalId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.update(goals).set({
-    name, description, planningHorizon, owner, status, visibility,
-    updatedBy: session.user.id, updatedAt: new Date(),
-  }).where(and(eq(goals.id, goalId), eq(goals.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(goals).set({
+      name, description, planningHorizon, owner, status, visibility,
+      updatedBy: session.user.id, updatedAt: new Date(),
+    }).where(and(eq(goals.id, goalId), eq(goals.organizationId, orgId)))
 
-  await db.delete(goalObjectives).where(eq(goalObjectives.goalId, goalId))
-  if (objectiveIds.length > 0) {
-    await db.insert(goalObjectives).values(
-      objectiveIds.map(oId => ({ goalId, objectiveId: oId }))
-    )
-  }
+    await tx.delete(goalObjectives).where(eq(goalObjectives.goalId, goalId))
+    if (objectiveIds.length > 0) {
+      await tx.insert(goalObjectives).values(
+        objectiveIds.map(oId => ({ goalId, objectiveId: oId }))
+      )
+    }
 
-  await writeAuditLog({
-    action: 'goal.edit', entityType: 'goal', entityId: goalId,
-    userId: session.user.id, organizationId: orgId,
-    before: { name: before?.name, status: before?.status },
-    after: { name, status },
+    await writeAuditLog(tx, {
+      action: 'goal.edit', entityType: 'goal', entityId: goalId,
+      userId: session.user.id, organizationId: orgId,
+      before: { name: before?.name, status: before?.status },
+      after: { name, status },
+    })
   })
 
   revalidatePath('/goals')
@@ -151,13 +155,15 @@ export async function deleteGoal(goalId: string) {
   const before = await db.query.goals.findFirst({ where: eq(goals.id, goalId) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(goals).where(
-    and(eq(goals.id, goalId), eq(goals.organizationId, orgId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(goals).where(
+      and(eq(goals.id, goalId), eq(goals.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'goal.delete', entityType: 'goal', entityId: goalId,
-    userId: session.user.id, organizationId: orgId, before: { name: before?.name },
+    await writeAuditLog(tx, {
+      action: 'goal.delete', entityType: 'goal', entityId: goalId,
+      userId: session.user.id, organizationId: orgId, before: { name: before?.name },
+    })
   })
 
   revalidatePath('/goals')

@@ -107,32 +107,35 @@ export async function createADR(formData: FormData) {
   const initiativeIds = formData.getAll('initiativeIds') as string[]
   const objectiveIds = formData.getAll('objectiveIds') as string[]
 
-  const [adr] = await db.insert(adrs).values({
-    number,
-    title,
-    context,
-    decision,
-    consequences,
-    status,
-    visibility,
-    supersededBy,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
-
-  await insertJunctions(adr.id, capabilityIds, applicationIds, initiativeIds, objectiveIds)
-
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
-  await syncEntityTaxonomyValues(orgId, 'adr', adr.id, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'adr.create',
-    entityType: 'adr',
-    entityId: adr.id,
-    userId: session.user.id,
-    organizationId: orgId,
-    after: { number, title, status, visibility },
+  await db.transaction(async (tx) => {
+    const [adr] = await tx.insert(adrs).values({
+      number,
+      title,
+      context,
+      decision,
+      consequences,
+      status,
+      visibility,
+      supersededBy,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
+
+    await insertJunctions(tx, adr.id, capabilityIds, applicationIds, initiativeIds, objectiveIds)
+
+    await syncEntityTaxonomyValues(tx, orgId, 'adr', adr.id, taxonomyTermIds)
+
+    await writeAuditLog(tx, {
+      action: 'adr.create',
+      entityType: 'adr',
+      entityId: adr.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { number, title, status, visibility },
+    })
   })
 }
 
@@ -157,36 +160,39 @@ export async function editADR(id: string, formData: FormData) {
   const before = await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.update(adrs).set({
-    number,
-    title,
-    context,
-    decision,
-    consequences,
-    status,
-    visibility,
-    supersededBy,
-    updatedBy: session.user.id,
-    updatedAt: new Date(),
-  }).where(and(eq(adrs.id, id), eq(adrs.organizationId, orgId)))
-
-  await db.delete(adrCapabilities).where(eq(adrCapabilities.adrId, id))
-  await db.delete(adrApplications).where(eq(adrApplications.adrId, id))
-  await db.delete(adrInitiatives).where(eq(adrInitiatives.adrId, id))
-  await db.delete(adrObjectives).where(eq(adrObjectives.adrId, id))
-  await insertJunctions(id, capabilityIds, applicationIds, initiativeIds, objectiveIds)
-
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
-  await syncEntityTaxonomyValues(orgId, 'adr', id, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'adr.edit',
-    entityType: 'adr',
-    entityId: id,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { number: before?.number, title: before?.title, status: before?.status },
-    after: { number, title, status, visibility },
+  await db.transaction(async (tx) => {
+    await tx.update(adrs).set({
+      number,
+      title,
+      context,
+      decision,
+      consequences,
+      status,
+      visibility,
+      supersededBy,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    }).where(and(eq(adrs.id, id), eq(adrs.organizationId, orgId)))
+
+    await tx.delete(adrCapabilities).where(eq(adrCapabilities.adrId, id))
+    await tx.delete(adrApplications).where(eq(adrApplications.adrId, id))
+    await tx.delete(adrInitiatives).where(eq(adrInitiatives.adrId, id))
+    await tx.delete(adrObjectives).where(eq(adrObjectives.adrId, id))
+    await insertJunctions(tx, id, capabilityIds, applicationIds, initiativeIds, objectiveIds)
+
+    await syncEntityTaxonomyValues(tx, orgId, 'adr', id, taxonomyTermIds)
+
+    await writeAuditLog(tx, {
+      action: 'adr.edit',
+      entityType: 'adr',
+      entityId: id,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { number: before?.number, title: before?.title, status: before?.status },
+      after: { number, title, status, visibility },
+    })
   })
 }
 
@@ -197,23 +203,28 @@ export async function deleteADR(id: string) {
   const before = await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(entityTaxonomyValues).where(
-    and(eq(entityTaxonomyValues.entityType, 'adr'), eq(entityTaxonomyValues.entityId, id))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(entityTaxonomyValues).where(
+      and(eq(entityTaxonomyValues.entityType, 'adr'), eq(entityTaxonomyValues.entityId, id))
+    )
 
-  await db.delete(adrs).where(and(eq(adrs.id, id), eq(adrs.organizationId, orgId)))
+    await tx.delete(adrs).where(and(eq(adrs.id, id), eq(adrs.organizationId, orgId)))
 
-  await writeAuditLog({
-    action: 'adr.delete',
-    entityType: 'adr',
-    entityId: id,
-    userId: session.user.id,
-    organizationId: orgId,
-    before: { number: before?.number, title: before?.title },
+    await writeAuditLog(tx, {
+      action: 'adr.delete',
+      entityType: 'adr',
+      entityId: id,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { number: before?.number, title: before?.title },
+    })
   })
 }
 
+type DBOrTx = Pick<typeof db, 'insert'>
+
 async function insertJunctions(
+  tx: DBOrTx,
   adrId: string,
   capabilityIds: string[],
   applicationIds: string[],
@@ -221,11 +232,11 @@ async function insertJunctions(
   objectiveIds: string[],
 ) {
   if (capabilityIds.length > 0)
-    await db.insert(adrCapabilities).values(capabilityIds.map(capabilityId => ({ adrId, capabilityId }))).onConflictDoNothing()
+    await tx.insert(adrCapabilities).values(capabilityIds.map(capabilityId => ({ adrId, capabilityId }))).onConflictDoNothing()
   if (applicationIds.length > 0)
-    await db.insert(adrApplications).values(applicationIds.map(applicationId => ({ adrId, applicationId }))).onConflictDoNothing()
+    await tx.insert(adrApplications).values(applicationIds.map(applicationId => ({ adrId, applicationId }))).onConflictDoNothing()
   if (initiativeIds.length > 0)
-    await db.insert(adrInitiatives).values(initiativeIds.map(initiativeId => ({ adrId, initiativeId }))).onConflictDoNothing()
+    await tx.insert(adrInitiatives).values(initiativeIds.map(initiativeId => ({ adrId, initiativeId }))).onConflictDoNothing()
   if (objectiveIds.length > 0)
-    await db.insert(adrObjectives).values(objectiveIds.map(objectiveId => ({ adrId, objectiveId }))).onConflictDoNothing()
+    await tx.insert(adrObjectives).values(objectiveIds.map(objectiveId => ({ adrId, objectiveId }))).onConflictDoNothing()
 }

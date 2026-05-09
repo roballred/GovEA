@@ -94,30 +94,32 @@ export async function createObjective(formData: FormData) {
   const capabilityIds = formData.getAll('capabilityIds') as string[]
   const valueStreamIds = formData.getAll('valueStreamIds') as string[]
 
-  const [obj] = await db.insert(strategicObjectives).values({
-    name, description, successMetric, timeHorizon, status, visibility,
-    organizationId: orgId,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  }).returning()
+  await db.transaction(async (tx) => {
+    const [obj] = await tx.insert(strategicObjectives).values({
+      name, description, successMetric, timeHorizon, status, visibility,
+      organizationId: orgId,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    }).returning()
 
-  if (capabilityIds.length > 0) {
-    await db.insert(objectiveCapabilities).values(
-      capabilityIds.map(cId => ({ objectiveId: obj.id, capabilityId: cId }))
-    )
-  }
-  if (valueStreamIds.length > 0) {
-    await db.insert(objectiveValueStreams).values(
-      valueStreamIds.map(vId => ({ objectiveId: obj.id, valueStreamId: vId }))
-    )
-  }
+    if (capabilityIds.length > 0) {
+      await tx.insert(objectiveCapabilities).values(
+        capabilityIds.map(cId => ({ objectiveId: obj.id, capabilityId: cId }))
+      )
+    }
+    if (valueStreamIds.length > 0) {
+      await tx.insert(objectiveValueStreams).values(
+        valueStreamIds.map(vId => ({ objectiveId: obj.id, valueStreamId: vId }))
+      )
+    }
 
-  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
-  await syncEntityTaxonomyValues(orgId, 'objective', obj.id, taxonomyTermIds)
+    const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+    await syncEntityTaxonomyValues(tx, orgId, 'objective', obj.id, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'objective.create', entityType: 'objective', entityId: obj.id,
-    userId: session.user.id, organizationId: orgId, after: { name, status },
+    await writeAuditLog(tx, {
+      action: 'objective.create', entityType: 'objective', entityId: obj.id,
+      userId: session.user.id, organizationId: orgId, after: { name, status },
+    })
   })
 }
 
@@ -139,33 +141,35 @@ export async function editObjective(objectiveId: string, formData: FormData) {
   })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.update(strategicObjectives).set({
-    name, description, successMetric, timeHorizon, status, visibility,
-    updatedBy: session.user.id, updatedAt: new Date(),
-  }).where(and(eq(strategicObjectives.id, objectiveId), eq(strategicObjectives.organizationId, orgId)))
+  await db.transaction(async (tx) => {
+    await tx.update(strategicObjectives).set({
+      name, description, successMetric, timeHorizon, status, visibility,
+      updatedBy: session.user.id, updatedAt: new Date(),
+    }).where(and(eq(strategicObjectives.id, objectiveId), eq(strategicObjectives.organizationId, orgId)))
 
-  await db.delete(objectiveCapabilities).where(eq(objectiveCapabilities.objectiveId, objectiveId))
-  if (capabilityIds.length > 0) {
-    await db.insert(objectiveCapabilities).values(
-      capabilityIds.map(cId => ({ objectiveId, capabilityId: cId }))
-    )
-  }
+    await tx.delete(objectiveCapabilities).where(eq(objectiveCapabilities.objectiveId, objectiveId))
+    if (capabilityIds.length > 0) {
+      await tx.insert(objectiveCapabilities).values(
+        capabilityIds.map(cId => ({ objectiveId, capabilityId: cId }))
+      )
+    }
 
-  await db.delete(objectiveValueStreams).where(eq(objectiveValueStreams.objectiveId, objectiveId))
-  if (valueStreamIds.length > 0) {
-    await db.insert(objectiveValueStreams).values(
-      valueStreamIds.map(vId => ({ objectiveId, valueStreamId: vId }))
-    )
-  }
+    await tx.delete(objectiveValueStreams).where(eq(objectiveValueStreams.objectiveId, objectiveId))
+    if (valueStreamIds.length > 0) {
+      await tx.insert(objectiveValueStreams).values(
+        valueStreamIds.map(vId => ({ objectiveId, valueStreamId: vId }))
+      )
+    }
 
-  const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
-  await syncEntityTaxonomyValues(orgId, 'objective', objectiveId, taxonomyTermIds)
+    const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+    await syncEntityTaxonomyValues(tx, orgId, 'objective', objectiveId, taxonomyTermIds)
 
-  await writeAuditLog({
-    action: 'objective.edit', entityType: 'objective', entityId: objectiveId,
-    userId: session.user.id, organizationId: orgId,
-    before: { name: before?.name, status: before?.status },
-    after: { name, status },
+    await writeAuditLog(tx, {
+      action: 'objective.edit', entityType: 'objective', entityId: objectiveId,
+      userId: session.user.id, organizationId: orgId,
+      before: { name: before?.name, status: before?.status },
+      after: { name, status },
+    })
   })
 }
 
@@ -178,16 +182,18 @@ export async function deleteObjective(objectiveId: string) {
   })
   assertOwnership(before?.organizationId, orgId)
 
-  await db.delete(entityTaxonomyValues).where(
-    and(eq(entityTaxonomyValues.entityType, 'objective'), eq(entityTaxonomyValues.entityId, objectiveId))
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(entityTaxonomyValues).where(
+      and(eq(entityTaxonomyValues.entityType, 'objective'), eq(entityTaxonomyValues.entityId, objectiveId))
+    )
 
-  await db.delete(strategicObjectives).where(
-    and(eq(strategicObjectives.id, objectiveId), eq(strategicObjectives.organizationId, orgId))
-  )
+    await tx.delete(strategicObjectives).where(
+      and(eq(strategicObjectives.id, objectiveId), eq(strategicObjectives.organizationId, orgId))
+    )
 
-  await writeAuditLog({
-    action: 'objective.delete', entityType: 'objective', entityId: objectiveId,
-    userId: session.user.id, organizationId: orgId, before: { name: before?.name },
+    await writeAuditLog(tx, {
+      action: 'objective.delete', entityType: 'objective', entityId: objectiveId,
+      userId: session.user.id, organizationId: orgId, before: { name: before?.name },
+    })
   })
 }

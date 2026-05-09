@@ -2,6 +2,13 @@ import { db } from '@/db/client'
 import { entityTaxonomyValues } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 
+/**
+ * Structural type accepting either the top-level db client or a Drizzle tx
+ * handle. Used by mutating helpers so they can participate in the caller's
+ * transaction (#416).
+ */
+type DBOrTx = Pick<typeof db, 'delete' | 'insert'>
+
 // Internal helpers used by mutations and detail-page reads in actions/capabilities.ts,
 // actions/personas.ts, actions/applications.ts, actions/objectives.ts,
 // actions/initiatives.ts, actions/principles.ts, actions/services.ts, actions/adrs.ts,
@@ -103,14 +110,18 @@ export async function getEntityTaxonomyValues(organizationId: string, entityType
  *
  * Caller MUST pass an organizationId derived from the actor's session, and have
  * already verified write authorization on the entity.
+ *
+ * Pass the caller's transaction handle as `tx` so this helper participates in
+ * the same transaction as the surrounding mutation and audit write (#416).
  */
 export async function syncEntityTaxonomyValues(
+  tx: DBOrTx,
   organizationId: string,
   entityType: string,
   entityId: string,
   termIds: string[],
 ) {
-  await db.delete(entityTaxonomyValues)
+  await tx.delete(entityTaxonomyValues)
     .where(and(
       eq(entityTaxonomyValues.organizationId, organizationId),
       eq(entityTaxonomyValues.entityType, entityType),
@@ -118,7 +129,7 @@ export async function syncEntityTaxonomyValues(
     ))
 
   if (termIds.length > 0) {
-    await db.insert(entityTaxonomyValues).values(
+    await tx.insert(entityTaxonomyValues).values(
       termIds.map(termId => ({
         organizationId,
         entityType,
