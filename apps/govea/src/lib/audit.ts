@@ -1,5 +1,23 @@
 import type { db } from '@/db/client'
 import { auditLog } from '@/db/schema'
+import { triggerSnapshotRecompute } from './completeness-snapshot'
+
+/**
+ * EA-content entity types whose mutations affect the completeness snapshot
+ * (#380 PR-1). Non-content events (auth, audit, instance config) skip the
+ * trigger.
+ */
+const SNAPSHOT_RELEVANT_ENTITY_TYPES = new Set([
+  'capability',
+  'application',
+  'persona',
+  'value_stream',
+  'strategic_objective',
+  'principle',
+  'glossary_term',
+  'initiative',
+  'adr',
+])
 
 /**
  * Audit-log writer (#416).
@@ -52,4 +70,18 @@ export async function writeAuditLog(tx: DBOrTx, params: AuditParams): Promise<vo
     after: params.after ?? null,
     metadata: params.metadata ?? null,
   })
+
+  // Fire-and-forget snapshot recompute when an EA-content entity changed.
+  // Gated on COMPLETENESS_SNAPSHOT_ENABLED so the flag controls both the read
+  // path (lib/confidence.ts) and the write path together — no behavior change
+  // when the flag is off (PR-1 acceptance criterion). Uses the top-level `db`
+  // (not `tx`); any race with an in-flight commit self-corrects on the next
+  // mutation or the nightly fallback. See `lib/completeness-snapshot.ts`.
+  if (
+    process.env.COMPLETENESS_SNAPSHOT_ENABLED === 'true'
+    && params.organizationId
+    && SNAPSHOT_RELEVANT_ENTITY_TYPES.has(params.entityType)
+  ) {
+    void triggerSnapshotRecompute(params.organizationId)
+  }
 }

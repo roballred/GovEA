@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { taxonomyTerms } from './taxonomy'
@@ -20,7 +20,10 @@ export const personas = pgTable('personas', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   lastReviewedAt: timestamp('last_reviewed_at'),
-})
+}, (t) => [
+  index('personas_org_status_idx').on(t.organizationId, t.status),
+  index('personas_org_updated_at_idx').on(t.organizationId, t.updatedAt),
+])
 
 export type Persona = typeof personas.$inferSelect
 export type NewPersona = typeof personas.$inferInsert

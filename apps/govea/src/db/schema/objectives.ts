@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
@@ -18,7 +18,10 @@ export const strategicObjectives = pgTable('strategic_objectives', {
   updatedBy: uuid('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+}, (t) => [
+  index('strategic_objectives_org_status_idx').on(t.organizationId, t.status),
+  index('strategic_objectives_org_updated_at_idx').on(t.organizationId, t.updatedAt),
+])
 
 export type StrategicObjective = typeof strategicObjectives.$inferSelect
 

@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
@@ -23,7 +23,10 @@ export const capabilities = pgTable('capabilities', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   lastReviewedAt: timestamp('last_reviewed_at'),
-})
+}, (t) => [
+  index('capabilities_org_status_idx').on(t.organizationId, t.status),
+  index('capabilities_org_updated_at_idx').on(t.organizationId, t.updatedAt),
+])
 
 // Junction table: capabilities ↔ personas (many-to-many)
 export const capabilityPersonas = pgTable('capability_personas', {

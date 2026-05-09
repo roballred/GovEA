@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations } from './organizations'
 import { workflowStatusEnum } from './personas'
 import { visibilityEnum } from './organizations'
@@ -21,7 +21,10 @@ export const principles = pgTable('principles', {
   updatedBy: uuid('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+}, (t) => [
+  index('principles_org_status_idx').on(t.organizationId, t.status),
+  index('principles_org_updated_at_idx').on(t.organizationId, t.updatedAt),
+])
 
 export const principleAdrs = pgTable('principle_adrs', {
   principleId: uuid('principle_id').notNull().references(() => principles.id, { onDelete: 'cascade' }),

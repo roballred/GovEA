@@ -1,4 +1,4 @@
-import { jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
@@ -29,7 +29,10 @@ export const applications = pgTable('applications', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   lastReviewedAt: timestamp('last_reviewed_at'),
-})
+}, (t) => [
+  index('applications_org_status_idx').on(t.organizationId, t.status),
+  index('applications_org_updated_at_idx').on(t.organizationId, t.updatedAt),
+])
 
 // Junction table: applications ↔ capabilities (many-to-many)
 // Rule: every application must link to at least one capability

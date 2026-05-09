@@ -1,4 +1,4 @@
-import { type AnyPgColumn, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { type AnyPgColumn, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { capabilities } from './capabilities'
@@ -23,7 +23,10 @@ export const adrs = pgTable('adrs', {
   updatedBy: uuid('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+}, (t) => [
+  index('adrs_org_status_idx').on(t.organizationId, t.status),
+  index('adrs_org_updated_at_idx').on(t.organizationId, t.updatedAt),
+])
 
 export type ADR = typeof adrs.$inferSelect
 export type NewADR = typeof adrs.$inferInsert
