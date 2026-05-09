@@ -77,7 +77,7 @@ function asRegularAdmin() {
 // ── Break-glass grant ─────────────────────────────────────────────────────────
 
 describe('grantBreakGlass', () => {
-  it('creates a session row expiring in 24h', async () => {
+  it('creates a session row expiring in 1h by default', async () => {
     asInstanceAdmin()
     const before = Date.now()
     await grantBreakGlass(targetOrgId, 'Integration test reason')
@@ -93,9 +93,10 @@ describe('grantBreakGlass', () => {
 
     expect(session).toBeDefined()
     expect(session!.reason).toBe('Integration test reason')
+    expect(session!.requiresApproval).toBe(false)
     const expiresMs = session!.expiresAt.getTime()
-    expect(expiresMs).toBeGreaterThan(before + 23 * 3600 * 1000)
-    expect(expiresMs).toBeLessThan(before + 25 * 3600 * 1000)
+    expect(expiresMs).toBeGreaterThan(before + 59 * 60_000)
+    expect(expiresMs).toBeLessThan(before + 61 * 60_000)
   })
 
   it('writes an audit log entry', async () => {
