@@ -2,12 +2,20 @@ import { notFound } from 'next/navigation'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { db } from '@/db/client'
 import { organizations, users, breakGlassSessions } from '@/db/schema'
-import { eq, and, isNull, gt, desc } from 'drizzle-orm'
+import { eq, and, isNull, gt, ne, desc } from 'drizzle-orm'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ConfirmWithReason } from '@/components/confirm-with-reason'
-import { suspendOrg, unsuspendOrg, grantBreakGlass, revokeBreakGlass, getOrgGovernanceHistory } from '@/actions/instance'
+import { BreakGlassGrantForm } from '@/components/break-glass-grant-form'
+import {
+  suspendOrg,
+  unsuspendOrg,
+  grantBreakGlass,
+  revokeBreakGlass,
+  approveBreakGlass,
+  getOrgGovernanceHistory,
+} from '@/actions/instance'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -26,6 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
   'instance.org.unsuspend':           'Unsuspended',
   'instance.org.governance.update':   'Governance updated',
   'instance.break_glass.grant':       'Break-glass granted',
+  'instance.break_glass.approve':     'Break-glass approved',
   'instance.break_glass.revoke':      'Break-glass revoked',
 }
 
@@ -33,7 +42,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
   const { id } = await params
   const session = await requireInstanceAdmin()
 
-  const [org, orgUsers, activeBG, bgHistory, govHistory] = await Promise.all([
+  const now = new Date()
+  const [org, orgUsers, myActiveSession, pendingFromOthers, bgHistory, govHistory] = await Promise.all([
     db.query.organizations.findFirst({ where: eq(organizations.id, id) }),
     db.query.users.findMany({
       where: eq(users.organizationId, id),
@@ -44,8 +54,20 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         eq(breakGlassSessions.instanceAdminId, session.user.id),
         eq(breakGlassSessions.targetOrgId, id),
         isNull(breakGlassSessions.revokedAt),
-        gt(breakGlassSessions.expiresAt, new Date()),
+        gt(breakGlassSessions.expiresAt, now),
       ),
+      orderBy: (s, { desc }) => [desc(s.grantedAt)],
+    }),
+    db.query.breakGlassSessions.findMany({
+      where: and(
+        eq(breakGlassSessions.targetOrgId, id),
+        eq(breakGlassSessions.requiresApproval, true),
+        isNull(breakGlassSessions.approvedAt),
+        isNull(breakGlassSessions.revokedAt),
+        gt(breakGlassSessions.expiresAt, now),
+        ne(breakGlassSessions.instanceAdminId, session.user.id),
+      ),
+      orderBy: (s, { desc }) => [desc(s.grantedAt)],
     }),
     db.query.breakGlassSessions.findMany({
       where: eq(breakGlassSessions.targetOrgId, id),
@@ -54,6 +76,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
     }),
     getOrgGovernanceHistory(id),
   ])
+
+  const myActiveIsPending = !!myActiveSession && myActiveSession.requiresApproval && !myActiveSession.approvedAt
 
   if (!org) notFound()
 
@@ -176,36 +200,90 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <div>
             <h2 className="text-base font-semibold">Break-Glass Access</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Time-limited read-only access to this organisation&apos;s data for incident investigation. All sessions are audited.
+              Time-limited access to this organisation&apos;s data for incident investigation. Sessions over 1 hour require a second instance admin to approve. All sessions are audited.
             </p>
           </div>
-          {!activeBG && !org.isSystemOrg && (
-            <ConfirmWithReason
+          {!myActiveSession && !org.isSystemOrg && (
+            <BreakGlassGrantForm
               trigger={<Button variant="outline" size="sm">Grant Access</Button>}
-              title="Grant break-glass access"
-              description={`You will have read-only access to "${org.name}" for 24 hours. Enter a reason for the audit log.`}
-              placeholder="e.g. User support request, incident investigation…"
-              confirmLabel="Grant 24h Access"
-              onConfirm={async (reason) => {
+              orgName={org.name}
+              onConfirm={async (reason, ttlMinutes) => {
                 'use server'
-                await grantBreakGlass(id, reason)
+                await grantBreakGlass(id, reason, ttlMinutes)
               }}
             />
           )}
         </div>
 
-        {activeBG ? (
-          <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4">
+        {/* Pending sessions from OTHER admins — caller can approve them */}
+        {pendingFromOthers.length > 0 && (
+          <div className="mb-4 space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Awaiting your approval
+            </h3>
+            {pendingFromOthers.map(s => (
+              <div
+                key={s.id}
+                className="rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-800 dark:text-blue-300">
+                      Pending approval — granted by another admin
+                    </p>
+                    <p className="text-blue-700 dark:text-blue-400 mt-0.5">
+                      Requested {s.grantedAt.toLocaleString()} · expires {s.expiresAt.toLocaleString()} · Reason: {s.reason}
+                    </p>
+                  </div>
+                  <form action={async () => {
+                    'use server'
+                    await approveBreakGlass(s.id)
+                  }}>
+                    <Button type="submit" variant="default" size="sm">Approve</Button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {myActiveSession ? (
+          <div
+            className={cn(
+              'rounded-md p-4 border',
+              myActiveIsPending
+                ? 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800'
+                : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800',
+            )}
+          >
             <div className="flex items-center justify-between gap-4">
               <div className="text-sm">
-                <p className="font-medium text-amber-800 dark:text-amber-300">Active session</p>
-                <p className="text-amber-700 dark:text-amber-400 mt-0.5">
-                  Expires {activeBG.expiresAt.toLocaleString()} · Reason: {activeBG.reason}
+                <p
+                  className={cn(
+                    'font-medium',
+                    myActiveIsPending
+                      ? 'text-slate-800 dark:text-slate-300'
+                      : 'text-amber-800 dark:text-amber-300',
+                  )}
+                >
+                  {myActiveIsPending ? 'Pending approval' : 'Active session'}
+                </p>
+                <p
+                  className={cn(
+                    'mt-0.5',
+                    myActiveIsPending
+                      ? 'text-slate-700 dark:text-slate-400'
+                      : 'text-amber-700 dark:text-amber-400',
+                  )}
+                >
+                  {myActiveIsPending
+                    ? `Awaiting approval from another instance admin · expires ${myActiveSession.expiresAt.toLocaleString()} regardless of when approved · Reason: ${myActiveSession.reason}`
+                    : `Expires ${myActiveSession.expiresAt.toLocaleString()} · Reason: ${myActiveSession.reason}`}
                 </p>
               </div>
               <form action={async () => {
                 'use server'
-                await revokeBreakGlass(activeBG.id, id)
+                await revokeBreakGlass(myActiveSession.id, id)
               }}>
                 <Button type="submit" variant="destructive" size="sm">Revoke</Button>
               </form>
@@ -219,22 +297,34 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <div className="mt-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Session history</h3>
             <div className="divide-y rounded-md border text-sm">
-              {bgHistory.map(s => (
-                <div key={s.id} className="flex items-center gap-3 px-3 py-2">
-                  <span className={cn(
-                    'shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium',
-                    s.revokedAt
-                      ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                      : s.expiresAt < new Date()
-                        ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
-                  )}>
-                    {s.revokedAt ? 'Revoked' : s.expiresAt < new Date() ? 'Expired' : 'Active'}
-                  </span>
-                  <span className="flex-1 truncate text-muted-foreground">{s.reason}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{s.grantedAt.toLocaleString()}</span>
-                </div>
-              ))}
+              {bgHistory.map(s => {
+                const expired = s.expiresAt < new Date()
+                const pending = !s.revokedAt && !expired && s.requiresApproval && !s.approvedAt
+                const status = s.revokedAt
+                  ? 'Revoked'
+                  : expired
+                    ? 'Expired'
+                    : pending
+                      ? 'Pending'
+                      : 'Active'
+                const cls = s.revokedAt || expired
+                  ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                  : pending
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400'
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                return (
+                  <div key={s.id} className="flex items-center gap-3 px-3 py-2">
+                    <span className={cn(
+                      'shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium',
+                      cls,
+                    )}>
+                      {status}
+                    </span>
+                    <span className="flex-1 truncate text-muted-foreground">{s.reason}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{s.grantedAt.toLocaleString()}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

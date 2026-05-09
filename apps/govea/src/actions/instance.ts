@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import { organizations, users, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
-import { eq, and, isNull, gt, like, desc } from 'drizzle-orm'
+import { eq, and, isNull, gt, like, desc, ne } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
@@ -10,6 +10,12 @@ import { MODULE_DEFS, type ModuleKey } from '@/lib/modules'
 import { validatePassword } from '@/lib/password'
 import bcrypt from 'bcryptjs'
 import { themes } from '@/lib/themes'
+import {
+  BREAK_GLASS_APPROVAL_THRESHOLD_MINUTES,
+  BREAK_GLASS_DEFAULT_TTL,
+  isValidBreakGlassTtl,
+} from '@/lib/break-glass'
+import { notifyBreakGlassEvent } from '@/lib/notifications/break-glass'
 
 export async function createOrg(formData: FormData): Promise<{ id: string }> {
   const session = await requireInstanceAdmin()
@@ -57,16 +63,33 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
   return { id: orgId }
 }
 
-export async function grantBreakGlass(orgId: string, reason: string) {
+export async function grantBreakGlass(
+  orgId: string,
+  reason: string,
+  ttlMinutes: number = BREAK_GLASS_DEFAULT_TTL,
+) {
   const session = await requireInstanceAdmin()
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
-  await db.transaction(async (tx) => {
+  const trimmedReason = reason.trim()
+  if (!trimmedReason) throw new Error('Reason is required')
+  if (!isValidBreakGlassTtl(ttlMinutes)) {
+    throw new Error('Invalid TTL — must be one of 60, 240, 480 minutes')
+  }
+
+  const requiresApproval = ttlMinutes > BREAK_GLASS_APPROVAL_THRESHOLD_MINUTES
+  const grantedAt = new Date()
+  // TTL counts from grantedAt, NOT from approvedAt — pre-staging an
+  // approval cannot extend the elevation window beyond what was requested.
+  const expiresAt = new Date(grantedAt.getTime() + ttlMinutes * 60_000)
+
+  const inserted = await db.transaction(async (tx) => {
     const [row] = await tx.insert(breakGlassSessions).values({
       instanceAdminId: session.user.id,
       targetOrgId: orgId,
-      reason,
+      reason: trimmedReason,
+      grantedAt,
       expiresAt,
+      requiresApproval,
     }).returning()
 
     await writeAuditLog(tx, {
@@ -75,36 +98,133 @@ export async function grantBreakGlass(orgId: string, reason: string) {
       entityId: orgId,
       userId: session.user.id,
       organizationId: null,
-      after: { reason, expiresAt, sessionId: row.id },
+      after: {
+        reason: trimmedReason,
+        ttlMinutes,
+        expiresAt,
+        sessionId: row.id,
+        requiresApproval,
+      },
     })
+
+    return row
+  })
+
+  await notifyBreakGlassEvent({
+    event: 'grant',
+    session: inserted,
+    actorUserId: session.user.id,
   })
 
   revalidatePath(`/instance/orgs/${orgId}`)
   revalidatePath('/instance')
 }
 
+export async function approveBreakGlass(sessionId: string) {
+  const session = await requireInstanceAdmin()
+
+  const approved = await db.transaction(async (tx) => {
+    const target = await tx.query.breakGlassSessions.findFirst({
+      where: eq(breakGlassSessions.id, sessionId),
+    })
+    if (!target) throw new Error('Session not found')
+    if (target.instanceAdminId === session.user.id) {
+      throw new Error('Cannot approve your own break-glass session')
+    }
+    if (!target.requiresApproval) {
+      throw new Error('Session does not require approval')
+    }
+    if (target.approvedAt) throw new Error('Session is already approved')
+    if (target.revokedAt) throw new Error('Session is revoked')
+    if (target.expiresAt <= new Date()) throw new Error('Session has expired')
+
+    const approvedAt = new Date()
+    const [row] = await tx.update(breakGlassSessions)
+      .set({ approvedAt, approvedBy: session.user.id })
+      .where(eq(breakGlassSessions.id, sessionId))
+      .returning()
+
+    await writeAuditLog(tx, {
+      action: 'instance.break_glass.approve',
+      entityType: 'break_glass_session',
+      entityId: sessionId,
+      userId: session.user.id,
+      organizationId: null,
+      after: {
+        approvedAt,
+        granterId: target.instanceAdminId,
+        targetOrgId: target.targetOrgId,
+      },
+    })
+
+    return row
+  })
+
+  await notifyBreakGlassEvent({
+    event: 'approval',
+    session: approved,
+    actorUserId: session.user.id,
+  })
+
+  revalidatePath(`/instance/orgs/${approved.targetOrgId}`)
+  revalidatePath('/instance')
+}
+
 export async function revokeBreakGlass(sessionId: string, orgId: string) {
   const session = await requireInstanceAdmin()
 
-  await db.transaction(async (tx) => {
-    await tx.update(breakGlassSessions)
+  const revoked = await db.transaction(async (tx) => {
+    const [row] = await tx.update(breakGlassSessions)
       .set({ revokedAt: new Date(), revokedBy: session.user.id })
       .where(and(
         eq(breakGlassSessions.id, sessionId),
         eq(breakGlassSessions.instanceAdminId, session.user.id),
       ))
+      .returning()
 
-    await writeAuditLog(tx, {
-      action: 'instance.break_glass.revoke',
-      entityType: 'break_glass_session',
-      entityId: sessionId,
-      userId: session.user.id,
-      organizationId: null,
-    })
+    if (row) {
+      await writeAuditLog(tx, {
+        action: 'instance.break_glass.revoke',
+        entityType: 'break_glass_session',
+        entityId: sessionId,
+        userId: session.user.id,
+        organizationId: null,
+      })
+    }
+
+    return row
   })
+
+  if (revoked) {
+    await notifyBreakGlassEvent({
+      event: 'revoke',
+      session: revoked,
+      actorUserId: session.user.id,
+    })
+  }
 
   revalidatePath(`/instance/orgs/${orgId}`)
   revalidatePath('/instance')
+}
+
+/**
+ * Returns pending-approval sessions that the caller can approve — i.e.,
+ * sessions that require approval, are not yet approved, not revoked, not
+ * expired, and were granted by some OTHER instance admin.
+ */
+export async function getPendingBreakGlassApprovals() {
+  const session = await requireInstanceAdmin()
+  const now = new Date()
+  return db.query.breakGlassSessions.findMany({
+    where: and(
+      eq(breakGlassSessions.requiresApproval, true),
+      isNull(breakGlassSessions.approvedAt),
+      isNull(breakGlassSessions.revokedAt),
+      gt(breakGlassSessions.expiresAt, now),
+      ne(breakGlassSessions.instanceAdminId, session.user.id),
+    ),
+    orderBy: (s, { desc }) => [desc(s.grantedAt)],
+  })
 }
 
 export async function suspendOrg(orgId: string, reason: string) {

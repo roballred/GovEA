@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { users } from './users'
 import { organizations } from './organizations'
 
@@ -9,6 +9,9 @@ export const breakGlassSessions = pgTable('break_glass_sessions', {
   reason: text('reason').notNull(),
   grantedAt: timestamp('granted_at').notNull().defaultNow(),
   expiresAt: timestamp('expires_at').notNull(),
+  requiresApproval: boolean('requires_approval').notNull().default(false),
+  approvedAt: timestamp('approved_at'),
+  approvedBy: uuid('approved_by').references(() => users.id),
   revokedAt: timestamp('revoked_at'),
   revokedBy: uuid('revoked_by').references(() => users.id),
 })
