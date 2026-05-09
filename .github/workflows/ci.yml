@@ -118,6 +118,9 @@ jobs:
       - name: Push schema to database
         run: pnpm --filter govea db:push --force
 
+      - name: Apply DB triggers (audit_log immutability, etc.)
+        run: pnpm --filter govea db:apply-triggers:container
+
       - name: Run integration tests
         run: pnpm --filter govea test:integration
 
@@ -164,6 +167,9 @@ jobs:
 
       - name: Push schema to database
         run: pnpm --filter govea db:push --force
+
+      - name: Apply DB triggers (audit_log immutability, etc.)
+        run: pnpm --filter govea db:apply-triggers:container
 
       # The db:seed script uses `tsx --env-file .env.local`.  Create an empty
       # placeholder so tsx does not fail on the missing file.  All real env

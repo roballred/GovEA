@@ -39,11 +39,20 @@ SSO users default to Viewer. Admins promote as needed.
 
 ## Database Workflow
 
-**Pre-production (current):** Use `db:push` to sync schema changes directly to the dev database. CI also uses `db:push --force` on a fresh database. No migration files needed — run `pnpm --filter govea db:push` after schema edits, then `db:seed` to repopulate.
+**Pre-production (current):** Use `db:push` to sync schema changes directly to the dev database. CI also uses `db:push --force` on a fresh database. No migration files needed — run `pnpm --filter govea db:push` after schema edits, then `db:apply-triggers` to install Postgres triggers, then `db:seed` to repopulate.
 
-**Switch to migrations when:** the first real tenant or persistent data exists that can't be thrown away. At that point: squash the schema into a single `0000_initial_schema.sql`, switch CI from `db:push` to `db:migrate`, and use `db:generate` + `db:migrate` for all schema changes going forward. Update this section when the switch happens.
+**Switch to migrations when:** the first real tenant or persistent data exists that can't be thrown away. At that point: squash the schema into a single `0000_initial_schema.sql`, fold the SQL files in `apps/govea/src/db/sql/` into the migration sequence, switch CI from `db:push` to `db:migrate`, and use `db:generate` + `db:migrate` for all schema changes going forward. Update this section when the switch happens.
 
 Do not commit migration files generated during pre-production development.
+
+### Postgres triggers (DB-level constraints)
+
+Some constraints are enforced by Postgres triggers that drizzle-kit does not manage. Source of truth: `apps/govea/src/db/sql/*.sql`. Idempotent — re-applied after every `db:push` by `pnpm --filter govea db:apply-triggers`.
+
+Currently shipped:
+- `audit-immutable.sql` — blocks UPDATE and DELETE on `audit_log` (#417). Audit rows are append-only at the DB layer; even a compromised admin role cannot rewrite history. Operators: this means the `audit_log` table cannot be retroactively edited, including by you.
+
+When adding a new trigger, drop a new `.sql` file in `src/db/sql/` (idempotent: `CREATE OR REPLACE` for functions, `DROP TRIGGER IF EXISTS` then `CREATE TRIGGER`). The apply-triggers script picks it up automatically.
 
 ---
 
