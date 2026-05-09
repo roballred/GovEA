@@ -25,7 +25,7 @@ describe('audit_log immutability (#417)', () => {
     const org = await createTestOrg()
     const action = `test.audit.update-blocked.${randomUUID()}`
     try {
-      await writeAuditLog(db, {
+      await writeAuditLog({
         action,
         entityType: 'organization',
         entityId: org.id,
@@ -56,7 +56,7 @@ describe('audit_log immutability (#417)', () => {
     const org = await createTestOrg()
     const action = `test.audit.delete-blocked.${randomUUID()}`
     try {
-      await writeAuditLog(db, {
+      await writeAuditLog({
         action,
         entityType: 'organization',
         entityId: org.id,
@@ -84,7 +84,7 @@ describe('audit_log immutability (#417)', () => {
     const org = await createTestOrg()
     const action = `test.audit.cause-message.${randomUUID()}`
     try {
-      await writeAuditLog(db, {
+      await writeAuditLog({
         action,
         entityType: 'organization',
         entityId: org.id,
@@ -111,7 +111,7 @@ describe('audit_log immutability (#417)', () => {
     const user = await createTestUser(org.id, 'admin')
 
     const action = `test.audit.cascade-safe.${randomUUID()}`
-    await writeAuditLog(db, {
+    await writeAuditLog({
       action,
       entityType: 'user',
       entityId: user.id,
