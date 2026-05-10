@@ -14,7 +14,21 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { CoverageTileLabel } from './coverage-tile-label'
 import { DomainBadge } from '@/components/domain-badge'
 import { ConfidenceSummary } from '@/components/confidence-summary'
+import { canEdit } from '@/lib/rbac'
+import {
+  getCategorizedSignals,
+  getMostNeededActions,
+  getDomainRagBuckets,
+  type RagBucket,
+} from '@/lib/completeness-signals'
 import Link from 'next/link'
+
+const RAG_TEXT_CLASS: Record<RagBucket, string> = {
+  green:   'text-green-700 dark:text-green-400',
+  amber:   'text-amber-600 dark:text-amber-400',
+  red:     'text-red-600 dark:text-red-400',
+  neutral: 'text-foreground',
+}
 
 function pivotCounts(rows: { status: string; count: number | string }[]) {
   const byStatus: Record<string, number> = {}
@@ -148,9 +162,23 @@ export default async function DashboardPage() {
     { label: 'Personas',     href: '/personas',     total: Number(personaTotal[0].count), modified: Number(personaModified[0].count), reviewed: Number(personaReviewed[0].count) },
   ]
 
-  const needsAttention = COVERAGE_ENTITIES
-    .map(e => ({ ...e, draftCount: stats[e.key].byStatus[e.draftKey] ?? 0 }))
-    .filter(e => e.draftCount > 0)
+  // PR-3: completeness drill-down counts, top-5 ranked actions, per-domain RAG.
+  // Most-Needed Actions is gated to Admin/Contributor per `rm-repository-completeness`.
+  const showRanked = canEdit(session.user)
+  const [signals, mostNeeded, domainRag] = await Promise.all([
+    getCategorizedSignals(orgId),
+    showRanked ? getMostNeededActions(orgId) : Promise.resolve([]),
+    getDomainRagBuckets(orgId),
+  ])
+  const ragByDomain = new Map<string, RagBucket>(
+    domainRag.map(r => [r.domain || '__uncategorized__', r.bucket]),
+  )
+  const targetByDomain = new Map<string, number | null>(
+    domainRag.map(r => [r.domain || '__uncategorized__', r.target]),
+  )
+  const publishedPctByDomain = new Map<string, number>(
+    domainRag.map(r => [r.domain || '__uncategorized__', r.publishedPct]),
+  )
 
   // Resolve target entity names for inbound pending links
   const fedCapIds = fedInboundLinks.filter(l => l.targetEntityType === 'capability').map(l => l.targetEntityId)
@@ -324,26 +352,38 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Capabilities by Domain */}
+      {/* Capabilities by Domain — RAG-colored vs domainTargets */}
       {capsByDomain.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Capabilities by Domain</p>
           <Card>
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-wrap gap-3">
-                {capsByDomain.map(row => (
-                  <Link
-                    key={row.domain ?? '__none__'}
-                    href={`/capabilities${row.domain ? `?domain=${encodeURIComponent(row.domain)}` : ''}`}
-                    className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 hover:bg-muted/50 transition-colors"
-                  >
-                    {row.domain
-                      ? <DomainBadge domain={row.domain} />
-                      : <span className="text-xs text-muted-foreground">Uncategorized</span>
-                    }
-                    <span className="text-sm font-semibold">{Number(row.count)}</span>
-                  </Link>
-                ))}
+                {capsByDomain.map(row => {
+                  const key = row.domain ?? '__uncategorized__'
+                  const bucket = ragByDomain.get(key) ?? 'neutral'
+                  const target = targetByDomain.get(key) ?? null
+                  const publishedPct = publishedPctByDomain.get(key) ?? 0
+                  return (
+                    <Link
+                      key={row.domain ?? '__none__'}
+                      href={`/capabilities${row.domain ? `?domain=${encodeURIComponent(row.domain)}` : ''}`}
+                      className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 hover:bg-muted/50 transition-colors"
+                      title={target != null ? `${publishedPct}% published vs ${target}% target` : undefined}
+                    >
+                      {row.domain
+                        ? <DomainBadge domain={row.domain} />
+                        : <span className="text-xs text-muted-foreground">Uncategorized</span>
+                      }
+                      <span className={`text-sm font-semibold ${RAG_TEXT_CLASS[bucket]}`}>{Number(row.count)}</span>
+                      {target != null && (
+                        <span className={`text-xs ${RAG_TEXT_CLASS[bucket]}`}>
+                          {publishedPct}/{target}%
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
@@ -351,26 +391,65 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Needs Attention */}
+        {/* Needs Attention — categorized drill-down */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Needs Attention</CardTitle>
           </CardHeader>
           <CardContent>
-            {needsAttention.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No drafts — all content is published.</p>
+            {(signals.stale + signals.unpublished + signals.incompleteRelationships) === 0 ? (
+              <p className="text-sm text-muted-foreground">Repository is current — nothing to flag.</p>
             ) : (
               <ul className="space-y-2">
-                {needsAttention.map(e => (
-                  <li key={e.key} className="flex items-center justify-between text-sm">
-                    <Link href={e.href} className="hover:underline">{e.label}</Link>
-                    <span className="font-medium text-amber-600">{e.draftCount} draft</span>
-                  </li>
-                ))}
+                <li className="flex items-center justify-between text-sm">
+                  <span>
+                    Stale <span className="text-xs text-muted-foreground">(past staleness window)</span>
+                  </span>
+                  <span className={`font-medium ${signals.stale > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                    {signals.stale}
+                  </span>
+                </li>
+                <li className="flex items-center justify-between text-sm">
+                  <span>Unpublished <span className="text-xs text-muted-foreground">(drafts)</span></span>
+                  <span className={`font-medium ${signals.unpublished > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                    {signals.unpublished}
+                  </span>
+                </li>
+                <li className="flex items-center justify-between text-sm">
+                  <span>
+                    Incomplete relationships <span className="text-xs text-muted-foreground">(capability ↔ application / persona)</span>
+                  </span>
+                  <span className={`font-medium ${signals.incompleteRelationships > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                    {signals.incompleteRelationships}
+                  </span>
+                </li>
               </ul>
             )}
           </CardContent>
         </Card>
+
+        {/* Most-Needed Actions — top 5 ranked items, Admin/Contributor only */}
+        {showRanked && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Most-Needed Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {mostNeeded.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nothing pressing — everything is current.</p>
+              ) : (
+                <ol className="space-y-2">
+                  {mostNeeded.map(action => (
+                    <li key={action.key} className="text-sm">
+                      <Link href={action.href} className="font-medium hover:underline">{action.name}</Link>
+                      <p className="text-xs text-muted-foreground mt-0.5">{action.detail}</p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Initiative breakdown */}
         <Card>
