@@ -17,6 +17,8 @@
     "db:apply-triggers:container": "tsx src/db/scripts/apply-triggers.ts",
     "db:recompute-snapshots": "tsx --env-file .env.local src/db/scripts/recompute-completeness-snapshots.ts",
     "db:recompute-snapshots:container": "tsx src/db/scripts/recompute-completeness-snapshots.ts",
+    "db:prune-snapshots": "tsx --env-file .env.local src/db/scripts/prune-completeness-snapshots.ts",
+    "db:prune-snapshots:container": "tsx src/db/scripts/prune-completeness-snapshots.ts",
     "test:e2e": "playwright test",
     "test:integration": "vitest run --config vitest.config.ts",
     "test:integration:watch": "vitest --config vitest.config.ts"

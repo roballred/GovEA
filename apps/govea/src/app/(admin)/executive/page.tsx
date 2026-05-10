@@ -8,6 +8,7 @@ import {
 import { and, count, desc, eq, inArray, isNull, lt } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { ConfidenceSummary } from '@/components/confidence-summary'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -286,6 +287,9 @@ export default async function ExecutiveDashboardPage() {
           {org?.name ?? 'Your organisation'} · {generatedDate}
         </p>
       </div>
+
+      {/* Repository confidence — shown when org has authenticated visibility on (#380 PR-4) */}
+      <ConfidenceSummary orgId={orgId} />
 
       {/* ── Hero stats ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

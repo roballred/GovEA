@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getInitiatives } from '@/actions/initiatives'
+import { ConfidenceSummary } from '@/components/confidence-summary'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -304,6 +305,9 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
           </Link>
         </div>
       </div>
+
+      {/* Repository confidence — shown when org has authenticated visibility on (#380 PR-4) */}
+      <ConfidenceSummary orgId={orgId} />
 
       {/* Empty state */}
       {!hasInitiatives && (
