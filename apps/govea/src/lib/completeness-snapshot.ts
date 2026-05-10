@@ -19,9 +19,12 @@ import {
   strategicObjectives, principles, glossaryTerms, initiatives, adrs,
   completenessSnapshots,
   organizations,
+  auditLog,
   type SnapshotCounts,
+  type ConfidenceSettings,
 } from '@/db/schema'
-import { and, count, eq, max, sql } from 'drizzle-orm'
+import { and, count, desc, eq, max, ne, sql } from 'drizzle-orm'
+import { scoreFromCounts } from './completeness-trend'
 
 /** UTC date string (YYYY-MM-DD) — Postgres `date` columns are timezone-naive. */
 function todayUtc(): string {
@@ -115,6 +118,23 @@ export async function recomputeCompletenessSnapshot(orgId: string): Promise<Reco
 
   const snapshotDate = todayUtc()
 
+  // Read the most recent prior snapshot so we can detect a threshold-crossing
+  // transition (#380 PR-4 auto-suppression notification). We compare scores
+  // and audit-log only on the boundary cross — not on every recompute.
+  const [previous, settingsRow] = await Promise.all([
+    db.query.completenessSnapshots.findFirst({
+      where: and(
+        eq(completenessSnapshots.organizationId, orgId),
+        ne(completenessSnapshots.snapshotDate, snapshotDate),
+      ),
+      orderBy: [desc(completenessSnapshots.snapshotDate)],
+    }),
+    db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      columns: { confidenceSettings: true },
+    }),
+  ])
+
   await db
     .insert(completenessSnapshots)
     .values({
@@ -132,7 +152,65 @@ export async function recomputeCompletenessSnapshot(orgId: string): Promise<Reco
       },
     })
 
+  await maybeAuditSuppressionTransition({
+    orgId,
+    settings: settingsRow?.confidenceSettings ?? null,
+    prevCounts: previous?.counts ?? null,
+    currentCounts: counts,
+  })
+
   return { organizationId: orgId, snapshotDate, counts, lastUpdated }
+}
+
+/**
+ * Audit-log a suppression transition when today's score crosses the
+ * `suppressBelowPercent` threshold relative to the previous snapshot.
+ *
+ *   - "completeness.summary_suppressed" — was ≥ threshold, now < threshold
+ *   - "completeness.summary_recovered"  — was < threshold, now ≥ threshold
+ *
+ * No audit row is written when there is no prior snapshot, when the org has
+ * no confidence settings, or when the score did not cross the boundary.
+ */
+async function maybeAuditSuppressionTransition({
+  orgId, settings, prevCounts, currentCounts,
+}: {
+  orgId: string
+  settings: ConfidenceSettings | null
+  prevCounts: SnapshotCounts | null
+  currentCounts: SnapshotCounts
+}) {
+  if (!settings || !prevCounts) return
+  // Only meaningful when the summary is actually published to someone.
+  // If neither audience visibility is on, suppression is a no-op operationally.
+  const enabled = settings.authenticatedVisibility ?? settings.enabled
+  if (!enabled) return
+
+  const threshold = settings.suppressBelowPercent
+  const prevScore = scoreFromCounts(prevCounts)
+  const currentScore = scoreFromCounts(currentCounts)
+
+  const wasShown = prevScore >= threshold
+  const nowShown = currentScore >= threshold
+
+  if (wasShown === nowShown) return // no boundary cross
+
+  const action = nowShown
+    ? 'completeness.summary_recovered'
+    : 'completeness.summary_suppressed'
+
+  await db.insert(auditLog).values({
+    action,
+    entityType: 'organization',
+    entityId: orgId,
+    organizationId: orgId,
+    userId: null, // system event — no user actor
+    metadata: {
+      previousScore: prevScore,
+      currentScore,
+      threshold,
+    },
+  })
 }
 
 /** Recompute snapshots for every organization. Used by the nightly fallback and the backfill. */

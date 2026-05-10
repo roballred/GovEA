@@ -14,6 +14,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { CoverageTileLabel } from './coverage-tile-label'
 import { DomainBadge } from '@/components/domain-badge'
 import { ConfidenceSummary } from '@/components/confidence-summary'
+import { CompletenessTrend } from '@/components/completeness-trend'
+import { getConfidenceSummary } from '@/lib/confidence'
 import { canEdit } from '@/lib/rbac'
 import {
   getCategorizedSignals,
@@ -164,12 +166,18 @@ export default async function DashboardPage() {
 
   // PR-3: completeness drill-down counts, top-5 ranked actions, per-domain RAG.
   // Most-Needed Actions is gated to Admin/Contributor per `rm-repository-completeness`.
+  // PR-4: confidence summary fetched here so the dashboard can show the
+  // suppression banner when the score is currently below threshold.
   const showRanked = canEdit(session.user)
-  const [signals, mostNeeded, domainRag] = await Promise.all([
+  const [signals, mostNeeded, domainRag, confSummary] = await Promise.all([
     getCategorizedSignals(orgId),
     showRanked ? getMostNeededActions(orgId) : Promise.resolve([]),
     getDomainRagBuckets(orgId),
+    getConfidenceSummary(orgId, 'authenticated'),
   ])
+  const summarySuppressed =
+    (confSummary.settings.authenticatedVisibility ?? confSummary.settings.enabled) &&
+    confSummary.score < confSummary.settings.suppressBelowPercent
   const ragByDomain = new Map<string, RagBucket>(
     domainRag.map(r => [r.domain || '__uncategorized__', r.bucket]),
   )
@@ -218,7 +226,24 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      {summarySuppressed && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm"
+        >
+          <p className="font-medium text-amber-900 dark:text-amber-200">
+            Confidence summary is currently suppressed
+          </p>
+          <p className="text-amber-800 dark:text-amber-300/80 mt-0.5">
+            Score is {confSummary.score}% — below the {confSummary.settings.suppressBelowPercent}% publication threshold.
+            Stakeholders will not see the summary until the score recovers.
+          </p>
+        </div>
+      )}
+
       <ConfidenceSummary orgId={orgId} />
+
+      <CompletenessTrend orgId={orgId} />
 
       {/* Coverage */}
       <div>
