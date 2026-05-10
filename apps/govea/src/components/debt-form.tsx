@@ -27,6 +27,12 @@ interface DebtFormProps {
   action: (formData: FormData) => Promise<unknown>
   /** Where to send the user after a successful create / edit. */
   successHref?: string
+  /** Quick-create prefills from the entity-detail page (#381 PR-2). Ignored
+   *  when `initial` is provided (edit mode). */
+  prefillApplicationIds?: string[]
+  prefillCapabilityIds?: string[]
+  prefillAdrIds?: string[]
+  prefillInitiativeIds?: string[]
 }
 
 const DEBT_TYPES: { value: DebtType; label: string }[] = [
@@ -53,7 +59,10 @@ const STATUSES: { value: DebtStatus; label: string }[] = [
   { value: 'archived',    label: 'Archived' },
 ]
 
-export function DebtForm({ initial, applications, capabilities, adrs, initiatives, action, successHref }: DebtFormProps) {
+export function DebtForm({
+  initial, applications, capabilities, adrs, initiatives, action, successHref,
+  prefillApplicationIds, prefillCapabilityIds, prefillAdrIds, prefillInitiativeIds,
+}: DebtFormProps) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [debtType, setDebtType] = useState<DebtType>(initial?.debtType ?? 'lifecycle-risk')
@@ -64,10 +73,11 @@ export function DebtForm({ initial, applications, capabilities, adrs, initiative
   const [acceptanceRationale, setAcceptanceRationale] = useState(initial?.acceptanceRationale ?? '')
   const [securitySensitive, setSecuritySensitive] = useState(initial?.securitySensitive ?? false)
   const [overrideSecurity, setOverrideSecurity] = useState(false)
-  const [appIds, setAppIds] = useState<string[]>(initial?.applicationIds ?? [])
-  const [capIds, setCapIds] = useState<string[]>(initial?.capabilityIds ?? [])
-  const [adrIds, setAdrIds] = useState<string[]>(initial?.adrIds ?? [])
-  const [initIds, setInitIds] = useState<string[]>(initial?.initiativeIds ?? [])
+  // Edit mode honors `initial`; create mode honors `prefill*` from the URL.
+  const [appIds, setAppIds] = useState<string[]>(initial?.applicationIds ?? prefillApplicationIds ?? [])
+  const [capIds, setCapIds] = useState<string[]>(initial?.capabilityIds  ?? prefillCapabilityIds  ?? [])
+  const [adrIds, setAdrIds] = useState<string[]>(initial?.adrIds         ?? prefillAdrIds         ?? [])
+  const [initIds, setInitIds] = useState<string[]>(initial?.initiativeIds ?? prefillInitiativeIds ?? [])
   const [formError, setFormError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 

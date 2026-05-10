@@ -9,6 +9,7 @@ import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { RelationshipPanel } from '@/components/relationship-panel'
+import { LinkedDebt } from '@/components/linked-debt'
 import {
   linkApplicationCapability, unlinkApplicationCapability,
   linkApplicationInitiative, unlinkApplicationInitiative,
@@ -142,6 +143,14 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       />
 
       <hr />
+
+      <LinkedDebt
+        entityType="application"
+        entityId={application.id}
+        callerOrgId={orgId}
+        role={session.user.role}
+        canEdit={canMutate}
+      />
 
       {isModuleEnabled(enabledModules, 'capabilities') && (
         <RelationshipPanel
