@@ -213,6 +213,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Application custom fields with CSV import/export so agencies can extend and load portfolio metadata without schema changes
 - Impact analysis on application and capability detail pages to surface decommission and change consequences from existing relationship data
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
+- Repository completeness workflow foundations: daily snapshot model, configurable staleness windows, ranked cleanup actions, and domain-target RAG indicators on the admin dashboard
 - Demo-ready planning module: goals, strategic objectives, and initiatives with roadmap grid and executive timeline views
 - Goals layer above strategic objectives, with objective rollup and traceability into initiatives and capabilities
 - Reports hub with generated Architecture Vision, Executive Summary, Heatmap Analysis, and TOGAF Application Landscape outputs from existing repository content
@@ -241,19 +242,19 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
 
 **Active work:**
-- Closing open high-severity security findings from the 2026-05-07 static scan (audit trail integrity, break-glass TTL controls, junction cross-tenant writes — see SECURITY.md and the security remediation table in `docs/product-priorities.md`)
-- Adding regression tests to lock in the server-action auth invariants hardened this week
-- Turning early repository signals into fuller completeness and confidence workflows
+- Completing the repository-confidence slice with trend history, stakeholder-facing confidence surfaces, and auto-suppression behavior
 - Maturing ADRs and decision support into stronger architecture-debt and tradeoff visibility
+- Validating assumed stakeholder personas and starting a lightweight feedback loop for analysis surfaces
+- Wiring break-glass to a real cross-tenant operational caller before relying on it in support scenarios
 - Expanding automated test coverage
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
-- Close remaining high-severity security findings (#416, #417, #418) and merge open security PRs (#428, #429)
-- Ship repository completeness drill-downs and a stakeholder-facing confidence summary
+- Merge PR #457 to finish the repository-confidence rollout across `/dashboard`, `/roadmap`, and `/executive`
 - Add architecture debt tracking tied to ADRs, impact analysis, and reporting
-- Start the integration foundation with a REST API plus the first Tier 1 operational sync slice
 - Start lightweight user feedback capture and persona validation for the analysis surfaces
+- Decide v1-vs-future scope for the Data Architecture Metamodel contribution thread
+- Start the integration foundation with a REST API plus the first Tier 1 operational sync slice
 
 **Longer-term:**
 - End-to-end traceability and architecture debt tracking
