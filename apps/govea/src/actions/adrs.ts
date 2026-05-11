@@ -10,6 +10,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { redirect } from 'next/navigation'
 
 async function requireContributor() {
@@ -162,6 +163,16 @@ export async function editADR(id: string, formData: FormData) {
 
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
 
+  // Publish-time debt gate (#381 PR-3). For ADRs, "publish" = accepted.
+  const transitioningToAccepted = before?.status !== 'accepted' && status === 'accepted'
+  const acknowledgeOpenDebt = formData.get('acknowledgeOpenDebt') === 'on'
+  const debtAck = await ensurePublishOpenDebtAck({
+    entityType: 'adr',
+    entityId: id,
+    transitioningToPublished: transitioningToAccepted,
+    acknowledged: acknowledgeOpenDebt,
+  })
+
   await db.transaction(async (tx) => {
     await tx.update(adrs).set({
       number,
@@ -193,6 +204,21 @@ export async function editADR(id: string, formData: FormData) {
       before: { number: before?.number, title: before?.title, status: before?.status },
       after: { number, title, status, visibility },
     })
+
+    if (debtAck.acknowledged) {
+      await writeAuditLog(tx, {
+        action: 'publish.acknowledged_open_debt',
+        entityType: 'adr',
+        entityId: id,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          criticalCount: debtAck.criticalCount,
+          highCount: debtAck.highCount,
+          publishedAt: new Date().toISOString(),
+        },
+      })
+    }
   })
 }
 

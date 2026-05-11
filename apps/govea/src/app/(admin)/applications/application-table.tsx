@@ -323,9 +323,24 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
   async function handleEdit(formData: FormData) {
     if (!editTarget) return
     startTransition(async () => {
-      await editApplication(editTarget.id, formData)
-      setEditTarget(null)
-      refresh()
+      try {
+        await editApplication(editTarget.id, formData)
+        setEditTarget(null)
+        refresh()
+      } catch (err) {
+        // #381 PR-3 publish-time debt gate: confirm + re-submit with ack.
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('Publishing requires acknowledgment')) {
+          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? Your acknowledgment will be logged in the audit trail.')) {
+            formData.set('acknowledgeOpenDebt', 'on')
+            await editApplication(editTarget.id, formData)
+            setEditTarget(null)
+            refresh()
+            return
+          }
+        }
+        throw err
+      }
     })
   }
 
