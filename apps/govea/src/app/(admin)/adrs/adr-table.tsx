@@ -101,9 +101,24 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
   async function handleEdit(formData: FormData) {
     if (!editTarget) return
     startTransition(async () => {
-      await editADR(editTarget.id, formData)
-      setEditTarget(null)
-      refresh()
+      try {
+        await editADR(editTarget.id, formData)
+        setEditTarget(null)
+        refresh()
+      } catch (err) {
+        // #381 PR-3 publish-time debt gate: confirm + re-submit with ack.
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('Publishing requires acknowledgment')) {
+          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nAccept anyway? Your acknowledgment will be logged in the audit trail.')) {
+            formData.set('acknowledgeOpenDebt', 'on')
+            await editADR(editTarget.id, formData)
+            setEditTarget(null)
+            refresh()
+            return
+          }
+        }
+        throw err
+      }
     })
   }
 

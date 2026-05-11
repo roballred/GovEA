@@ -22,10 +22,11 @@ import {
   strategicObjectives, principles, glossaryTerms, initiatives, adrs,
   applicationCapabilities, capabilityPersonas,
   organizations,
+  architectureDebtItems,
   DEFAULT_COMPLETENESS_SETTINGS,
   type CompletenessSettings,
 } from '@/db/schema'
-import { and, count, eq, lt, notInArray, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, lt, notInArray, sql } from 'drizzle-orm'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,14 +34,16 @@ export interface CategorizedSignals {
   stale: number
   unpublished: number
   incompleteRelationships: number
+  /** Open debt items (status in draft/published/in-progress). Added in #381 PR-3. */
+  openDebt: number
 }
 
-export type MostNeededReason = 'publishedButStale' | 'incompleteRelationship' | 'unpublished'
+export type MostNeededReason = 'publishedButStale' | 'incompleteRelationship' | 'unpublished' | 'openCriticalDebt' | 'openHighDebt'
 
 export interface MostNeededAction {
   /** Stable key used for React list rendering. */
   key: string
-  entityType: 'capability' | 'application' | 'persona'
+  entityType: 'capability' | 'application' | 'persona' | 'architecture_debt_item'
   entityId: string
   name: string
   reason: MostNeededReason
@@ -144,6 +147,13 @@ export async function getCategorizedSignals(orgId: string): Promise<CategorizedS
       )),
   ])
 
+  // Open debt — counted separately because it joins a different schema family.
+  // "Open" matches the spec's working definition: draft / published / in-progress.
+  const openDebtRows = await db.select({ c: count() }).from(architectureDebtItems).where(and(
+    eq(architectureDebtItems.organizationId, orgId),
+    inArray(architectureDebtItems.status, ['draft', 'published', 'in-progress']),
+  ))
+
   const stale = Number(capStale[0].c) + Number(appStale[0].c) + Number(persStale[0].c)
     + Number(vsStale[0].c) + Number(objStale[0].c) + Number(prinStale[0].c)
     + Number(glossStale[0].c) + Number(initStale[0].c) + Number(adrStale[0].c)
@@ -157,7 +167,9 @@ export async function getCategorizedSignals(orgId: string): Promise<CategorizedS
   // Underlying drill-down list (out of scope here) shows distinct items.
   const incompleteRelationships = Number(capNoApp[0].c) + Number(capNoPersona[0].c)
 
-  return { stale, unpublished, incompleteRelationships }
+  const openDebt = Number(openDebtRows[0].c)
+
+  return { stale, unpublished, incompleteRelationships, openDebt }
 }
 
 // ── Most-Needed Actions (top 5 ranked) ───────────────────────────────────────
@@ -188,10 +200,14 @@ export async function getMostNeededActions(orgId: string): Promise<MostNeededAct
 
   // We scope to capabilities, applications, personas. These three drive most
   // of the EA value and also have href patterns the dashboard already links.
+  // Open debt is added alongside in #381 PR-3 — critical and high debt items
+  // outrank everything else by design (immediate operational/security risk
+  // per `rm-architecture-debt.md`).
   const [
     capsStale, appsStale, personasStale,
     capsDraft, appsDraft, personasDraft,
     capsNoApp, capsNoPersona,
+    criticalDebt, highDebt,
   ] = await Promise.all([
     db.select({ id: capabilities.id, name: capabilities.name }).from(capabilities)
       .where(and(eq(capabilities.organizationId, orgId), eq(capabilities.status, 'published'), lt(capabilities.updatedAt, cutoff))),
@@ -217,6 +233,21 @@ export async function getMostNeededActions(orgId: string): Promise<MostNeededAct
         eq(capabilities.status, 'published'),
         notInArray(capabilities.id, db.select({ id: capabilityPersonas.capabilityId }).from(capabilityPersonas)),
       )),
+    // Open critical and high debt — surfaced as ranked actions in their own right.
+    // Excludes security-sensitive items at the read layer so the Most-Needed Actions
+    // tile is safe for Contributor+ (caller is responsible for the role gate).
+    db.select({ id: architectureDebtItems.id, name: architectureDebtItems.title }).from(architectureDebtItems)
+      .where(and(
+        eq(architectureDebtItems.organizationId, orgId),
+        eq(architectureDebtItems.severity, 'critical'),
+        inArray(architectureDebtItems.status, ['draft', 'published', 'in-progress']),
+      )),
+    db.select({ id: architectureDebtItems.id, name: architectureDebtItems.title }).from(architectureDebtItems)
+      .where(and(
+        eq(architectureDebtItems.organizationId, orgId),
+        eq(architectureDebtItems.severity, 'high'),
+        inArray(architectureDebtItems.status, ['draft', 'published', 'in-progress']),
+      )),
   ])
 
   const tag = (
@@ -226,6 +257,8 @@ export async function getMostNeededActions(orgId: string): Promise<MostNeededAct
   ): CandidateRow[] => rows.map(r => ({ entityType, entityId: r.id, name: r.name, reason }))
 
   const candidates: CandidateRow[] = [
+    ...tag(criticalDebt,   'architecture_debt_item', 'openCriticalDebt'),
+    ...tag(highDebt,       'architecture_debt_item', 'openHighDebt'),
     ...tag(capsStale,      'capability',  'publishedButStale'),
     ...tag(appsStale,      'application', 'publishedButStale'),
     ...tag(personasStale,  'persona',     'publishedButStale'),
@@ -267,8 +300,15 @@ export async function getMostNeededActions(orgId: string): Promise<MostNeededAct
   return sorted.slice(0, 5)
 }
 
+// Debt items outrank the original three buckets by design. Critical = immediate
+// operational/security risk per `rm-architecture-debt.md` severity tiers.
+const DEBT_CRITICAL_WEIGHT = 5
+const DEBT_HIGH_WEIGHT = 4
+
 function scoreFor(reason: MostNeededReason, w: CompletenessSettings['rankingWeights']): number {
   switch (reason) {
+    case 'openCriticalDebt':        return DEBT_CRITICAL_WEIGHT
+    case 'openHighDebt':            return DEBT_HIGH_WEIGHT
     case 'publishedButStale':       return w.publishedButStale
     case 'incompleteRelationship':  return w.incompleteRelationship
     case 'unpublished':             return w.unpublished
@@ -277,6 +317,8 @@ function scoreFor(reason: MostNeededReason, w: CompletenessSettings['rankingWeig
 
 function detailFor(reason: MostNeededReason, settings: CompletenessSettings): string {
   switch (reason) {
+    case 'openCriticalDebt':        return 'Open critical-severity debt'
+    case 'openHighDebt':            return 'Open high-severity debt'
     case 'publishedButStale':       return `Published but not updated in ${settings.stalenessDays} days`
     case 'incompleteRelationship':  return 'Published but missing required relationship'
     case 'unpublished':             return 'Still in draft'
@@ -285,9 +327,10 @@ function detailFor(reason: MostNeededReason, settings: CompletenessSettings): st
 
 function hrefFor(entityType: MostNeededAction['entityType'], id: string): string {
   switch (entityType) {
-    case 'capability':  return `/capabilities/${id}`
-    case 'application': return `/applications/${id}`
-    case 'persona':     return `/personas/${id}`
+    case 'capability':              return `/capabilities/${id}`
+    case 'application':             return `/applications/${id}`
+    case 'persona':                 return `/personas/${id}`
+    case 'architecture_debt_item':  return `/debt/${id}`
   }
 }
 

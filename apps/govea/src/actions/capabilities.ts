@@ -8,6 +8,7 @@ import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnecte
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
@@ -233,6 +234,17 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     await assertEntityInOrg('capability', parentId, orgId)
   }
 
+  // Publish-time debt gate (#381 PR-3): when transitioning to 'published'
+  // with linked critical/high open debt, require explicit ack from the form.
+  const transitioningToPublished = before?.status !== 'published' && status === 'published'
+  const acknowledgeOpenDebt = formData.get('acknowledgeOpenDebt') === 'on'
+  const debtAck = await ensurePublishOpenDebtAck({
+    entityType: 'capability',
+    entityId: capabilityId,
+    transitioningToPublished,
+    acknowledged: acknowledgeOpenDebt,
+  })
+
   // Mutation + audit + cross-org-link flag/clear are all in one transaction
   // so a failure anywhere rolls back the entire edit (#416).
   await db.transaction(async (tx) => {
@@ -274,6 +286,22 @@ export async function editCapability(capabilityId: string, formData: FormData) {
       before: { name: before?.name, status: before?.status, visibility: before?.visibility },
       after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
     })
+
+    // #381 PR-3: when the publish-debt gate was acknowledged, log it.
+    if (debtAck.acknowledged) {
+      await writeAuditLog(tx, {
+        action: 'publish.acknowledged_open_debt',
+        entityType: 'capability',
+        entityId: capabilityId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          criticalCount: debtAck.criticalCount,
+          highCount: debtAck.highCount,
+          publishedAt: new Date().toISOString(),
+        },
+      })
+    }
 
     // Flag or clear cross-org links when visibility changes.
     const prevVis = before?.visibility
