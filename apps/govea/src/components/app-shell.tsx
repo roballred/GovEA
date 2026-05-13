@@ -26,13 +26,30 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // Data Architecture surfaces the full metamodel (entity / attribute /
+    // link / business-key + the Chen Notation diagram) the same way
+    // Business Architecture surfaces its object types. Every entry is
+    // gated on the `data-architecture` module key so toggling the module
+    // hides the whole group. Diagram lives behind PR-3 (#470/#477) — the
+    // link is included here so the nav is complete once that PR lands;
+    // if this PR ships first the link 404s until #477 lands.
+    label: 'Data Architecture',
+    items: [
+      { href: '/data',                label: 'Overview',      moduleKey: 'data-architecture' },
+      { href: '/data/entities',       label: 'Entities',      moduleKey: 'data-architecture' },
+      { href: '/data/attributes',     label: 'Attributes',    moduleKey: 'data-architecture' },
+      { href: '/data/links',          label: 'Links',         moduleKey: 'data-architecture' },
+      { href: '/data/business-keys',  label: 'Business keys', moduleKey: 'data-architecture' },
+      { href: '/data/diagram',        label: 'Diagram',       moduleKey: 'data-architecture' },
+    ],
+  },
+  {
     label: 'Portfolio',
     items: [
       { href: '/applications', label: 'Applications', moduleKey: 'applications' },
       { href: '/adrs',         label: 'Decisions',    moduleKey: 'adrs' },
       { href: '/principles',   label: 'Principles',   moduleKey: 'principles' },
       { href: '/debt',         label: 'Debt',         moduleKey: 'debt' },
-      { href: '/data',         label: 'Data architecture', moduleKey: 'data-architecture' },
     ],
   },
   {
