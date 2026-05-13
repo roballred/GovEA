@@ -1,6 +1,11 @@
 import { auth } from '@/lib/auth'
 import { notFound, redirect } from 'next/navigation'
-import { getDataAttribute, deleteDataAttribute } from '@/actions/data-architecture'
+import {
+  getDataAttribute, deleteDataAttribute, getDataAttributes, getDataEntities,
+} from '@/actions/data-architecture'
+import {
+  getSharedAttributeIds, getEntitiesCharacterizedBy,
+} from '@/actions/data-architecture-relationships'
 import { getPersonas } from '@/actions/personas'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import Link from 'next/link'
@@ -18,7 +23,17 @@ export default async function DataAttributeDetailPage({ params }: { params: Prom
   const orgId = session.user.organizationId!
 
   const { id } = await params
-  const [attribute, personas] = await Promise.all([getDataAttribute(id), getPersonas()])
+  const [
+    attribute, personas, allAttributes, allEntities,
+    sharedIds, characterizesEntityIds,
+  ] = await Promise.all([
+    getDataAttribute(id),
+    getPersonas(),
+    getDataAttributes(),
+    getDataEntities(),
+    getSharedAttributeIds(id),
+    getEntitiesCharacterizedBy(id),
+  ])
   if (!attribute) notFound()
 
   const showWriteActions = canEdit(session.user) && attribute.organizationId === orgId
@@ -26,6 +41,9 @@ export default async function DataAttributeDetailPage({ params }: { params: Prom
   const ownerNames = attribute.ownerPersonaIds
     .map(pid => personas.find(p => p.id === pid)?.name)
     .filter((n): n is string => !!n)
+
+  const sharedAttributes = allAttributes.filter(a => sharedIds.includes(a.id))
+  const characterizesEntities = allEntities.filter(e => characterizesEntityIds.includes(e.id))
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -62,6 +80,29 @@ export default async function DataAttributeDetailPage({ params }: { params: Prom
         <Field label="Owners" value={ownerNames.length ? ownerNames.join(', ') : '—'} />
       </div>
 
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold">Relationships</h2>
+          {showWriteActions && (
+            <Link href={`/data/attributes/${id}/relationships`} className="text-xs text-muted-foreground hover:underline">
+              Edit relationships
+            </Link>
+          )}
+        </div>
+        <div className="space-y-2">
+          <RelPanel
+            label="Shares with attributes"
+            kindHint='"shares"'
+            items={sharedAttributes.map(a => ({ id: a.id, name: a.name, href: `/data/attributes/${a.id}` }))}
+          />
+          <RelPanel
+            label="Characterizes entities"
+            kindHint='"characterizes" — managed on each entity'
+            items={characterizesEntities.map(e => ({ id: e.id, name: e.name, href: `/data/entities/${e.id}` }))}
+          />
+        </div>
+      </div>
+
       {showDelete && (
         <div className="border-t pt-4">
           <form action={async () => {
@@ -84,6 +125,33 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
     <div className="space-y-0.5">
       <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
       <p className={`text-sm ${mono ? 'font-mono' : ''}`}>{value}</p>
+    </div>
+  )
+}
+
+function RelPanel({
+  label, kindHint, items,
+}: {
+  label: string
+  kindHint: string
+  items: { id: string; name: string; href: string }[]
+}) {
+  return (
+    <div className="rounded-lg border bg-card px-4 py-2">
+      <p className="text-xs font-medium text-muted-foreground">
+        {label} <span className="font-normal italic">— {kindHint}</span> ({items.length})
+      </p>
+      {items.length > 0 ? (
+        <ul className="mt-1 space-y-0.5 text-sm">
+          {items.map(it => (
+            <li key={it.id}>
+              <Link href={it.href} className="hover:underline">{it.name}</Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-muted-foreground italic mt-0.5">None.</p>
+      )}
     </div>
   )
 }
