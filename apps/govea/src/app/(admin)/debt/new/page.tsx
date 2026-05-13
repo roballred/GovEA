@@ -9,17 +9,33 @@ import { getADRs } from '@/actions/adrs'
 import { getInitiatives } from '@/actions/initiatives'
 import Link from 'next/link'
 
-export default async function NewDebtPage() {
+interface SearchParams {
+  applicationId?: string
+  capabilityId?: string
+  adrId?: string
+  initiativeId?: string
+}
+
+export default async function NewDebtPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await auth()
   if (!session?.user) redirect('/login')
   if (!canEdit(session.user)) redirect('/debt')
 
+  const params = await searchParams
   const [apps, caps, adrs, inits] = await Promise.all([
     getApplications(),
     getCapabilities(),
     getADRs(),
     getInitiatives(),
   ])
+
+  // Pre-link only when the requested entity exists in the caller's accessible
+  // pickers. Filtering against the picker output also filters out unauthorized
+  // ids (e.g. an org guessing another org's UUID via the URL).
+  const prefilledApplicationIds = params.applicationId && apps.some(a => a.id === params.applicationId) ? [params.applicationId] : []
+  const prefilledCapabilityIds  = params.capabilityId  && caps.some(c => c.id === params.capabilityId)  ? [params.capabilityId]  : []
+  const prefilledAdrIds         = params.adrId         && adrs.some(a => a.id === params.adrId)         ? [params.adrId]         : []
+  const prefilledInitiativeIds  = params.initiativeId  && inits.some(i => i.id === params.initiativeId) ? [params.initiativeId]  : []
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -37,6 +53,10 @@ export default async function NewDebtPage() {
         initiatives={inits.map(i => ({ id: i.id, name: i.name }))}
         action={createDebtItem}
         successHref="/debt"
+        prefillApplicationIds={prefilledApplicationIds}
+        prefillCapabilityIds={prefilledCapabilityIds}
+        prefillAdrIds={prefilledAdrIds}
+        prefillInitiativeIds={prefilledInitiativeIds}
       />
     </div>
   )

@@ -9,6 +9,7 @@ import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { RelationshipPanel } from '@/components/relationship-panel'
+import { LinkedDebt } from '@/components/linked-debt'
 import {
   linkAdrCapability, unlinkAdrCapability,
   linkAdrApplication, unlinkAdrApplication,
@@ -138,6 +139,14 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       <hr />
+
+      <LinkedDebt
+        entityType="adr"
+        entityId={adr.id}
+        callerOrgId={orgId}
+        role={session.user.role}
+        canEdit={canMutate}
+      />
 
       {isModuleEnabled(enabledModules, 'capabilities') && (
         <RelationshipPanel

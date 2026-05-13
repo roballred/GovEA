@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { DomainBadge } from '@/components/domain-badge'
 import { RelationshipPanel } from '@/components/relationship-panel'
+import { LinkedDebt } from '@/components/linked-debt'
 import {
   linkCapabilityPersona, unlinkCapabilityPersona,
   linkCapabilityApplication, unlinkCapabilityApplication,
@@ -224,6 +225,14 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
       )}
 
       <hr />
+
+      <LinkedDebt
+        entityType="capability"
+        entityId={capability.id}
+        callerOrgId={orgId}
+        role={session.user.role}
+        canEdit={canMutate}
+      />
 
       {isModuleEnabled(enabledModules, 'personas') && (
         <RelationshipPanel
