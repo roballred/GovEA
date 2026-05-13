@@ -42,12 +42,20 @@ export default async function DataArchitectureHub() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Data architecture</h1>
-        <p className="text-muted-foreground mt-1 text-sm max-w-2xl">
-          A Data Vault-aligned metamodel for Data Architects. Capture entities, attributes, links,
-          and business keys with their physical-table metadata.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Data architecture</h1>
+          <p className="text-muted-foreground mt-1 text-sm max-w-2xl">
+            A Data Vault-aligned metamodel for Data Architects. Capture entities, attributes, links,
+            and business keys with their physical-table metadata.
+          </p>
+        </div>
+        <Link
+          href="/data/diagram"
+          className="shrink-0 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted/50"
+        >
+          View diagram
+        </Link>
       </div>
 
       <ul className="grid gap-4 sm:grid-cols-2">
