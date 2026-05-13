@@ -422,7 +422,7 @@ export default async function DashboardPage() {
             <CardTitle className="text-base">Needs Attention</CardTitle>
           </CardHeader>
           <CardContent>
-            {(signals.stale + signals.unpublished + signals.incompleteRelationships) === 0 ? (
+            {(signals.stale + signals.unpublished + signals.incompleteRelationships + signals.openDebt) === 0 ? (
               <p className="text-sm text-muted-foreground">Repository is current — nothing to flag.</p>
             ) : (
               <ul className="space-y-2">
@@ -446,6 +446,14 @@ export default async function DashboardPage() {
                   </span>
                   <span className={`font-medium ${signals.incompleteRelationships > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
                     {signals.incompleteRelationships}
+                  </span>
+                </li>
+                <li className="flex items-center justify-between text-sm">
+                  <Link href="/debt" className="hover:underline">
+                    Open debt <span className="text-xs text-muted-foreground">(draft / published / in-progress)</span>
+                  </Link>
+                  <span className={`font-medium ${signals.openDebt > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                    {signals.openDebt}
                   </span>
                 </li>
               </ul>

@@ -151,7 +151,7 @@ describe('getCategorizedSignals', () => {
 
   it('returns zeros for an empty org', async () => {
     const signals = await getCategorizedSignals(org.id)
-    expect(signals).toEqual({ stale: 0, unpublished: 0, incompleteRelationships: 0 })
+    expect(signals).toEqual({ stale: 0, unpublished: 0, incompleteRelationships: 0, openDebt: 0 })
   })
 })
 

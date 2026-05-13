@@ -136,9 +136,26 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
   async function handleEdit(formData: FormData) {
     if (!editTarget) return
     startTransition(async () => {
-      await editCapability(editTarget.id, formData)
-      setEditTarget(null)
-      refresh()
+      try {
+        await editCapability(editTarget.id, formData)
+        setEditTarget(null)
+        refresh()
+      } catch (err) {
+        // #381 PR-3 publish-time debt gate: explicit confirmation flow.
+        // Server throws when transitioning to published with linked critical/high
+        // open debt and no ack. We prompt the user, then re-submit with the ack.
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('Publishing requires acknowledgment')) {
+          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? Your acknowledgment will be logged in the audit trail.')) {
+            formData.set('acknowledgeOpenDebt', 'on')
+            await editCapability(editTarget.id, formData)
+            setEditTarget(null)
+            refresh()
+            return
+          }
+        }
+        throw err
+      }
     })
   }
 

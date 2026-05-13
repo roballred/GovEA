@@ -7,6 +7,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from '@/lib/entity-taxonomy-helpers'
@@ -183,6 +184,16 @@ export async function editApplication(applicationId: string, formData: FormData)
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
 
+  // Publish-time debt gate (#381 PR-3)
+  const transitioningToPublished = before?.status !== 'published' && status === 'published'
+  const acknowledgeOpenDebt = formData.get('acknowledgeOpenDebt') === 'on'
+  const debtAck = await ensurePublishOpenDebtAck({
+    entityType: 'application',
+    entityId: applicationId,
+    transitioningToPublished,
+    acknowledged: acknowledgeOpenDebt,
+  })
+
   await db.transaction(async (tx) => {
     await tx.update(applications).set({
       name,
@@ -216,6 +227,21 @@ export async function editApplication(applicationId: string, formData: FormData)
       before: { name: before?.name, status: before?.status, visibility: before?.visibility },
       after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
     })
+
+    if (debtAck.acknowledged) {
+      await writeAuditLog(tx, {
+        action: 'publish.acknowledged_open_debt',
+        entityType: 'application',
+        entityId: applicationId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          criticalCount: debtAck.criticalCount,
+          highCount: debtAck.highCount,
+          publishedAt: new Date().toISOString(),
+        },
+      })
+    }
   })
 }
 
