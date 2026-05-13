@@ -164,6 +164,22 @@ export const DEV_PERSONAS = [
     status: 'archived' as const,
     visibility: 'instance' as const,
   },
+  // Data Architecture personas (#363 PR-1). Both are owners of data-modelling
+  // objects (Entity / Attribute / Link / BusinessKey) in the metamodel.
+  {
+    name: 'Enterprise Data Architect',
+    description: 'Owns the data architecture strategy and modelling standards across the organization. Recommends modelling methodologies, oversees logical and physical model alignment, and approves metadata scorecards.',
+    type: 'Staff',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'Data Modeler',
+    description: 'Produces conceptual, logical, and physical data models. Maintains the entity-relationship structure of the data layer and works directly with DBAs on Data Vault and dimensional implementations.',
+    type: 'Staff',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
 ]
 
 // ─── Capabilities (City of Riverdale) ────────────────────────────────────────

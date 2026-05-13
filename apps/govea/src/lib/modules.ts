@@ -23,6 +23,7 @@ export type ModuleKey =
   | 'initiatives'
   | 'roadmap'
   | 'debt'
+  | 'data-architecture'
   | 'framework-overlay'
 
 export type ModuleGroup = 'Business Architecture' | 'Portfolio' | 'Strategy' | 'Framework'
@@ -57,6 +58,7 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'adrs',          label: 'Decisions (ADRs)',    href: '/adrs',          group: 'Portfolio' },
   { key: 'principles',    label: 'Principles',          href: '/principles',    group: 'Portfolio' },
   { key: 'debt',          label: 'Architecture debt',   href: '/debt',          group: 'Portfolio' },
+  { key: 'data-architecture', label: 'Data architecture', href: '/data',        group: 'Portfolio' },
   // Strategy
   { key: 'objectives',    label: 'Objectives',          href: '/objectives',    group: 'Strategy' },
   { key: 'initiatives',   label: 'Initiatives',         href: '/initiatives',   group: 'Strategy' },
