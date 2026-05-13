@@ -115,6 +115,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Bump max_connections from the postgres:16-alpine default of 100 to 200
+      # so the integration suite has headroom while the underlying connection
+      # leak in server actions is investigated. See #475 for the diagnostic
+      # and follow-ups. max_connections is a restart-required setting, so
+      # ALTER SYSTEM is paired with `docker restart` of the service container.
+      - name: Bump Postgres max_connections
+        run: |
+          docker exec ${{ job.services.postgres.id }} psql -U postgres -d govea -c "ALTER SYSTEM SET max_connections = 200;"
+          docker restart ${{ job.services.postgres.id }}
+          for i in {1..20}; do
+            if docker exec ${{ job.services.postgres.id }} pg_isready -U postgres >/dev/null 2>&1; then
+              echo "Postgres ready after restart"
+              break
+            fi
+            sleep 1
+          done
+
       - name: Push schema to database
         run: pnpm --filter govea db:push --force
 
