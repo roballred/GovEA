@@ -32,6 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/adrs',         label: 'Decisions',    moduleKey: 'adrs' },
       { href: '/principles',   label: 'Principles',   moduleKey: 'principles' },
       { href: '/debt',         label: 'Debt',         moduleKey: 'debt' },
+      { href: '/data',         label: 'Data architecture', moduleKey: 'data-architecture' },
     ],
   },
   {
