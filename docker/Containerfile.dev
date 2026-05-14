@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM mcr.microsoft.com/devcontainers/javascript-node:20 AS base
 RUN corepack enable pnpm
 
 # Install dependencies into the image so node_modules are pre-built.
