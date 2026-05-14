@@ -7,6 +7,7 @@
  * - suspendOrg sets suspendedAt and writes audit log
  * - unsuspendOrg clears suspendedAt and writes audit log
  * - promoteInstanceAdmin / demoteInstanceAdmin toggle instanceRole
+ * - suspendUserAccount / reactivateUserAccount toggle isActive with audit log
  * - All actions reject non-instance-admins (Forbidden)
  * - Tenant content is not accessible to instance admin without active break-glass
  */
@@ -15,6 +16,7 @@ import {
   grantBreakGlass, revokeBreakGlass,
   suspendOrg, unsuspendOrg,
   promoteInstanceAdmin, demoteInstanceAdmin, setInstanceModuleAvailability, createInstanceUser,
+  suspendUserAccount, reactivateUserAccount,
 } from '@/actions/instance'
 import { db } from '@/db/client'
 import { breakGlassSessions, auditLog, instanceSettings, organizations, users } from '@/db/schema'
@@ -339,5 +341,78 @@ describe('demoteInstanceAdmin', () => {
   it('throws Forbidden for non-instance-admin', async () => {
     asRegularAdmin()
     await expect(demoteInstanceAdmin(regularUser.id)).rejects.toThrow('Forbidden')
+  })
+})
+
+// ── Suspend / reactivate user account ────────────────────────────────────────
+
+describe('suspendUserAccount', () => {
+  it('sets isActive to false', async () => {
+    asInstanceAdmin()
+    await suspendUserAccount(regularUser.id, 'Security incident test')
+
+    const u = await findUser(regularUser.id)
+    expect(u!.isActive).toBe('false')
+  })
+
+  it('writes an audit log entry with reason and target org', async () => {
+    const entries = await db.select().from(auditLog)
+      .where(and(eq(auditLog.action, 'instance.user.suspend'), eq(auditLog.entityId, regularUser.id)))
+    expect(entries.length).toBeGreaterThan(0)
+    const entry = entries[0]
+    expect(entry.userId).toBe(instanceAdmin.id)
+    expect((entry.after as Record<string, unknown>).reason).toBe('Security incident test')
+    expect((entry.after as Record<string, unknown>).targetOrgId).toBe(orgId)
+  })
+
+  it('throws if trying to suspend yourself', async () => {
+    asInstanceAdmin()
+    await expect(suspendUserAccount(instanceAdmin.id, 'Self')).rejects.toThrow('Cannot suspend yourself')
+  })
+
+  it('throws when suspending the last active admin in an org', async () => {
+    asInstanceAdmin()
+    // regularAdmin is the only admin with isActive='true' in orgId
+    // (regularUser.role='viewer', instanceAdmin is in orgId but may or may not be active)
+    // Create an isolated org with exactly one admin to guarantee the guard fires
+    const soloOrg = await createTestOrg()
+    const soloAdmin = await createTestUser(soloOrg.id, 'admin')
+    try {
+      await expect(suspendUserAccount(soloAdmin.id, 'Last admin test')).rejects.toThrow(
+        'Cannot suspend the last active admin'
+      )
+    } finally {
+      await cleanupOrg(soloOrg.id)
+    }
+  })
+
+  it('throws Forbidden for non-instance-admin', async () => {
+    asRegularAdmin()
+    await expect(suspendUserAccount(regularUser.id, 'x')).rejects.toThrow('Forbidden')
+  })
+})
+
+describe('reactivateUserAccount', () => {
+  it('sets isActive back to true', async () => {
+    asInstanceAdmin()
+    // regularUser was suspended above; reactivate it
+    await reactivateUserAccount(regularUser.id, 'Cleared — reactivation test')
+
+    const u = await findUser(regularUser.id)
+    expect(u!.isActive).toBe('true')
+  })
+
+  it('writes an audit log entry with reason and target org', async () => {
+    const entries = await db.select().from(auditLog)
+      .where(and(eq(auditLog.action, 'instance.user.reactivate'), eq(auditLog.entityId, regularUser.id)))
+    expect(entries.length).toBeGreaterThan(0)
+    const entry = entries[0]
+    expect(entry.userId).toBe(instanceAdmin.id)
+    expect((entry.after as Record<string, unknown>).reason).toBe('Cleared — reactivation test')
+  })
+
+  it('throws Forbidden for non-instance-admin', async () => {
+    asRegularAdmin()
+    await expect(reactivateUserAccount(regularUser.id, 'x')).rejects.toThrow('Forbidden')
   })
 })

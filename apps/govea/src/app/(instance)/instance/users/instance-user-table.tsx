@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { ConfirmWithReason } from '@/components/confirm-with-reason'
-import { createInstanceUser, demoteInstanceAdmin, promoteInstanceAdmin } from '@/actions/instance'
+import { createInstanceUser, demoteInstanceAdmin, promoteInstanceAdmin, suspendUserAccount, reactivateUserAccount } from '@/actions/instance'
 
 type OrgOption = {
   id: string
@@ -108,28 +108,52 @@ export function InstanceUserTable({ users, organizations, currentUserId }: Props
                   </TableCell>
                   <TableCell className="text-right">
                     {!isMe && (
-                      u.instanceRole === 'instance_admin' ? (
-                        <ConfirmWithReason
-                          trigger={<Button variant="outline" size="sm">Demote</Button>}
-                          title={`Demote "${u.name ?? u.email}"`}
-                          description="This will remove platform admin access. Enter a reason for the audit log."
-                          confirmLabel="Remove Platform Access"
-                          destructive
-                          onConfirm={async (reason) => {
-                            await demoteInstanceAdmin(u.id, reason)
-                          }}
-                        />
-                      ) : (
-                        <ConfirmWithReason
-                          trigger={<Button variant="outline" size="sm">Promote</Button>}
-                          title={`Promote "${u.name ?? u.email}"`}
-                          description="This will grant platform admin access across all organisations. Enter a reason for the audit log."
-                          confirmLabel="Grant Platform Access"
-                          onConfirm={async (reason) => {
-                            await promoteInstanceAdmin(u.id, reason)
-                          }}
-                        />
-                      )
+                      <div className="flex items-center justify-end gap-2">
+                        {u.instanceRole === 'instance_admin' ? (
+                          <ConfirmWithReason
+                            trigger={<Button variant="outline" size="sm">Demote</Button>}
+                            title={`Demote "${u.name ?? u.email}"`}
+                            description="This will remove platform admin access. Enter a reason for the audit log."
+                            confirmLabel="Remove Platform Access"
+                            destructive
+                            onConfirm={async (reason) => {
+                              await demoteInstanceAdmin(u.id, reason)
+                            }}
+                          />
+                        ) : (
+                          <ConfirmWithReason
+                            trigger={<Button variant="outline" size="sm">Promote</Button>}
+                            title={`Promote "${u.name ?? u.email}"`}
+                            description="This will grant platform admin access across all organisations. Enter a reason for the audit log."
+                            confirmLabel="Grant Platform Access"
+                            onConfirm={async (reason) => {
+                              await promoteInstanceAdmin(u.id, reason)
+                            }}
+                          />
+                        )}
+                        {u.isActive === 'true' ? (
+                          <ConfirmWithReason
+                            trigger={<Button variant="outline" size="sm" className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950">Suspend</Button>}
+                            title={`Suspend "${u.name ?? u.email}"`}
+                            description="This will block the account from signing in. It does not delete any data. Enter a reason for the audit log."
+                            confirmLabel="Suspend Account"
+                            destructive
+                            onConfirm={async (reason) => {
+                              await suspendUserAccount(u.id, reason)
+                            }}
+                          />
+                        ) : (
+                          <ConfirmWithReason
+                            trigger={<Button variant="outline" size="sm" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950">Reactivate</Button>}
+                            title={`Reactivate "${u.name ?? u.email}"`}
+                            description="This will restore the account's ability to sign in. Enter a reason for the audit log."
+                            confirmLabel="Reactivate Account"
+                            onConfirm={async (reason) => {
+                              await reactivateUserAccount(u.id, reason)
+                            }}
+                          />
+                        )}
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
