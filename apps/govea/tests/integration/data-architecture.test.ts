@@ -130,11 +130,11 @@ describe('createDataEntity', () => {
   it('writes a data_entity.create audit row', async () => {
     asUser(adminA)
     const baseline = await db.select().from(auditLog).where(eq(auditLog.organizationId, orgA.id))
-    await createDataEntity(fd({ name: 'Product', ownerPersonaIds: [personaA1] }))
+    const id = await createDataEntity(fd({ name: 'Product', ownerPersonaIds: [personaA1] }))
     const after = await db.select().from(auditLog).where(eq(auditLog.organizationId, orgA.id))
     const delta = after.length - baseline.length
     expect(delta).toBe(1)
-    expect(after[after.length - 1].action).toBe('data_entity.create')
+    expect(after.some(row => row.entityId === id && row.action === 'data_entity.create')).toBe(true)
   })
 })
 
@@ -158,7 +158,7 @@ describe('editDataEntity', () => {
     await editDataEntity(id, fd({ name: 'Order (renamed)' }))
     const after = await db.select().from(auditLog).where(eq(auditLog.organizationId, orgA.id))
     expect(after.length - baseline.length).toBe(1)
-    expect(after[after.length - 1].action).toBe('data_entity.update')
+    expect(after.some(row => row.entityId === id && row.action === 'data_entity.update')).toBe(true)
   })
 })
 
@@ -170,7 +170,7 @@ describe('deleteDataEntity', () => {
     await deleteDataEntity(id)
     const after = await db.select().from(auditLog).where(eq(auditLog.organizationId, orgA.id))
     expect(after.length - baseline.length).toBe(1)
-    expect(after[after.length - 1].action).toBe('data_entity.delete')
+    expect(after.some(row => row.entityId === id && row.action === 'data_entity.delete')).toBe(true)
 
     const row = await db.query.dataEntities.findFirst({ where: eq(dataEntities.id, id) })
     expect(row).toBeUndefined()

@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM mcr.microsoft.com/devcontainers/javascript-node:20 AS base
 RUN corepack enable pnpm
 
 # Install dependencies into the image so node_modules are pre-built.
@@ -29,6 +29,11 @@ COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
 # Copy source — will be overridden by volume mount in docker-compose,
 # but kept here so the image is self-contained if run without volumes.
 COPY . .
+
+RUN pnpm --filter govea build
+RUN mkdir -p apps/govea/.next/standalone/apps/govea/.next \
+  && cp -R apps/govea/.next/static apps/govea/.next/standalone/apps/govea/.next/static \
+  && if [ -d apps/govea/public ]; then cp -R apps/govea/public apps/govea/.next/standalone/apps/govea/public; fi
 
 COPY docker/entrypoint.dev.sh /entrypoint.dev.sh
 COPY docker/entrypoint.azure-dev.sh /entrypoint.azure-dev.sh
