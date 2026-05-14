@@ -6,11 +6,12 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/instance',        label: 'Dashboard',      exact: true },
-  { href: '/instance/orgs',   label: 'Organizations' },
-  { href: '/instance/users',  label: 'Users' },
-  { href: '/instance/audit',  label: 'Audit Log' },
-  { href: '/instance/config', label: 'Configuration' },
+  { href: '/instance',          label: 'Dashboard',         exact: true },
+  { href: '/instance/orgs',     label: 'Organizations' },
+  { href: '/instance/users',    label: 'Users' },
+  { href: '/instance/features', label: 'Feature Controls' },
+  { href: '/instance/audit',    label: 'Audit Log' },
+  { href: '/instance/config',   label: 'Configuration' },
 ]
 
 const BG    = '#1e1b4b' // indigo-950 — distinct from agency admin
