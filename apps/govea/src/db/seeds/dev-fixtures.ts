@@ -1531,6 +1531,192 @@ export const DEV_SERVICES = [
   },
 ]
 
+// ─── Data Architecture metamodel (City of Riverdale) ─────────────────────────
+// Fixtures for the Data Architecture stream (#363 / #481).
+// Covers all physical attribute types, both link types, and all four cross-object
+// relationship kinds. Product + its children are 'draft' so the Viewer role-gate
+// is exercisable (Victor cannot see them; Alice/Carol can).
+
+export const DEV_DATA_ENTITIES = [
+  {
+    name: 'Customer',
+    description: 'Represents a resident or business with a registered relationship with the City. Source of truth for identity and contact data across source systems.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalHubTableName: 'h_customer',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    owners: ['Enterprise Data Architect'],
+  },
+  {
+    name: 'Order',
+    description: 'A transactional request submitted by a Customer — permit application, service request, license renewal, or similar.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalHubTableName: 'h_order',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    owners: ['Enterprise Data Architect'],
+  },
+  {
+    name: 'Product',
+    description: 'A service or permit type offered by the City. Draft — pending data governance approval to publish.',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    physicalHubTableName: 'h_product',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    owners: ['Enterprise Data Architect'],
+  },
+]
+
+export const DEV_DATA_ATTRIBUTES = [
+  {
+    name: 'Customer Profile Details',
+    description: 'Core demographic and contact attributes for a Customer. Tracked with effectivity dates to capture historical changes.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalSatelliteTableName: 's_customer_profile',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    physicalAttributeType: 'effectivity' as const,
+    owners: ['Data Modeler'],
+    entityLinks: ['Customer'],
+  },
+  {
+    name: 'Customer Contact Preferences',
+    description: 'Multi-active list of communication channels a Customer has opted into. One row per active channel per load date.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalSatelliteTableName: 's_customer_contact',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    physicalAttributeType: 'multi-active' as const,
+    owners: ['Data Modeler'],
+    entityLinks: ['Customer'],
+  },
+  {
+    name: 'Order Status Tracking',
+    description: 'Lifecycle states for an Order (submitted, under review, approved, rejected). Status-tracking satellite with current-state projection.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalSatelliteTableName: 's_order_status',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    physicalAttributeType: 'status-tracking' as const,
+    owners: ['Data Modeler'],
+    entityLinks: ['Order'],
+  },
+  {
+    name: 'Order Record Details',
+    description: 'Descriptive attributes of an Order captured at submission time with full record-tracking audit columns.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalSatelliteTableName: 's_order_record',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    physicalAttributeType: 'record-tracking' as const,
+    owners: ['Data Modeler'],
+    entityLinks: ['Order'],
+  },
+  {
+    name: 'Product Details',
+    description: 'Descriptive attributes for a City service or permit type. Draft — not yet approved for publication.',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    physicalSatelliteTableName: 's_product_details',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    physicalAttributeType: 'effectivity' as const,
+    owners: ['Data Modeler'],
+    entityLinks: ['Product'],
+  },
+]
+
+export const DEV_DATA_LINKS = [
+  {
+    name: 'Customer-Order Association',
+    description: 'Relates a Customer to the Orders they have submitted. Same-As link used to resolve potential duplicate Customer references across source systems.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalLinkTableName: 'l_customer_order',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    physicalLinkType: 'same-as' as const,
+    owners: ['Enterprise Data Architect'],
+  },
+  {
+    name: 'Product Hierarchy',
+    description: 'Hierarchical link capturing parent-child relationships between City service product types (e.g. Electrical Permit is a child of Building Permit).',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    physicalLinkTableName: 'l_product_hierarchy',
+    serverName: 'dw01',
+    databaseName: 'riverdale_dv',
+    schemaName: 'raw_vault',
+    physicalLinkType: 'hierarchical' as const,
+    owners: ['Enterprise Data Architect'],
+  },
+]
+
+export const DEV_DATA_BUSINESS_KEYS = [
+  {
+    name: 'Customer ID',
+    description: 'Primary business key for a Customer — the city-assigned resident or business identifier.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    dataType: 'VARCHAR(50)',
+    entityName: 'Customer',
+    owners: ['Data Modeler'],
+  },
+  {
+    name: 'Customer Email',
+    description: 'Secondary business key sourced from the identity provider registration record.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    dataType: 'VARCHAR(255)',
+    entityName: 'Customer',
+    owners: ['Data Modeler'],
+  },
+  {
+    name: 'Order Number',
+    description: 'Unique permit or service request reference number assigned at submission time.',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    dataType: 'CHAR(10)',
+    entityName: 'Order',
+    owners: ['Data Modeler'],
+  },
+  {
+    name: 'Product SKU',
+    description: 'Internal code identifying a City service or permit product type. Draft — pending approval.',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    dataType: 'VARCHAR(20)',
+    entityName: 'Product',
+    owners: ['Data Modeler'],
+  },
+]
+
+// Entity ↔ Entity "is related" — canonical ordering enforced at seed time (smaller UUID as left)
+export const DEV_DATA_ENTITY_RELATIONS = [
+  { leftEntityName: 'Customer', rightEntityName: 'Order' },
+]
+
+// Attribute ↔ Attribute "shares" — canonical ordering enforced at seed time
+export const DEV_DATA_ATTRIBUTE_SHARES = [
+  { leftAttributeName: 'Customer Profile Details', rightAttributeName: 'Product Details' },
+]
+
 // ─── Cross-org links ──────────────────────────────────────────────────────────
 
 export const DEV_CROSS_ORG_LINKS = [
