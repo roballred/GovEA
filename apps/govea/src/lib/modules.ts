@@ -85,9 +85,9 @@ export function isModuleEnabled(
 }
 
 /**
- * Applies instance-wide disable overrides to an org's module settings.
- * When an instance admin disables a module globally, it is OFF for every org
- * regardless of that org's local preference.
+ * Applies instance-wide module availability overrides to an org's module settings.
+ * When an instance admin makes a module unavailable across the instance, it is
+ * OFF for every org regardless of that org's local preference.
  */
 export function mergeModuleSettings(
   orgEnabledModules: ModuleStateMap,

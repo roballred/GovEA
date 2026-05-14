@@ -68,30 +68,40 @@ export function InstanceModuleToggles({ initialDisabledModules }: InstanceModule
 
   return (
     <div className="space-y-6">
-      {GROUPS.map(group => {
-        const groupMods = MODULE_DEFS.filter(m => m.group === group)
-        const groupKeys = groupMods.map(m => m.key)
-        const allAvailable = groupKeys.every(k => disabledModules[k] !== true)
-        return (
-          <div key={group} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {group}
-              </p>
-              <Toggle
-                enabled={allAvailable}
-                disabled={isPending}
-                label={`${allAvailable ? 'Disable' : 'Enable'} all ${group} modules across the instance`}
-                onChange={() => toggleGroupAvailability(group)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              {groupMods.map(mod => {
-                const available = disabledModules[mod.key] !== true
-                return (
-                  <div
-                    key={mod.key}
-                    className="flex items-start justify-between gap-4 rounded-lg border bg-card px-4 py-3"
+      {GROUPS.map(group => (
+        <div key={group} className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {group}
+          </p>
+          <div className="space-y-1.5">
+            {MODULE_DEFS.filter(m => m.group === group).map(mod => {
+              const available = disabledModules[mod.key] !== true
+              return (
+                <div
+                  key={mod.key}
+                  className="flex items-start justify-between gap-4 rounded-lg border bg-card px-4 py-3"
+                >
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">{mod.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {available
+                        ? 'Available to organizations. Each org can still choose whether to use it.'
+                        : 'Unavailable across the entire instance. It is hidden and forced off for every organization.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={available}
+                    aria-label={`${available ? 'Disable' : 'Enable'} ${mod.label} across the instance`}
+                    disabled={isPending}
+                    onClick={() => toggleAvailability(mod.key)}
+                    className={cn(
+                      'mt-0.5 relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      'disabled:cursor-not-allowed disabled:opacity-60',
+                      available ? 'bg-primary' : 'bg-input',
+                    )}
                   >
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">{mod.label}</p>

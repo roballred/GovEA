@@ -69,32 +69,41 @@ export function ModuleToggles({ initialModules, lockedModules = {} }: ModuleTogg
 
   return (
     <div className="space-y-6">
-      {GROUPS.map(group => {
-        const groupMods = MODULE_DEFS.filter(m => m.group === group)
-        const groupKeys = groupMods.filter(m => m.href !== null).map(m => m.key)
-        const anyLocked = groupKeys.some(k => lockedModules[k] === true)
-        const allEnabled = groupKeys.every(k => lockedModules[k] !== true && isModuleEnabled(modules, k))
-        return (
-          <div key={group} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {group}
-              </p>
-              <Toggle
-                enabled={allEnabled}
-                disabled={isPending || anyLocked}
-                label={`${allEnabled ? 'Disable' : 'Enable'} all ${group} modules`}
-                onChange={() => toggleGroup(group)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              {groupMods.map(mod => {
-                const locked = lockedModules[mod.key] === true
-                const enabled = locked ? false : isModuleEnabled(modules, mod.key)
-                return (
-                  <div
-                    key={mod.key}
-                    className="flex items-center justify-between rounded-lg border bg-card px-4 py-3"
+      {GROUPS.map(group => (
+        <div key={group} className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {group}
+          </p>
+          <div className="space-y-1.5">
+            {MODULE_DEFS.filter(m => m.group === group).map(mod => {
+              const locked = lockedModules[mod.key] === true
+              const enabled = locked ? false : isModuleEnabled(modules, mod.key)
+              return (
+                <div
+                  key={mod.key}
+                  className="flex items-center justify-between rounded-lg border bg-card px-4 py-3"
+                >
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-medium">{mod.label}</span>
+                    {locked && (
+                      <p className="text-xs text-muted-foreground">
+                        Unavailable across the entire GovEA instance by an instance admin.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={enabled}
+                    aria-label={`${enabled ? 'Disable' : 'Enable'} ${mod.label}`}
+                    disabled={isPending || locked}
+                    onClick={() => toggle(mod.key)}
+                    className={cn(
+                      'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      'disabled:cursor-not-allowed disabled:opacity-60',
+                      enabled ? 'bg-primary' : 'bg-input',
+                    )}
                   >
                     <div className="space-y-0.5">
                       <span className="text-sm font-medium">{mod.label}</span>
