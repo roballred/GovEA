@@ -59,3 +59,44 @@ When adding a new trigger, drop a new `.sql` file in `src/db/sql/` (idempotent: 
 ## GitHub
 
 Repo: https://github.com/roballred/GovEA
+
+---
+
+## Pre-Flight Checklist — Required Before Writing Any Code
+
+Before implementing anything, work through every item below in order. If any item cannot be satisfied, stop and resolve it before proceeding. Do not start implementation to "figure it out as you go."
+
+### 1. Issue exists
+A GitHub issue must exist with defined scope and acceptance criteria. If the user hands me a task informally (chat message, verbal request), I must **create the issue first** and confirm its content before writing code. No exceptions.
+
+### 2. Capability traceability is present
+The issue must include a `Capability:` or `Capability group:` line referencing the relevant EasyEA capability ID (the file stem of the capability doc, e.g. `ac-feature-management`). If it is missing:
+- Read the relevant capability doc under `business-architecture/capabilities/` to identify the right ID.
+- Add it to the issue, or ask the user to confirm the mapping before proceeding.
+- If no capability doc exists for the work, flag that explicitly — do not silently proceed without traceability.
+
+### 3. Persona is identified
+The issue should name the persona(s) the work serves. If a change cannot be tied to a persona need or business goal, flag it and ask the user to confirm why it should exist. Do not assume the work is self-evidently justified.
+
+### 4. Acceptance criteria are clear
+The issue should have enough detail to know when the work is done. If acceptance criteria are missing or vague, ask before implementing.
+
+---
+
+## Traceability in Every Commit and PR
+
+Every commit that touches implementation must include the capability ID in the message body:
+
+```
+feat(settings): add group-level module toggles
+
+Capability: ac-feature-management
+Closes #N
+```
+
+Every PR description must include:
+- `Closes #N` referencing the issue
+- `Capability: [id]` referencing the capability
+- A short explanation of what changed, why, and how it was tested
+
+This is not optional — it is the mechanism that makes AI-assisted work auditable and trustworthy.
