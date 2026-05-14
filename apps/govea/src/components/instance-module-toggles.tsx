@@ -44,7 +44,7 @@ export function InstanceModuleToggles({ initialDisabledModules }: InstanceModule
                     <p className="text-xs text-muted-foreground">
                       {available
                         ? 'Available to organizations. Each org can still choose whether to use it.'
-                        : 'Disabled across the entire instance. It is hidden and forced off for every organization.'}
+                        : 'Unavailable across the entire instance. It is hidden and forced off for every organization.'}
                     </p>
                   </div>
                   <button
