@@ -30,6 +30,8 @@ COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
 # but kept here so the image is self-contained if run without volumes.
 COPY . .
 
+RUN pnpm --filter govea build
+
 COPY docker/entrypoint.dev.sh /entrypoint.dev.sh
 COPY docker/entrypoint.azure-dev.sh /entrypoint.azure-dev.sh
 RUN chmod +x /entrypoint.dev.sh /entrypoint.azure-dev.sh
