@@ -12,10 +12,10 @@ import {
   DEV_DATA_ENTITY_RELATIONS, DEV_DATA_ATTRIBUTE_SHARES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
   DEV_CROSS_ORG_LINKS,
-  LAKESIDE_ORG, LAKESIDE_USERS,
-  LAKESIDE_PERSONAS, LAKESIDE_CAPABILITIES, LAKESIDE_APPLICATIONS,
-  LAKESIDE_VALUE_STREAMS, LAKESIDE_OBJECTIVES, LAKESIDE_INITIATIVES,
-  LAKESIDE_ADRS, LAKESIDE_PRINCIPLES, LAKESIDE_GLOSSARY, LAKESIDE_SERVICES,
+  GOVEA_PROJECT_ORG, GOVEA_PROJECT_USERS,
+  GOVEA_PROJECT_PERSONAS, GOVEA_PROJECT_CAPABILITIES, GOVEA_PROJECT_APPLICATIONS,
+  GOVEA_PROJECT_VALUE_STREAMS, GOVEA_PROJECT_OBJECTIVES, GOVEA_PROJECT_INITIATIVES,
+  GOVEA_PROJECT_ADRS, GOVEA_PROJECT_PRINCIPLES, GOVEA_PROJECT_GLOSSARY, GOVEA_PROJECT_SERVICES,
 } from './dev-fixtures'
 import {
   TOGAF_ORG, TOGAF_USERS,
@@ -1146,35 +1146,35 @@ async function seed() {
   }
   console.log(`  ✓ ${STATE_APPLICATIONS.length} applications`)
 
-  // ── Org 3: City of Lakeside ──────────────────────────────────────────────
+  // ── Org 3: GovEA Project ─────────────────────────────────────────────────
 
-  console.log('\n[Org 3] City of Lakeside')
-  const lakesideOrgId = await findOrCreateOrg(LAKESIDE_ORG.slug, LAKESIDE_ORG.name)
+  console.log('\n[Org 3] GovEA Project')
+  const goveaProjectOrgId = await findOrCreateOrg(GOVEA_PROJECT_ORG.slug, GOVEA_PROJECT_ORG.name)
 
-  for (const u of LAKESIDE_USERS) {
-    await db.insert(users).values({ ...u, passwordHash, organizationId: lakesideOrgId, isActive: 'true' }).onConflictDoNothing()
+  for (const u of GOVEA_PROJECT_USERS) {
+    await db.insert(users).values({ ...u, passwordHash, organizationId: goveaProjectOrgId, isActive: 'true' }).onConflictDoNothing()
   }
-  console.log(`  ✓ ${LAKESIDE_USERS.length} users (password: dev-password)`)
+  console.log(`  ✓ ${GOVEA_PROJECT_USERS.length} users (password: dev-password)`)
 
-  const lakesidePersonaIds: Record<string, string> = {}
-  for (const p of LAKESIDE_PERSONAS) {
-    lakesidePersonaIds[p.name] = await findOrCreatePersona(lakesideOrgId, p.name, {
+  const goveaProjectPersonaIds: Record<string, string> = {}
+  for (const p of GOVEA_PROJECT_PERSONAS) {
+    goveaProjectPersonaIds[p.name] = await findOrCreatePersona(goveaProjectOrgId, p.name, {
       description: p.description, type: p.type, status: p.status, visibility: p.visibility,
     })
   }
-  console.log(`  ✓ ${LAKESIDE_PERSONAS.length} personas`)
+  console.log(`  ✓ ${GOVEA_PROJECT_PERSONAS.length} personas`)
 
-  const lakesideCapabilityIds: Record<string, string> = {}
-  for (const c of LAKESIDE_CAPABILITIES) {
-    const capId = await findOrCreateCapability(lakesideOrgId, c.name, {
+  const goveaProjectCapabilityIds: Record<string, string> = {}
+  for (const c of GOVEA_PROJECT_CAPABILITIES) {
+    const capId = await findOrCreateCapability(goveaProjectOrgId, c.name, {
       description: c.description, domain: c.domain,
       behaviors: (c as { behaviors?: string }).behaviors,
       rules: (c as { rules?: string }).rules,
       status: c.status, visibility: c.visibility,
     })
-    lakesideCapabilityIds[c.name] = capId
+    goveaProjectCapabilityIds[c.name] = capId
     for (const personaName of c.personas) {
-      const personaId = lakesidePersonaIds[personaName]
+      const personaId = goveaProjectPersonaIds[personaName]
       if (!personaId) continue
       const exists = await db.query.capabilityPersonas.findFirst({
         where: (t, { eq: e, and }) => and(e(t.capabilityId, capId), e(t.personaId, personaId)),
@@ -1182,17 +1182,17 @@ async function seed() {
       if (!exists) await db.insert(capabilityPersonas).values({ capabilityId: capId, personaId })
     }
   }
-  console.log(`  ✓ ${LAKESIDE_CAPABILITIES.length} capabilities`)
+  console.log(`  ✓ ${GOVEA_PROJECT_CAPABILITIES.length} capabilities`)
 
-  const lakesideApplicationIds: Record<string, string> = {}
-  for (const a of LAKESIDE_APPLICATIONS) {
-    const appId = await findOrCreateApplication(lakesideOrgId, a.name, {
+  const goveaProjectApplicationIds: Record<string, string> = {}
+  for (const a of GOVEA_PROJECT_APPLICATIONS) {
+    const appId = await findOrCreateApplication(goveaProjectOrgId, a.name, {
       description: a.description, vendor: a.vendor, hostingModel: a.hostingModel,
       lifecycleStatus: a.lifecycleStatus, status: a.status,
     })
-    lakesideApplicationIds[a.name] = appId
+    goveaProjectApplicationIds[a.name] = appId
     for (const capName of a.capabilities) {
-      const capId = lakesideCapabilityIds[capName]
+      const capId = goveaProjectCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.applicationCapabilities.findFirst({
         where: (t, { eq: e, and }) => and(e(t.applicationId, appId), e(t.capabilityId, capId)),
@@ -1200,29 +1200,29 @@ async function seed() {
       if (!exists) await db.insert(applicationCapabilities).values({ applicationId: appId, capabilityId: capId })
     }
   }
-  console.log(`  ✓ ${LAKESIDE_APPLICATIONS.length} applications`)
+  console.log(`  ✓ ${GOVEA_PROJECT_APPLICATIONS.length} applications`)
 
   // Value Streams + stages + stage capability links + persona links
-  const lakesideValueStreamIds: Record<string, string> = {}
-  for (const vs of LAKESIDE_VALUE_STREAMS) {
+  const goveaProjectValueStreamIds: Record<string, string> = {}
+  for (const vs of GOVEA_PROJECT_VALUE_STREAMS) {
     const existingVs = await db.query.valueStreams.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, vs.name)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.name, vs.name)),
     })
     let vsId: string
     if (existingVs) {
       vsId = existingVs.id
     } else {
       const [inserted] = await db.insert(valueStreams).values({
-        organizationId: lakesideOrgId,
+        organizationId: goveaProjectOrgId,
         name: vs.name, description: vs.description, valueItem: vs.valueItem,
         status: vs.status, visibility: vs.visibility,
       }).returning()
       vsId = inserted.id
     }
-    lakesideValueStreamIds[vs.name] = vsId
+    goveaProjectValueStreamIds[vs.name] = vsId
 
     for (const personaName of vs.stakeholderPersonas) {
-      const personaId = lakesidePersonaIds[personaName]
+      const personaId = goveaProjectPersonaIds[personaName]
       if (!personaId) continue
       const exists = await db.query.valueStreamPersonas.findFirst({
         where: (t, { eq: e, and }) => and(e(t.valueStreamId, vsId), e(t.personaId, personaId)),
@@ -1244,7 +1244,7 @@ async function seed() {
         stageId = insertedStage.id
       }
       for (const capName of stage.capabilities) {
-        const capId = lakesideCapabilityIds[capName]
+        const capId = goveaProjectCapabilityIds[capName]
         if (!capId) continue
         const exists = await db.query.valueStreamStageCapabilities.findFirst({
           where: (t, { eq: e, and }) => and(e(t.stageId, stageId), e(t.capabilityId, capId)),
@@ -1253,30 +1253,30 @@ async function seed() {
       }
     }
   }
-  console.log(`  ✓ ${LAKESIDE_VALUE_STREAMS.length} value streams with stages and persona links`)
+  console.log(`  ✓ ${GOVEA_PROJECT_VALUE_STREAMS.length} value streams with stages and persona links`)
 
   // Strategic Objectives + capability / value stream links
-  const lakesideObjectiveIds: Record<string, string> = {}
-  for (const o of LAKESIDE_OBJECTIVES) {
+  const goveaProjectObjectiveIds: Record<string, string> = {}
+  for (const o of GOVEA_PROJECT_OBJECTIVES) {
     const existing = await db.query.strategicObjectives.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, o.name)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.name, o.name)),
     })
     let objId: string
     if (existing) {
       objId = existing.id
     } else {
       const [inserted] = await db.insert(strategicObjectives).values({
-        organizationId: lakesideOrgId,
+        organizationId: goveaProjectOrgId,
         name: o.name, description: o.description,
         successMetric: o.successMetric, timeHorizon: o.timeHorizon,
         status: o.status, visibility: o.visibility,
       }).returning()
       objId = inserted.id
     }
-    lakesideObjectiveIds[o.name] = objId
+    goveaProjectObjectiveIds[o.name] = objId
 
     for (const capName of o.capabilities) {
-      const capId = lakesideCapabilityIds[capName]
+      const capId = goveaProjectCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.objectiveCapabilities.findFirst({
         where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.capabilityId, capId)),
@@ -1285,7 +1285,7 @@ async function seed() {
     }
 
     for (const vsName of o.valueStreams) {
-      const vsId = lakesideValueStreamIds[vsName]
+      const vsId = goveaProjectValueStreamIds[vsName]
       if (!vsId) continue
       const exists = await db.query.objectiveValueStreams.findFirst({
         where: (t, { eq: e, and }) => and(e(t.objectiveId, objId), e(t.valueStreamId, vsId)),
@@ -1293,29 +1293,29 @@ async function seed() {
       if (!exists) await db.insert(objectiveValueStreams).values({ objectiveId: objId, valueStreamId: vsId })
     }
   }
-  console.log(`  ✓ ${LAKESIDE_OBJECTIVES.length} strategic objectives`)
+  console.log(`  ✓ ${GOVEA_PROJECT_OBJECTIVES.length} strategic objectives`)
 
   // Initiatives + capability / application / objective links
-  const lakesideInitiativeIds: Record<string, string> = {}
-  for (const ini of LAKESIDE_INITIATIVES) {
+  const goveaProjectInitiativeIds: Record<string, string> = {}
+  for (const ini of GOVEA_PROJECT_INITIATIVES) {
     const existingIni = await db.query.initiatives.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, ini.name)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.name, ini.name)),
     })
     let iniId: string
     if (existingIni) {
       iniId = existingIni.id
     } else {
       const [inserted] = await db.insert(initiatives).values({
-        organizationId: lakesideOrgId,
+        organizationId: goveaProjectOrgId,
         name: ini.name, description: ini.description,
         status: ini.status, startDate: ini.startDate, endDate: ini.endDate ?? undefined,
       }).returning()
       iniId = inserted.id
     }
-    lakesideInitiativeIds[ini.name] = iniId
+    goveaProjectInitiativeIds[ini.name] = iniId
 
     for (const { name: capName, impact } of ini.capabilities) {
-      const capId = lakesideCapabilityIds[capName]
+      const capId = goveaProjectCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.initiativeCapabilities.findFirst({
         where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.capabilityId, capId)),
@@ -1324,7 +1324,7 @@ async function seed() {
     }
 
     for (const { name: appName, impact } of ini.applications) {
-      const appId = lakesideApplicationIds[appName]
+      const appId = goveaProjectApplicationIds[appName]
       if (!appId) continue
       const exists = await db.query.initiativeApplications.findFirst({
         where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.applicationId, appId)),
@@ -1333,7 +1333,7 @@ async function seed() {
     }
 
     for (const objName of ini.objectives) {
-      const objId = lakesideObjectiveIds[objName]
+      const objId = goveaProjectObjectiveIds[objName]
       if (!objId) continue
       const exists = await db.query.initiativeObjectives.findFirst({
         where: (t, { eq: e, and }) => and(e(t.initiativeId, iniId), e(t.objectiveId, objId)),
@@ -1341,43 +1341,43 @@ async function seed() {
       if (!exists) await db.insert(initiativeObjectives).values({ initiativeId: iniId, objectiveId: objId })
     }
   }
-  console.log(`  ✓ ${LAKESIDE_INITIATIVES.length} initiatives`)
+  console.log(`  ✓ ${GOVEA_PROJECT_INITIATIVES.length} initiatives`)
 
   // ADRs — insert all records first (without supersededBy), then resolve self-references
-  const lakesideAdrIds: Record<string, string> = {}
-  for (const adr of LAKESIDE_ADRS) {
+  const goveaProjectAdrIds: Record<string, string> = {}
+  for (const adr of GOVEA_PROJECT_ADRS) {
     const existingAdr = await db.query.adrs.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.number, adr.number)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.number, adr.number)),
     })
     let adrId: string
     if (existingAdr) {
       adrId = existingAdr.id
     } else {
       const [inserted] = await db.insert(adrs).values({
-        organizationId: lakesideOrgId,
+        organizationId: goveaProjectOrgId,
         number: adr.number, title: adr.title, context: adr.context,
         decision: adr.decision, consequences: adr.consequences, status: adr.status,
       }).returning()
       adrId = inserted.id
     }
-    lakesideAdrIds[adr.number] = adrId
+    goveaProjectAdrIds[adr.number] = adrId
   }
 
-  for (const adr of LAKESIDE_ADRS) {
+  for (const adr of GOVEA_PROJECT_ADRS) {
     if (!adr.supersededByNumber) continue
-    const adrId = lakesideAdrIds[adr.number]
-    const supersedingId = lakesideAdrIds[adr.supersededByNumber]
+    const adrId = goveaProjectAdrIds[adr.number]
+    const supersedingId = goveaProjectAdrIds[adr.supersededByNumber]
     if (adrId && supersedingId) {
       await db.update(adrs).set({ supersededBy: supersedingId }).where(eq(adrs.id, adrId))
     }
   }
 
-  for (const adr of LAKESIDE_ADRS) {
-    const adrId = lakesideAdrIds[adr.number]
+  for (const adr of GOVEA_PROJECT_ADRS) {
+    const adrId = goveaProjectAdrIds[adr.number]
     if (!adrId) continue
 
     for (const capName of adr.capabilities) {
-      const capId = lakesideCapabilityIds[capName]
+      const capId = goveaProjectCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.adrCapabilities.findFirst({
         where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.capabilityId, capId)),
@@ -1386,7 +1386,7 @@ async function seed() {
     }
 
     for (const iniName of adr.initiatives) {
-      const iniId = lakesideInitiativeIds[iniName]
+      const iniId = goveaProjectInitiativeIds[iniName]
       if (!iniId) continue
       const exists = await db.query.adrInitiatives.findFirst({
         where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.initiativeId, iniId)),
@@ -1395,7 +1395,7 @@ async function seed() {
     }
 
     for (const objName of adr.objectives) {
-      const objId = lakesideObjectiveIds[objName]
+      const objId = goveaProjectObjectiveIds[objName]
       if (!objId) continue
       const exists = await db.query.adrObjectives.findFirst({
         where: (t, { eq: e, and }) => and(e(t.adrId, adrId), e(t.objectiveId, objId)),
@@ -1403,12 +1403,12 @@ async function seed() {
       if (!exists) await db.insert(adrObjectives).values({ adrId, objectiveId: objId })
     }
   }
-  console.log(`  ✓ ${LAKESIDE_ADRS.length} ADRs with junction links and supersededBy chain`)
+  console.log(`  ✓ ${GOVEA_PROJECT_ADRS.length} ADRs with junction links and supersededBy chain`)
 
   // Principles + capability links
-  for (const p of LAKESIDE_PRINCIPLES) {
+  for (const p of GOVEA_PROJECT_PRINCIPLES) {
     const existing = await db.query.principles.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, p.name)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.name, p.name)),
     })
     let pRow: typeof existing
     if (existing) {
@@ -1418,12 +1418,12 @@ async function seed() {
       const [inserted] = await db.insert(principles).values({
         name: p.name, description: p.description ?? null, title: p.title ?? null,
         rationale: p.rationale, implications: p.implications, principleType: p.principleType,
-        status: p.status, visibility: p.visibility, organizationId: lakesideOrgId,
+        status: p.status, visibility: p.visibility, organizationId: goveaProjectOrgId,
       }).returning()
       pRow = inserted
     }
     for (const capName of p.capabilities) {
-      const capId = lakesideCapabilityIds[capName]
+      const capId = goveaProjectCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.principleCapabilities.findFirst({
         where: (t, { eq: e, and }) => and(e(t.principleId, pRow!.id), e(t.capabilityId, capId)),
@@ -1431,12 +1431,12 @@ async function seed() {
       if (!exists) await db.insert(principleCapabilities).values({ principleId: pRow!.id, capabilityId: capId })
     }
   }
-  console.log(`  ✓ ${LAKESIDE_PRINCIPLES.length} principles`)
+  console.log(`  ✓ ${GOVEA_PROJECT_PRINCIPLES.length} principles`)
 
   // Glossary
-  for (const g of LAKESIDE_GLOSSARY) {
+  for (const g of GOVEA_PROJECT_GLOSSARY) {
     const existing = await db.query.glossaryTerms.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.term, g.term)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.term, g.term)),
     })
     if (existing) continue
     await db.insert(glossaryTerms).values({
@@ -1445,22 +1445,22 @@ async function seed() {
       definitionSourceUrl: null,
       domain: g.domain ?? null,
       notes: (g as { notes?: string }).notes ?? null,
-      status: g.status, visibility: g.visibility, organizationId: lakesideOrgId,
+      status: g.status, visibility: g.visibility, organizationId: goveaProjectOrgId,
     })
   }
-  console.log(`  ✓ ${LAKESIDE_GLOSSARY.length} glossary terms`)
+  console.log(`  ✓ ${GOVEA_PROJECT_GLOSSARY.length} glossary terms`)
 
   // Services + junction links
-  for (const svc of LAKESIDE_SERVICES) {
+  for (const svc of GOVEA_PROJECT_SERVICES) {
     const existing = await db.query.services.findFirst({
-      where: (t, { eq: e, and }) => and(e(t.organizationId, lakesideOrgId), e(t.name, svc.name)),
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.name, svc.name)),
     })
     let svcId: string
     if (existing) {
       svcId = existing.id
     } else {
       const [inserted] = await db.insert(services).values({
-        organizationId: lakesideOrgId,
+        organizationId: goveaProjectOrgId,
         name: svc.name, description: svc.description,
         serviceOwner: svc.serviceOwner, channels: svc.channels,
         status: svc.status, visibility: svc.visibility,
@@ -1469,7 +1469,7 @@ async function seed() {
     }
 
     for (const capName of svc.capabilities) {
-      const capId = lakesideCapabilityIds[capName]
+      const capId = goveaProjectCapabilityIds[capName]
       if (!capId) continue
       const exists = await db.query.serviceCapabilities.findFirst({
         where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.capabilityId, capId)),
@@ -1478,7 +1478,7 @@ async function seed() {
     }
 
     for (const personaName of svc.personas) {
-      const personaId = lakesidePersonaIds[personaName]
+      const personaId = goveaProjectPersonaIds[personaName]
       if (!personaId) continue
       const exists = await db.query.servicePersonas.findFirst({
         where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.personaId, personaId)),
@@ -1487,7 +1487,7 @@ async function seed() {
     }
 
     for (const vsName of svc.valueStreams) {
-      const vsId = lakesideValueStreamIds[vsName]
+      const vsId = goveaProjectValueStreamIds[vsName]
       if (!vsId) continue
       const exists = await db.query.serviceValueStreams.findFirst({
         where: (t, { eq: e, and }) => and(e(t.serviceId, svcId), e(t.valueStreamId, vsId)),
@@ -1495,7 +1495,7 @@ async function seed() {
       if (!exists) await db.insert(serviceValueStreams).values({ serviceId: svcId, valueStreamId: vsId })
     }
   }
-  console.log(`  ✓ ${LAKESIDE_SERVICES.length} services with capability, persona, and value stream links`)
+  console.log(`  ✓ ${GOVEA_PROJECT_SERVICES.length} services with capability, persona, and value stream links`)
 
   // ── Multi-org: connection + cross-org capability links ────────────────────
 
