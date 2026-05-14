@@ -24,7 +24,7 @@ This register is intentionally lightweight:
 
 | ID | Risk | Category | Impact | Likelihood | Mitigation | Owner | Status | Last reviewed |
 |---|---|---|---|---|---|---|---|---|
-| R-001 | Architecture debt will remain incomplete until the final lifecycle auto-flagging PR lands | Delivery / Product | High | Medium | Merge PR #486, verify system-detected debt behavior, then close or narrow #381 | Product / Engineering | Open | 2026-05-14 |
+| R-001 | Module/settings changes can blur product boundaries if #487 and #488 are reviewed independently | Product / UX | Medium | Medium | Review #487 and #488 together for language, defaults, navigation semantics, and terminology follow-up to #446 | Product / Engineering | Open | 2026-05-14 |
 | R-002 | Data Architecture can keep expanding without a deliberate v1 boundary | Scope | Medium | Medium | Decide whether #363 is v1-complete or split conceptual/logical model expansion into focused follow-ups | Product | Open | 2026-05-14 |
 | R-003 | Stakeholder-facing analytics are still driven by assumed personas and unvalidated trust signals | Product Fit | High | High | Run #384 and activate #103 Phase 1 manual feedback logging before building more analysis surfaces | Product | Open | 2026-05-14 |
 | R-004 | Break-glass controls exist, but there is still no real cross-tenant operational caller proving they work in practice | Operational / Security | High | Medium | Ship #437 before treating break-glass as an operationally credible control | Product / Engineering | Open | 2026-05-14 |
@@ -33,19 +33,19 @@ This register is intentionally lightweight:
 
 ## Risk Details
 
-### R-001 — Architecture debt will remain incomplete until the final lifecycle auto-flagging PR lands
+### R-001 — Module/settings changes can blur product boundaries if #487 and #488 are reviewed independently
 
-- **Category:** Delivery / Product
-- **Impact:** High
+- **Category:** Product / UX
+- **Impact:** Medium
 - **Likelihood:** Medium
 - **Owner:** Product / Engineering
 - **Status:** Open
 - **Last reviewed:** 2026-05-14
-- **Mitigation:** Merge PR #486, verify system-detected debt behavior, then close or narrow #381 based on any residual ADR-decision-support gaps.
+- **Mitigation:** Review #487 and #488 together for language, defaults, navigation semantics, and terminology follow-up to #446.
 
 #### Details
 
-PRs #459, #466, and #467 already shipped the architecture-debt model, CRUD surface, linked-debt panels, dashboard priority signal, and publish-time acknowledgment gate. The remaining risk is that the final planned behavior, automatic lifecycle-risk detection, remains outside main until #486 merges. Without that final slice, the debt workflow relies on users to name lifecycle debt manually.
+PR #487 aligns language around instance-wide module availability controls. PR #488 goes further by adding group-level module toggles, moving Principles into Business Architecture, and making framework overlay default-on. These changes touch the same mental model even though they are separate PRs. If reviewed independently, GovEA could end up with clear copy but surprising defaults, or useful defaults with terminology still unsettled.
 
 ### R-002 — Data Architecture can keep expanding without a deliberate v1 boundary
 
@@ -115,4 +115,4 @@ The product already supports org-level module toggles and instance-wide availabi
 
 #### Details
 
-This risk showed up again on 2026-05-14: the checked-in priority note still described PR #457 as open even though main had moved through the architecture-debt and Data Architecture streams. The consequence is not just cosmetic; stale docs distort prioritization.
+This risk showed up again on 2026-05-14: the checked-in priority note still described PR #457 as open even though main had moved through the architecture-debt and Data Architecture streams, and #486 merged during the grooming run. The consequence is not just cosmetic; stale docs distort prioritization.
