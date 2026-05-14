@@ -30,4 +30,5 @@ pnpm --filter govea db:seed:container
 
 echo ""
 echo "==> Starting server..."
-exec pnpm --filter govea start
+cd /app/apps/govea
+exec node .next/standalone/apps/govea/server.js
