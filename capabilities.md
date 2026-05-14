@@ -153,7 +153,7 @@ Organization-level settings and administrative tools.
 | Persona Type Management | Implemented | Manage persona type categories as taxonomy terms under the `Persona Type` branch |
 | Persona Tags | Implemented | Manage persona tag values as taxonomy terms under the `Persona Tag` branch |
 | Admin Dashboard | Implemented | Live practitioner dashboard with repository activity, coverage signals, and navigation shortcuts |
-| Feature Management | Partially implemented | Org-level module toggles and instance-wide global disables are shipped; richer dependency and feature-flag behavior remains future work |
+| Feature Management | Partially implemented | Org-level module toggles and instance-wide module availability controls are shipped; richer dependency and feature-flag behavior remains future work |
 | Email Configuration | Not implemented | SMTP setup for notifications and password reset |
 | Backup & Export | Not implemented | Data export and backup tooling |
 | Security Settings | Not implemented | Session timeouts, password policy, IP restrictions |

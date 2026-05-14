@@ -11,14 +11,14 @@ export default async function InstanceFeaturesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Feature Controls</h1>
         <p className="text-muted-foreground mt-1">
-          Control which GovEA modules are available anywhere on this instance. Turning a feature off here
-          forces it off for every organization, even if an org admin previously enabled it.
+          Control which GovEA modules are available anywhere on this instance. Making a module unavailable
+          here forces it off for every organization, even if an org admin previously enabled it.
         </p>
       </div>
 
       <div className="rounded-lg border bg-amber-50 px-4 py-3 text-sm text-amber-900 border-amber-200">
-        Instance-wide feature controls do not delete data. They only remove the related navigation and UI until
-        the module is made available again.
+        Instance-wide module availability controls do not delete data. They only remove the related navigation
+        and UI until the module is made available again.
       </div>
 
       <InstanceModuleToggles initialDisabledModules={disabledModules} />

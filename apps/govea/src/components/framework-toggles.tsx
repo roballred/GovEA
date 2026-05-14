@@ -44,7 +44,7 @@ export function FrameworkToggles({ initialModules, lockedModules = {} }: Framewo
               )}
               {locked && (
                 <p className="text-xs text-muted-foreground">
-                  Disabled for the entire GovEA instance by a platform admin.
+                  Unavailable across the entire GovEA instance by an instance admin.
                 </p>
               )}
             </div>

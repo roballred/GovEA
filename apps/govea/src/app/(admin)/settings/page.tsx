@@ -70,8 +70,8 @@ export default async function SettingsPage() {
           <h2 className="text-base font-semibold">Modules</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Disable modules your organization does not use. Hidden modules are removed from navigation
-            — no data is deleted and you can re-enable them at any time. If a module is turned off
-            by the site admin for the whole instance, it will be locked here.
+            — no data is deleted and you can re-enable them at any time. If an instance admin makes a
+            module unavailable across the whole GovEA instance, it will be locked here.
           </p>
         </div>
         <ModuleToggles initialModules={enabledModules} lockedModules={instanceDisabledModules} />
@@ -84,6 +84,7 @@ export default async function SettingsPage() {
           <h2 className="text-base font-semibold">Framework Overlays</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Optional framework integrations. These are opt-in and off by default — enable only what your organization actively uses.
+            Instance-wide module availability controls still override local choices here.
           </p>
         </div>
         <FrameworkToggles initialModules={enabledModules} lockedModules={instanceDisabledModules} />
