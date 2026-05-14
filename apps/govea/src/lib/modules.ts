@@ -52,19 +52,19 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'value-streams', label: 'Value Streams',       href: '/value-streams', group: 'Business Architecture' },
   { key: 'capabilities',  label: 'Capabilities',        href: '/capabilities',  group: 'Business Architecture' },
   { key: 'services',      label: 'Services',            href: '/services',      group: 'Business Architecture' },
+  { key: 'principles',    label: 'Principles',          href: '/principles',    group: 'Business Architecture' },
   { key: 'glossary',      label: 'Glossary',            href: '/glossary',      group: 'Business Architecture' },
   // Portfolio
   { key: 'applications',  label: 'Applications',        href: '/applications',  group: 'Portfolio' },
   { key: 'adrs',          label: 'Decisions (ADRs)',    href: '/adrs',          group: 'Portfolio' },
-  { key: 'principles',    label: 'Principles',          href: '/principles',    group: 'Portfolio' },
   { key: 'debt',          label: 'Architecture debt',   href: '/debt',          group: 'Portfolio' },
   { key: 'data-architecture', label: 'Data architecture', href: '/data',        group: 'Portfolio' },
   // Strategy
   { key: 'objectives',    label: 'Objectives',          href: '/objectives',    group: 'Strategy' },
   { key: 'initiatives',   label: 'Initiatives',         href: '/initiatives',   group: 'Strategy' },
   { key: 'roadmap',       label: 'Roadmap',             href: '/roadmap',       group: 'Strategy' },
-  // Framework overlays — opt-in, default OFF
-  { key: 'framework-overlay', label: 'TOGAF Framework Overlay', href: null, group: 'Framework', defaultOn: false },
+  // Framework overlays — default ON with everything else
+  { key: 'framework-overlay', label: 'TOGAF Framework Overlay', href: null, group: 'Framework' },
 ]
 
 /**

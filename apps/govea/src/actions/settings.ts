@@ -7,7 +7,7 @@ import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { themes } from '@/lib/themes'
-import { MODULE_DEFS, type ModuleKey } from '@/lib/modules'
+import { MODULE_DEFS, type ModuleKey, type ModuleGroup } from '@/lib/modules'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
@@ -79,6 +79,39 @@ export async function setModuleEnabled(key: ModuleKey, enabled: boolean) {
       organizationId: orgId,
       before: { [key]: before[key] ?? true },
       after: { [key]: enabled },
+    })
+  })
+
+  revalidatePath('/', 'layout')
+}
+
+export async function setGroupModulesEnabled(group: ModuleGroup, enabled: boolean) {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  if (!isAdmin(session.user)) throw new Error('Forbidden')
+
+  const keys = MODULE_DEFS.filter(m => m.group === group && m.href !== null).map(m => m.key)
+  if (keys.length === 0) throw new Error('Unknown group')
+
+  const orgId = session.user.organizationId!
+  const org = await db.query.organizations.findFirst({ where: eq(organizations.id, orgId) })
+  const before = org?.enabledModules ?? {}
+  const after = { ...before }
+  for (const key of keys) after[key] = enabled
+
+  await db.transaction(async (tx) => {
+    await tx.update(organizations)
+      .set({ enabledModules: after, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId))
+
+    await writeAuditLog(tx, {
+      action: 'settings.group_toggled',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: Object.fromEntries(keys.map(k => [k, before[k] ?? true])),
+      after: Object.fromEntries(keys.map(k => [k, enabled])),
     })
   })
 
