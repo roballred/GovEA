@@ -87,11 +87,17 @@ deploy_containerapp() {
   secret=$(auth_secret)
 
   if az containerapp show --name "$ACA_APP" --resource-group "$RG" &>/dev/null; then
-    # Already exists — just update the image
+    # Already exists — update the image and runtime env that the demo depends on.
     az containerapp update \
       --name "$ACA_APP" \
       --resource-group "$RG" \
       --image "$IMAGE" \
+      --set-env-vars \
+        "AUTH_SECRET=${secret}" \
+        "NEXT_PUBLIC_APP_URL=${app_url}" \
+        "AUTH_TRUST_HOST=true" \
+        "DEV=true" \
+        "NODE_ENV=production" \
       --output none
   else
     # First deploy: create app + add postgres sidecar
@@ -110,8 +116,9 @@ deploy_containerapp() {
         "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/govea" \
         "AUTH_SECRET=${secret}" \
         "NEXT_PUBLIC_APP_URL=${app_url}" \
+        "AUTH_TRUST_HOST=true" \
         "DEV=true" \
-        "NODE_ENV=development" \
+        "NODE_ENV=production" \
       --ingress external \
       --target-port 3000 \
       --min-replicas 1 \
@@ -181,12 +188,23 @@ cmd_update() {
   require_deploy
   build_and_push
 
+  local app_url_now
+  app_url_now="$(app_url)"
+  local secret
+  secret="$(auth_secret)"
+
   log "Rolling out new revision..."
   az containerapp update \
     --name "$ACA_APP" \
     --resource-group "$RG" \
     --container-name "$ACA_APP" \
     --image "$IMAGE" \
+    --set-env-vars \
+      "AUTH_SECRET=${secret}" \
+      "NEXT_PUBLIC_APP_URL=${app_url_now}" \
+      "AUTH_TRUST_HOST=true" \
+      "DEV=true" \
+      "NODE_ENV=production" \
     --output none
 
   echo ""
