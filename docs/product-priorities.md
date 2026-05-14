@@ -1,6 +1,6 @@
 # Product Priority Shortlist
 
-Last groomed: 2026-05-10 (security regression coverage merged; repository-completeness slice 1-3 merged; PR-4 open)
+Last groomed: 2026-05-14 (architecture-debt stream merged; feature-management and settings PRs open)
 
 This note summarizes the top next product moves from the current capability inventory, open issues, and recent pull requests. It is intentionally short so it can be reviewed during backlog planning without replacing GitHub issues as the source of execution detail.
 
@@ -8,61 +8,58 @@ Use this alongside [`docs/risk-register.md`](./risk-register.md) when a backlog 
 
 ## Current Signal
 
-The 2026-05-07 security hardening wave is closed end-to-end. The production fixes merged via PRs #424, #425, #426, #428, #429, #433, and #438, and the two regression-test follow-ups are also merged:
+The security hardening wave remains closed end-to-end. The remaining security-adjacent backlog is productized control work, not emergency remediation.
 
-- [#421](https://github.com/roballred/GovEA/issues/421) — closed by PR #440
-- [#422](https://github.com/roballred/GovEA/issues/422) — closed by PR #441
+The repository-completeness and repository-confidence stream from [#380](https://github.com/roballred/GovEA/issues/380) has moved from "active build" to "shipped baseline":
 
-That means security is no longer the immediate planning bottleneck. The bottleneck has shifted back to repository trust and product fit.
+- [#448](https://github.com/roballred/GovEA/pull/448) — snapshot foundation + indexes
+- [#450](https://github.com/roballred/GovEA/pull/450) — settings model + admin config
+- [#454](https://github.com/roballred/GovEA/pull/454) — drill-downs + ranked actions + RAG indicators
+- [#457](https://github.com/roballred/GovEA/pull/457) — trend line + stakeholder surfaces + auto-suppression
 
-The repository-completeness slice in [#380](https://github.com/roballred/GovEA/issues/380) is also no longer merely "planned":
+The architecture-debt stream from [#381](https://github.com/roballred/GovEA/issues/381) is now merged end-to-end. PRs [#459](https://github.com/roballred/GovEA/pull/459), [#466](https://github.com/roballred/GovEA/pull/466), [#467](https://github.com/roballred/GovEA/pull/467), and [#486](https://github.com/roballred/GovEA/pull/486) shipped the debt model, CRUD surface, linked-debt panels, dashboard priority signal, publish-time acknowledgment gate, and lifecycle-based system-detected debt.
 
-- PR-1 merged: [#448](https://github.com/roballred/GovEA/pull/448) — snapshot foundation + indexes
-- PR-2 merged: [#450](https://github.com/roballred/GovEA/pull/450) — settings model + admin config
-- PR-3 merged: [#454](https://github.com/roballred/GovEA/pull/454) — drill-downs + ranked actions + RAG indicators
-- PR-4 open: [#457](https://github.com/roballred/GovEA/pull/457) — trend line + stakeholder surfaces + auto-suppression, tracking [#455](https://github.com/roballred/GovEA/issues/455)
+The Data Architecture stream from [#363](https://github.com/roballred/GovEA/issues/363) has also become a real shipped module: schema and CRUD foundation, business-architecture docs, Chen Notation visualization, dedicated sidebar group, and representative demo fixtures have all landed. What remains is a product boundary decision: close the issue as v1-complete, or split conceptual/logical model expansion into explicit follow-up issues.
 
-Only one PR is currently open in the repo: **#457**. So the highest-leverage next move is to finish that slice cleanly, close #455, and then either close #380 or reduce it to whatever remains after PR-4 merges.
+There are three open PRs at this grooming point:
 
-Two break-glass follow-up issues remain open from #418:
-
-- [#437](https://github.com/roballred/GovEA/issues/437) — wire a real cross-tenant mutation/impersonation caller through `requireBreakGlass`
-- [#436](https://github.com/roballred/GovEA/issues/436) — later Option 1 promotion to gate cross-tenant reads
-
-These are not new vulnerabilities, but they do matter for operational credibility. #437 is the earlier one because it gives the new break-glass control an actual caller; #436 is stricter follow-on hardening and reads as post-v1 unless operator experience says otherwise.
+- [#489](https://github.com/roballred/GovEA/pull/489) — this backlog-grooming documentation refresh
+- [#488](https://github.com/roballred/GovEA/pull/488) — Principles navigation move, group-level module toggles, and default-on framework overlay
+- [#487](https://github.com/roballred/GovEA/pull/487) — documentation and UI copy alignment for instance-wide module availability controls
 
 ## Top 5 Next Things To Do
 
 | Rank | Recommended next thing | Why now | Primary issue(s) |
 |---|---|---|---|
-| 1 | Merge PR #457 and close out the repository-confidence slice | PRs #448, #450, and #454 already landed, so #457 is the last open step in the highest-value current feature stream. It puts the confidence summary onto `/roadmap` and `/executive`, adds the trend line, and finishes the suppression loop. That closes #455 and likely most or all of #380. | [#457](https://github.com/roballred/GovEA/pull/457), [#455](https://github.com/roballred/GovEA/issues/455), [#380](https://github.com/roballred/GovEA/issues/380) |
-| 2 | Start architecture debt tracking and ADR decision support | The product can now show impact and repository quality, but it still cannot record durable constraints, debt severity, or remediation paths. This is the clean next step in the repository-modelling roadmap, and PR-3 already laid groundwork for a future unified priority queue. | `rm-architecture-debt`, `po-architecture-decisions`, [#381](https://github.com/roballred/GovEA/issues/381) |
-| 3 | Run the persona-validation and feedback-capture slice | The riskiest product assumption is now fit, not infrastructure. The research materials already exist in `docs/research/`, and #103's manual feedback log is still unstarted. Before building more stakeholder-facing analytics, validate who actually uses these views and what they trust. | [#384](https://github.com/roballred/GovEA/issues/384), [#103](https://github.com/roballred/GovEA/issues/103) |
-| 4 | Give break-glass a real production caller via #437 | #418 shipped the control machinery, but today it is still mostly governance scaffolding. If GovEA expects instance admins to rely on break-glass in real support/debugging scenarios, #437 is the issue that turns it into a functional control. | [#437](https://github.com/roballred/GovEA/issues/437) |
-| 5 | Make the v1-vs-future scope decision on the Data Architecture Metamodel | #363 is active, externally visible, and now has enough discussion to require a product call. The next move is not engineering; it is deciding whether GovEA should absorb conceptual/logical/physical data-model concerns in v1 scope or explicitly defer them. | [#363](https://github.com/roballred/GovEA/issues/363) |
+| 1 | Review and merge PR #487, then close #445 | This is a small clarity PR with high process value. It aligns docs and UI language around instance-wide module availability controls, reducing confusion between org-level settings and platform-wide controls. | [#487](https://github.com/roballred/GovEA/pull/487), [#445](https://github.com/roballred/GovEA/issues/445) |
+| 2 | Review PR #488 carefully against the module-settings roadmap | #488 is broader than a copy change: it moves Principles into Business Architecture, adds group-level module toggles, and changes framework overlay default behavior. That could be the right product direction, but it needs explicit review because it changes defaults and navigation semantics at the same time. | [#488](https://github.com/roballred/GovEA/pull/488), [#446](https://github.com/roballred/GovEA/issues/446) |
+| 3 | Decide the Data Architecture v1 boundary and split #363 if needed | Data Architecture is no longer speculative. With the v1 metamodel, diagram, nav, and fixtures shipped, the issue should not remain an open-ended request. Make the product call on conceptual/logical expansion and create focused follow-ups if that work remains in scope. | [#363](https://github.com/roballred/GovEA/issues/363) |
+| 4 | Run the persona-validation and feedback-capture slice | GovEA is now shipping stakeholder-facing confidence, roadmap, reporting, Data Architecture, and architecture-debt surfaces based on assumed personas. Validate the highest-risk assumptions before adding more analysis workflows. | [#384](https://github.com/roballred/GovEA/issues/384), [#103](https://github.com/roballred/GovEA/issues/103) |
+| 5 | Give break-glass a real production caller | Break-glass controls are implemented, but operational credibility depends on a real support/debugging flow that consults `requireBreakGlass`. Ship #437 before treating the control as proven in incident scenarios. | [#437](https://github.com/roballred/GovEA/issues/437) |
 
 ## Product Manager Notes
 
-- The hardening wave is fully closed, including regression coverage. The remaining security-labeled backlog is productized control work, not emergency remediation.
-- #457 is now the natural "finish what is already 75% shipped" priority. It has the best effort-to-value ratio in the repo because it completes an existing four-PR sequence instead of starting a new stream.
-- #381 is the next major implementation stream after #457. It is the cleanest continuation of the trust story: repository confidence tells users whether to trust the repository; architecture debt tells them what to worry about inside it.
-- #384 and #103 should run as a product-management workstream, not wait until after more analytics are built. The interview guide and assumption register are already good enough to execute.
-- [#402](https://github.com/roballred/GovEA/issues/402) is still a good opportunistic one-PR win, but it no longer belongs in the top five ahead of #437 or #363.
+- #381 can leave the top-five implementation list now that #486 has merged. The next architecture-debt move should be validation and ADR decision-support refinement, not another immediate build stream.
+- #487 should stay ahead of broader terminology work in #446. First make the current "module availability" language clear; then decide whether "module" should become "tool" in user-facing copy.
+- #488 needs product review because "group-level toggle" and "framework overlay defaults on" are not just UI conveniences; they change what new organizations experience by default.
+- #479 remains a good follow-up once the two open PRs are cleared. The Data Architecture sidebar group makes collapsible navigation more valuable, but it is still a usability improvement rather than a product-risk reducer.
+- #382 is the next major roadmap candidate after the current repository-modelling and validation items. It should not jump the queue until the team decides how much integration scope belongs in v1.
+- #482 is important process work, but it has an explicit maintainer-review-first workflow. Do not bypass that by bundling an AI-session-start document into ordinary grooming PRs.
 
-## Security Remediation Status (as of 2026-05-10)
+## Security Remediation Status
 
 | Issue | Severity | Status |
 |---|---|---|
-| #411 — `getUsers` cross-tenant + secret exposure | High | ✅ Fixed (PR #424) |
-| #412 — cross-org-link helpers reachable as RPC | High | ✅ Fixed (PR #425) |
-| #413 — read actions trust caller `organizationId` | High | ✅ Fixed (PR #426) |
-| #414 — read actions trust caller `role` | High | ✅ Fixed (PR #426) |
-| #427 — entity-taxonomy helpers reachable as RPC | High | ✅ Fixed (PR #428) |
-| #415 — junction writes skip target-entity org check | High | ✅ Fixed (PR #429) |
-| #416 — audit writes not transactional with mutation | High | ✅ Fixed |
-| #417 — `audit_log` has no DB-level append-only constraint | High | ✅ Fixed (PR #433) |
-| #418 — break-glass TTL 24h; no dual control | High | ✅ Fixed (PR #438) |
-| #421 — test: unauthenticated server-action POSTs blocked | Enhancement | ✅ Fixed (PR #440) |
-| #422 — test: read actions ignore caller-supplied orgId/role | Enhancement | ✅ Fixed (PR #441) |
+| #411 — `getUsers` cross-tenant + secret exposure | High | Fixed (PR #424) |
+| #412 — cross-org-link helpers reachable as RPC | High | Fixed (PR #425) |
+| #413 — read actions trust caller `organizationId` | High | Fixed (PR #426) |
+| #414 — read actions trust caller `role` | High | Fixed (PR #426) |
+| #427 — entity-taxonomy helpers reachable as RPC | High | Fixed (PR #428) |
+| #415 — junction writes skip target-entity org check | High | Fixed (PR #429) |
+| #416 — audit writes not transactional with mutation | High | Fixed |
+| #417 — `audit_log` has no DB-level append-only constraint | High | Fixed (PR #433) |
+| #418 — break-glass TTL 24h; no dual control | High | Fixed (PR #438) |
+| #421 — test: unauthenticated server-action POSTs blocked | Enhancement | Fixed (PR #440) |
+| #422 — test: read actions ignore caller-supplied orgId/role | Enhancement | Fixed (PR #441) |
 | #436 — promote break-glass to gate cross-tenant reads | Medium | Open (post-v1 per triage) |
 | #437 — wire cross-tenant impersonation through break-glass | Medium | Open (recommended before relying on break-glass operationally) |
