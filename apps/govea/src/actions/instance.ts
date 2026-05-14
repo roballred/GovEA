@@ -6,7 +6,7 @@ import { eq, and, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
-import { MODULE_DEFS, type ModuleKey } from '@/lib/modules'
+import { MODULE_DEFS, type ModuleKey, type ModuleGroup } from '@/lib/modules'
 import { validatePassword } from '@/lib/password'
 import bcrypt from 'bcryptjs'
 import { themes } from '@/lib/themes'
@@ -598,6 +598,51 @@ export async function setInstanceModuleAvailability(key: ModuleKey, available: b
       organizationId: null,
       before: { [key]: beforeDisabledModules[key] ? 'disabled' : 'available' },
       after: { [key]: available ? 'available' : 'disabled' },
+    })
+  })
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/instance')
+  revalidatePath('/instance/features')
+  revalidatePath('/settings')
+}
+
+export async function setInstanceGroupAvailability(group: ModuleGroup, available: boolean) {
+  const session = await requireInstanceAdmin()
+
+  const keys = MODULE_DEFS.filter(m => m.group === group).map(m => m.key)
+  if (keys.length === 0) throw new Error('Unknown group')
+
+  const before = await db.query.instanceSettings.findFirst()
+  const allDisabled = Object.fromEntries(MODULE_DEFS.map(m => [m.key, true]))
+  const beforeDisabledModules = before?.disabledModules ?? allDisabled
+  const afterDisabledModules = { ...beforeDisabledModules }
+  for (const key of keys) {
+    if (available) {
+      delete afterDisabledModules[key]
+    } else {
+      afterDisabledModules[key] = true
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    const [row] = before
+      ? await tx.update(instanceSettings)
+          .set({ disabledModules: afterDisabledModules, updatedAt: new Date() })
+          .where(eq(instanceSettings.id, before.id))
+          .returning()
+      : await tx.insert(instanceSettings)
+          .values({ disabledModules: afterDisabledModules })
+          .returning()
+
+    await writeAuditLog(tx, {
+      action: 'instance.settings.group_availability',
+      entityType: 'instance_settings',
+      entityId: row.id,
+      userId: session.user.id,
+      organizationId: null,
+      before: Object.fromEntries(keys.map(k => [k, beforeDisabledModules[k] ? 'disabled' : 'available'])),
+      after: Object.fromEntries(keys.map(k => [k, available ? 'available' : 'disabled'])),
     })
   })
 

@@ -6,7 +6,7 @@
 // demo) is defined in togaf-demo-fixtures.ts and seeded by run.ts as Org 5.
 //
 //   - City of Riverdale (primary dev org) — full EA content, admin + contributor shortcuts
-//   - City of Lakeside — second municipal demo org, comparable EA content, admin role
+//   - GovEA Project — dogfood org: GovEA models its own enterprise architecture
 //   - Office of Digital Services (state agency) — second org for multi-org scenario
 //   - GovEA Platform (system org, isSystemOrg=true) — operator org for instance admin
 //
@@ -14,12 +14,12 @@
 // and multiple cross-org capability links are created to exercise the federation/visibility use case.
 //
 // Dev login roster:
-//   alice@govea.dev               — City of Riverdale, Admin
-//   carol@govea.dev               — City of Riverdale, Contributor
-//   luke@lakeside.govea.dev       — City of Lakeside, Admin
-//   sam@state.govea.dev           — Office of Digital Services, Admin
-//   maya@hartfield.govea.dev      — City of Hartfield (TOGAF demo), Admin
-//   ivan@govea.dev                — GovEA Platform, Instance Admin (dev tools only)
+//   alice@govea.dev                    — City of Riverdale, Admin
+//   carol@govea.dev                    — City of Riverdale, Contributor
+//   aria@govea-project.govea.dev       — GovEA Project, Admin
+//   sam@state.govea.dev                — Office of Digital Services, Admin
+//   maya@hartfield.govea.dev           — City of Hartfield (TOGAF demo), Admin
+//   ivan@govea.dev                     — GovEA Platform, Instance Admin (dev tools only)
 //
 // victor@govea.dev remains seeded as a Riverdale Viewer for automated role
 // coverage, but is intentionally not shown as a dev login shortcut.
@@ -57,15 +57,16 @@ export const SYSTEM_USERS = [
   { name: 'Ivan InstanceAdmin', email: 'ivan@govea.dev', role: 'admin' as const, instanceRole: 'instance_admin' as const },
 ]
 
-// ─── City of Lakeside ─────────────────────────────────────────────────────────
+// ─── GovEA Project ────────────────────────────────────────────────────────────
+// Dogfood org: GovEA models its own enterprise architecture using the tool.
 
-export const LAKESIDE_ORG = {
-  name: 'City of Lakeside',
-  slug: 'city-of-lakeside',
+export const GOVEA_PROJECT_ORG = {
+  name: 'GovEA Project',
+  slug: 'govea-project',
 }
 
-export const LAKESIDE_USERS = [
-  { name: 'Luke Admin', email: 'luke@lakeside.govea.dev', role: 'admin' as const },
+export const GOVEA_PROJECT_USERS = [
+  { name: 'Aria Admin', email: 'aria@govea-project.govea.dev', role: 'admin' as const },
 ]
 
 // ─── Persona types & tags (taxonomy-backed) ──────────────────────────────────
@@ -1737,548 +1738,658 @@ export const DEV_CROSS_ORG_LINKS = [
   },
 ]
 
-// ─── Personas (City of Lakeside) ─────────────────────────────────────────────
+// ─── Personas (GovEA Project) ─────────────────────────────────────────────────
 // Coverage: status = draft ✓, published ✓, archived ✓
 //           visibility = org ✓, connections ✓, instance ✓
 
-export const LAKESIDE_PERSONAS = [
+export const GOVEA_PROJECT_PERSONAS = [
   {
-    name: 'Resident',
-    description: 'A Lakeside resident who accesses city parks, waterfront facilities, and reporting tools. Primarily uses the city website and mobile app.',
-    type: 'Citizen',
-    status: 'published' as const,
-    visibility: 'org' as const,
-  },
-  {
-    name: 'Marina Operator',
-    description: 'Owner or manager of a marina slip or waterfront commercial business requiring annual waterfront permits and safety inspections.',
-    type: 'External Partner',
-    status: 'published' as const,
-    visibility: 'org' as const,
-  },
-  {
-    name: 'Parks & Recreation Staff',
-    description: 'Front-line parks department employee managing facility bookings, maintenance requests, and recreation program delivery.',
+    name: 'Enterprise Architect',
+    description: 'The lead EA practitioner responsible for modelling the organisation\'s capabilities, applications, and strategic architecture. Primary author of EA content and the main GovEA user.',
     type: 'Staff',
     status: 'published' as const,
     visibility: 'org' as const,
   },
   {
-    name: 'Environmental Compliance Officer',
-    description: 'City staff responsible for stormwater monitoring, permit compliance, and environmental reporting to state agencies.',
+    name: 'Agency EA Coordinator',
+    description: 'A coordinator within a participating agency who maintains that agency\'s portion of the shared architecture repository and liaises with the lead EA team.',
     type: 'Staff',
     status: 'published' as const,
-    visibility: 'org' as const,
+    visibility: 'connections' as const,
   },
   {
     name: 'Department Director',
-    description: 'Senior city manager overseeing a department\'s budget, strategic objectives, and cross-departmental coordination.',
+    description: 'A senior leader who consumes EA outputs — roadmaps, capability assessments, and executive summaries — to inform budget and investment decisions.',
     type: 'Staff',
     status: 'published' as const,
     visibility: 'org' as const,
   },
   {
-    name: 'City Council Member',
-    description: 'Elected official who votes on budgets, policies, and major capital projects affecting parks, waterfront, and city services.',
+    name: 'Junior EA Analyst',
+    description: 'An early-career analyst who contributes EA content under the guidance of the Enterprise Architect. Creates and updates capability, application, and principle records.',
+    type: 'Staff',
+    status: 'draft' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'Elected Official',
+    description: 'An elected representative who reviews published executive summaries and strategic roadmaps. Read-only access to high-level architecture outputs.',
     type: 'Elected Official',
     status: 'published' as const,
     visibility: 'connections' as const,
   },
   {
-    name: 'Seasonal Visitor',
-    description: 'Summer-season visitor to Lakeside who uses the marina, parks, and visitor services. Peak demand runs May through September.',
-    type: 'Citizen',
+    name: 'CMS Administrator',
+    description: 'A platform administrator who manages GovEA instance settings, module availability, user roles, and taxonomy configuration.',
+    type: 'Staff',
     status: 'draft' as const,
+    visibility: 'org' as const,
+  },
+  {
+    name: 'Programme Director',
+    description: 'Accountable for one or more strategic initiatives. Uses GovEA to track initiative progress, capability impacts, and linkage to strategic objectives.',
+    type: 'Staff',
+    status: 'published' as const,
     visibility: 'org' as const,
   },
   // archived + instance — exercises both missing enum values
   {
-    name: 'Waterfront Event Coordinator',
-    description: 'External event organiser who previously held a direct permit relationship with the city. Role retired when waterfront events were contracted to a dedicated events management firm.',
-    type: 'External Partner',
+    name: 'TOGAF Practitioner',
+    description: 'A former persona representing users who preferred TOGAF-aligned taxonomy. Retired when GovEA adopted EasyEA methodology as its canonical framework and the TOGAF overlay was made optional.',
+    type: 'Staff',
     status: 'archived' as const,
     visibility: 'instance' as const,
   },
 ]
 
-// ─── Capabilities (City of Lakeside) ─────────────────────────────────────────
+// ─── Capabilities (GovEA Project) ─────────────────────────────────────────────
 // Coverage: status = draft ✓, published ✓, archived ✓
 //           visibility = org ✓, connections ✓, instance ✓
 
-export const LAKESIDE_CAPABILITIES = [
+export const GOVEA_PROJECT_CAPABILITIES = [
   {
-    name: 'Parks & Facility Reservation',
-    description: 'Manage bookings for parks, pavilions, athletic fields, and recreation centres. Includes availability calendars, online payment, and confirmation workflows.',
-    domain: 'Community Services',
-    behaviors: 'Search available facilities by date, location, and type\nBook a facility online and pay required fees\nReceive a digital confirmation with access instructions\nCancel or modify a booking within the allowed window\nView and manage all active bookings from a resident account',
-    rules: 'Bookings require payment at time of reservation\nCancellations within 48 hours of the booking start are non-refundable\nFacilities may only be booked by verified resident accounts',
+    name: 'Capability Mapping',
+    description: 'Define, structure, and maintain the organisation\'s capability map — the hierarchy of things the organisation must be able to do to deliver its mission.',
+    domain: 'Enterprise Architecture',
+    behaviors: 'Create and edit capability records with name, description, domain, behaviors, and rules\nLink capabilities to personas, applications, principles, and objectives\nOrganise capabilities into a domain hierarchy\nPublish capabilities with org, connections, or instance visibility\nArchive retired capabilities without deleting their historical links',
+    rules: 'A capability must have a domain before it can be published\nCapability names must be unique within an organisation\nArchived capabilities remain visible in historical linkage reports',
     status: 'published' as const,
     visibility: 'org' as const,
-    personas: ['Resident', 'Parks & Recreation Staff'],
+    personas: ['Enterprise Architect', 'Junior EA Analyst'],
   },
   {
-    name: 'Waterfront Permit & Licensing',
-    description: 'Issue and renew annual waterfront operation permits for marinas, boat rentals, and commercial waterfront businesses. Includes safety inspections and fee collection.',
-    domain: 'Regulatory Compliance',
-    behaviors: 'Submit a new or renewal waterfront permit application with supporting documents\nSchedule and record a safety inspection tied to the application\nIssue a digital permit certificate upon approval\nSend renewal reminders 60 days before permit expiry\nRevoke or suspend a permit for non-compliance',
-    rules: 'A permit may only be issued after a satisfactory safety inspection\nAll waterfront commercial operators must hold a current permit\nRenewal applications must be submitted at least 30 days before expiry',
+    name: 'Application Portfolio',
+    description: 'Catalogue and manage the organisation\'s application portfolio — the systems that enable capabilities — including lifecycle status, hosting model, and vendor details.',
+    domain: 'Enterprise Architecture',
+    behaviors: 'Create and edit application records with vendor, hosting model, and lifecycle status\nLink applications to the capabilities they support\nTrack lifecycle status from planned through to decommissioned\nGenerate portfolio views filtered by status, domain, or capability\nAutomatic debt flagging when an application moves to sunset or decommissioned lifecycle status',
+    rules: 'Applications must be linked to at least one capability to appear in capability portfolio views\nDecommissioned applications are read-only except by admins',
     status: 'published' as const,
     visibility: 'org' as const,
-    personas: ['Marina Operator', 'Parks & Recreation Staff'],
+    personas: ['Enterprise Architect', 'Department Director'],
   },
   {
-    name: 'Stormwater Management',
-    description: 'Plan, inspect, and maintain the city\'s stormwater infrastructure. Track outfall monitoring, maintenance schedules, and regulatory compliance reporting.',
-    domain: 'Infrastructure & Operations',
-    behaviors: 'Log and schedule stormwater infrastructure inspections\nRecord maintenance activities against specific assets\nGenerate compliance reports for state NPDES permit submissions\nTrack outfall monitoring data over time',
-    rules: 'NPDES compliance reports must be filed on state-mandated schedules\nAll outfall monitoring data must be retained for a minimum of 5 years',
+    name: 'Architecture Decision Records',
+    description: 'Capture, link, and publish Architecture Decision Records (ADRs) that document significant technical and architectural decisions, their context, and their consequences.',
+    domain: 'Enterprise Architecture',
+    behaviors: 'Create ADRs with context, decision, and consequences fields\nAssign status: proposed, accepted, deprecated, superseded\nLink ADRs to capabilities, applications, initiatives, and objectives\nRecord supersession chains between related ADRs\nPublish ADRs with appropriate visibility',
+    rules: 'A superseded ADR must reference the ADR that superseded it\nADR numbers must be unique within an organisation',
     status: 'published' as const,
     visibility: 'org' as const,
-    personas: ['Environmental Compliance Officer', 'Department Director'],
+    personas: ['Enterprise Architect', 'Programme Director'],
   },
   {
-    name: 'Recreation Program Registration',
-    description: 'Register residents and seasonal visitors for city-run recreation programs including classes, sports leagues, camps, and fitness programs.',
-    domain: 'Community Services',
-    behaviors: 'Browse and search available recreation programs by type, age group, and season\nRegister participants and pay program fees online\nView registration confirmation and program schedule\nJoin a waitlist for programs at capacity\nReceive notifications for program changes or cancellations',
-    rules: 'Programs with age or residency restrictions must validate eligibility at registration\nRefunds are only available for cancellations made at least 5 business days before the program start date',
+    name: 'Content Authoring & Workflow',
+    description: 'Manage the authoring lifecycle for all EA content — draft, publish, and archive records across capabilities, personas, principles, and value streams.',
+    domain: 'Platform',
+    behaviors: 'Set and transition content status between draft, published, and archived\nControl visibility at org, connections, or instance scope\nFilter repository views by status and visibility\nPrevent accidental publication of incomplete or unapproved content',
+    rules: 'Content in draft status is visible only to authenticated users within the organisation\nArchived content is read-only\nVisibility cannot be set to connections or instance without admin approval',
     status: 'published' as const,
     visibility: 'org' as const,
-    personas: ['Resident', 'Seasonal Visitor'],
+    personas: ['Enterprise Architect', 'Junior EA Analyst', 'CMS Administrator'],
   },
   {
-    name: 'Asset & Work Order Management',
-    description: 'Track, schedule, and dispatch maintenance work orders for parks assets, waterfront structures, and green space infrastructure.',
-    domain: 'Infrastructure & Operations',
-    behaviors: 'Create and assign maintenance work orders for parks and waterfront assets\nTrack work order status from open to closed\nRecord labour, materials, and cost against each work order\nLink assets to inspection histories and maintenance schedules\nGenerate asset condition reports for capital planning',
-    rules: 'All maintenance activity against city assets must be recorded as a work order\nClosed work orders are read-only and cannot be modified',
+    name: 'User & Role Management',
+    description: 'Manage users within an organisation, assign roles (admin, contributor, viewer), and control access to EA content.',
+    domain: 'Platform',
+    behaviors: 'Invite and onboard users via email\nAssign and change user roles\nSuspend and reactivate user accounts\nView user activity and last login\nSSO users default to viewer until promoted by an admin',
+    rules: 'Only admins can change user roles\nAn organisation must retain at least one active admin at all times\nSuspended users cannot log in but their authored content is retained',
     status: 'published' as const,
     visibility: 'org' as const,
-    personas: ['Parks & Recreation Staff'],
+    personas: ['CMS Administrator', 'Enterprise Architect'],
   },
   {
-    name: 'Environmental Monitoring & Reporting',
-    description: 'Collect and report water quality and environmental data from lake monitoring stations and stormwater outfalls. Supports state permit compliance.',
-    domain: 'Infrastructure & Operations',
+    name: 'Repository Completeness',
+    description: 'Measure and surface the completeness of the EA repository — identifying gaps in capability coverage, stale content, and missing linkages.',
+    domain: 'Enterprise Architecture',
+    behaviors: 'Calculate completeness scores per capability domain\nFlag stale content based on configurable staleness thresholds\nHighlight capabilities with no linked applications or personas\nRank capabilities by completeness for prioritised remediation\nDisplay a dashboard summary of repository health',
+    rules: 'Staleness thresholds are configurable per organisation\nCompleteness scores are recalculated on each repository save',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Enterprise Architect', 'Department Director'],
+  },
+  {
+    name: 'Architecture Debt Tracking',
+    description: 'Log, categorise, and track architecture debt items — including lifecycle risks, capability gaps, and principle violations — to drive remediation planning.',
+    domain: 'Enterprise Architecture',
+    behaviors: 'Create debt items with type, severity, description, and linked capabilities or applications\nAuto-flag lifecycle risk debt when an application reaches sunset or decommissioned status\nLink debt items to initiatives for remediation tracking\nFilter and sort debt by severity, type, and status\nClose debt items with a resolution note',
+    rules: 'System-detected debt items cannot be manually deleted — they are resolved when the underlying condition changes\nDebt severity follows: low → medium → high → critical',
+    status: 'published' as const,
+    visibility: 'org' as const,
+    personas: ['Enterprise Architect', 'Programme Director'],
+  },
+  {
+    name: 'Feature Management',
+    description: 'Enable or disable GovEA modules at the organisation level and control which modules are available across the instance.',
+    domain: 'Platform',
     status: 'draft' as const,
     visibility: 'org' as const,
-    personas: ['Environmental Compliance Officer'],
+    personas: ['CMS Administrator'],
   },
   {
-    name: 'Community Engagement & Notifications',
-    description: 'Push targeted notifications, alerts, and community updates to residents via email, SMS, and the city website. Includes emergency alert integration.',
-    domain: 'Public Engagement',
-    behaviors: 'Send targeted notifications to resident segments by geography or subscription topic\nPublish community updates to the city website and resident app\nIntegrate with the statewide emergency alert system for urgent notifications\nTrack notification delivery and open rates',
-    rules: 'Residents must opt in to non-emergency notifications\nEmergency alerts bypass opt-in consent\nNotification content must be reviewed by the communications team before distribution',
+    name: 'Multi-Org Federation',
+    description: 'Establish connections between organisations to share and link EA content across organisational boundaries with configurable visibility.',
+    domain: 'Platform',
+    behaviors: 'Request and accept org-to-org connections\nShare capabilities, personas, and value streams at connections visibility\nCreate cross-org capability links with typed relationships\nView federated content from connected organisations',
+    rules: 'Both organisations must accept a connection before content can be shared\nCross-org links require approval from the target organisation\'s admin',
     status: 'published' as const,
     visibility: 'connections' as const,
-    personas: ['Resident', 'City Council Member'],
+    personas: ['CMS Administrator', 'Agency EA Coordinator'],
   },
   {
-    name: 'Financial Management',
-    description: 'General ledger, accounts payable, procurement, and budget management for city departments.',
-    domain: 'Finance & Revenue',
-    behaviors: 'Post journal entries to the general ledger\nProcess accounts payable invoices and generate payment runs\nTrack departmental budgets and expenditures in real time\nGenerate financial reports for audit and council review',
-    rules: 'All expenditures must be approved by an authorised budget holder before payment\nFinancial records must be retained for 7 years',
-    status: 'published' as const,
-    visibility: 'org' as const,
-    personas: ['Department Director'],
-  },
-  {
-    name: 'Document Management',
-    description: 'Centralised repository for city documents, permits, and records. Supports retention schedules and public records requests.',
-    domain: 'Administrative Services',
+    name: 'Data Architecture',
+    description: 'Model and document the organisation\'s data architecture — entities, attributes, links, business keys, and their semantic relationships — in a structured metamodel.',
+    domain: 'Enterprise Architecture',
     status: 'draft' as const,
     visibility: 'org' as const,
-    personas: ['Parks & Recreation Staff', 'Environmental Compliance Officer'],
+    personas: ['Enterprise Architect', 'Junior EA Analyst'],
   },
   // archived + instance — exercises both missing enum values
   {
-    name: 'Legacy Booking System',
-    description: 'Self-hosted facility booking application replaced by ActiveNet. Archived following successful data migration in Q4 FY2026.',
-    domain: 'Community Services',
+    name: 'End-to-End Traceability',
+    description: 'Trace architecture decisions through capabilities, applications, principles, value streams, and strategic objectives to demonstrate coherent alignment. Superseded by the cross-entity linking model shipped in v2.',
+    domain: 'Enterprise Architecture',
     status: 'archived' as const,
     visibility: 'instance' as const,
     personas: [] as string[],
   },
 ]
 
-// ─── Applications (City of Lakeside) ─────────────────────────────────────────
+// ─── Applications (GovEA Project) ─────────────────────────────────────────────
 
-export const LAKESIDE_APPLICATIONS = [
+export const GOVEA_PROJECT_APPLICATIONS = [
   {
-    name: 'ActiveNet',
-    description: 'Parks and recreation management platform for facility reservations, program registration, and activity management.',
-    vendor: 'Perfect Mind / ActiveNetwork',
+    name: 'GovEA Web App',
+    description: 'The GovEA Next.js application — the primary interface for EA authoring, repository browsing, and administration. Deployed on Vercel.',
+    vendor: 'GovEA Project (open source)',
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
-    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration'],
+    capabilities: ['Capability Mapping', 'Application Portfolio', 'Architecture Decision Records', 'Content Authoring & Workflow', 'User & Role Management', 'Repository Completeness', 'Architecture Debt Tracking', 'Feature Management', 'Multi-Org Federation', 'Data Architecture'],
   },
   {
-    name: 'Tyler Munis',
-    description: 'Enterprise resource planning system for financial management, purchasing, and budget tracking.',
-    vendor: 'Tyler Technologies',
+    name: 'PostgreSQL (Neon)',
+    description: 'Serverless PostgreSQL database hosted on Neon. Stores all EA content, user data, audit logs, and configuration.',
+    vendor: 'Neon',
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
-    capabilities: ['Financial Management'],
+    capabilities: ['Capability Mapping', 'Application Portfolio', 'Architecture Decision Records', 'Repository Completeness', 'Architecture Debt Tracking'],
   },
   {
-    name: 'Laserfiche',
-    description: 'Enterprise content management and document services platform for city records and permit documentation.',
-    vendor: 'Laserfiche',
+    name: 'GitHub',
+    description: 'Source control, issue tracking, and CI/CD orchestration for the GovEA codebase. Also used to publish the open source distribution.',
+    vendor: 'GitHub (Microsoft)',
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
-    capabilities: ['Document Management'],
+    capabilities: ['Feature Management', 'Architecture Decision Records'],
   },
   {
-    name: 'Brightly Asset Essentials',
-    description: 'Cloud-based work order and asset management system for parks facilities, trails, and waterfront infrastructure.',
-    vendor: 'Brightly (formerly Dude Solutions)',
+    name: 'Vercel',
+    description: 'Cloud deployment platform for the GovEA Next.js application. Handles builds, preview deployments, and production hosting.',
+    vendor: 'Vercel',
     hostingModel: 'saas',
     lifecycleStatus: 'active' as const,
     status: 'published' as const,
-    capabilities: ['Asset & Work Order Management'],
-  },
-  {
-    name: 'Cartegraph OMS',
-    description: 'Legacy on-premises operations management system used for work orders and asset tracking. Being phased out in favour of Brightly Asset Essentials.',
-    vendor: 'Cartegraph',
-    hostingModel: 'on-prem',
-    lifecycleStatus: 'sunset' as const,
-    status: 'published' as const,
-    capabilities: ['Asset & Work Order Management'],
+    capabilities: ['Feature Management'],
   },
 ]
 
-// ─── Value Streams (City of Lakeside) ────────────────────────────────────────
+// ─── Value Streams (GovEA Project) ────────────────────────────────────────────
 
-export const LAKESIDE_VALUE_STREAMS = [
+export const GOVEA_PROJECT_VALUE_STREAMS = [
   {
-    name: 'Facility Booking to Confirmation',
-    description: 'End-to-end journey from a resident or visitor searching for an available facility through to receiving a booking confirmation.',
-    valueItem: 'Confirmed facility booking with digital access instructions',
+    name: 'Feature Idea to Production',
+    description: 'End-to-end flow from a user need or contributor idea through design, development, review, and deployment to production.',
+    valueItem: 'Deployed feature available to all GovEA users',
     status: 'published' as const,
     visibility: 'org' as const,
-    stakeholderPersonas: ['Resident', 'Seasonal Visitor'],
+    stakeholderPersonas: ['Enterprise Architect', 'CMS Administrator'],
     stages: [
       {
-        name: 'Availability Search',
-        description: 'Resident searches for available facilities by date, type, and location.',
+        name: 'Idea & Issue',
+        description: 'A feature idea is raised as a GitHub issue, linked to a capability and persona, and acceptance criteria are agreed.',
         order: 1,
-        capabilities: ['Parks & Facility Reservation'],
+        capabilities: ['Feature Management'],
       },
       {
-        name: 'Booking & Payment',
-        description: 'Resident selects a facility, reviews terms, and completes payment.',
+        name: 'Design & Build',
+        description: 'The feature is designed, implemented in a git worktree branch, and tested against acceptance criteria.',
         order: 2,
-        capabilities: ['Parks & Facility Reservation'],
+        capabilities: ['Content Authoring & Workflow', 'Feature Management'],
       },
       {
-        name: 'Confirmation & Access',
-        description: 'Booking is confirmed and resident receives a digital confirmation with access instructions.',
+        name: 'Review & Merge',
+        description: 'A pull request is reviewed, CI checks pass, and the branch is merged to main.',
         order: 3,
-        capabilities: ['Parks & Facility Reservation', 'Community Engagement & Notifications'],
+        capabilities: ['Architecture Decision Records'],
+      },
+      {
+        name: 'Deploy',
+        description: 'Vercel builds and deploys the merged change to production.',
+        order: 4,
+        capabilities: ['Feature Management'],
       },
     ],
   },
   {
-    name: 'Permit Application to Approval',
-    description: 'Journey from a marina operator submitting a waterfront permit application through to receiving an approved permit certificate.',
-    valueItem: 'Approved waterfront permit certificate enabling legal operation',
+    name: 'EA Gap to Published Architecture',
+    description: 'Journey from identifying a gap in the EA repository — a missing capability, stale application record, or undocumented decision — through to a reviewed, published architecture record.',
+    valueItem: 'Published, linked EA content that accurately reflects the current state of the organisation\'s architecture',
     status: 'published' as const,
     visibility: 'org' as const,
-    stakeholderPersonas: ['Marina Operator'],
+    stakeholderPersonas: ['Enterprise Architect', 'Junior EA Analyst'],
     stages: [
       {
-        name: 'Application Submission',
-        description: 'Operator submits permit application with required documentation and pays the application fee.',
+        name: 'Gap Identification',
+        description: 'Repository completeness dashboard or peer review surfaces a gap or stale record.',
         order: 1,
-        capabilities: ['Waterfront Permit & Licensing'],
+        capabilities: ['Repository Completeness'],
       },
       {
-        name: 'Review & Inspection',
-        description: 'Staff review the application and conduct a safety inspection of the waterfront operation.',
+        name: 'Content Authoring',
+        description: 'The architect or analyst creates or updates the relevant record in draft status.',
         order: 2,
-        capabilities: ['Waterfront Permit & Licensing'],
+        capabilities: ['Capability Mapping', 'Application Portfolio', 'Content Authoring & Workflow'],
       },
       {
-        name: 'Approval & Issuance',
-        description: 'Permit is approved and a digital permit certificate is issued to the operator.',
+        name: 'Review & Publish',
+        description: 'The draft content is reviewed, links to related entities are added, and the record is published.',
         order: 3,
-        capabilities: ['Waterfront Permit & Licensing'],
+        capabilities: ['Content Authoring & Workflow', 'Capability Mapping'],
       },
     ],
   },
 ]
 
-// ─── Strategic Objectives (City of Lakeside) ──────────────────────────────────
+// ─── Strategic Objectives (GovEA Project) ─────────────────────────────────────
 
-export const LAKESIDE_OBJECTIVES = [
+export const GOVEA_PROJECT_OBJECTIVES = [
   {
-    name: 'Modernise Parks & Recreation Digital Services',
-    description: 'Replace disconnected booking spreadsheets and phone-based registration with a unified online platform that residents and seasonal visitors can access at any time.',
-    successMetric: '90% of facility bookings and program registrations completed online by end of FY2027',
-    timeHorizon: 'FY2027',
+    name: 'Deliver a complete EA repository for state and local government',
+    description: 'Build and maintain a comprehensive, people-centred EA repository that covers all core architecture domains and is usable by non-specialist government staff without formal EA training.',
+    successMetric: 'All core modules (capabilities, applications, decisions, strategy, data architecture) at production quality with 95%+ test coverage by end of CY2026',
+    timeHorizon: 'CY2026',
     status: 'published' as const,
     visibility: 'org' as const,
-    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration', 'Community Engagement & Notifications'],
-    valueStreams: ['Facility Booking to Confirmation'],
+    capabilities: ['Capability Mapping', 'Application Portfolio', 'Architecture Decision Records', 'Content Authoring & Workflow', 'Data Architecture'],
+    valueStreams: ['Feature Idea to Production'],
   },
   {
-    name: 'Strengthen Environmental Compliance & Reporting',
-    description: 'Improve stormwater monitoring data quality and automate compliance report generation to eliminate manual data assembly and reduce risk of late or deficient submissions.',
-    successMetric: '100% on-time stormwater compliance reports filed with no deficiencies by FY2026',
-    timeHorizon: 'FY2026',
+    name: 'Enable multi-organisation architecture sharing',
+    description: 'Allow state and local government organisations to establish trusted connections and share EA content across boundaries, supporting regional and whole-of-government architecture collaboration.',
+    successMetric: 'At least three active inter-org connections in production use by Q2 CY2026',
+    timeHorizon: 'CY2026',
     status: 'published' as const,
     visibility: 'org' as const,
-    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
+    capabilities: ['Multi-Org Federation', 'User & Role Management'],
     valueStreams: [] as string[],
   },
   {
-    name: 'Replace Legacy Asset Management System',
-    description: 'Retire the ageing Cartegraph OMS system and migrate all parks and waterfront asset and work order management to a modern cloud-hosted platform.',
-    successMetric: 'Cartegraph OMS decommissioned and Brightly Asset Essentials fully operational across all work order categories by Q2 FY2027',
-    timeHorizon: 'FY2027',
+    name: 'Make architecture debt visible and actionable',
+    description: 'Surface architecture debt — lifecycle risks, capability gaps, and principle violations — automatically and link it to the initiatives and decisions that will resolve it.',
+    successMetric: 'Auto-detected debt covers 100% of lifecycle risk scenarios with no manual triage required',
+    timeHorizon: 'CY2026',
     status: 'published' as const,
     visibility: 'org' as const,
-    capabilities: ['Asset & Work Order Management'],
-    valueStreams: [] as string[],
+    capabilities: ['Architecture Debt Tracking', 'Repository Completeness'],
+    valueStreams: ['EA Gap to Published Architecture'],
   },
 ]
 
-// ─── Initiatives (City of Lakeside) ──────────────────────────────────────────
+// ─── Initiatives (GovEA Project) ──────────────────────────────────────────────
 // Coverage: status = active ✓, proposed ✓, on-hold ✓, complete ✓
 
-export const LAKESIDE_INITIATIVES = [
+export const GOVEA_PROJECT_INITIATIVES = [
   {
-    name: 'ActiveNet Implementation',
-    description: 'Implement ActiveNet as the city\'s unified parks and recreation management platform, replacing disconnected booking spreadsheets and the phone-based registration process.',
+    name: 'Data Architecture Metamodel',
+    description: 'Build the data architecture module — entities, attributes, links, business keys, semantic relationships, and the Chen Notation diagram — to extend GovEA into the data domain.',
     status: 'active' as const,
-    startDate: 'Q2 FY2026',
-    endDate: 'Q4 FY2026',
+    startDate: 'Q1 CY2026',
+    endDate: 'Q2 CY2026',
     capabilities: [
-      { name: 'Parks & Facility Reservation',  impact: 'build' },
-      { name: 'Recreation Program Registration', impact: 'build' },
+      { name: 'Data Architecture', impact: 'build' },
+      { name: 'Capability Mapping', impact: 'improve' },
     ],
     applications: [
-      { name: 'ActiveNet', impact: 'build' },
+      { name: 'GovEA Web App', impact: 'improve' },
+      { name: 'PostgreSQL (Neon)', impact: 'improve' },
     ],
-    objectives: ['Modernise Parks & Recreation Digital Services'],
+    objectives: ['Deliver a complete EA repository for state and local government'],
   },
   {
-    name: 'Asset Management Platform Replacement',
-    description: 'Retire the legacy Cartegraph OMS system and migrate work order and asset management to Brightly Asset Essentials. Includes data migration, staff training, and a parallel-run period.',
-    status: 'proposed' as const,
-    startDate: 'Q1 FY2027',
-    endDate: 'Q4 FY2027',
-    capabilities: [
-      { name: 'Asset & Work Order Management', impact: 'improve' },
-    ],
-    applications: [
-      { name: 'Cartegraph OMS',         impact: 'retire' },
-      { name: 'Brightly Asset Essentials', impact: 'build'  },
-    ],
-    objectives: ['Replace Legacy Asset Management System'],
-  },
-  {
-    name: 'Waterfront Digital Permitting Pilot',
-    description: 'Pilot a digital permit application and inspection workflow for marina operators and waterfront businesses. On hold pending selection of a permitting platform compatible with the city\'s Tyler Munis integration.',
-    status: 'on-hold' as const,
-    startDate: 'Q3 FY2026',
-    endDate: 'Q2 FY2027',
-    capabilities: [
-      { name: 'Waterfront Permit & Licensing', impact: 'improve' },
-    ],
-    applications: [] as { name: string; impact: string }[],
-    objectives: [] as string[],
-  },
-  {
-    name: 'Stormwater Compliance Reporting Upgrade',
-    description: 'Upgrade stormwater monitoring data collection and reporting workflows to meet updated state NPDES permit requirements. Completed Q2 FY2025.',
+    name: 'Architecture Debt Tracking',
+    description: 'Implement the architecture debt module including manual debt logging, auto-detection of lifecycle risks, severity classification, and initiative-linked remediation tracking.',
     status: 'complete' as const,
-    startDate: 'Q3 FY2024',
-    endDate: 'Q2 FY2025',
+    startDate: 'Q1 CY2026',
+    endDate: 'Q2 CY2026',
     capabilities: [
-      { name: 'Stormwater Management',              impact: 'improve' },
-      { name: 'Environmental Monitoring & Reporting', impact: 'build'  },
+      { name: 'Architecture Debt Tracking', impact: 'build' },
     ],
-    applications: [] as { name: string; impact: string }[],
-    objectives: ['Strengthen Environmental Compliance & Reporting'],
+    applications: [
+      { name: 'GovEA Web App', impact: 'improve' },
+    ],
+    objectives: ['Make architecture debt visible and actionable'],
+  },
+  {
+    name: 'Repository Completeness Dashboard',
+    description: 'Build the completeness scoring engine, staleness detection, domain-level targets, and the dashboard view that surfaces repository health to the EA team.',
+    status: 'complete' as const,
+    startDate: 'Q3 CY2025',
+    endDate: 'Q4 CY2025',
+    capabilities: [
+      { name: 'Repository Completeness', impact: 'build' },
+    ],
+    applications: [
+      { name: 'GovEA Web App', impact: 'improve' },
+    ],
+    objectives: ['Deliver a complete EA repository for state and local government', 'Make architecture debt visible and actionable'],
+  },
+  {
+    name: 'Multi-Org Federation',
+    description: 'Implement org-to-org connections, cross-org capability links, and federated content visibility to support multi-organisation EA collaboration.',
+    status: 'complete' as const,
+    startDate: 'Q4 CY2025',
+    endDate: 'Q1 CY2026',
+    capabilities: [
+      { name: 'Multi-Org Federation', impact: 'build' },
+      { name: 'User & Role Management', impact: 'improve' },
+    ],
+    applications: [
+      { name: 'GovEA Web App', impact: 'improve' },
+    ],
+    objectives: ['Enable multi-organisation architecture sharing'],
   },
 ]
 
-// ─── ADRs (City of Lakeside) ──────────────────────────────────────────────────
-// Coverage: status = accepted ✓, superseded ✓ (ADR-002 → ADR-003)
+// ─── ADRs (GovEA Project) ─────────────────────────────────────────────────────
+// Coverage: status = accepted ✓, superseded ✓ (ADR-001 → ADR-002)
 //           supersededByNumber — self-reference chain resolved in run.ts
+// ADR-003 is based on the real GovEA query performance decision.
 
-export const LAKESIDE_ADRS = [
+export const GOVEA_PROJECT_ADRS = [
   {
     number: 'ADR-001',
-    title: 'Adopt SaaS-first for parks and recreation technology acquisitions',
-    context: 'The parks department relied on a mix of paper forms, spreadsheets, and a legacy self-hosted booking system that required dedicated server maintenance and was inaccessible outside of business hours. The existing approach could not support resident self-service or seasonal demand spikes.',
-    decision: 'All new parks and recreation technology acquisitions will default to vendor-hosted SaaS platforms. On-premises deployment requires Director-level approval and a documented justification.',
-    consequences: 'Reduces infrastructure burden on IT. Enables 24/7 resident self-service. Increases reliance on vendor uptime and internet access. Requires updated data agreements to cover resident data processed by SaaS vendors.',
-    status: 'accepted' as const,
-    supersededByNumber: null as string | null,
-    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration'],
-    applications: ['ActiveNet'],
-    initiatives: ['ActiveNet Implementation'],
-    objectives: ['Modernise Parks & Recreation Digital Services'],
-  },
-  {
-    number: 'ADR-002',
-    title: 'Retain on-premises hosting for all environmental monitoring data',
-    context: 'Environmental monitoring data is subject to state retention requirements and chain-of-custody obligations for NPDES permit submissions. In 2021, city legal counsel advised that cloud-hosted storage created ambiguity about data custody for regulatory compliance.',
-    decision: 'Environmental monitoring and stormwater compliance data will be stored exclusively on city-managed on-premises infrastructure.',
-    consequences: 'Ensured regulatory compliance under the 2021 legal interpretation. Restricted cloud adoption for environmental systems and increased infrastructure maintenance costs. Superseded by updated state cloud data guidance issued in 2024.',
+    title: 'Adopt TOGAF as the canonical EA framework',
+    context: 'At project inception GovEA needed a recognised EA framework to structure its metamodel and terminology. TOGAF is the most widely adopted framework in government EA contexts and offered a well-documented content metamodel.',
+    decision: 'GovEA will adopt TOGAF as its canonical framework. The content metamodel, terminology, and capability groupings will align with TOGAF ADM phases and the TOGAF Content Framework.',
+    consequences: 'Provided an established vocabulary and reduced time-to-first-model. Created significant friction for non-specialist government staff unfamiliar with TOGAF jargon. Later superseded when user research consistently showed that TOGAF terminology was a barrier to adoption.',
     status: 'superseded' as const,
-    supersededByNumber: 'ADR-003',
-    capabilities: ['Environmental Monitoring & Reporting'],
+    supersededByNumber: 'ADR-002',
+    capabilities: ['Capability Mapping', 'Content Authoring & Workflow'],
     applications: [] as string[],
     initiatives: [] as string[],
     objectives: [] as string[],
   },
   {
-    number: 'ADR-003',
-    title: 'Permit cloud hosting for environmental data with state-approved data residency controls',
-    context: 'The state issued updated cloud hosting guidance in 2024 permitting cloud storage of environmental monitoring data provided vendors hold state-approved data residency agreements. This resolves the legal ambiguity that motivated ADR-002.',
-    decision: 'Environmental monitoring and stormwater compliance data may be hosted in cloud platforms that hold state-approved data residency agreements. Vendor data residency documentation must be reviewed by city legal counsel before onboarding.',
-    consequences: 'Opens the market for cloud-hosted environmental monitoring solutions. Requires vendor due diligence on data residency agreements. Supersedes ADR-002.',
+    number: 'ADR-002',
+    title: 'Adopt EasyEA as the canonical framework with optional TOGAF overlay',
+    context: 'User research across five state and local government teams found that TOGAF terminology (ADM phases, architecture building blocks, BDAT layers) was consistently cited as a barrier to adoption. Non-specialist staff could not map their day-to-day work onto the TOGAF vocabulary without expert facilitation. EasyEA is a lightweight, people-centred methodology designed specifically for government teams without dedicated EA staff.',
+    decision: 'GovEA will adopt EasyEA as its canonical framework. The core metamodel uses plain-language terms (capabilities, personas, value streams, principles). TOGAF-aligned terminology is available as an optional overlay for organisations that require it, but is not the default.',
+    consequences: 'Significantly improved adoption rates in pilot organisations. Reduced the learning curve for non-specialist contributors. The TOGAF overlay is maintained but not actively developed. Supersedes ADR-001.',
     status: 'accepted' as const,
     supersededByNumber: null as string | null,
-    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
-    applications: [] as string[],
-    initiatives: ['Stormwater Compliance Reporting Upgrade'],
-    objectives: ['Strengthen Environmental Compliance & Reporting'],
+    capabilities: ['Capability Mapping', 'Content Authoring & Workflow', 'Feature Management'],
+    applications: ['GovEA Web App'],
+    initiatives: [] as string[],
+    objectives: ['Deliver a complete EA repository for state and local government'],
+  },
+  {
+    number: 'ADR-003',
+    title: 'Use raw SQL with indexed CTEs for traversal and completeness queries',
+    context: 'GovEA\'s completeness scoring and cross-entity traversal queries must traverse capability → application → personas → value streams → objectives in a single request. Drizzle ORM query builder generates N+1 patterns for these traversals, and the completeness score requires aggregating counts across five entity types per capability domain. In load testing with 500 capabilities, ORM-generated queries took 2.3 seconds on average.',
+    decision: 'Completeness and traversal queries will be implemented as raw SQL using indexed CTEs rather than the Drizzle ORM query builder. Drizzle is retained for all CRUD operations. A query performance budget of 200ms is enforced for all dashboard queries.',
+    consequences: 'Dashboard load time reduced to under 80ms in load testing. Raw SQL queries require explicit review in code review to guard against injection. Query complexity is centralised in a small number of query files, reducing the surface area for performance regressions.',
+    status: 'accepted' as const,
+    supersededByNumber: null as string | null,
+    capabilities: ['Repository Completeness', 'End-to-End Traceability'],
+    applications: ['PostgreSQL (Neon)', 'GovEA Web App'],
+    initiatives: ['Repository Completeness Dashboard'],
+    objectives: ['Deliver a complete EA repository for state and local government'],
   },
 ]
 
-// ─── Principles (City of Lakeside) ───────────────────────────────────────────
+// ─── Principles (GovEA Project) ───────────────────────────────────────────────
+// The ten EasyEA principles that govern every EasyEA engagement.
+// Source: https://github.com/roballred/EasyEA/blob/main/framework/principles.md
 
-export const LAKESIDE_PRINCIPLES = [
+export const GOVEA_PROJECT_PRINCIPLES = [
   {
-    name: 'Accessible by Default',
-    description: 'Design all resident-facing parks and recreation services for maximum accessibility — physical, digital, and linguistic.',
-    title: 'Design for accessibility first in all parks and recreation services',
-    rationale: 'Parks and recreation services are used by residents of all abilities, ages, and language backgrounds. Designing for the most constrained users ensures the service works well for everyone, including those with disabilities, low digital literacy, or limited English proficiency.',
-    implications: 'All online booking and registration flows must meet WCAG 2.1 AA standards. Multilingual support is required for all resident-facing parks services. Staff-facing interfaces require accessibility review before launch.',
+    name: 'Business First',
+    description: 'All architecture work must begin with business goals, priorities, and desired outcomes. Technology serves the business — never the reverse.',
+    title: 'Begin with business goals; technology serves the business',
+    rationale: 'Architecture that starts with technology creates solutions in search of problems. Starting with business goals ensures every capability, application, and decision can be traced back to an outcome the organisation is trying to achieve. In GovEA, this means no module or feature is built unless it addresses a documented business or user need.',
+    implications: 'Every GovEA issue must reference a capability ID and a business goal before implementation begins. Features that cannot be traced to a business outcome are descoped. Architecture reviews start with objectives, not systems.',
     principleType: 'architecture' as const,
     status: 'published' as const,
     visibility: 'org' as const,
-    capabilities: ['Parks & Facility Reservation', 'Recreation Program Registration', 'Community Engagement & Notifications'],
+    capabilities: ['Capability Mapping', 'Architecture Decision Records'],
     adrs: [] as string[],
   },
   {
-    name: 'Environmental Stewardship Through Data',
-    description: 'Base environmental policy decisions on monitored data rather than estimates, and publish compliance data openly where permissible.',
-    title: 'Ground environmental decisions in monitored, verifiable data',
-    rationale: 'The lake and waterfront are the city\'s most valuable natural assets. Environmental decisions made without reliable monitoring data risk both ecological damage and regulatory non-compliance. Data-grounded decisions are also more defensible in regulatory and public contexts.',
-    implications: 'Capital investments in environmental monitoring infrastructure are prioritised. Stormwater and water quality data must be collected at defined intervals and stored with full chain-of-custody metadata. Compliance reports must include source data references.',
-    principleType: 'data' as const,
-    status: 'draft' as const,
+    name: 'Value at Every Step',
+    description: 'Every artifact, decision, and recommendation must create meaningful business or customer value. If something does not deliver value, it does not belong.',
+    title: 'Every artifact must deliver measurable value',
+    rationale: 'EA practices fail when they produce documentation nobody reads or governance nobody follows. Requiring every artifact to deliver value forces the team to ask "who will use this and how?" before creating it. In GovEA, this principle drives the decision to start with a minimal but complete set of modules rather than building comprehensive coverage first.',
+    implications: 'Capabilities, ADRs, and principles that are not actively referenced or maintained are flagged as stale. Repository completeness scoring surfaces low-value content for review. Debt items without a linked initiative are escalated in severity.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Repository Completeness', 'Architecture Debt Tracking'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'People-Centered by Design',
+    description: 'Architecture work begins with understanding people — their needs, pain points, tasks, and experiences. Every capability, process, and system decision must trace back to a real person\'s real problem.',
+    title: 'Begin with personas; let systems follow',
+    rationale: 'Government EA fails when it models technology in isolation from the people who use and are affected by it. Starting with personas forces architects to ground capability design in real human needs rather than system boundaries. It also produces outputs that elected officials and non-technical stakeholders can read without translation.',
+    implications: 'Every capability record must be linked to at least one persona before it can be published. Value streams must name their stakeholder personas. Architecture reviews begin with a persona impact assessment, not a technology inventory.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Capability Mapping', 'Content Authoring & Workflow', 'Repository Completeness'],
+    adrs: ['ADR-002'],
+  },
+  {
+    name: 'AI-Enabled from the Beginning',
+    description: 'AI is not an add-on. It is built into how EasyEA works. Use AI to accelerate insight, reduce manual effort, and strengthen decision-making across all steps.',
+    title: 'Use AI throughout — not as a bolt-on at the end',
+    rationale: 'EA practitioners face significant cognitive load — synthesising large bodies of documentation, identifying patterns, and maintaining consistent terminology across dozens of artefacts. AI assistance reduces that burden and allows practitioners to focus on judgment rather than drafting. GovEA is built with AI-assisted authoring as a first-class workflow, not an afterthought.',
+    implications: 'GovEA features are designed to work with AI-assisted authoring tools. The data model produces clean, structured output that AI tools can read and augment. Where AI is used to draft content, the source is noted and human review is required before publication.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Content Authoring & Workflow', 'Feature Management'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'Human in the Lead',
+    description: 'AI may structure the work, draft artifacts, simulate review perspectives, and surface options. Humans make the decisions. No EasyEA engagement may move from discovery to recommendation, or from recommendation to implementation, without explicit human confirmation.',
+    title: 'AI structures the work; humans make the decisions',
+    rationale: 'AI can accelerate EA work dramatically but introduces risks if its outputs are accepted without review. AI-generated content can be plausible but wrong; AI-simulated stakeholder perspectives can miss political or contextual nuance; AI recommendations can optimise for the wrong objective. Human confirmation at each decision point is non-negotiable.',
+    implications: 'GovEA does not automate architecture decisions. Auto-detected debt items surface recommendations but require human review before remediation is logged. All published content reflects a human authoring decision, not an automated one.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
     visibility: 'connections' as const,
-    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
+    capabilities: ['Content Authoring & Workflow', 'Architecture Decision Records'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'Solve Real Problems',
+    description: 'Every method, artifact, and recommendation must address genuine organizational challenges — alignment gaps, delivery friction, legacy complexity, customer experience failures, siloed teams. No academic models, no theoretical constructs.',
+    title: 'Address problems organisations actually have',
+    rationale: 'EA frameworks have a tendency toward theoretical completeness over practical utility. TOGAF\'s ADM phases, Zachman\'s framework cells, and FEAF capability domains are intellectually coherent but often disconnected from the actual problems government teams face day-to-day. EasyEA starts with the problem, not the framework.',
+    implications: 'GovEA features are prioritised by documented user problems, not framework completeness. Every capability in the repository must link to at least one real organisational problem or pain point. Architecture debt tracking starts with problems that affect delivery, not abstract technical quality metrics.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Capability Mapping', 'Architecture Debt Tracking'],
+    adrs: ['ADR-002'],
+  },
+  {
+    name: 'Simplicity Over Completeness',
+    description: 'EasyEA prioritizes clarity, usability, and speed. If something cannot be explained quickly or used easily, simplify it or remove it. A clear, incomplete artifact is more useful than a comprehensive, unreadable one.',
+    title: 'A clear, incomplete artifact beats a comprehensive, unreadable one',
+    rationale: 'Comprehensive documentation that nobody reads has negative value — it consumes effort and creates a false sense of coverage. GovEA is designed for government staff who have a day job alongside their EA responsibilities. Every field, every screen, and every report must justify its complexity.',
+    implications: 'GovEA modules are scoped to the minimum set of fields needed for informed decision-making. Optional fields are truly optional. Repository completeness scoring rewards completion of core fields, not exhaustive documentation. The data model does not add fields speculatively.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Repository Completeness', 'Content Authoring & Workflow'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'Lightweight and Built for Everyday Work',
+    description: 'The framework must fit naturally into business, product, and delivery workflows. Minimal artifacts. Lean governance. Just enough structure to support good decisions — nothing more.',
+    title: 'Fit into existing workflows; do not create new ones',
+    rationale: 'EA tools that require a dedicated EA team to operate are not sustainable in most government organisations. GovEA is designed to be used by department directors, programme managers, and analysts alongside their primary responsibilities — not only by dedicated architects.',
+    implications: 'GovEA workflows are measured against time-to-first-value for non-specialist users. Features that require more effort to maintain than the value they produce are candidates for removal. The seed data and onboarding flow are designed to demonstrate value within the first ten minutes of use.',
+    principleType: 'architecture' as const,
+    status: 'draft' as const,
+    visibility: 'org' as const,
+    capabilities: ['Feature Management', 'Content Authoring & Workflow'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'Collaborative by Default',
+    description: 'Architecture is created with business, product, and technology teams — not delivered to them. The framework supports shared understanding, joint decision-making, and co-creation.',
+    title: 'Create architecture with teams, not for them',
+    rationale: 'EA artefacts created in isolation and then distributed rarely influence decisions. Architecture that is built collaboratively is understood, trusted, and used. GovEA supports cross-team and cross-organisation collaboration as a first-class concern — shared visibility, federated content, and contributor roles are core to the model.',
+    implications: 'GovEA supports multiple visibility levels (org, connections, instance) so content can be shared appropriately across teams and organisations. The contributor role allows non-admin staff to author EA content. Multi-org federation enables cross-agency architecture collaboration without requiring a single shared instance.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
+    visibility: 'connections' as const,
+    capabilities: ['Multi-Org Federation', 'Content Authoring & Workflow'],
+    adrs: [] as string[],
+  },
+  {
+    name: 'Designed to Evolve',
+    description: 'EasyEA is a continuous, learning-focused framework. It supports experimentation, feedback loops, and incremental improvement. When real work reveals gaps, log them. When the framework is wrong, change it.',
+    title: 'Log gaps; change the framework when it is wrong',
+    rationale: 'No framework survives first contact with a real organisation unchanged. EasyEA is explicitly designed to be modified based on real experience. The architecture decision record pattern, the archived status on capabilities, and the supersession chain on ADRs are all mechanisms for capturing how the organisation\'s thinking has evolved.',
+    implications: 'Deprecated approaches are archived, not deleted. ADRs that are no longer current are marked superseded with a reference to the decision that replaced them. GovEA collects structured feedback through GitHub issues and uses that feedback to evolve the platform. FRAMEWORK-IMPROVEMENTS.md captures gaps discovered during real engagements.',
+    principleType: 'architecture' as const,
+    status: 'published' as const,
+    visibility: 'org' as const,
+    capabilities: ['Feature Management', 'Architecture Decision Records'],
     adrs: [] as string[],
   },
 ]
 
-// ─── Glossary (City of Lakeside) ─────────────────────────────────────────────
+// ─── Glossary (GovEA Project) ─────────────────────────────────────────────────
 
-export const LAKESIDE_GLOSSARY = [
+export const GOVEA_PROJECT_GLOSSARY = [
   {
-    term: 'Asset Management',
-    definition: 'The systematic process of developing, operating, maintaining, and disposing of physical assets in the most cost-effective manner. In local government, covers infrastructure, buildings, equipment, and fleet.',
-    domain: 'Infrastructure & Operations',
+    term: 'Enterprise Architecture',
+    definition: 'A discipline for proactively and holistically leading enterprise responses to disruptive forces by identifying and analysing the execution of change toward desired business outcomes. In GovEA, EA is treated as a practical, people-centred discipline rather than a compliance framework.',
+    domain: 'Enterprise Architecture',
     status: 'published' as const,
     visibility: 'org' as const,
   },
   {
-    term: 'Work Order',
-    definition: 'A formal record of a maintenance, repair, or improvement task assigned to a staff member or crew. Work orders track the scope of work, assigned resources, priority, status, and completion details.',
-    domain: 'Infrastructure & Operations',
+    term: 'Capability',
+    definition: 'Something an organisation must be able to do to deliver its mission — independent of the systems, processes, or people used to deliver it. Capabilities describe what is needed, not how it is done.',
+    domain: 'Enterprise Architecture',
     status: 'published' as const,
     visibility: 'org' as const,
   },
   {
-    term: 'Waterfront Permit',
-    definition: 'An annual operating permit issued by the city to commercial operators conducting business on or adjacent to the waterfront, including marinas, boat rentals, and event organisers.',
-    domain: 'Regulatory Compliance',
+    term: 'Architecture Decision Record',
+    definition: 'A document that captures a significant architectural decision made during the evolution of a system, including the context that motivated it, the decision itself, and its consequences. ADRs are immutable by convention — superseded decisions are marked as such rather than deleted.',
+    definitionSource: 'Nygard, M. (2011). Documenting Architecture Decisions.',
+    domain: 'Enterprise Architecture',
     status: 'published' as const,
     visibility: 'org' as const,
   },
   {
-    term: 'Stormwater Management',
-    definition: 'The collection, treatment, and controlled release of rainwater and snowmelt runoff to prevent flooding and protect water quality. Local governments are typically responsible for stormwater infrastructure under their NPDES permit.',
-    domain: 'Infrastructure & Operations',
-    notes: 'City of Lakeside holds an NPDES Phase II Small MS4 permit from the state. All stormwater-related system decisions must align with permit obligations and the approved Stormwater Management Plan.',
+    term: 'Value Stream',
+    definition: 'The sequence of activities an organisation performs to deliver a specific outcome of value to a stakeholder. Value streams cross organisational boundaries and capability domains.',
+    domain: 'Enterprise Architecture',
+    status: 'published' as const,
+    visibility: 'org' as const,
+  },
+  {
+    term: 'Repository Completeness',
+    definition: 'A measure of how thoroughly the EA repository reflects the current state of the organisation\'s architecture. Completeness is assessed per capability domain and considers the presence of descriptions, persona links, application links, and content freshness.',
+    domain: 'Enterprise Architecture',
+    notes: 'GovEA calculates completeness scores automatically on each repository save. Scores below 60% trigger a warning in the dashboard.',
     status: 'draft' as const,
     visibility: 'org' as const,
   },
   {
-    term: 'Recreation Program',
-    definition: 'A structured activity or class offered by the parks and recreation department for residents, including fitness, arts, sports leagues, summer camps, and senior programming.',
-    domain: 'Community Services',
-    status: 'published' as const,
-    visibility: 'org' as const,
-  },
-  {
-    term: 'NPDES Permit',
-    definition: 'National Pollutant Discharge Elimination System permit — a federal permit administered by states that regulates the discharge of pollutants into waters of the United States. Local governments operating stormwater systems hold Phase II MS4 permits.',
-    definitionSource: 'US EPA Clean Water Act Section 402',
-    domain: 'Infrastructure & Operations',
+    term: 'Federation',
+    definition: 'The ability for two or more GovEA organisations to establish a trusted connection and share EA content across organisational boundaries. Federated content retains its source organisation\'s visibility rules.',
+    domain: 'Platform',
     status: 'published' as const,
     visibility: 'connections' as const,
   },
 ]
 
-// ─── Services (City of Lakeside) ─────────────────────────────────────────────
+// ─── Services (GovEA Project) ─────────────────────────────────────────────────
 
-export const LAKESIDE_SERVICES = [
+export const GOVEA_PROJECT_SERVICES = [
   {
-    name: 'Parks & Facility Booking',
-    description: 'Residents and seasonal visitors book parks pavilions, athletic fields, and recreation centres online, select dates, pay fees, and receive a digital confirmation with access instructions.',
-    serviceOwner: 'Parks & Recreation',
-    channels: ['online', 'in-person'],
+    name: 'GovEA Hosted Application',
+    description: 'The cloud-hosted GovEA web application available to state and local government organisations at govea.app. Organisations sign up, create a workspace, and begin modelling their enterprise architecture immediately.',
+    serviceOwner: 'GovEA Project',
+    channels: ['online'],
     status: 'published' as const,
     visibility: 'org' as const,
-    capabilities: ['Parks & Facility Reservation'],
-    personas: ['Resident', 'Parks & Recreation Staff'],
-    valueStreams: ['Facility Booking to Confirmation'],
+    capabilities: ['Capability Mapping', 'Application Portfolio', 'Architecture Decision Records', 'Content Authoring & Workflow', 'User & Role Management'],
+    personas: ['Enterprise Architect', 'Junior EA Analyst', 'Department Director'],
+    valueStreams: ['EA Gap to Published Architecture'],
   },
   {
-    name: 'Waterfront Permit Application',
-    description: 'Marina operators and waterfront commercial businesses apply for and renew their annual waterfront operating permits, upload required documents, pay fees, and track inspection scheduling.',
-    serviceOwner: 'Waterfront Management Office',
-    channels: ['online', 'in-person'],
+    name: 'Open Source Self-Hosting',
+    description: 'The GovEA codebase published on GitHub under an open source licence, enabling government organisations to self-host the application on their own infrastructure.',
+    serviceOwner: 'GovEA Project',
+    channels: ['online'],
+    status: 'published' as const,
+    visibility: 'connections' as const,
+    capabilities: ['Feature Management', 'User & Role Management'],
+    personas: ['CMS Administrator'],
+    valueStreams: ['Feature Idea to Production'],
+  },
+  {
+    name: 'EA Repository Authoring',
+    description: 'The core EA authoring workspace — capabilities, applications, personas, value streams, principles, decisions, and strategy modules — used by EA practitioners to build and maintain their architecture repository.',
+    serviceOwner: 'GovEA Project',
+    channels: ['online'],
     status: 'published' as const,
     visibility: 'org' as const,
-    capabilities: ['Waterfront Permit & Licensing'],
-    personas: ['Marina Operator'],
-    valueStreams: ['Permit Application to Approval'],
+    capabilities: ['Capability Mapping', 'Application Portfolio', 'Architecture Decision Records', 'Repository Completeness', 'Architecture Debt Tracking'],
+    personas: ['Enterprise Architect', 'Junior EA Analyst'],
+    valueStreams: ['EA Gap to Published Architecture'],
   },
   {
-    name: 'Recreation Program Registration',
-    description: 'Residents and seasonal visitors browse and register for city-run recreation programs — fitness classes, sports leagues, summer camps, and senior activities — and pay online.',
-    serviceOwner: 'Parks & Recreation',
-    channels: ['online', 'mobile'],
-    status: 'published' as const,
-    visibility: 'org' as const,
-    capabilities: ['Recreation Program Registration'],
-    personas: ['Resident', 'Seasonal Visitor'],
-    valueStreams: ['Facility Booking to Confirmation'],
-  },
-  {
-    name: 'Report Environmental Concern',
-    description: 'Residents report suspected stormwater, lake water quality, or waterfront environmental issues. Reports are triaged by the Environmental Services Division and tracked to resolution.',
-    serviceOwner: 'Environmental Services Division',
-    channels: ['online', 'phone'],
+    name: 'Multi-Organisation Architecture Collaboration',
+    description: 'Federated EA sharing that allows connected government organisations to publish capabilities and cross-link their architecture at agreed visibility levels.',
+    serviceOwner: 'GovEA Project',
+    channels: ['online'],
     status: 'draft' as const,
-    visibility: 'org' as const,
-    capabilities: ['Environmental Monitoring & Reporting', 'Stormwater Management'],
-    personas: ['Resident', 'Environmental Compliance Officer'],
+    visibility: 'connections' as const,
+    capabilities: ['Multi-Org Federation'],
+    personas: ['Agency EA Coordinator', 'Enterprise Architect'],
     valueStreams: [] as string[],
   },
 ]

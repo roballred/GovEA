@@ -22,6 +22,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/value-streams', label: 'Value Streams',  moduleKey: 'value-streams' },
       { href: '/capabilities',  label: 'Capabilities',   moduleKey: 'capabilities' },
       { href: '/services',      label: 'Services',       moduleKey: 'services' },
+      { href: '/principles',    label: 'Principles',     moduleKey: 'principles' },
       { href: '/glossary',      label: 'Glossary',       moduleKey: 'glossary' },
     ],
   },
@@ -48,7 +49,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/applications', label: 'Applications', moduleKey: 'applications' },
       { href: '/adrs',         label: 'Decisions',    moduleKey: 'adrs' },
-      { href: '/principles',   label: 'Principles',   moduleKey: 'principles' },
       { href: '/debt',         label: 'Debt',         moduleKey: 'debt' },
     ],
   },
