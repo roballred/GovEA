@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import { organizations, users, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
-import { eq, and, isNull, gt, like, desc, ne } from 'drizzle-orm'
+import { eq, and, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
@@ -313,6 +313,65 @@ export async function demoteInstanceAdmin(userId: string, reason?: string) {
       organizationId: null,
       before: { instanceRole: 'instance_admin' },
       after: { instanceRole: null, reason: reason?.trim() || null },
+    })
+  })
+
+  revalidatePath('/instance/users')
+}
+
+export async function suspendUserAccount(userId: string, reason: string) {
+  const session = await requireInstanceAdmin()
+  if (userId === session.user.id) throw new Error('Cannot suspend yourself')
+
+  const target = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { id: true, organizationId: true, role: true, isActive: true },
+  })
+  if (!target) throw new Error('User not found')
+
+  if (target.role === 'admin') {
+    const [{ adminCount }] = await db
+      .select({ adminCount: count() })
+      .from(users)
+      .where(and(eq(users.organizationId, target.organizationId), eq(users.role, 'admin'), eq(users.isActive, 'true')))
+    if (adminCount <= 1) throw new Error('Cannot suspend the last active admin for this organization')
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ isActive: 'false', updatedAt: new Date() }).where(eq(users.id, userId))
+
+    await writeAuditLog(tx, {
+      action: 'instance.user.suspend',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: null,
+      after: { isActive: false, targetOrgId: target.organizationId, reason: reason.trim() },
+    })
+  })
+
+  revalidatePath('/instance/users')
+}
+
+export async function reactivateUserAccount(userId: string, reason: string) {
+  const session = await requireInstanceAdmin()
+
+  const target = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { id: true, organizationId: true },
+  })
+  if (!target) throw new Error('User not found')
+
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ isActive: 'true', updatedAt: new Date() }).where(eq(users.id, userId))
+
+    await writeAuditLog(tx, {
+      action: 'instance.user.reactivate',
+      entityType: 'user',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId: null,
+      after: { isActive: true, targetOrgId: target.organizationId, reason: reason.trim() },
     })
   })
 
