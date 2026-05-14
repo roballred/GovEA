@@ -20,6 +20,16 @@ function Toggle({
   label: string
   onChange: () => void
 }) {
+  const trackCls = cn(
+    'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+    'disabled:cursor-not-allowed disabled:opacity-60',
+    enabled ? 'bg-primary' : 'bg-input',
+  )
+  const thumbCls = cn(
+    'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-150',
+    enabled ? 'translate-x-4' : 'translate-x-0',
+  )
   return (
     <button
       type="button"
@@ -28,19 +38,9 @@ function Toggle({
       aria-label={label}
       disabled={disabled}
       onClick={onChange}
-      className={cn(
-        'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        'disabled:cursor-not-allowed disabled:opacity-60',
-        enabled ? 'bg-primary' : 'bg-input',
-      )}
+      className={trackCls}
     >
-      <span
-        className={cn(
-          'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-150',
-          enabled ? 'translate-x-4' : 'translate-x-0',
-        )}
-      />
+      <span className={thumbCls} />
     </button>
   )
 }
