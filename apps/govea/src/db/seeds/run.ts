@@ -8,6 +8,8 @@ import {
   DEV_PERSONAS, DEV_CAPABILITIES, DEV_CAPABILITY_RELATIONSHIPS, DEV_APPLICATIONS,
   DEV_OBJECTIVES, DEV_GOALS, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
   DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
+  DEV_DATA_ENTITIES, DEV_DATA_ATTRIBUTES, DEV_DATA_LINKS, DEV_DATA_BUSINESS_KEYS,
+  DEV_DATA_ENTITY_RELATIONS, DEV_DATA_ATTRIBUTE_SHARES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
   DEV_CROSS_ORG_LINKS,
   LAKESIDE_ORG, LAKESIDE_USERS,
@@ -40,6 +42,9 @@ import {
   services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
   instanceSettings,
+  dataEntities, dataAttributes, dataLinks, dataBusinessKeys,
+  dataEntityOwners, dataAttributeOwners, dataLinkOwners, dataBusinessKeyOwners,
+  dataEntityRelations, dataEntityAttributeLinks, dataAttributeShares,
 } from '../schema'
 import { MODULE_DEFS } from '../../lib/modules'
 import bcrypt from 'bcryptjs'
@@ -911,6 +916,184 @@ async function seed() {
     sortOrder: 0,
   }).onConflictDoNothing()
   console.log('  ✓ Principle Scope taxonomy type + entity definition')
+
+  // Data Architecture metamodel (#363 / #481) ──────────────────────────────
+
+  const devDataEntityIds: Record<string, string> = {}
+  for (const e of DEV_DATA_ENTITIES) {
+    const existing = await db.query.dataEntities.findFirst({
+      where: (t, { eq: eq2, and }) => and(eq2(t.organizationId, devOrgId), eq2(t.name, e.name)),
+    })
+    let entityId: string
+    if (existing) {
+      await db.update(dataEntities).set({
+        description: e.description, status: e.status, visibility: e.visibility,
+        physicalHubTableName: e.physicalHubTableName, serverName: e.serverName,
+        databaseName: e.databaseName, schemaName: e.schemaName, updatedAt: new Date(),
+      }).where(eq(dataEntities.id, existing.id))
+      entityId = existing.id
+    } else {
+      const [inserted] = await db.insert(dataEntities).values({
+        organizationId: devOrgId,
+        name: e.name, description: e.description, status: e.status, visibility: e.visibility,
+        physicalHubTableName: e.physicalHubTableName, serverName: e.serverName,
+        databaseName: e.databaseName, schemaName: e.schemaName,
+      }).returning()
+      entityId = inserted.id
+    }
+    devDataEntityIds[e.name] = entityId
+    for (const personaName of e.owners) {
+      const personaId = devPersonaIds[personaName]
+      if (!personaId) continue
+      const ownerExists = await db.query.dataEntityOwners.findFirst({
+        where: (t, { eq: eq2, and }) => and(eq2(t.dataEntityId, entityId), eq2(t.personaId, personaId)),
+      })
+      if (!ownerExists) await db.insert(dataEntityOwners).values({ dataEntityId: entityId, personaId })
+    }
+  }
+  console.log(`  ✓ ${DEV_DATA_ENTITIES.length} data entities`)
+
+  const devDataAttributeIds: Record<string, string> = {}
+  for (const a of DEV_DATA_ATTRIBUTES) {
+    const existing = await db.query.dataAttributes.findFirst({
+      where: (t, { eq: eq2, and }) => and(eq2(t.organizationId, devOrgId), eq2(t.name, a.name)),
+    })
+    let attrId: string
+    if (existing) {
+      await db.update(dataAttributes).set({
+        description: a.description, status: a.status, visibility: a.visibility,
+        physicalSatelliteTableName: a.physicalSatelliteTableName, serverName: a.serverName,
+        databaseName: a.databaseName, schemaName: a.schemaName,
+        physicalAttributeType: a.physicalAttributeType, updatedAt: new Date(),
+      }).where(eq(dataAttributes.id, existing.id))
+      attrId = existing.id
+    } else {
+      const [inserted] = await db.insert(dataAttributes).values({
+        organizationId: devOrgId,
+        name: a.name, description: a.description, status: a.status, visibility: a.visibility,
+        physicalSatelliteTableName: a.physicalSatelliteTableName, serverName: a.serverName,
+        databaseName: a.databaseName, schemaName: a.schemaName,
+        physicalAttributeType: a.physicalAttributeType,
+      }).returning()
+      attrId = inserted.id
+    }
+    devDataAttributeIds[a.name] = attrId
+    for (const personaName of a.owners) {
+      const personaId = devPersonaIds[personaName]
+      if (!personaId) continue
+      const ownerExists = await db.query.dataAttributeOwners.findFirst({
+        where: (t, { eq: eq2, and }) => and(eq2(t.dataAttributeId, attrId), eq2(t.personaId, personaId)),
+      })
+      if (!ownerExists) await db.insert(dataAttributeOwners).values({ dataAttributeId: attrId, personaId })
+    }
+    for (const entityName of a.entityLinks) {
+      const entityId = devDataEntityIds[entityName]
+      if (!entityId) continue
+      const linkExists = await db.query.dataEntityAttributeLinks.findFirst({
+        where: (t, { eq: eq2, and }) => and(eq2(t.dataEntityId, entityId), eq2(t.dataAttributeId, attrId)),
+      })
+      if (!linkExists) await db.insert(dataEntityAttributeLinks).values({
+        organizationId: devOrgId, dataEntityId: entityId, dataAttributeId: attrId,
+      })
+    }
+  }
+  console.log(`  ✓ ${DEV_DATA_ATTRIBUTES.length} data attributes with owner and entity links`)
+
+  const devDataLinkIds: Record<string, string> = {}
+  for (const l of DEV_DATA_LINKS) {
+    const existing = await db.query.dataLinks.findFirst({
+      where: (t, { eq: eq2, and }) => and(eq2(t.organizationId, devOrgId), eq2(t.name, l.name)),
+    })
+    let linkId: string
+    if (existing) {
+      await db.update(dataLinks).set({
+        description: l.description, status: l.status, visibility: l.visibility,
+        physicalLinkTableName: l.physicalLinkTableName, serverName: l.serverName,
+        databaseName: l.databaseName, schemaName: l.schemaName,
+        physicalLinkType: l.physicalLinkType, updatedAt: new Date(),
+      }).where(eq(dataLinks.id, existing.id))
+      linkId = existing.id
+    } else {
+      const [inserted] = await db.insert(dataLinks).values({
+        organizationId: devOrgId,
+        name: l.name, description: l.description, status: l.status, visibility: l.visibility,
+        physicalLinkTableName: l.physicalLinkTableName, serverName: l.serverName,
+        databaseName: l.databaseName, schemaName: l.schemaName,
+        physicalLinkType: l.physicalLinkType,
+      }).returning()
+      linkId = inserted.id
+    }
+    devDataLinkIds[l.name] = linkId
+    for (const personaName of l.owners) {
+      const personaId = devPersonaIds[personaName]
+      if (!personaId) continue
+      const ownerExists = await db.query.dataLinkOwners.findFirst({
+        where: (t, { eq: eq2, and }) => and(eq2(t.dataLinkId, linkId), eq2(t.personaId, personaId)),
+      })
+      if (!ownerExists) await db.insert(dataLinkOwners).values({ dataLinkId: linkId, personaId })
+    }
+  }
+  console.log(`  ✓ ${DEV_DATA_LINKS.length} data links`)
+
+  for (const bk of DEV_DATA_BUSINESS_KEYS) {
+    const entityId = devDataEntityIds[bk.entityName]
+    if (!entityId) continue
+    const existing = await db.query.dataBusinessKeys.findFirst({
+      where: (t, { eq: eq2, and }) => and(eq2(t.organizationId, devOrgId), eq2(t.name, bk.name)),
+    })
+    let bkId: string
+    if (existing) {
+      await db.update(dataBusinessKeys).set({
+        description: bk.description, status: bk.status, visibility: bk.visibility,
+        dataType: bk.dataType, updatedAt: new Date(),
+      }).where(eq(dataBusinessKeys.id, existing.id))
+      bkId = existing.id
+    } else {
+      const [inserted] = await db.insert(dataBusinessKeys).values({
+        organizationId: devOrgId,
+        name: bk.name, description: bk.description, status: bk.status, visibility: bk.visibility,
+        dataType: bk.dataType, owningDataEntityId: entityId,
+      }).returning()
+      bkId = inserted.id
+    }
+    for (const personaName of bk.owners) {
+      const personaId = devPersonaIds[personaName]
+      if (!personaId) continue
+      const ownerExists = await db.query.dataBusinessKeyOwners.findFirst({
+        where: (t, { eq: eq2, and }) => and(eq2(t.dataBusinessKeyId, bkId), eq2(t.personaId, personaId)),
+      })
+      if (!ownerExists) await db.insert(dataBusinessKeyOwners).values({ dataBusinessKeyId: bkId, personaId })
+    }
+  }
+  console.log(`  ✓ ${DEV_DATA_BUSINESS_KEYS.length} business keys`)
+
+  // Entity ↔ Entity "is related" + Attribute ↔ Attribute "shares"
+  // Both tables have a canonical-ordering check (left < right). Sort UUIDs at seed time.
+  for (const rel of DEV_DATA_ENTITY_RELATIONS) {
+    const idA = devDataEntityIds[rel.leftEntityName]
+    const idB = devDataEntityIds[rel.rightEntityName]
+    if (!idA || !idB) continue
+    const [leftId, rightId] = idA < idB ? [idA, idB] : [idB, idA]
+    const exists = await db.query.dataEntityRelations.findFirst({
+      where: (t, { eq: eq2, and }) => and(eq2(t.leftDataEntityId, leftId), eq2(t.rightDataEntityId, rightId)),
+    })
+    if (!exists) await db.insert(dataEntityRelations).values({
+      organizationId: devOrgId, leftDataEntityId: leftId, rightDataEntityId: rightId,
+    })
+  }
+  for (const share of DEV_DATA_ATTRIBUTE_SHARES) {
+    const idA = devDataAttributeIds[share.leftAttributeName]
+    const idB = devDataAttributeIds[share.rightAttributeName]
+    if (!idA || !idB) continue
+    const [leftId, rightId] = idA < idB ? [idA, idB] : [idB, idA]
+    const exists = await db.query.dataAttributeShares.findFirst({
+      where: (t, { eq: eq2, and }) => and(eq2(t.leftDataAttributeId, leftId), eq2(t.rightDataAttributeId, rightId)),
+    })
+    if (!exists) await db.insert(dataAttributeShares).values({
+      organizationId: devOrgId, leftDataAttributeId: leftId, rightDataAttributeId: rightId,
+    })
+  }
+  console.log(`  ✓ entity-entity and attribute-attribute cross-object relationships`)
 
   // ── Org 2: Office of Digital Services (state agency) ────────────────────
 
