@@ -91,6 +91,11 @@ export default async function DebtIndexPage({ searchParams }: { searchParams: Pr
                       <span className="text-xs text-muted-foreground">{TYPE_LABEL[item.debtType]}</span>
                       <span className="text-xs text-muted-foreground">·</span>
                       <span className="text-xs text-muted-foreground">{STATUS_LABEL[item.status]}</span>
+                      {item.source === 'system-detected' && (
+                        <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 dark:bg-slate-900 dark:border-slate-700 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-400">
+                          auto-detected
+                        </span>
+                      )}
                       {item.securitySensitive && (
                         <span className="text-xs font-medium text-amber-700 dark:text-amber-300">🔒 security-sensitive</span>
                       )}

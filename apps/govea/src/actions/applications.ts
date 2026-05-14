@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
+import { autoFlagLifecycleDebt } from '@/lib/lifecycle-debt'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from '@/lib/entity-taxonomy-helpers'
@@ -126,6 +127,7 @@ export async function createApplication(formData: FormData) {
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
 
+  let newApplicationId: string
   await db.transaction(async (tx) => {
     const [application] = await tx.insert(applications).values({
       name,
@@ -141,6 +143,8 @@ export async function createApplication(formData: FormData) {
       createdBy: session.user.id,
       updatedBy: session.user.id,
     }).returning()
+
+    newApplicationId = application.id
 
     if (capabilityIds.length > 0) {
       await tx.insert(applicationCapabilities).values(
@@ -160,6 +164,13 @@ export async function createApplication(formData: FormData) {
       organizationId: orgId,
       after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
     })
+  })
+
+  await autoFlagLifecycleDebt({
+    applicationId: newApplicationId!,
+    applicationName: name,
+    organizationId: orgId,
+    lifecycleStatus,
   })
 }
 
@@ -242,6 +253,13 @@ export async function editApplication(applicationId: string, formData: FormData)
         },
       })
     }
+  })
+
+  await autoFlagLifecycleDebt({
+    applicationId,
+    applicationName: name,
+    organizationId: orgId,
+    lifecycleStatus,
   })
 }
 
