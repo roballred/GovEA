@@ -23,6 +23,7 @@ import {
   TOGAF_VALUE_STREAMS, TOGAF_OBJECTIVES, TOGAF_INITIATIVES,
   TOGAF_ADRS, TOGAF_PRINCIPLES, TOGAF_GLOSSARY, TOGAF_SERVICES,
 } from './togaf-demo-fixtures'
+import { removeRetiredOrgs, RETIRED_ORG_SLUGS } from './cleanup'
 import {
   SCALE_ORG, SCALE_USERS, SCALE_CAPABILITIES, SCALE_APPLICATIONS,
 } from './scale-fixtures'
@@ -114,6 +115,12 @@ async function seed() {
 
   console.log('\nLoading dev fixtures...')
   const passwordHash = await bcrypt.hash('dev-password', 12)
+
+  // ── Cleanup: remove retired fixture orgs ─────────────────────────────────
+  const removed = await removeRetiredOrgs(RETIRED_ORG_SLUGS)
+  for (const slug of removed) {
+    console.log(`  ✓ removed retired org: ${slug}`)
+  }
 
   // ── Org 1: City of Riverdale ─────────────────────────────────────────────
 
