@@ -23,6 +23,7 @@ import {
   TOGAF_VALUE_STREAMS, TOGAF_OBJECTIVES, TOGAF_INITIATIVES,
   TOGAF_ADRS, TOGAF_PRINCIPLES, TOGAF_GLOSSARY, TOGAF_SERVICES,
 } from './togaf-demo-fixtures'
+import { removeRetiredOrgs, RETIRED_ORG_SLUGS } from './cleanup'
 import {
   SCALE_ORG, SCALE_USERS, SCALE_CAPABILITIES, SCALE_APPLICATIONS,
 } from './scale-fixtures'
@@ -116,14 +117,9 @@ async function seed() {
   const passwordHash = await bcrypt.hash('dev-password', 12)
 
   // ── Cleanup: remove retired fixture orgs ─────────────────────────────────
-  // All child tables have onDelete: 'cascade', so deleting the org row is enough.
-  const RETIRED_ORG_SLUGS = ['city-of-lakeside']
-  for (const slug of RETIRED_ORG_SLUGS) {
-    const org = await db.query.organizations.findFirst({ where: (t, { eq: e }) => e(t.slug, slug) })
-    if (org) {
-      await db.delete(organizations).where(eq(organizations.id, org.id))
-      console.log(`  ✓ removed retired org: ${slug}`)
-    }
+  const removed = await removeRetiredOrgs(RETIRED_ORG_SLUGS)
+  for (const slug of removed) {
+    console.log(`  ✓ removed retired org: ${slug}`)
   }
 
   // ── Org 1: City of Riverdale ─────────────────────────────────────────────

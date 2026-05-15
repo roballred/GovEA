@@ -1,0 +1,29 @@
+name: PR base check
+
+# Fails any PR whose base branch is not `main`. Prevents the failure mode
+# that lost PRs #496 and #497: they were merged into a long-lived feature
+# branch (`claude/gifted-matsumoto-beb73b`) which was later deleted without
+# its contents reaching `main`. See #492 for the recovery work.
+#
+# Stacked-PR workflows are not in use on this repo; if that changes,
+# replace this with a base-branch allowlist rather than dropping the check.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  base-is-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert PR base is main
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          if [ "$BASE_REF" != "main" ]; then
+            echo "::error::PR base is '$BASE_REF' — all PRs must target 'main'."
+            echo "::error::Change the base via 'Edit' on the PR ($PR_URL), or close + reopen against main."
+            exit 1
+          fi
+          echo "PR base is 'main' — ok."
