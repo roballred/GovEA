@@ -13,8 +13,6 @@ export async function ActAsBanner() {
     where: eq(organizations.id, session.targetOrgId),
   })
 
-  const minutesLeft = Math.max(0, Math.round((session.expiresAt.getTime() - Date.now()) / 60_000))
-
   return (
     <div className="sticky top-0 z-50 bg-red-600 text-white text-sm shadow">
       <div className="mx-auto max-w-7xl px-4 py-2 flex items-center justify-between gap-3">
@@ -22,7 +20,7 @@ export async function ActAsBanner() {
           <span className="font-semibold">Acting as</span>
           <span>{target?.name ?? 'unknown org'}</span>
           <span className="text-red-100">·</span>
-          <span className="text-red-100">{minutesLeft}m remaining</span>
+          <span className="text-red-100">ends {session.expiresAt.toLocaleTimeString()}</span>
         </div>
         <form action={async () => { 'use server'; await endActAs() }}>
           <Button type="submit" size="sm" variant="secondary">End session</Button>
