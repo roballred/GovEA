@@ -8,7 +8,8 @@
  *
  * Requires:
  *   - The app is already running (Playwright's webServer config starts it).
- *   - The database has been seeded with DEV=true so dev-shortcut buttons exist.
+ *   - The database has been seeded with DEV=true and the app exposes demo
+ *     shortcuts via NODE_ENV=development, DEV=true, or DEMO_MODE=true.
  */
 
 import { chromium } from '@playwright/test'
@@ -41,7 +42,7 @@ export default async function globalSetup() {
     await page.goto(`${baseURL}/login`)
 
     if ('shortcutLabel' in role) {
-      // Dev-shortcut buttons only appear in development mode; they call the
+      // Demo shortcut buttons call the
       // server action with a pre-set email and the shared dev-password.
       await page.getByRole('button', { name: role.shortcutLabel }).click()
     } else {
