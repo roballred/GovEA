@@ -21,7 +21,7 @@ The Data Architecture stream from [#363](https://github.com/roballred/GovEA/issu
 Recent merged PRs changed the next-work queue:
 
 - [#493](https://github.com/roballred/GovEA/pull/493) and [#498](https://github.com/roballred/GovEA/pull/498) stabilized the Azure demo runtime and separated demo-mode shortcuts from `NODE_ENV`.
-- [#496](https://github.com/roballred/GovEA/pull/496) and [#497](https://github.com/roballred/GovEA/pull/497) cleaned up retired seed data and made the GovEA Project dogfood org more useful for demonstrations.
+- [#503](https://github.com/roballred/GovEA/pull/503) recovered the seed cleanup and GovEA Project value-chain enrichment from [#496](https://github.com/roballred/GovEA/pull/496) and [#497](https://github.com/roballred/GovEA/pull/497) onto `main`, closing [#492](https://github.com/roballred/GovEA/issues/492) and adding a PR base-check workflow.
 - [#501](https://github.com/roballred/GovEA/pull/501) documented first-class risk tracking and closed [#500](https://github.com/roballred/GovEA/issues/500) as a design/capability-definition slice.
 - No PRs are open at this grooming point.
 
