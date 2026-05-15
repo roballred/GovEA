@@ -97,6 +97,7 @@ deploy_containerapp() {
         "NEXT_PUBLIC_APP_URL=${app_url}" \
         "AUTH_TRUST_HOST=true" \
         "DEV=true" \
+        "DEMO_MODE=true" \
         "NODE_ENV=production" \
       --output none
   else
@@ -118,6 +119,7 @@ deploy_containerapp() {
         "NEXT_PUBLIC_APP_URL=${app_url}" \
         "AUTH_TRUST_HOST=true" \
         "DEV=true" \
+        "DEMO_MODE=true" \
         "NODE_ENV=production" \
       --ingress external \
       --target-port 3000 \
@@ -204,6 +206,7 @@ cmd_update() {
       "NEXT_PUBLIC_APP_URL=${app_url_now}" \
       "AUTH_TRUST_HOST=true" \
       "DEV=true" \
+      "DEMO_MODE=true" \
       "NODE_ENV=production" \
     --output none
 

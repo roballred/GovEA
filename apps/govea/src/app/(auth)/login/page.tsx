@@ -24,7 +24,9 @@ export default async function LoginPage({
   if (session) redirect('/dashboard')
 
   const params = await searchParams
-  const isDev = process.env.NODE_ENV === 'development'
+  const showDemoShortcuts = process.env.NODE_ENV === 'development'
+    || process.env.DEV === 'true'
+    || process.env.DEMO_MODE === 'true'
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30">
@@ -77,7 +79,7 @@ export default async function LoginPage({
             </form>
           )}
 
-          {isDev && (
+          {showDemoShortcuts && (
             <div className="space-y-2 pt-2">
               <Separator />
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Dev shortcuts</p>
