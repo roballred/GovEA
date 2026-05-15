@@ -16,6 +16,8 @@ import {
   approveBreakGlass,
   getOrgGovernanceHistory,
 } from '@/actions/instance'
+import { startActAs } from '@/actions/act-as'
+import { getActiveActAsSession } from '@/lib/act-as'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -76,6 +78,9 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
     }),
     getOrgGovernanceHistory(id),
   ])
+
+  const activeActAs = await getActiveActAsSession()
+  const isActingOnThisOrg = !!activeActAs && activeActAs.targetOrgId === id
 
   const myActiveIsPending = !!myActiveSession && myActiveSession.requiresApproval && !myActiveSession.approvedAt
 
@@ -281,12 +286,27 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
                     : `Expires ${myActiveSession.expiresAt.toLocaleString()} · Reason: ${myActiveSession.reason}`}
                 </p>
               </div>
-              <form action={async () => {
-                'use server'
-                await revokeBreakGlass(myActiveSession.id, id)
-              }}>
-                <Button type="submit" variant="destructive" size="sm">Revoke</Button>
-              </form>
+              <div className="flex items-center gap-2">
+                {!myActiveIsPending && !isActingOnThisOrg && (
+                  <form action={async () => {
+                    'use server'
+                    await startActAs(id)
+                  }}>
+                    <Button type="submit" variant="default" size="sm">Act as tenant</Button>
+                  </form>
+                )}
+                {isActingOnThisOrg && (
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                    Acting as this tenant
+                  </span>
+                )}
+                <form action={async () => {
+                  'use server'
+                  await revokeBreakGlass(myActiveSession.id, id)
+                }}>
+                  <Button type="submit" variant="destructive" size="sm">Revoke</Button>
+                </form>
+              </div>
             </div>
           </div>
         ) : (
