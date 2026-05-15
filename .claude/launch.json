@@ -4,7 +4,7 @@
     {
       "name": "govea-dev",
       "runtimeExecutable": "/opt/homebrew/bin/pnpm",
-      "runtimeArgs": ["-C", "/Users/roballred/Repos/Claude/govea-app/.claude/worktrees/adoring-merkle-4d21d8", "--filter", "govea", "dev"],
+      "runtimeArgs": ["-C", "/Users/roballred/Repos/Claude/govea-app", "--filter", "govea", "dev"],
       "port": 3000,
       "autoPort": false
     }
