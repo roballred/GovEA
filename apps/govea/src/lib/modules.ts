@@ -26,7 +26,7 @@ export type ModuleKey =
   | 'data-architecture'
   | 'framework-overlay'
 
-export type ModuleGroup = 'Business Architecture' | 'Portfolio' | 'Strategy' | 'Framework'
+export type ModuleGroup = 'Business Architecture' | 'Data Architecture' | 'Portfolio' | 'Strategy' | 'Framework'
 
 export type ModuleStateMap = Record<string, boolean>
 
@@ -54,11 +54,12 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'services',      label: 'Services',            href: '/services',      group: 'Business Architecture' },
   { key: 'principles',    label: 'Principles',          href: '/principles',    group: 'Business Architecture' },
   { key: 'glossary',      label: 'Glossary',            href: '/glossary',      group: 'Business Architecture' },
+  // Data Architecture
+  { key: 'data-architecture', label: 'Data architecture', href: '/data',        group: 'Data Architecture' },
   // Portfolio
   { key: 'applications',  label: 'Applications',        href: '/applications',  group: 'Portfolio' },
   { key: 'adrs',          label: 'Decisions (ADRs)',    href: '/adrs',          group: 'Portfolio' },
   { key: 'debt',          label: 'Architecture debt',   href: '/debt',          group: 'Portfolio' },
-  { key: 'data-architecture', label: 'Data architecture', href: '/data',        group: 'Portfolio' },
   // Strategy
   { key: 'objectives',    label: 'Objectives',          href: '/objectives',    group: 'Strategy' },
   { key: 'initiatives',   label: 'Initiatives',         href: '/initiatives',   group: 'Strategy' },

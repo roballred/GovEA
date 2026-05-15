@@ -10,7 +10,7 @@ interface ModuleTogglesProps {
   lockedModules?: Record<string, boolean>
 }
 
-const GROUPS: ModuleGroup[] = ['Business Architecture', 'Portfolio', 'Strategy']
+const GROUPS: ModuleGroup[] = ['Business Architecture', 'Data Architecture', 'Portfolio', 'Strategy']
 
 function Toggle({
   enabled, disabled, label, onChange,
@@ -73,12 +73,21 @@ export function ModuleToggles({ initialModules, lockedModules = {} }: ModuleTogg
         const groupKeys = MODULE_DEFS.filter(m => m.group === group && m.href !== null).map(m => m.key)
         const allEnabled = groupKeys.every(k => lockedModules[k] !== true && isModuleEnabled(modules, k))
         const allLocked = groupKeys.every(k => lockedModules[k] === true)
+        const enabledCount = groupKeys.filter(k => lockedModules[k] !== true && isModuleEnabled(modules, k)).length
         return (
-          <div key={group} className="space-y-2">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {group}
-              </p>
+          <section key={group} className="space-y-2" aria-labelledby={`module-group-${group.replace(/\s+/g, '-').toLowerCase()}`}>
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border/80 bg-muted/60 px-4 py-3 shadow-sm">
+              <div className="space-y-0.5">
+                <p
+                  id={`module-group-${group.replace(/\s+/g, '-').toLowerCase()}`}
+                  className="text-xs font-semibold uppercase tracking-wider text-foreground"
+                >
+                  {group}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {enabledCount}/{groupKeys.length} enabled
+                </p>
+              </div>
               <Toggle
                 enabled={allEnabled}
                 disabled={isPending || allLocked}
@@ -113,7 +122,7 @@ export function ModuleToggles({ initialModules, lockedModules = {} }: ModuleTogg
                 )
               })}
             </div>
-          </div>
+          </section>
         )
       })}
       {isPending && (

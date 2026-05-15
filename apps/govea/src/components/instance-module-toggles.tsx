@@ -5,7 +5,7 @@ import { MODULE_DEFS, type ModuleGroup, type ModuleKey } from '@/lib/modules'
 import { setInstanceModuleAvailability, setInstanceGroupAvailability } from '@/actions/instance'
 import { cn } from '@/lib/utils'
 
-const GROUPS: ModuleGroup[] = ['Business Architecture', 'Portfolio', 'Strategy', 'Framework']
+const GROUPS: ModuleGroup[] = ['Business Architecture', 'Data Architecture', 'Portfolio', 'Strategy', 'Framework']
 
 interface InstanceModuleTogglesProps {
   initialDisabledModules: Record<string, boolean>
@@ -71,12 +71,21 @@ export function InstanceModuleToggles({ initialDisabledModules }: InstanceModule
       {GROUPS.map(group => {
         const groupKeys = MODULE_DEFS.filter(m => m.group === group).map(m => m.key)
         const allAvailable = groupKeys.every(k => disabledModules[k] !== true)
+        const availableCount = groupKeys.filter(k => disabledModules[k] !== true).length
         return (
-          <div key={group} className="space-y-2">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {group}
-              </p>
+          <section key={group} className="space-y-2" aria-labelledby={`instance-module-group-${group.replace(/\s+/g, '-').toLowerCase()}`}>
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border/80 bg-muted/60 px-4 py-3 shadow-sm">
+              <div className="space-y-0.5">
+                <p
+                  id={`instance-module-group-${group.replace(/\s+/g, '-').toLowerCase()}`}
+                  className="text-xs font-semibold uppercase tracking-wider text-foreground"
+                >
+                  {group}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {availableCount}/{groupKeys.length} available
+                </p>
+              </div>
               <Toggle
                 enabled={allAvailable}
                 disabled={isPending}
@@ -110,7 +119,7 @@ export function InstanceModuleToggles({ initialDisabledModules }: InstanceModule
                 )
               })}
             </div>
-          </div>
+          </section>
         )
       })}
       {isPending && (
