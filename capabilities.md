@@ -17,8 +17,9 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 | 5 | [Frontend Display](#5-frontend-display) | Partially implemented |
 | 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
 | 7 | [Multi-Organization Federation](#7-multi-organization-federation) | Prototype |
-| 8 | [Repository & Modelling](#8-repository--modelling) | Scaffolded |
-| 9 | [Framework Alignment](#9-framework-alignment) | Partially implemented |
+| 8 | [Repository & Modelling](#8-repository--modelling) | Partially implemented |
+| 9 | [Data Architecture](#9-data-architecture) | Partially implemented |
+| 10 | [Framework Alignment](#10-framework-alignment) | Partially implemented |
 
 ---
 
@@ -30,7 +31,7 @@ Controls authentication, authorization, and all identity events.
 |---|---|---|
 | User Management | Implemented | Create, edit, deactivate, and assign org-scoped roles to user accounts |
 | Role-Based Access Control | Implemented | Enforce Admin / Contributor / Viewer roles across all content and actions, with `instance_admin` layered separately for platform operations |
-| Instance Administration | Implemented | Instance-scoped admin role, `/instance` console, org inventory, user view, audit view, org suspension, instance-admin promotion/demotion, and audited break-glass sessions without taking over org-scoped settings |
+| Instance Administration | Implemented | Instance-scoped admin role, `/instance` console, org inventory, user view, audit view, org suspension, instance-admin promotion/demotion, audited break-glass sessions, and scoped act-as support actions without taking over org-scoped settings |
 | SSO Authentication | Implemented | Microsoft Entra ID sign-in via OpenID Connect (OIDC) with admin-managed pre-provisioned access |
 | Local Authentication | Implemented | Email and password login; always available as SSO fallback |
 | IAM Audit Trail | Implemented | Immutable log of all identity and access events, including instance-scoped platform events |
@@ -136,7 +137,7 @@ How content is presented to authenticated users and, optionally, the public.
 | Content Display | Implemented | Detail pages with status badges, metadata, linked records, contributor-friendly edit affordances, and markdown-rendered narrative fields on shipped surfaces |
 | Product Tour | Implemented | Role-aware guided tour covering the main dashboard, architecture, portfolio, strategy, search, and role-specific workflows |
 | Public / Authenticated Views | Not implemented | Opt-in public access to published content without login |
-| Repository Confidence Summary | Not implemented | Plain-language freshness and trust cue for stakeholder-facing views |
+| Repository Confidence Summary | Implemented | Plain-language freshness and trust cue for stakeholder-facing roadmap and executive views, backed by completeness settings, trend history, and suppression behavior |
 | Application Risk Portfolio | Implemented | Leadership-oriented portfolio card view on the Applications page, with lifecycle and dependency risk cues derived from existing data |
 | Responsive Layout | Partially implemented | Desktop-first; mobile not a v1 priority |
 | Theming | Implemented | Organization-selected predefined themes applied through settings |
@@ -192,11 +193,12 @@ Reliability, navigability, and self-auditing of the architecture store.
 | Capability | Status | Description |
 |---|---|---|
 | Audit Trail | Implemented | Immutable log of all create/update/delete events with before/after JSON |
-| Repository Completeness | Scaffolded | Early coverage signals exist, but this is not yet a dedicated repository-quality workflow |
-| End-to-End Traceability | Partially implemented | Read-only traceability views exist for strategic objectives, capabilities, and services, but broader repository-wide impact analysis remains future work |
-| Architecture Debt Tracking | Not implemented | Surface and track decisions and conditions that constrain future options |
+| Repository Completeness | Partially implemented | Snapshot foundations, configurable staleness windows, ranked cleanup actions, domain-target RAG indicators, trend history, and stakeholder confidence cues are shipped |
+| End-to-End Traceability | Partially implemented | Objective, capability, service, application, data-architecture, and debt-linked views exist, but broader repository-wide traversal remains future work |
+| Architecture Debt Tracking | Implemented | CRUD, linked-debt panels, dashboard priority signals, publish-time acknowledgement, and lifecycle-based system-detected debt |
+| Risk Tracking | Proposed | First-class architecture and delivery risk tracking has a capability definition and design note, but no product surface yet |
 
-This group is strategically important, but today it is still mostly documented direction plus a small amount of shipped dashboarding rather than a mature product surface.
+This group is strategically important and now has several shipped trust-building surfaces. The remaining risk is product focus: risk tracking, traceability expansion, and Data Architecture growth should stay tied to validated user decisions rather than becoming broad modelling or GRC platforms.
 
 **Out of scope for v1:**
 - Multi-framework modelling (ArchiMate, BPMN, UML): GovEA uses enforced relationship chains and plain-language descriptions, not formal notation
@@ -204,7 +206,21 @@ This group is strategically important, but today it is still mostly documented d
 
 ---
 
-## 9. Framework Alignment
+## 9. Data Architecture
+
+First-class modelling support for data architecture and data asset context.
+
+| Capability | Status | Description |
+|---|---|---|
+| Data Architecture Metamodel | Partially implemented | Data entities, attributes, categories, business keys, and semantic relationships are shipped; conceptual/logical/physical boundary decisions remain open |
+| Chen Notation Visualization | Implemented | Data entity relationship visualization is available for the shipped metamodel |
+| Data Architecture Navigation | Implemented | Data Architecture has its own sidebar group and representative demo fixtures |
+
+Current reality: GovEA now supports a concrete Data Architecture v1 surface. The next product decision is whether #363 is complete for v1 or should split conceptual/logical expansion into focused follow-up issues.
+
+---
+
+## 10. Framework Alignment
 
 Optional alignment to external architecture frameworks such as TOGAF without replacing GovEA's EasyEA-based model.
 
@@ -216,7 +232,7 @@ Optional alignment to external architecture frameworks such as TOGAF without rep
 | TOGAF-Aligned Reporting | Partially implemented | Reports hub ships an Architecture Vision summary for all orgs and a TOGAF Application Landscape report when the overlay is enabled |
 | Framework Overlay Configuration | Partially implemented | Org admins can enable or disable the TOGAF overlay module; richer per-framework configuration remains future work |
 
-Current reality: GovEA now ships the first framework-alignment slice. The TOGAF overlay is opt-in and off by default, application and capability records can carry TOGAF Architecture Domain mappings, and the Reports area includes a TOGAF Application Landscape report. ADM phase tagging, admin-managed framework references, and broader mapping depth remain future work.
+Current reality: GovEA now ships the first framework-alignment slice. Application and capability records can carry TOGAF Architecture Domain mappings, the Reports area includes a TOGAF Application Landscape report, and module settings can control whether the overlay is available and enabled. ADM phase tagging, admin-managed framework references, and broader mapping depth remain future work.
 
 **Design principle:** Framework support should increase credibility without increasing friction. TOGAF-aware architects should be able to recognize familiar concepts and reporting structures, while ordinary GovEA users continue working with plain-language personas, capabilities, services, applications, objectives, initiatives, principles, and decisions.
 
@@ -230,14 +246,15 @@ GovEA's longer-horizon capability direction spans the major themes below, each d
 
 | Group | Near-term priorities |
 |---|---|
-| Identity & Access Management | Tenant-boundary tests, production hardening for instance-admin operations |
-| Repository & Modelling | End-to-end traceability, architecture debt tracking, repository confidence summary |
+| Identity & Access Management | Operational experience with act-as sessions, then decide whether to promote #436 read gating |
+| Repository & Modelling | Risk tracking validation, end-to-end traceability expansion, repository confidence calibration |
 | Application & IT Portfolio | Technology lifecycle tracking, custom-field reuse, import/export maturation, richer rationalization views |
-| Business & Capability Architecture | Operating model views, typed principle sets, stronger cross-entity classification and relationship visualisation |
+| Business & Capability Architecture | Inherited system glossary, menu definitions, operating model views, stronger cross-entity classification and relationship visualisation |
+| Data Architecture | Decide #363 v1 boundary, then split conceptual/logical expansion if needed |
 | Planning & Analysis | Scenario planning, value stream analytics |
 | Governance & Compliance | ARB review workflow, regulatory mapping |
 | Integration | Tier 1: ITSM/CMDB sync, DevOps pipeline links, cloud discovery — Tier 2 (critical gaps): PPM/project portfolio, ERP/financial, HR/org design — Tier 3: data governance platform, API management platform, BI analytics feed — Tier 4 (emerging): IaC, AI/ML registry, low-code platforms — Foundational: REST API |
-| Collaboration & Stakeholder Engagement | Stakeholder validation, repository confidence summaries, stakeholder-facing plain-language views, feedback capture |
+| Collaboration & Stakeholder Engagement | Stakeholder validation, stakeholder-facing plain-language views, feedback capture |
 | Reporting & Documentation | Configurable reports, KPI tracking, elected-official summaries |
 | Framework Alignment | Optional TOGAF mapping, ADM phase alignment, and framework-aware reporting |
 
