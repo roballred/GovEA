@@ -178,7 +178,7 @@ Azure deployments build images in the cloud via `az acr build` and do not requir
 
 ## Capabilities
 
-GovEA's capability surface spans 9 groups, each driven by government EA practitioner personas and validated through the EasyEA workflow:
+GovEA's capability surface spans 10 groups, each driven by government EA practitioner personas and validated through the EasyEA workflow:
 
 | Group | Description |
 |---|---|
@@ -191,6 +191,7 @@ GovEA's capability surface spans 9 groups, each driven by government EA practiti
 | Collaboration & Stakeholder Engagement | Role-based access, stakeholder views, change notifications |
 | Reporting & Documentation | Plain-language outputs, configurable reports, KPI tracking |
 | Framework Alignment | Optional TOGAF/SAFe-style overlays, mappings, and framework-aware reports |
+| Data Architecture | Data entities, attributes, categories, business keys, and semantic relationships for data-architecture work |
 
 For the full capability inventory, including implementation status, see [`capabilities.md`](./capabilities.md).
 
@@ -213,7 +214,9 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Application custom fields with CSV import/export so agencies can extend and load portfolio metadata without schema changes
 - Impact analysis on application and capability detail pages to surface decommission and change consequences from existing relationship data
 - Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
-- Repository completeness workflow foundations: daily snapshot model, configurable staleness windows, ranked cleanup actions, and domain-target RAG indicators on the admin dashboard
+- Repository completeness and confidence workflow: daily snapshot model, configurable staleness windows, ranked cleanup actions, domain-target RAG indicators, trend history, stakeholder-facing trust cues, and auto-suppression behavior
+- Architecture debt tracking with CRUD, linked-debt panels, dashboard priority signals, publish-time acknowledgement, and lifecycle-based system-detected debt
+- Data Architecture module with entities, attributes, categories, business keys, semantic relationships, Chen notation visualization, and dedicated navigation
 - Demo-ready planning module: goals, strategic objectives, and initiatives with roadmap grid and executive timeline views
 - Goals layer above strategic objectives, with objective rollup and traceability into initiatives and capabilities
 - Reports hub with generated Architecture Vision, Executive Summary, Heatmap Analysis, and TOGAF Application Landscape outputs from existing repository content
@@ -224,12 +227,12 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Taxonomy management: org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Shared taxonomy foundation now proven across applications and capabilities, including capability-priority classification as the second pilot
 - Identity & access management: SSO via Microsoft Entra ID (OIDC) with admin-managed pre-provisioned access, local auth fallback, Admin/Contributor/Viewer roles
-- Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, audited break-glass sessions, and instance-level platform configuration
+- Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, audited break-glass sessions, scoped act-as support actions, and instance-level platform configuration
 - Clear product boundary: org admins manage their own workspace settings; instance admins govern the shared platform and tenant lifecycle
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
 - Prototype multi-org federation: connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
-- Two-city demo seed data and dev login roster for Riverdale, Lakeside, state admin, and dev-only instance-admin scenarios
+- Demo seed data and dev login roster for Riverdale, GovEA Project dogfooding, Office of Digital Services, Hartfield TOGAF overlay, and dev-only instance-admin scenarios
 - Reusable `@govea/core` package: RBAC, audit, taxonomy, workflow, content type, and recipe primitives
 - E2E smoke test coverage across all routes x roles (Playwright)
 - Containerized local development plus Azure Container Apps dev deployment support
@@ -239,25 +242,27 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Planning semantics: useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
 - Long-form authoring: markdown now renders on detail pages, but editing still uses plain textareas rather than a richer toolbar/preview workflow
 - Admin configuration beyond core settings
-- Repository completeness, broader repository confidence, deeper end-to-end traceability analysis, and architecture debt tooling
+- Risk tracking is defined as a proposed Repository & Modelling capability, but the first-class product surface has not been implemented yet
+- Deeper end-to-end traceability analysis and conceptual/logical Data Architecture expansion
 
 **Active work:**
-- Completing the repository-confidence slice with trend history, stakeholder-facing confidence surfaces, and auto-suppression behavior
-- Maturing ADRs and decision support into stronger architecture-debt and tradeoff visibility
+- Building a traceable release pipeline for the Azure demo so deployments are tied to a known commit, image digest, and post-deploy smoke result
+- Implementing the inherited system glossary and menu definitions so glossary, tour, onboarding, and contextual help use the same language
+- Deciding the Data Architecture v1 boundary before expanding conceptual/logical modeling
 - Validating assumed stakeholder personas and starting a lightweight feedback loop for analysis surfaces
-- Wiring break-glass to a real cross-tenant operational caller before relying on it in support scenarios
+- Deciding whether user-facing product language should remain "module" or shift to "tool"
 - Expanding automated test coverage
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
-- Merge PR #457 to finish the repository-confidence rollout across `/dashboard`, `/roadmap`, and `/executive`
-- Add architecture debt tracking tied to ADRs, impact analysis, and reporting
-- Start lightweight user feedback capture and persona validation for the analysis surfaces
-- Decide v1-vs-future scope for the Data Architecture Metamodel contribution thread
-- Start the integration foundation with a REST API plus the first Tier 1 operational sync slice
+- Ship #504 for traceable demo releases and rollback
+- Implement #499 for inherited glossary/menu definitions
+- Split or close #363 based on the Data Architecture v1 boundary decision
+- Run #384 and #103 Phase 1 feedback capture for stakeholder-facing analysis surfaces
+- Resolve #446 before broader onboarding, glossary, or tour copy work
 
 **Longer-term:**
-- End-to-end traceability and architecture debt tracking
+- End-to-end traceability expansion and risk-informed decision support
 - ARB review simulation using reviewer personas
 - Broader hosted SaaS deployment options
 - Progressive coverage across remaining capability groups

@@ -24,95 +24,95 @@ This register is intentionally lightweight:
 
 | ID | Risk | Category | Impact | Likelihood | Mitigation | Owner | Status | Last reviewed |
 |---|---|---|---|---|---|---|---|---|
-| R-001 | Module/settings changes can blur product boundaries if #487 and #488 are reviewed independently | Product / UX | Medium | Medium | Review #487 and #488 together for language, defaults, navigation semantics, and terminology follow-up to #446 | Product / Engineering | Open | 2026-05-14 |
-| R-002 | Data Architecture can keep expanding without a deliberate v1 boundary | Scope | Medium | Medium | Decide whether #363 is v1-complete or split conceptual/logical model expansion into focused follow-ups | Product | Open | 2026-05-14 |
-| R-003 | Stakeholder-facing analytics are still driven by assumed personas and unvalidated trust signals | Product Fit | High | High | Run #384 and activate #103 Phase 1 manual feedback logging before building more analysis surfaces | Product | Open | 2026-05-14 |
-| R-004 | Break-glass controls exist, but there is still no real cross-tenant operational caller proving they work in practice | Operational / Security | High | Medium | Ship #437 before treating break-glass as an operationally credible control | Product / Engineering | Open | 2026-05-14 |
-| R-005 | Feature-management wording can confuse org-level settings with instance-wide availability controls | Documentation / Product Clarity | Medium | Low | Merge PR #487, close #445, then handle the broader "module" vs "tool" terminology decision in #446 | Product | Watching | 2026-05-14 |
-| R-006 | Documentation can drift behind shipped repo state during fast-moving backlog turns | Process | Medium | Medium | Refresh `README.md`, `capabilities.md`, `docs/product-priorities.md`, and this register during backlog grooming when status materially changes | Product | Watching | 2026-05-14 |
+| R-001 | Manual demo deployment can obscure which commit, image, and runtime configuration are live | Operational / Release | High | Medium | Ship #504 so main-branch releases build immutable images, record deployment metadata, smoke test after deploy, and keep rollback clear | Product / Engineering | Open | 2026-05-15 |
+| R-002 | Data Architecture can keep expanding without a deliberate v1 boundary | Scope | Medium | Medium | Decide whether #363 is v1-complete or split conceptual/logical model expansion into focused follow-ups | Product | Open | 2026-05-15 |
+| R-003 | Stakeholder-facing analytics are still driven by assumed personas and unvalidated trust signals | Product Fit | High | High | Run #384 and activate #103 Phase 1 manual feedback logging before building more analysis surfaces | Product | Open | 2026-05-15 |
+| R-004 | Glossary, tour, and navigation help can spread inconsistent product language if #446 and #499 are handled separately | Product / UX | Medium | Medium | Decide module/tool terminology in #446 before implementing inherited system glossary and menu definitions in #499 | Product | Open | 2026-05-15 |
+| R-005 | First-class risk tracking can become too broad if implementation starts before validation | Product Scope | Medium | Medium | Treat #501 as capability definition only; validate risk-summary audiences through #384 before opening implementation slices | Product | Watching | 2026-05-15 |
+| R-006 | Documentation can drift behind shipped repo state during fast-moving backlog turns | Process | Medium | Medium | Refresh `README.md`, `capabilities.md`, `docs/product-priorities.md`, and this register during backlog grooming when status materially changes | Product | Watching | 2026-05-15 |
 
 ## Risk Details
 
-### R-001 — Module/settings changes can blur product boundaries if #487 and #488 are reviewed independently
+### R-001 - Manual demo deployment can obscure which commit, image, and runtime configuration are live
 
-- **Category:** Product / UX
-- **Impact:** Medium
+- **Category:** Operational / Release
+- **Impact:** High
 - **Likelihood:** Medium
 - **Owner:** Product / Engineering
 - **Status:** Open
-- **Last reviewed:** 2026-05-14
-- **Mitigation:** Review #487 and #488 together for language, defaults, navigation semantics, and terminology follow-up to #446.
+- **Last reviewed:** 2026-05-15
+- **Mitigation:** Ship #504 so main-branch releases build immutable images, record deployment metadata, smoke test after deploy, and keep rollback clear.
 
 #### Details
 
-PR #487 aligns language around instance-wide module availability controls. PR #488 goes further by adding group-level module toggles, moving Principles into Business Architecture, and making framework overlay default-on. These changes touch the same mental model even though they are separate PRs. If reviewed independently, GovEA could end up with clear copy but surprising defaults, or useful defaults with terminology still unsettled.
+PRs #493 and #498 stabilized the Azure demo runtime and separated demo-mode shortcuts from `NODE_ENV`. That fixed the immediate runtime mismatch, but the process is still too manual for a demo environment that users and reviewers depend on. Without a traceable release pipeline, maintainers can lose time reconstructing which commit, image digest, and Container Apps revision are actually live.
 
-### R-002 — Data Architecture can keep expanding without a deliberate v1 boundary
+### R-002 - Data Architecture can keep expanding without a deliberate v1 boundary
 
 - **Category:** Scope
 - **Impact:** Medium
 - **Likelihood:** Medium
 - **Owner:** Product
 - **Status:** Open
-- **Last reviewed:** 2026-05-14
-- **Mitigation:** Decide whether #363 is v1-complete after the shipped schema, CRUD, docs, visualization, nav, and fixtures; if not, split conceptual/logical expansion into focused follow-up issues.
+- **Last reviewed:** 2026-05-15
+- **Mitigation:** Decide whether #363 is v1-complete after the shipped schema, CRUD, relationships, docs, visualization, nav, and fixtures; if not, split conceptual/logical expansion into focused follow-up issues.
 
 #### Details
 
 The Data Architecture Metamodel is now a shipped module, not only a request. That increases the need for a product boundary. Leaving #363 open as a broad umbrella risks sliding from an enterprise-architecture support surface into a much larger data-modelling product without a deliberate sequence.
 
-### R-003 — Stakeholder-facing analytics are still driven by assumed personas and unvalidated trust signals
+### R-003 - Stakeholder-facing analytics are still driven by assumed personas and unvalidated trust signals
 
 - **Category:** Product Fit
 - **Impact:** High
 - **Likelihood:** High
 - **Owner:** Product
 - **Status:** Open
-- **Last reviewed:** 2026-05-14
+- **Last reviewed:** 2026-05-15
 - **Mitigation:** Execute #384 and start #103 Phase 1 with a manual feedback log tied to recently shipped stakeholder-facing surfaces.
 
 #### Details
 
-The research artifacts already identify high-risk assumptions about who uses roadmap, confidence-summary, guided-answer, Data Architecture, and architecture-debt surfaces; what formats they trust; and whether they act on freshness or confidence labels at all. If those assumptions are wrong, GovEA can continue shipping polished features that do not improve adoption or decision quality.
+The research artifacts already identify high-risk assumptions about who uses roadmap, confidence-summary, guided-answer, Data Architecture, risk, and architecture-debt surfaces; what formats they trust; and whether they act on freshness or confidence labels at all. If those assumptions are wrong, GovEA can continue shipping polished features that do not improve adoption or decision quality.
 
-### R-004 — Break-glass controls exist, but there is still no real cross-tenant operational caller proving they work in practice
+### R-004 - Glossary, tour, and navigation help can spread inconsistent product language if #446 and #499 are handled separately
 
-- **Category:** Operational / Security
-- **Impact:** High
+- **Category:** Product / UX
+- **Impact:** Medium
 - **Likelihood:** Medium
-- **Owner:** Product / Engineering
+- **Owner:** Product
 - **Status:** Open
-- **Last reviewed:** 2026-05-14
-- **Mitigation:** Ship #437 before treating break-glass as operationally credible. Defer #436 unless operator experience shows read-gating is immediately required.
+- **Last reviewed:** 2026-05-15
+- **Mitigation:** Decide module/tool terminology in #446 before implementing inherited system glossary and menu definitions in #499.
 
 #### Details
 
-The hardening work for #418 shipped TTL reduction, dual control, approval flow, and the `requireBreakGlass` helper. The remaining risk is practical rather than theoretical: until GovEA uses that control in a real support/debugging flow, the control is only partially proven. That matters if the platform team expects to rely on break-glass under incident conditions.
+PRs #487 and #488 clarified instance-wide module availability and shipped group-level module toggles. Issue #499 now proposes glossary-backed menu definitions and reusable tour/contextual-help language. If #499 moves first, the product may encode terminology that #446 later changes, creating avoidable copy churn across onboarding, glossary, settings, and navigation surfaces.
 
-### R-005 — Feature-management wording can confuse org-level settings with instance-wide availability controls
+### R-005 - First-class risk tracking can become too broad if implementation starts before validation
 
-- **Category:** Documentation / Product Clarity
+- **Category:** Product Scope
 - **Impact:** Medium
-- **Likelihood:** Low
+- **Likelihood:** Medium
 - **Owner:** Product
 - **Status:** Watching
-- **Last reviewed:** 2026-05-14
-- **Mitigation:** Merge PR #487, close #445, then decide the broader "module" vs "tool" terminology question in #446.
+- **Last reviewed:** 2026-05-15
+- **Mitigation:** Treat #501 as a capability-definition PR only; validate risk-summary audiences through #384 before opening implementation slices.
 
 #### Details
 
-The product already supports org-level module toggles and instance-wide availability controls. Uneven wording makes the operator boundary harder to explain: org admins choose what their organization uses, while instance admins decide which modules are available anywhere on the shared instance. This is not a behavior gap, but clear language matters for a multi-tenant government tool.
+PR #501 defines `rm-risk-tracking` and a design note for architecture and delivery risk tracking. That is the right product direction, but risk tracking can easily become a full GRC platform if the first implementation slice is not tightly tied to GovEA's architecture repository, roadmap decisions, and validated stakeholder needs.
 
-### R-006 — Documentation can drift behind shipped repo state during fast-moving backlog turns
+### R-006 - Documentation can drift behind shipped repo state during fast-moving backlog turns
 
 - **Category:** Process
 - **Impact:** Medium
 - **Likelihood:** Medium
 - **Owner:** Product
 - **Status:** Watching
-- **Last reviewed:** 2026-05-14
+- **Last reviewed:** 2026-05-15
 - **Mitigation:** Treat backlog grooming as the required checkpoint for refreshing `README.md`, `capabilities.md`, `docs/product-priorities.md`, and this file when the live repo state changes materially.
 
 #### Details
 
-This risk showed up again on 2026-05-14: the checked-in priority note still described PR #457 as open even though main had moved through the architecture-debt and Data Architecture streams, and #486 merged during the grooming run. The consequence is not just cosmetic; stale docs distort prioritization.
+The latest grooming pass again found stale docs: the checked-in priority note still treated PRs #487 and #488 as active and #437 as open after those streams had moved on. The consequence is not just cosmetic; stale docs distort prioritization and make automation repeat work that should already be closed.
