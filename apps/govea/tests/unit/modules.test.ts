@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { isModuleEnabled, moduleForPath } from '@/lib/modules'
+import { MODULE_DEFS, isModuleEnabled, moduleForPath } from '@/lib/modules'
 
 // ---------------------------------------------------------------------------
 // isModuleEnabled
@@ -43,6 +43,9 @@ describe('isModuleEnabled', () => {
       objectives: false,
       initiatives: false,
       roadmap: false,
+      debt: false,
+      'data-architecture': false,
+      'framework-overlay': false,
     }
     expect(isModuleEnabled(allOff, 'roadmap')).toBe(false)
     expect(isModuleEnabled({}, 'roadmap')).toBe(true)
@@ -92,6 +95,21 @@ describe('moduleForPath', () => {
 
   it('matches roadmap', () => {
     expect(moduleForPath('/roadmap')).toMatchObject({ key: 'roadmap' })
+  })
+
+  it('matches data architecture to its own module group', () => {
+    expect(moduleForPath('/data/entities')).toMatchObject({
+      key: 'data-architecture',
+      group: 'Data Architecture',
+    })
+  })
+
+  it('keeps data architecture out of the portfolio module group', () => {
+    const portfolioKeys = MODULE_DEFS.filter(def => def.group === 'Portfolio').map(def => def.key)
+    expect(portfolioKeys).toEqual(['applications', 'adrs', 'debt'])
+    expect(MODULE_DEFS.find(def => def.key === 'data-architecture')).toMatchObject({
+      group: 'Data Architecture',
+    })
   })
 
   it('returns the full ModuleDef shape', () => {
