@@ -9,6 +9,7 @@ import { getTheme, themeToStyleString } from '@/lib/themes'
 import type { Role } from '@/lib/rbac'
 import { isInstanceAdmin } from '@/lib/rbac'
 import { AppShell } from '@/components/app-shell'
+import { AdminNoticeBanner } from '@/components/admin-notice-banner'
 import { getCurrentModuleSettings } from '@/lib/get-enabled-modules'
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
@@ -67,6 +68,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       enabledModules={enabledModules}
       signOutSlot={signOutSlot}
     >
+      {session.user.organizationId && (
+        <AdminNoticeBanner orgId={session.user.organizationId} />
+      )}
       {children}
     </AppShell>
   )
