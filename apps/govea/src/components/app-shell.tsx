@@ -77,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/connections', label: 'Connections' },
       { href: '/audit',       label: 'Audit Log' },
       { href: '/settings',    label: 'Settings' },
+      { href: '/settings/notices', label: 'Notices' },
     ],
   },
 ]
