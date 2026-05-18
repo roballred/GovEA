@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 async function devSignIn(formData: FormData) {
   'use server'
   const email = formData.get('email') as string
-  await signIn('credentials', { email, password: 'dev-password', redirectTo: '/dashboard' })
+  await signIn('credentials', { email, password: 'dev-password', redirectTo: '/auth-redirect' })
 }
 
 export default async function LoginPage({
@@ -21,7 +21,7 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; callbackUrl?: string }>
 }) {
   const session = await auth()
-  if (session) redirect('/dashboard')
+  if (session) redirect('/auth-redirect')
 
   const params = await searchParams
   const showDemoShortcuts = process.env.NODE_ENV === 'development'
@@ -73,7 +73,7 @@ export default async function LoginPage({
           {process.env.AUTH_MICROSOFT_ENTRA_ID_ID && (
             <form action={async () => {
               'use server'
-              await signIn('microsoft-entra-id', { redirectTo: params.callbackUrl ?? '/dashboard' })
+              await signIn('microsoft-entra-id', { redirectTo: safeCallbackUrl(params.callbackUrl) })
             }}>
               <Button type="submit" variant="outline" className="w-full">Sign in with Microsoft</Button>
             </form>

@@ -84,7 +84,9 @@ export function InstanceOrgsTable({ orgs }: Props) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Organisations</h1>
-          <p className="text-muted-foreground mt-1">All tenant organisations registered on this instance.</p>
+          <p className="text-muted-foreground mt-1">
+            All organisations on this instance. The platform system org is included and labeled — it cannot be suspended or targeted for break-glass.
+          </p>
         </div>
         <Button size="sm" onClick={() => handleOpen(true)}>+ New organisation</Button>
       </div>
@@ -109,7 +111,9 @@ export function InstanceOrgsTable({ orgs }: Props) {
                     {org.name}
                   </Link>
                   {org.isSystemOrg && (
-                    <span className="ml-2 text-xs text-muted-foreground">(system)</span>
+                    <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                      Platform
+                    </span>
                   )}
                 </TableCell>
                 <TableCell className="font-mono text-sm text-muted-foreground">{org.slug}</TableCell>
