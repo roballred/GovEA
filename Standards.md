@@ -182,6 +182,48 @@ Every open issue carries exactly one `track:*` label. Tracks group work by inten
 
 ---
 
+## Persona Journey Labels
+
+Each of the 16 personas in `business-architecture/personas/` has a matching `journey:<persona-id>` label. The persona ID is the file stem (e.g. `journey:enterprise-architect` for `enterprise-architect.md`).
+
+### What they mean
+
+A `journey:<persona-id>` label attaches an issue to one persona's canonical end-to-end journey through GovEA. It is used to:
+
+- Group gap issues filed during a persona journey audit (see `docs/persona-journeys/<persona-id>.md`) so all the friction one persona hits is reviewable as a set.
+- Surface work that is attributable to a single persona's experience even when filed outside an audit (e.g. a UX issue that only the Elected Official journey encounters).
+
+### When to apply
+
+- Apply when an issue is specifically scoped to one persona's path through the product.
+- Multiple `journey:*` labels are allowed when an issue legitimately blocks more than one persona; prefer this over filing duplicates.
+- Do **not** apply to infrastructure, governance, or platform-wide work — those carry only a `track:*` label.
+
+### Labels (16)
+
+| Persona ID | Label |
+|---|---|
+| `agency-ea-coordinator` | `journey:agency-ea-coordinator` |
+| `budget-performance-analyst` | `journey:budget-performance-analyst` |
+| `business-stakeholder` | `journey:business-stakeholder` |
+| `cms-administrator` | `journey:cms-administrator` |
+| `cms-viewer` | `journey:cms-viewer` |
+| `consultant-si` | `journey:consultant-si` |
+| `data-modeler` | `journey:data-modeler` |
+| `department-director` | `journey:department-director` |
+| `domain-architect` | `journey:domain-architect` |
+| `early-maturity-practice-lead` | `journey:early-maturity-practice-lead` |
+| `elected-official` | `journey:elected-official` |
+| `enterprise-architect` | `journey:enterprise-architect` |
+| `enterprise-data-architect` | `journey:enterprise-data-architect` |
+| `instance-administrator` | `journey:instance-administrator` |
+| `junior-ea-analyst` | `journey:junior-ea-analyst` |
+| `programme-director` | `journey:programme-director` |
+
+When a persona file is added, renamed, or removed, the matching label is created, renamed, or deprecated in lockstep.
+
+---
+
 ## Draft Workflow
 
 1. Set direction using EasyEA: business goals, problems, principles, and constraints.
