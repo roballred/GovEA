@@ -1969,7 +1969,7 @@ async function seed() {
       })
     }
   }
-  console.log(`  ✓ ${SYSTEM_USERS.length} users (ivan@govea.dev / dev-password, instanceRole=instance_admin)`)
+  console.log(`  ✓ ${SYSTEM_USERS.length} users with instanceRole=instance_admin (dev-password): ${SYSTEM_USERS.map(u => u.email).join(', ')}`)
 
   // ── Instance settings — enable all modules for dev ────────────────────────
   // Production instances start with every module disabled (opt-in). For dev,

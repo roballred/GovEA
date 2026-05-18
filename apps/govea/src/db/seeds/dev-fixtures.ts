@@ -20,6 +20,7 @@
 //   sam@state.govea.dev                — Office of Digital Services, Admin
 //   maya@hartfield.govea.dev           — City of Hartfield (TOGAF demo), Admin
 //   ivan@govea.dev                     — GovEA Platform, Instance Admin (dev tools only)
+//   nora@govea.dev                     — GovEA Platform, Instance Admin (dev tools only) — pair partner for break-glass approval workflows
 //
 // victor@govea.dev remains seeded as a Riverdale Viewer for automated role
 // coverage, but is intentionally not shown as a dev login shortcut.
@@ -55,6 +56,7 @@ export const STATE_USERS = [
 
 export const SYSTEM_USERS = [
   { name: 'Ivan InstanceAdmin', email: 'ivan@govea.dev', role: 'admin' as const, instanceRole: 'instance_admin' as const },
+  { name: 'Nora InstanceAdmin', email: 'nora@govea.dev', role: 'admin' as const, instanceRole: 'instance_admin' as const },
 ]
 
 // ─── GovEA Project ────────────────────────────────────────────────────────────
