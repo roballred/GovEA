@@ -158,6 +158,30 @@ This is a convention, not enforcement. The goal is a clear record of why each ch
 
 ---
 
+## Backlog Tracks
+
+Every open issue carries exactly one `track:*` label. Tracks group work by intent so the backlog can be prioritized and reviewed by purpose, not by date or component alone.
+
+| Label | Meaning |
+|---|---|
+| `track:core` | Product capability or feature required for GovEA v1. New persona-facing functionality, capability additions, baseline UI surfaces, and the underlying data model. |
+| `track:differentiator` | Capability that distinguishes GovEA from generic EA tools — typically EasyEA-grounded methodology surfaces (persona-first analysis, plain-language outputs, government-specific patterns, ARB simulation, maturity self-assessment). |
+| `track:foundation` | Infrastructure, governance, standards, ARB findings, security hardening, test infrastructure, CI tooling, and process work that unblocks the other tracks. |
+
+### Application rules
+
+- Every new issue is triaged into a track before it is moved out of triage.
+- A track is not permanent — re-label when scope changes.
+- If a reviewer thinks an issue is mis-tracked, comment on the issue rather than silently re-labeling.
+
+### Defaults
+
+- "ARB:" prefixed issues, governance docs, CI work, security hardening, and test infrastructure default to `track:foundation`.
+- New product capabilities and persona-facing features default to `track:core`.
+- Surfaces that exist primarily because of the EasyEA framework or GovEA's government focus belong in `track:differentiator`. When uncertain, ask on the issue rather than guessing.
+
+---
+
 ## Draft Workflow
 
 1. Set direction using EasyEA: business goals, problems, principles, and constraints.
