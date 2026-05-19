@@ -5,6 +5,8 @@
 **Walk audited:** 2026-05-18 — first persona walk under epic [#515](https://github.com/roballred/GovEA/issues/515) ([sub-issue #519](https://github.com/roballred/GovEA/issues/519))
 **Persona validation status:** Assumed (not yet validated with a real shared-platform operator).
 
+> **Errata (2026-05-18):** the original report claimed the `createOrg` server action was unreachable from the UI. That was wrong — a `+ New organisation` button has been wired to `createOrg` in [`instance-orgs-table.tsx`](../../apps/govea/src/app/(instance)/instance/orgs/instance-orgs-table.tsx) since [#342](https://github.com/roballred/GovEA/pull/342), and the dialog flow is fully functional. The cross-link to [#389](https://github.com/roballred/GovEA/issues/389) was therefore over-eager: that issue scopes the broader lifecycle (states, transitions, governance), not creation alone. Other walk findings stand.
+
 ## Method
 
 Code-based audit of the routes under `apps/govea/src/app/(instance)/instance/**`, their server actions in `apps/govea/src/actions/instance.ts`, and the dev seed in `apps/govea/src/db/seeds/dev-fixtures.ts`. Browser walk was not run — every step is reachable, well-typed, and well-named in code, so confidence is high without it. Steps where browser observation would meaningfully change the finding are called out.
