@@ -20,6 +20,12 @@ The system must present a concise, plain-language summary of how trustworthy and
 - The summary must be suppressible when repository quality falls below an admin-defined threshold
 - Confidence messaging must describe repository currency and completeness, not system uptime or infrastructure health
 
+## Implementation Status
+
+**Shipped (v1).** A plain-language confidence badge ("Actively Maintained · Last updated <month>") renders on `/dashboard`, `/executive`, and `/roadmap` as a small, non-intrusive trust signal. Confirmed during the Elected Official persona journey audit ([#546](https://github.com/roballred/GovEA/issues/546)).
+
+Future work: extend the confidence-summary placement to detail pages (capability, application, ADR) — currently missing per [#553](https://github.com/roballred/GovEA/issues/553).
+
 ## Links
 - Depends on: Repository & Modelling — Repository Completeness, Front-end Display — Content Display
 - Related: Front-end Display — Portfolio Views, Executive Roadmap Timeline

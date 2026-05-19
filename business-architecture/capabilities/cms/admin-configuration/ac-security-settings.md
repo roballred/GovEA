@@ -20,6 +20,10 @@ The system must allow administrators to configure security policies — password
 - Only Admins can access security settings
 - Minimum password length cannot be set below 8 characters
 
+## Implementation Status
+
+**Not yet implemented.** No security-settings surface exists under `apps/govea/src/app/(admin)/**`. The only password rule today is a hard-coded `PASSWORD_MIN_LENGTH = 8` constant in [`apps/govea/src/lib/password.ts`](../../../../apps/govea/src/lib/password.ts) — no configurable surface, no session timeout, no account lockout, no password expiry, no 2FA. Confirmed during the CMS Administrator persona journey audit ([#526](https://github.com/roballred/GovEA/issues/526)). Tracked at [#527](https://github.com/roballred/GovEA/issues/527).
+
 ## Links
 - Depends on: IAM — Role-Based Access Control, IAM — Local Authentication
 - Related: Site Settings, IAM — SSO Authentication

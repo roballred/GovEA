@@ -33,6 +33,10 @@ The system must allow users to traverse the connections between content items �
 - Broken relationships (linked item deleted or unpublished) must not surface as errors to the Viewer — they are silently excluded
 - Inline relationship edits must respect role and ownership checks before persisting changes
 
+## Implementation Status
+
+**Shipped (v1).** Linked entities (capabilities, personas, applications, ADRs, initiatives, objectives) render as clickable links on every detail page exercised so far. "View map →" and "View traceability →" affordances on capability detail pages provide drill-down paths into richer relationship views. Confirmed during the Content Viewer ([#552](https://github.com/roballred/GovEA/issues/552)) and Department Director ([#557](https://github.com/roballred/GovEA/issues/557)) persona journey audits.
+
 ## Links
 - Depends on: Content Display, Content Management — Content Relationships
 - Related: Portfolio Views, Navigation

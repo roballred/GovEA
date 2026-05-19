@@ -23,6 +23,12 @@ Capabilities are the required bridge from mission/service context to application
 - The visual must avoid EA jargon in headings, legends, and labels
 - Missing capability links should surface as plain-language gaps because those links are now the path to supporting applications
 
+## Implementation Status
+
+**Shipped (v1, drill-down only — no top-level entry).** Traceability is rendered via `/traceability?from=<entityType>&id=<id>`, reachable from any capability / objective / initiative detail page via a "View traceability →" link. The view itself matches the documented behaviors. Confirmed during the Elected Official ([#546](https://github.com/roballred/GovEA/issues/546)) and Content Viewer ([#552](https://github.com/roballred/GovEA/issues/552)) persona journey audits.
+
+Known gap: visiting `/traceability` with no query params returns 404 — there is no top-level entry surface (a hub of starting points, or a default featured trace). Tracked at [#549](https://github.com/roballred/GovEA/issues/549).
+
 ## Links
 - Depends on: Front-end Display - Content Display, Front-end Display - Relationship Navigation, Repository & Modelling - End-to-End Traceability
 - Related: Planning - Strategic Objectives, Planning - Initiatives, Front-end Display - Portfolio Views
