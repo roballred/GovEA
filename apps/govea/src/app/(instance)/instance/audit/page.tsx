@@ -1,20 +1,54 @@
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { db } from '@/db/client'
 import { auditLog, users, breakGlassSessions, organizations } from '@/db/schema'
-import { eq, desc, isNull } from 'drizzle-orm'
+import { and, eq, desc, isNull, gte, inArray } from 'drizzle-orm'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { AuditFilters } from './audit-filters'
 
-export default async function InstanceAuditPage() {
+function cutoffForSince(since: string | undefined): Date | null {
+  switch (since) {
+    case '24h': return new Date(Date.now() - 24 * 60 * 60 * 1000)
+    case '7d':  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    case '30d': return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    default:    return null
+  }
+}
+
+export default async function InstanceAuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ actor?: string; action?: string; since?: string }>
+}) {
   await requireInstanceAdmin()
 
-  const [instanceEvents, bgSessions] = await Promise.all([
+  const params = await searchParams
+  const actor = params.actor ?? ''
+  const actionFilter = params.action ? params.action.split(',').filter(Boolean) : []
+  const since = params.since ?? 'all'
+  const cutoff = cutoffForSince(since)
+
+  // Platform Events: instance-scoped audit (organizationId IS NULL) + filters
+  const eventWhere = and(
+    isNull(auditLog.organizationId),
+    actor ? eq(auditLog.userId, actor) : undefined,
+    actionFilter.length > 0 ? inArray(auditLog.action, actionFilter) : undefined,
+    cutoff ? gte(auditLog.createdAt, cutoff) : undefined,
+  )
+
+  // Break-Glass Sessions: same actor / time filters where applicable
+  const bgWhere = and(
+    actor ? eq(breakGlassSessions.instanceAdminId, actor) : undefined,
+    cutoff ? gte(breakGlassSessions.grantedAt, cutoff) : undefined,
+  )
+
+  const [instanceEvents, bgSessions, adminRows, actionRows] = await Promise.all([
     db
       .select({ log: auditLog, actor: users })
       .from(auditLog)
       .leftJoin(users, eq(auditLog.userId, users.id))
-      .where(isNull(auditLog.organizationId))
+      .where(eventWhere)
       .orderBy(desc(auditLog.createdAt))
       .limit(200),
     db
@@ -22,20 +56,41 @@ export default async function InstanceAuditPage() {
       .from(breakGlassSessions)
       .leftJoin(users, eq(breakGlassSessions.instanceAdminId, users.id))
       .leftJoin(organizations, eq(breakGlassSessions.targetOrgId, organizations.id))
+      .where(bgWhere)
       .orderBy(desc(breakGlassSessions.grantedAt))
       .limit(100),
+    db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.instanceRole, 'instance_admin'))
+      .orderBy(users.email),
+    db
+      .selectDistinct({ action: auditLog.action })
+      .from(auditLog)
+      .where(isNull(auditLog.organizationId))
+      .orderBy(auditLog.action),
   ])
 
+  const knownActions = actionRows.map(r => r.action).filter(Boolean) as string[]
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Platform Audit Log</h1>
         <p className="text-muted-foreground mt-1">Instance-level events and break-glass session history.</p>
       </div>
 
+      <AuditFilters
+        admins={adminRows}
+        actions={knownActions}
+        current={{ actor, action: actionFilter, since }}
+      />
+
       {/* Instance events */}
       <section>
-        <h2 className="text-base font-semibold mb-3">Platform Events</h2>
+        <h2 className="text-base font-semibold mb-3">
+          Platform Events <span className="text-muted-foreground text-sm font-normal">({instanceEvents.length})</span>
+        </h2>
         <div className="rounded-lg border bg-card">
           <Table>
             <TableHeader>
@@ -62,7 +117,7 @@ export default async function InstanceAuditPage() {
               {instanceEvents.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    No platform events recorded yet
+                    No platform events match these filters
                   </TableCell>
                 </TableRow>
               )}
@@ -73,7 +128,14 @@ export default async function InstanceAuditPage() {
 
       {/* Break-glass sessions */}
       <section>
-        <h2 className="text-base font-semibold mb-3">Break-Glass Sessions</h2>
+        <h2 className="text-base font-semibold mb-3">
+          Break-Glass Sessions <span className="text-muted-foreground text-sm font-normal">({bgSessions.length})</span>
+        </h2>
+        {actionFilter.length > 0 && (
+          <p className="text-xs text-muted-foreground mb-2">
+            Action filter applies to Platform Events only; break-glass sessions are unfiltered by action.
+          </p>
+        )}
         <div className="rounded-lg border bg-card">
           <Table>
             <TableHeader>
@@ -116,7 +178,7 @@ export default async function InstanceAuditPage() {
               {bgSessions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    No break-glass sessions recorded
+                    No break-glass sessions match these filters
                   </TableCell>
                 </TableRow>
               )}
