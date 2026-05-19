@@ -21,6 +21,12 @@ The system must present a roadmap timeline view that shows what is changing, whe
 - The visual should prioritize sequencing and stakeholder impact over detailed project-management semantics
 - Viewer-visible items must follow the current planning visibility rules for initiatives and objectives
 
+## Implementation Status
+
+**Shipped (v1).** `/roadmap` renders the documented timeline view with Timeline / Grid toggle, plain-language impact statements per initiative, status badges (Underway / Complete / planned), time-window labels (e.g. "Q1 FY2026 → Q4 FY2026"), linked capabilities with impact type (improve / extend), and the strategic objective each initiative serves. Confidence badge is rendered consistently across reader surfaces. Confirmed during the Elected Official ([#546](https://github.com/roballred/GovEA/issues/546)) and Department Director ([#557](https://github.com/roballred/GovEA/issues/557)) persona journey audits.
+
+Future work: department / domain / capability-domain / service-area filtering ([#549](https://github.com/roballred/GovEA/issues/549) covers the related traceability hub gap that would feed this), risk-vs-investment framing ([#563](https://github.com/roballred/GovEA/issues/563) covers the financial-dimension prerequisite), print / presentation-ready export ([#559](https://github.com/roballred/GovEA/issues/559)).
+
 ## Links
 - Depends on: Planning — Roadmap, Planning — Initiatives, Planning — Strategic Objectives
 - Related: Mission-to-Technology Traceability Views, Front-end Display — Portfolio Views

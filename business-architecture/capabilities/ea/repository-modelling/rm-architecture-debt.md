@@ -8,7 +8,13 @@ Debt that is named and tracked is manageable. Debt that is invisible becomes the
 
 ## Implementation Status
 
-**Not yet implemented.** No architecture debt tracking surface exists in the current product. This document is the design specification for a future capability. The severity tier definitions here are referenced by `rm-end-to-end-traceability` and `rm-repository-completeness` as a shared vocabulary for a future unified priority signal.
+**Shipped (v1, partial).** `/debt` route is live with the documented severity / status / type filter chips (`lifecycle-risk` / `capability-gap` / `decision-drift` / `known-shortcut` / `unreviewed`) and full CRUD pages (`/debt/new`, `/debt/[id]`, `/debt/[id]/edit`). The severity tier definitions and security-classification guidance below describe the implemented behavior. Confirmed during the Enterprise Data Architect persona journey audit ([#572](https://github.com/roballred/GovEA/issues/572)).
+
+Future work tracked separately:
+- Data-layer-specific debt types (query performance, schema drift, space utilization) — see [#573](https://github.com/roballred/GovEA/issues/573).
+- Unified priority signal panel on the admin dashboard combining debt + broken-chain + staleness signals — not yet implemented.
+- Auto-flagged debt queue distinct from human-created items — not yet implemented.
+- Federation behavior per the section below — implementation status unverified by the audit; requires a follow-up walk to confirm.
 
 ## Personas
 
@@ -85,11 +91,11 @@ Debt items are always owned by the organization that creates them. Federation do
 
 **Auto-flagged debt and cross-org objects:** The system-detected debt queue (lifecycle-based flags) only fires against objects the org owns. An agency is never auto-flagged for debt conditions in a cross-org linked object that belongs to another org.
 
-## Implementation Status
+## Implementation History
 
-Not yet implemented. No architecture debt tracking surface exists in the current product. This document is the design specification for that future build.
+The `security_sensitive` flag and the Security Classification Guidance section above were added in response to ARB finding #135 (Omar Singh, Security Architect). These constraints were incorporated in the initial implementation — retrofitting security classification onto an existing debt store would have been significantly harder than building it in from the start.
 
-The `security_sensitive` flag and the Security Classification Guidance section above were added in response to ARB finding #135 (Omar Singh, Security Architect). These constraints must be incorporated in the initial implementation — retrofitting security classification onto an existing debt store is significantly harder than building it in from the start.
+(Earlier revisions of this doc had a second "Not yet implemented" status block here; superseded by the Implementation Status section near the top of the file. See [#575](https://github.com/roballred/GovEA/issues/575) for the doc backfill that consolidated the two.)
 
 ## Links
 

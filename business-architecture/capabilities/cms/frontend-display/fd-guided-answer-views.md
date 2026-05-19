@@ -22,6 +22,12 @@ The system must answer common stakeholder questions with a structured result vie
 - The generated answer framing must avoid jargon and internal field names
 - Search and answer confidence should be explainable when multiple related records are returned
 
+## Implementation Status
+
+**Shipped (v1, with entry-path friction).** `/answers?q=<query>` renders an assembled briefing-ready view grouped by Capabilities / Services / Applications / Initiatives / Objectives with a "Why relevant" rationale on each item. Confirmed during the Elected Official persona journey audit ([#546](https://github.com/roballred/GovEA/issues/546)).
+
+Known gap: `/answers` with no query has no direct input field — the user has to detour through `/search` and click "Get guided answer →" to assemble an answer. Tracked at [#550](https://github.com/roballred/GovEA/issues/550) along with the "Capabilitys" pluralisation typo in the search results headings.
+
 ## Links
 - Depends on: Content Management — Content Search & Filtering, Front-end Display — Content Display, Front-end Display — Relationship Navigation
 - Related: Mission-to-Technology Traceability Views, Front-end Display — Portfolio Views

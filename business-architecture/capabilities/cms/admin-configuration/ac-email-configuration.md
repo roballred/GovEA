@@ -19,6 +19,10 @@ The system must allow administrators to configure outbound email so that transac
 - Only Admins can access email configuration
 - The test email must be sent to the Admin's own address — not an arbitrary address
 
+## Implementation Status
+
+**Not yet implemented.** No SMTP / email configuration surface exists under `apps/govea/src/app/(admin)/**`. `/dashboard` does not surface an "email not configured" warning. No email-sending dependency in `package.json`. Confirmed during the CMS Administrator persona journey audit ([#526](https://github.com/roballred/GovEA/issues/526)). Tracked at [#528](https://github.com/roballred/GovEA/issues/528).
+
 ## Links
 - Depends on: IAM — Role-Based Access Control
 - Related: Site Settings, IAM — Local Authentication

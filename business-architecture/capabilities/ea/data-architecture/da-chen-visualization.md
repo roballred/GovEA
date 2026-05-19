@@ -39,7 +39,9 @@ Chen Notation is the SME's preferred conceptual / logical-layer convention. Usin
 
 ## Implementation Status
 
-**Planned — not yet implemented.** Tracked at [#470](https://github.com/roballred/GovEA/issues/470). Working assumption is React Flow for the layout / interaction library; the implementation PR should confirm tree-shakeability or fall back to a hand-rolled SVG renderer if not.
+**Shipped (v1).** `/data/diagram` renders the metamodel as a Chen Notation graph with the documented node conventions (rectangles for entities, ovals for attributes, underlined ovals for business keys, diamonds for relationships labeled "is related" / "shares" / "instantiates"). The four documented filters (owner persona / attribute type / link type / free-text name) are all functional. Live counts are surfaced ("Showing N entities, M attributes, P business keys, Q relationships"). Read-only with edit links navigating back to detail pages — the documented "no write path on the canvas" intent is honored.
+
+Tracked at [#470](https://github.com/roballred/GovEA/issues/470) (now closed by the implementation PR). Confirmed during the Data Modeler persona journey audit ([#569](https://github.com/roballred/GovEA/issues/569)).
 
 ## Out of Scope (v1)
 

@@ -43,6 +43,12 @@ The system must provide curated, structured views of the EA repository that give
 - Views must be useful without EA training — labels, groupings, and filters use plain language
 - Navigation into portfolio views must be accessible without JavaScript
 
+## Implementation Status
+
+**Shipped (v1).** Application portfolio view at `/applications` (Portfolio toggle) renders the documented plain-language risk cards (e.g. "N applications retiring while still supporting active capabilities — review or re-map before decommission"). Executive Summary tile at `/executive` aggregates portfolio counts and surfaces coverage gaps. Confirmed during the Elected Official ([#546](https://github.com/roballred/GovEA/issues/546)), Department Director ([#557](https://github.com/roballred/GovEA/issues/557)), and Budget & Performance Analyst ([#562](https://github.com/roballred/GovEA/issues/562)) persona journey audits.
+
+Future work: financial / investment dimensions on the portfolio view ([#563](https://github.com/roballred/GovEA/issues/563)), print / presentation-ready export ([#559](https://github.com/roballred/GovEA/issues/559)), duplicate-application detection ([#538](https://github.com/roballred/GovEA/issues/538) covers the related capability concern).
+
 ## Links
 - Depends on: Content Display, Relationship Navigation, Content Management — Content Workflow
 - Related: Navigation, Responsive Layout
