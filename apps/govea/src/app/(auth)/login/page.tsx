@@ -48,7 +48,7 @@ export default async function LoginPage({
                 await signIn('credentials', {
                   email: formData.get('email'),
                   password: formData.get('password'),
-                  redirectTo: safeCallbackUrl(params.callbackUrl),
+                  redirectTo: safeCallbackUrl(params.callbackUrl, '/auth-redirect'),
                 })
               } catch (error) {
                 if (error instanceof AuthError) {
@@ -73,7 +73,7 @@ export default async function LoginPage({
           {process.env.AUTH_MICROSOFT_ENTRA_ID_ID && (
             <form action={async () => {
               'use server'
-              await signIn('microsoft-entra-id', { redirectTo: safeCallbackUrl(params.callbackUrl) })
+              await signIn('microsoft-entra-id', { redirectTo: safeCallbackUrl(params.callbackUrl, '/auth-redirect') })
             }}>
               <Button type="submit" variant="outline" className="w-full">Sign in with Microsoft</Button>
             </form>
