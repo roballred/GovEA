@@ -1,5 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/javascript-node:20 AS base
-RUN corepack enable pnpm
+RUN npm install -g pnpm@9.0.0 \
+  && corepack enable pnpm \
+  && corepack prepare pnpm@9.0.0 --activate
 
 # Install dependencies into the image so node_modules are pre-built.
 # Source is mounted as a volume at runtime, but node_modules are kept
@@ -15,10 +17,7 @@ RUN pnpm install --frozen-lockfile
 FROM base AS dev
 WORKDIR /app
 
-# Pre-download pnpm so corepack doesn't fetch it at container startup.
-# The deps stage downloads it too, but its cache lives in /root/.cache
-# which is not copied across stages, causing a runtime download on every
-# pnpm invocation in the entrypoint (migrate, seed, dev).
+# Keep pnpm pinned for runtime commands such as migrate, seed, and dev.
 RUN corepack prepare pnpm@9.0.0 --activate
 
 # Copy installed node_modules from deps stage
