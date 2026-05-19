@@ -237,7 +237,7 @@ export const DEV_CAPABILITIES = [
     behaviors: 'View budget vs. actuals comparisons by department and fund\nGenerate forecast dashboards for the current fiscal year\nExport budget reports to PDF or spreadsheet',
     rules: 'Budget data is read-only in this capability — modifications are made in the source financial system\nOnly published budget reports are visible to elected officials',
     status: 'published' as const,
-    visibility: 'org' as const,
+    visibility: 'connections' as const,
     personas: ['Department Director', 'City Council Member'],
   },
   {
@@ -257,7 +257,7 @@ export const DEV_CAPABILITIES = [
     behaviors: 'Authenticate residents and staff via local credentials or SSO\nIssue and refresh short-lived access tokens\nEnforce multi-factor authentication for privileged roles\nProvide self-service password reset for local accounts',
     rules: 'All resident-facing authentication flows must use OAuth 2.0 with OIDC\nTokens must expire within 8 hours for staff and 24 hours for residents',
     status: 'published' as const,
-    visibility: 'org' as const,
+    visibility: 'connections' as const,
     personas: ['Resident', 'Small Business Owner', 'IT Staff'],
   },
   {

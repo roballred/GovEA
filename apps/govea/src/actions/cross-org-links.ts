@@ -182,11 +182,16 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
     if (!peer) continue
 
     const visible = canReadWithContext(peer.organizationId, peer.visibility)
-    // Always show inbound pending links regardless of source visibility —
-    // the target org needs to see who is requesting approval even if the
-    // source entity is not yet shared with them.
-    const isInboundPending = link.status === 'pending' && !outbound
-    if (!visible && peer.organizationId !== callerOrgId && !isInboundPending) continue
+    // Inbound links (pending or active) bypass the visibility check on the
+    // target side — the target org needs to see who is requesting and what
+    // they have approved. Without the active-side bypass, approving a link
+    // whose source has been dropped back to org-private would silently
+    // hide it (#536). New requests are validated up-front to require the
+    // source be ≥ connections; the bypass here is a safety net for
+    // historical state and for visibility drops after approval.
+    const isInbound = !outbound
+    const isInboundPendingOrActive = isInbound && (link.status === 'pending' || link.status === 'active')
+    if (!visible && peer.organizationId !== callerOrgId && !isInboundPendingOrActive) continue
 
     const item: CrossOrgLinkItem = {
       id: link.id,
@@ -267,6 +272,13 @@ export async function requestCrossOrgLink(
   if (!source || !target) throw new Error('Content not found')
   if (source.organizationId !== session.user.organizationId) throw new Error('Forbidden')
   if (target.organizationId === session.user.organizationId) throw new Error('Use local relationships for same-org links')
+
+  // Source must be published at connections or instance visibility before
+  // federating. An org-private source would become invisible to the target
+  // after approval, breaking the federation feedback loop (#536).
+  if (source.visibility !== 'connections' && source.visibility !== 'instance') {
+    throw new Error('Source must be published at connections or instance visibility before linking.')
+  }
 
   const targetVisible = await canReadFederatedEntity(target.organizationId, target.visibility, session.user.organizationId!)
   if (!targetVisible) throw new Error('Target is not visible through the current federation rules')
