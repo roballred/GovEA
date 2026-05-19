@@ -56,13 +56,17 @@ export async function getObjective(id: string) {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
+  // Split into two queries to keep Drizzle's generated SQL aliases under
+  // Postgres's 63-char NAMEDATALEN limit (#558). The deeply-nested chain
+  //   strategicObjectives → objectiveCapabilities → capability
+  //                       → applicationCapabilities → application
+  // produces auto-generated alias names longer than 63 chars, which
+  // Postgres truncates and then fails to resolve in LATERAL subqueries.
   const objective = await db.query.strategicObjectives.findFirst({
     where: (o, { eq }) => eq(o.id, id),
     with: {
       objectiveCapabilities: {
-        with: {
-          capability: { with: { applicationCapabilities: { with: { application: true } } } },
-        },
+        with: { capability: true },
       },
       objectiveValueStreams: { with: { valueStream: true } },
       initiativeObjectives: { with: { initiative: true } },
@@ -74,11 +78,42 @@ export async function getObjective(id: string) {
   if (!visible) return null
   if (session.user.role === 'viewer' && objective.status !== 'published') return null
 
+  // Second query: applicationCapabilities for the capabilities found above,
+  // joined to their application. Grafted onto each capability below so the
+  // consumer-facing shape matches the original deep `with` chain.
+  const capabilityIds = objective.objectiveCapabilities.map(oc => oc.capability.id)
+  const appCaps = capabilityIds.length > 0
+    ? await db.query.applicationCapabilities.findMany({
+        where: (ac, { inArray }) => inArray(ac.capabilityId, capabilityIds),
+        with: { application: true },
+      })
+    : []
+
+  const appCapsByCapId = new Map<string, typeof appCaps>()
+  for (const ac of appCaps) {
+    const list = appCapsByCapId.get(ac.capabilityId) ?? []
+    list.push(ac)
+    appCapsByCapId.set(ac.capabilityId, list)
+  }
+
+  const objectiveCapabilitiesWithApps = objective.objectiveCapabilities.map(oc => ({
+    ...oc,
+    capability: {
+      ...oc.capability,
+      applicationCapabilities: appCapsByCapId.get(oc.capability.id) ?? [],
+    },
+  }))
+
   const [taxonomyValues, taxonomyDefinitions] = await Promise.all([
     getEntityTaxonomyValues(objective.organizationId, 'objective', id),
     getEntityTaxonomyDefinitions(objective.organizationId, 'objective'),
   ])
-  return { ...objective, taxonomyValues, taxonomyDefinitions }
+  return {
+    ...objective,
+    objectiveCapabilities: objectiveCapabilitiesWithApps,
+    taxonomyValues,
+    taxonomyDefinitions,
+  }
 }
 
 export async function createObjective(formData: FormData) {
