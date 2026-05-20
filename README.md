@@ -43,6 +43,8 @@ Personas -> Capabilities -> Applications
 
 For the implementation-level schema reference, including field metadata, enums, and junction tables, see [`docs/data-model.md`](./docs/data-model.md).
 
+For the application architecture overview, including runtime shape, tenancy, traceability, and deployment notes, see [`docs/architect/`](./docs/architect/).
+
 ---
 
 ## Development Approach
