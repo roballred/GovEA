@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { capabilities, capabilityPersonas, capabilityRelationships, entityTaxonomyValues } from '@/db/schema'
+import { capabilities, capabilityPersonas, capabilityRelationships, entityTaxonomyValues, personas } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
 import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
@@ -337,6 +337,225 @@ export async function deleteCapability(capabilityId: string) {
       before: { name: before?.name },
     })
   })
+}
+
+// ── Import (#596) ────────────────────────────────────────────────────────────
+//
+// Capability CSV import. Mirrors the Applications import pattern (#444) so
+// the audit's per-entity CSV plan stays consistent across the catalog:
+//
+//   - `name` is the upsert key. Existing rows match case-insensitively.
+//   - `personas` column is a semicolon-joined name list resolved to ids by
+//     looking up persona names in the caller's org.
+//   - Pre-validate ALL rows before opening the transaction so the returned
+//     counters reflect a complete pass — even if the second half fails.
+//   - `dryRun: true` returns counters and errors without writing anything;
+//     the table UI uses this for the import-preview step.
+
+export type CapabilityImportResult = {
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}
+
+const CAPABILITY_FIXED_COLUMNS = new Set([
+  'name', 'description', 'domain', 'behaviors', 'rules',
+  'capability_type', 'status', 'visibility', 'personas',
+])
+const VALID_CAPABILITY_TYPE = new Set(['', 'business', 'technical'])
+const VALID_CAPABILITY_STATUS = new Set(['draft', 'published', 'archived'])
+const VALID_CAPABILITY_VISIBILITY = new Set(['org', 'connections', 'instance'])
+
+/**
+ * Quote-aware CSV row splitter. Walks the full text character-by-character
+ * tracking quote state so that embedded newlines inside quoted fields stay
+ * with their row. Capabilities exports include multi-line `behaviors` and
+ * `rules` cells, so a naive `text.split('\n')` would split a single row into
+ * many malformed ones (#596 regression test fixture).
+ */
+function splitCsvRows(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let field = ''
+  let inQuotes = false
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') { field += '"'; i++ }
+      else inQuotes = !inQuotes
+    } else if (ch === ',' && !inQuotes) {
+      row.push(field); field = ''
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && text[i + 1] === '\n') i++
+      row.push(field); field = ''
+      if (row.some(c => c.length > 0)) rows.push(row)
+      row = []
+    } else {
+      field += ch
+    }
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field)
+    if (row.some(c => c.length > 0)) rows.push(row)
+  }
+  return rows
+}
+
+function parseCapabilityCsv(text: string): Record<string, string>[] {
+  const rows = splitCsvRows(text)
+  if (rows.length < 2) return []
+  const headers = rows[0].map(h => h.trim())
+  return rows.slice(1).map(values =>
+    Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? '').trim()]))
+  )
+}
+
+export async function importCapabilities(formData: FormData, dryRun = false): Promise<CapabilityImportResult> {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const file = formData.get('csvFile') as File | null
+  if (!file) return { created: 0, updated: 0, skipped: 0, errors: ['No file provided'] }
+
+  const text = await file.text()
+  const rows = parseCapabilityCsv(text)
+  if (rows.length === 0) return { created: 0, updated: 0, skipped: 0, errors: ['CSV has no data rows'] }
+
+  // Pre-fetch existing capabilities for upsert + persona name → id lookup.
+  // Both fetches scoped to the caller's org. Cross-org persona references
+  // are intentionally not resolved here — same rule as createCapability.
+  const [existing, orgPersonas] = await Promise.all([
+    db.query.capabilities.findMany({
+      where: eq(capabilities.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+    db.query.personas.findMany({
+      where: eq(personas.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+  ])
+  const existingByName = new Map(existing.map(c => [c.name.toLowerCase(), c.id]))
+  const personaIdByName = new Map(orgPersonas.map(p => [p.name.toLowerCase(), p.id]))
+
+  type ValidRow = {
+    name: string
+    description: string | null
+    domain: string | null
+    behaviors: string | null
+    rules: string | null
+    capabilityType: 'business' | 'technical' | null
+    status: 'draft' | 'published' | 'archived'
+    visibility: 'org' | 'connections' | 'instance'
+    personaIds: string[]
+    existingId: string | undefined
+  }
+  const validRows: ValidRow[] = []
+  let created = 0, updated = 0, skipped = 0
+  const errors: string[] = []
+
+  for (const [i, row] of rows.entries()) {
+    const rowNum = i + 2 // 1-indexed accounting for header row
+    const name = row['name']?.trim()
+    if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
+
+    const capabilityTypeRaw = (row['capability_type'] || '').trim().toLowerCase()
+    const status = (row['status'] || 'draft').trim()
+    const visibility = (row['visibility'] || 'org').trim()
+
+    if (!VALID_CAPABILITY_TYPE.has(capabilityTypeRaw)) {
+      errors.push(`Row ${rowNum}: invalid capability_type "${capabilityTypeRaw}" (expected "business", "technical", or empty)`)
+      skipped++; continue
+    }
+    if (!VALID_CAPABILITY_STATUS.has(status)) {
+      errors.push(`Row ${rowNum}: invalid status "${status}"`)
+      skipped++; continue
+    }
+    if (!VALID_CAPABILITY_VISIBILITY.has(visibility)) {
+      errors.push(`Row ${rowNum}: invalid visibility "${visibility}"`)
+      skipped++; continue
+    }
+
+    // Resolve personas — unknown names report as warnings, not row failures.
+    // The capability still imports; just without the unresolvable links.
+    const personaIds: string[] = []
+    const personaNames = (row['personas'] || '').split(/;|\n/).map(s => s.trim()).filter(Boolean)
+    for (const personaName of personaNames) {
+      const id = personaIdByName.get(personaName.toLowerCase())
+      if (id) personaIds.push(id)
+      else errors.push(`Row ${rowNum}: persona "${personaName}" not found in this org — skipped`)
+    }
+
+    const existingId = existingByName.get(name.toLowerCase())
+    if (existingId) updated++; else created++
+
+    validRows.push({
+      name,
+      description: row['description'] || null,
+      domain: row['domain'] || null,
+      behaviors: row['behaviors'] || null,
+      rules: row['rules'] || null,
+      capabilityType: (capabilityTypeRaw || null) as 'business' | 'technical' | null,
+      status: status as 'draft' | 'published' | 'archived',
+      visibility: visibility as 'org' | 'connections' | 'instance',
+      personaIds,
+      existingId,
+    })
+  }
+
+  if (!dryRun && (created > 0 || updated > 0)) {
+    await db.transaction(async (tx) => {
+      for (const r of validRows) {
+        let capId = r.existingId
+        if (capId) {
+          await tx.update(capabilities).set({
+            description: r.description,
+            domain: r.domain,
+            behaviors: r.behaviors,
+            rules: r.rules,
+            capabilityType: r.capabilityType,
+            status: r.status,
+            visibility: r.visibility,
+            updatedBy: session.user.id,
+            updatedAt: new Date(),
+          }).where(and(eq(capabilities.id, capId), eq(capabilities.organizationId, orgId)))
+          // Replace persona links wholesale — same semantics as editCapability.
+          await tx.delete(capabilityPersonas).where(eq(capabilityPersonas.capabilityId, capId))
+        } else {
+          const [inserted] = await tx.insert(capabilities).values({
+            name: r.name,
+            description: r.description,
+            domain: r.domain,
+            behaviors: r.behaviors,
+            rules: r.rules,
+            capabilityType: r.capabilityType,
+            status: r.status,
+            visibility: r.visibility,
+            organizationId: orgId,
+            createdBy: session.user.id,
+            updatedBy: session.user.id,
+          }).returning({ id: capabilities.id })
+          capId = inserted.id
+        }
+        if (r.personaIds.length > 0) {
+          await tx.insert(capabilityPersonas).values(
+            r.personaIds.map(personaId => ({ capabilityId: capId!, personaId }))
+          )
+        }
+      }
+
+      await writeAuditLog(tx, {
+        action: 'capability.import',
+        entityType: 'capability',
+        entityId: orgId,
+        userId: session.user.id,
+        organizationId: orgId,
+        after: { created, updated, skipped, dryRun, errorCount: errors.length },
+      })
+    })
+  }
+
+  return { created, updated, skipped, errors }
 }
 
 export async function markCapabilityReviewed(capabilityId: string, _formData: FormData) {
