@@ -1,26 +1,50 @@
 # Runtime and Deployment Architecture
 
-GovEA is designed to run locally for development, in containers for self-hosted demos, and in Azure Container Apps for the shared demo environment.
+GovEA is designed around portable containers. The application should be able to run in a local developer environment, a self-hosted container runtime, a government-managed platform, or a hosted cloud container service without changing the application architecture.
 
-## Runtime Components
+Azure Container Apps is the current shared demo target. It is not the architectural boundary.
+
+## Runtime Model
 
 ```mermaid
 flowchart TD
-  User["Browser"] --> ACA["Azure Container App: govea-dev"]
-  ACA --> App["Next.js standalone server"]
-  ACA --> Pg["PostgreSQL sidecar"]
-  App --> Pg
-  App --> Logs["Container logs"]
-  Logs --> LAW["Log Analytics workspace"]
-  ACR["Azure Container Registry"] --> ACA
+  User["Browser"] --> Proxy["Ingress / reverse proxy / platform routing"]
+  Proxy --> App["GovEA app container"]
+  App --> Runtime["Next.js standalone server"]
+  Runtime --> DB["PostgreSQL database"]
+  Runtime --> Logs["Application logs"]
+  Runtime --> Storage["Optional external services"]
 ```
 
-The Azure demo currently uses a single Container App with:
+The portable runtime assumptions are:
 
-- the GovEA app container
-- a PostgreSQL sidecar reachable on `localhost:5432`
-- production Next.js standalone runtime
-- demo flags enabled through environment variables
+- GovEA runs as a containerized Next.js application.
+- PostgreSQL is the system of record.
+- Runtime configuration is supplied through environment variables.
+- The container should run a production Next.js standalone server outside local development.
+- Logs should go to the hosting platform's normal container log stream.
+- Deployment targets should not require code changes for ordinary environment differences.
+
+## Deployment Targets
+
+| Target | Current use | Notes |
+|---|---|---|
+| Local host + containerized Postgres | Fast development | App runs with `pnpm dev`; database runs in Docker or Podman |
+| Local full container stack | Container behavior testing | App and database both run through compose |
+| Self-hosted container platform | Future on-prem or agency-managed installs | Could be Docker, Podman, Kubernetes, OpenShift, or another container runtime |
+| Hosted cloud container platform | Shared demo and hosted deployments | Azure Container Apps is the current demo implementation |
+
+This portability is why container behavior should stay generic where possible. Cloud-specific scripts can exist, but the application should not depend on Azure-only assumptions.
+
+## Container Components
+
+| Component | Responsibility |
+|---|---|
+| App image | Builds the Next.js standalone app and carries runtime entrypoints |
+| PostgreSQL | Stores GovEA tenant, content, auth, audit, taxonomy, and relationship data |
+| Entrypoint | Waits for database readiness, applies schema behavior appropriate to the environment, optionally seeds data, then starts the server |
+| Environment variables | Provide database URL, auth settings, public app URL, demo flags, and operational toggles |
+| Log stream | Exposes startup, migration, seed, request, and error output through the hosting platform |
 
 ## Local Development
 
@@ -37,9 +61,84 @@ Common local paths:
 
 Podman is preferred when available, but the compose helper can fall back to Docker.
 
-## Azure Demo Deployment
+## Runtime Configuration
 
-The demo deployment script is `scripts/azure-dev.sh`.
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_SECRET` | Stable Auth.js secret |
+| `NEXT_PUBLIC_APP_URL` | Public base URL used by auth and generated links |
+| `AUTH_TRUST_HOST` | Allows Auth.js to trust platform-provided host headers when needed |
+| `NODE_ENV` | Should be `production` for deployed container runtime |
+| `DEMO_MODE` | Enables demo affordances such as login shortcuts |
+| `DEV` | Enables development/demo fixture behavior where still used |
+| `MAINTENANCE_MODE` | Redirects non-admin traffic to the maintenance page |
+
+Demo data should be controlled through explicit demo flags, not by running a deployed environment with `next dev` or `NODE_ENV=development`.
+
+## Generic Startup Flow
+
+```mermaid
+sequenceDiagram
+  participant Platform as Container platform
+  participant Entry as Entrypoint
+  participant DB as PostgreSQL
+  participant App as Next.js server
+
+  Platform->>Entry: Start app container
+  Entry->>DB: Wait for database readiness
+  Entry->>DB: Apply schema or migrations
+  Entry->>DB: Optionally seed environment data
+  Entry->>App: Start standalone server
+  App-->>Platform: Listen on configured port
+```
+
+The exact schema step depends on the environment. Disposable demo environments can use schema push and idempotent seed data. Persistent production tenants should use explicit migrations and conservative seed behavior.
+
+## Container Build Notes
+
+The container files pin pnpm to the repository package-manager version before dependency installation. This matters because base images can ship a newer global pnpm that does not support the repo's Node version.
+
+Build-sensitive files:
+
+- `docker/Containerfile.dev`
+- `docker/Containerfile`
+- `docker/entrypoint.dev.sh`
+- `docker/entrypoint.prod.sh`
+- `docker/entrypoint.azure-dev.sh`
+- `docker/docker-compose.yml`
+- `docker/podman-compose.yml`
+- `scripts/azure-dev.sh`
+- `package.json`
+- `pnpm-lock.yaml`
+
+When changing package-manager, Node, container base-image, or entrypoint behavior, validate both CI and at least one real container build path. CI can pass while a container build fails if the base image has a different global toolchain.
+
+## Azure Demo Implementation
+
+The shared demo currently runs in Azure Container Apps through `scripts/azure-dev.sh`.
+
+```mermaid
+flowchart TD
+  User["Browser"] --> ACA["Azure Container App: govea-dev"]
+  ACA --> App["GovEA app container"]
+  ACA --> Pg["PostgreSQL sidecar"]
+  App --> Pg
+  App --> Logs["Container logs"]
+  Logs --> LAW["Log Analytics workspace"]
+  ACR["Azure Container Registry"] --> ACA
+```
+
+The Azure demo uses:
+
+- Azure Container Registry for image builds and storage
+- Azure Container Apps for runtime
+- a PostgreSQL sidecar reachable on `localhost:5432`
+- production Next.js standalone runtime
+- explicit demo flags through environment variables
+- Log Analytics for platform log collection
+
+The demo deployment script supports:
 
 | Command | Purpose |
 |---|---|
@@ -52,67 +151,17 @@ The demo deployment script is `scripts/azure-dev.sh`.
 
 The update path builds remotely with `az acr build`, pushes a timestamped image tag, then updates the Container App image reference.
 
-## Demo Runtime Environment
-
-The demo should run as production Next.js with explicit demo behavior enabled:
-
-| Variable | Expected demo value | Reason |
-|---|---|---|
-| `NODE_ENV` | `production` | Stable server-action bundles and standalone runtime |
-| `DEMO_MODE` | `true` | Shows demo affordances such as login shortcuts |
-| `DEV` | `true` | Enables seeded/demo behavior where still used |
-| `AUTH_TRUST_HOST` | `true` | Allows Auth.js behind the Azure hostname |
-| `NEXT_PUBLIC_APP_URL` | Demo URL | Used for auth and app URL generation |
-| `AUTH_SECRET` | Stable secret | Keeps auth sessions stable across revisions |
-| `DATABASE_URL` | Local sidecar URL | Points app to the Postgres sidecar |
-
-Do not set the Azure demo back to `next dev` just to expose sample data. Demo data and shortcuts should be controlled through explicit demo flags while keeping the runtime production-like.
-
-## Container Build Notes
-
-The container files pin pnpm to the repository package-manager version before dependency installation. This matters because base images can ship a newer global pnpm that does not support the repo's Node version.
-
-Build-sensitive files:
-
-- `docker/Containerfile.dev`
-- `docker/Containerfile`
-- `docker/entrypoint.azure-dev.sh`
-- `scripts/azure-dev.sh`
-- `package.json`
-- `pnpm-lock.yaml`
-
-When changing package-manager, Node, or container base-image behavior, validate both CI and the Azure ACR build path. CI can pass while the Azure image build fails if the container base image has a different global toolchain.
-
-## Startup Flow in Azure
-
-```mermaid
-sequenceDiagram
-  participant ACA as Container App
-  participant Entry as entrypoint.azure-dev.sh
-  participant DB as Postgres sidecar
-  participant App as Next.js server
-
-  ACA->>Entry: Start app container
-  Entry->>DB: Wait for localhost:5432
-  Entry->>DB: drizzle-kit push --force
-  Entry->>DB: db:seed:container
-  Entry->>App: node standalone server.js
-  App-->>ACA: Listen on port 3000
-```
-
-The demo currently uses schema push plus idempotent seed data because it is a disposable demo environment. Persistent production tenants should move to explicit migrations and more conservative seed behavior.
-
 ## Operational Checks
 
-After deployment, verify:
+After any deployment, verify the target-specific health signal and the generic app behavior:
 
-- Container App revision is healthy
-- traffic is 100 percent on the new revision
+- active revision, pod, task, or container is healthy
+- expected image tag or digest is running
 - `/login` returns HTTP 200
-- logs show schema sync, seed completion, and Next server ready
+- logs show schema/migration completion, optional seed completion, and Next server ready
 - no recurring auth, database pool, server-action, or static asset errors
 
-Useful commands:
+Azure demo commands:
 
 ```bash
 bash scripts/azure-dev.sh status
@@ -124,8 +173,9 @@ curl -I -L https://govea-dev.wittyocean-795e193a.eastus.azurecontainerapps.io/lo
 ## Current Limitations
 
 - There is not yet a traceable release pipeline from merge to deploy.
-- The demo uses a sidecar Postgres instance, not a managed production database.
-- Rollback is manual through Container Apps image/revision operations.
-- The deployment script records image tags in output, but the repository does not yet persist a release record automatically.
+- The shared demo uses a sidecar Postgres instance, not a managed production database.
+- Rollback is manual through the target platform's image or revision controls.
+- The Azure deployment script records image tags in output, but the repository does not yet persist a release record automatically.
+- Production deployment guidance for non-Azure container platforms is still intentionally light.
 
 Issue #504 tracks the release-pipeline work needed to make demo deployment traceable by commit, image digest, revision, smoke result, and rollback path.
