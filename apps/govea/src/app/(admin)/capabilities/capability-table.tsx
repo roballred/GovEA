@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import type { Capability, Persona, EntityTaxonomyValue } from '@/db/schema'
-import { createCapability, editCapability, deleteCapability } from '@/actions/capabilities'
+import { createCapability, editCapability, deleteCapability, importCapabilities, type CapabilityImportResult } from '@/actions/capabilities'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -87,6 +87,43 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<CapabilityRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CapabilityRow | null>(null)
+
+  // CSV import dialog state (#596). Two-step flow: preview (dryRun) →
+  // confirm. Same shape as Applications import.
+  const [importOpen, setImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPreview, setImportPreview] = useState<CapabilityImportResult | null>(null)
+  const [importResult, setImportResult] = useState<CapabilityImportResult | null>(null)
+
+  async function handleImportPreview() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.append('csvFile', importFile)
+      const result = await importCapabilities(fd, true)
+      setImportPreview(result)
+    })
+  }
+
+  async function handleImportConfirm() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.append('csvFile', importFile)
+      const result = await importCapabilities(fd, false)
+      setImportResult(result)
+      setImportPreview(null)
+      setImportFile(null)
+      refresh()
+    })
+  }
+
+  function openImport() {
+    setImportOpen(true)
+    setImportResult(null)
+    setImportPreview(null)
+    setImportFile(null)
+  }
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
@@ -236,11 +273,19 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
           filters={taxonomyFilters}
           onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
         />
-        {canEdit && (
-          <Button onClick={() => setCreateOpen(true)} className="ml-auto" size="sm">
-            + New Capability
-          </Button>
-        )}
+        <div className={cn('flex items-center gap-2', canEdit ? 'ml-auto' : 'ml-auto')}>
+          <a href="/api/capabilities/export">
+            <Button variant="outline" size="sm">Export CSV</Button>
+          </a>
+          {canEdit && (
+            <>
+              <Button variant="outline" size="sm" onClick={openImport}>Import CSV</Button>
+              <Button onClick={() => setCreateOpen(true)} size="sm">
+                + New Capability
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -525,6 +570,70 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
             <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
               {isPending ? 'Deleting…' : 'Delete'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog (#596) */}
+      <Dialog open={importOpen} onOpenChange={open => { if (!open) setImportOpen(false) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Import Capabilities</DialogTitle></DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">
+              Upload a CSV with columns: <code className="bg-muted px-1 rounded">name</code>, <code className="bg-muted px-1 rounded">description</code>, <code className="bg-muted px-1 rounded">domain</code>, <code className="bg-muted px-1 rounded">behaviors</code>, <code className="bg-muted px-1 rounded">rules</code>, <code className="bg-muted px-1 rounded">capability_type</code>, <code className="bg-muted px-1 rounded">status</code>, <code className="bg-muted px-1 rounded">visibility</code>, <code className="bg-muted px-1 rounded">personas</code> (semicolon-separated names).
+              Existing capabilities are matched by name and updated. Unknown persona names are reported as warnings without failing the row.
+            </p>
+
+            {!importResult && (
+              <div className="space-y-1.5">
+                <Label>CSV file</Label>
+                <Input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={e => { setImportFile(e.target.files?.[0] ?? null); setImportPreview(null) }}
+                />
+              </div>
+            )}
+
+            {importPreview && !importResult && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+                <p className="font-medium">Preview</p>
+                <p>Will create <strong>{importPreview.created}</strong> · update <strong>{importPreview.updated}</strong> · skip <strong>{importPreview.skipped}</strong></p>
+                {importPreview.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importPreview.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {importResult && (
+              <div className="rounded-md border bg-emerald-50 border-emerald-200 p-3 space-y-1">
+                <p className="font-medium text-emerald-800">Import complete</p>
+                <p className="text-emerald-700">Created <strong>{importResult.created}</strong> · updated <strong>{importResult.updated}</strong> · skipped <strong>{importResult.skipped}</strong></p>
+                {importResult.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setImportOpen(false)}>
+              {importResult ? 'Close' : 'Cancel'}
+            </Button>
+            {!importResult && !importPreview && (
+              <Button onClick={handleImportPreview} disabled={!importFile || isPending}>
+                {isPending ? 'Checking…' : 'Preview'}
+              </Button>
+            )}
+            {importPreview && !importResult && (
+              <Button onClick={handleImportConfirm} disabled={isPending || importPreview.created + importPreview.updated === 0}>
+                {isPending ? 'Importing…' : `Import ${importPreview.created + importPreview.updated} records`}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
