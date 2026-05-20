@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getInitiative } from '@/actions/initiatives'
+import { getInitiative, getRelatedInitiatives } from '@/actions/initiatives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getObjectives } from '@/actions/objectives'
 import { getApplications } from '@/actions/applications'
@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import type { RelationshipItem } from '@/components/relationship-panel'
+import { RelatedInitiativesPanel } from '@/components/related-initiatives-panel'
 import {
   linkInitiativeCapability, unlinkInitiativeCapability,
   linkInitiativeObjective, unlinkInitiativeObjective,
@@ -54,7 +55,11 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const [initiative, enabledModules] = await Promise.all([getInitiative(id), getEnabledModules()])
+  const [initiative, enabledModules, relatedInitiatives] = await Promise.all([
+    getInitiative(id),
+    getEnabledModules(),
+    getRelatedInitiatives(id),
+  ])
   if (!initiative) notFound() // also catches viewer status gate enforced in getInitiative (#208)
 
   const editor = canEdit(session.user)
@@ -170,6 +175,8 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
           removeAction={removeApplication}
         />
       )}
+
+      <RelatedInitiativesPanel related={relatedInitiatives} />
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
         Created {new Date(initiative.createdAt).toLocaleDateString()} · Updated {new Date(initiative.updatedAt).toLocaleDateString()}
