@@ -359,7 +359,7 @@ export default async function HeatmapPage() {
               {totalUnsupported > 0 && (
                 <div className="mb-3 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 px-4 py-3">
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                    {totalUnsupported} capability{totalUnsupported > 1 ? 'ies' : 'y'} across{' '}
+                    {totalUnsupported} {totalUnsupported === 1 ? 'capability' : 'capabilities'} across{' '}
                     {coverageDomains.filter(d => (coverageByDomain[d]?.unsupported ?? 0) > 0).length} domain{coverageDomains.filter(d => (coverageByDomain[d]?.unsupported ?? 0) > 0).length > 1 ? 's' : ''}{' '}
                     have no application support.
                   </p>
