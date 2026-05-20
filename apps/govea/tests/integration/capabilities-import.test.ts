@@ -34,7 +34,7 @@ function csvForm(content: string): FormData {
 
 async function seedPersona(orgId: string, name: string) {
   const [row] = await db.insert(personas).values({
-    id: randomUUID(), organizationId: orgId, name, validationStatus: 'assumed',
+    id: randomUUID(), organizationId: orgId, name,
   }).returning()
   return row.id
 }
