@@ -10,6 +10,8 @@ import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
 import { CompletenessSettingsForm } from '@/components/completeness-settings'
 import { CustomFieldsManager } from '@/components/custom-fields-manager'
+import { EmailSettingsSection } from '@/components/email-settings-section'
+import { getEmailSettingsForUi, getRecentEmailDeliveries } from '@/actions/email-settings'
 import { isAdmin } from '@/lib/rbac'
 import type { ConfidenceSettings, CompletenessSettings } from '@/db/schema'
 import { DEFAULT_COMPLETENESS_SETTINGS } from '@/db/schema'
@@ -31,7 +33,7 @@ export default async function SettingsPage() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) redirect('/dashboard')
 
-  const [org, moduleSettings, appCustomFields] = await Promise.all([
+  const [org, moduleSettings, appCustomFields, emailSettingsUi, emailDeliveries] = await Promise.all([
     session.user.organizationId
       ? db.query.organizations.findFirst({
           where: eq(organizations.id, session.user.organizationId),
@@ -41,6 +43,8 @@ export default async function SettingsPage() {
     session.user.organizationId
       ? getCustomFieldSchema(session.user.organizationId, 'application')
       : Promise.resolve([]),
+    getEmailSettingsForUi(),
+    getRecentEmailDeliveries(10),
   ])
 
   const activeTheme = org?.theme ?? 'govea'
@@ -127,6 +131,24 @@ export default async function SettingsPage() {
           </p>
         </div>
         <CompletenessSettingsForm initial={completenessSettings} />
+      </section>
+
+      <hr />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Email Configuration</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Configure outbound SMTP for password resets, notifications, and system alerts.
+            Credentials are encrypted at rest and never shown after saving.
+            Test sends always go to your own address.
+          </p>
+        </div>
+        <EmailSettingsSection
+          initial={emailSettingsUi}
+          recentDeliveries={emailDeliveries}
+          adminEmail={session.user.email ?? null}
+        />
       </section>
 
       <hr />
