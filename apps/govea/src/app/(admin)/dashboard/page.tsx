@@ -16,7 +16,8 @@ import { DomainBadge } from '@/components/domain-badge'
 import { ConfidenceSummary } from '@/components/confidence-summary'
 import { CompletenessTrend } from '@/components/completeness-trend'
 import { getConfidenceSummary } from '@/lib/confidence'
-import { canEdit } from '@/lib/rbac'
+import { canEdit, isAdmin } from '@/lib/rbac'
+import { isEmailConfigured } from '@/actions/email-settings'
 import {
   getCategorizedSignals,
   getMostNeededActions,
@@ -169,11 +170,15 @@ export default async function DashboardPage() {
   // PR-4: confidence summary fetched here so the dashboard can show the
   // suppression banner when the score is currently below threshold.
   const showRanked = canEdit(session.user)
-  const [signals, mostNeeded, domainRag, confSummary] = await Promise.all([
+  const isAdminUser = isAdmin(session.user)
+  const [signals, mostNeeded, domainRag, confSummary, emailConfigured] = await Promise.all([
     getCategorizedSignals(orgId),
     showRanked ? getMostNeededActions(orgId) : Promise.resolve([]),
     getDomainRagBuckets(orgId),
     getConfidenceSummary(orgId, 'authenticated'),
+    // Email banner is admin-only — contributors and viewers shouldn't see
+    // an org-config nudge they can't act on (#528 capability rule).
+    isAdminUser ? isEmailConfigured(orgId) : Promise.resolve(true),
   ])
   const summarySuppressed =
     (confSummary.settings.authenticatedVisibility ?? confSummary.settings.enabled) &&
@@ -225,6 +230,24 @@ export default async function DashboardPage() {
           Welcome back{session.user.name ? `, ${session.user.name}` : ''}.
         </p>
       </div>
+
+      {isAdminUser && !emailConfigured && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm"
+        >
+          <p className="font-medium text-amber-900 dark:text-amber-200">
+            Email is not configured
+          </p>
+          <p className="text-amber-800 dark:text-amber-300/80 mt-0.5">
+            Password reset and notifications are unavailable until you save SMTP settings.{' '}
+            <Link href="/settings#email-configuration" className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200">
+              Configure email in Settings
+            </Link>
+            .
+          </p>
+        </div>
+      )}
 
       {summarySuppressed && (
         <div
