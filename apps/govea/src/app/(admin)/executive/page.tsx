@@ -425,7 +425,7 @@ export default async function ExecutiveDashboardPage() {
           <SectionLabel>Architecture Gaps</SectionLabel>
           <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20 px-5 py-4 space-y-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              {gapCaps} capability{gapCaps !== 1 ? 'ies' : 'y'} without supporting technology
+              {gapCaps} {gapCaps === 1 ? 'capability' : 'capabilities'} without supporting technology
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400">
               These business capabilities have no application recorded as delivering them.

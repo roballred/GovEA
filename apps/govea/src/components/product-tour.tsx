@@ -92,7 +92,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-strategy"]',
+        element: '[data-tour="nav-adrs"]',
         popover: {
           title: 'Decisions',
           description: 'Record the why behind major technology choices. Superseded decisions stay visible so future teams understand the full context.',
@@ -101,7 +101,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-roadmap"]',
+        element: '[data-tour="nav-strategy"]',
         popover: {
           title: 'Strategy',
           description: 'Link capabilities to objectives and running initiatives to show which parts of your architecture are connected to mission outcomes.',
@@ -110,7 +110,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-reports"]',
+        element: '[data-tour="nav-roadmap"]',
         popover: {
           title: 'Roadmap',
           description: 'A timeline of active and planned initiatives. Useful for stakeholder reviews and communicating what\'s changing and when.',

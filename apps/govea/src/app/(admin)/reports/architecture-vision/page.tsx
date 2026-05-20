@@ -214,7 +214,7 @@ export default async function ArchitectureVisionPage() {
   if (hasPrinciples && principleRows.length === 0) gaps.push('No published architecture principles — guiding constraints are not recorded.')
   if (hasAdrs && adrRows.length === 0) gaps.push('No architecture decisions recorded — key choices are undocumented.')
   if (hasInitiatives && activeInitiatives.length === 0) gaps.push('No active or proposed initiatives — the change roadmap is empty.')
-  if (capsWithNoDomain.length > 0) gaps.push(`${capsWithNoDomain.length} capability${capsWithNoDomain.length !== 1 ? 'ies' : 'y'} have no domain assigned.`)
+  if (capsWithNoDomain.length > 0) gaps.push(`${capsWithNoDomain.length} ${capsWithNoDomain.length === 1 ? 'capability has' : 'capabilities have'} no domain assigned.`)
   if (hasApps && appsWithNoCap.length > 0) gaps.push(`${appsWithNoCap.length} application${appsWithNoCap.length !== 1 ? 's' : ''} have no capability link — architecture role is unclear.`)
 
   let sectionNum = 0
@@ -264,7 +264,7 @@ export default async function ArchitectureVisionPage() {
                             {obj.name}
                           </Link>
                           <span className="text-xs text-muted-foreground shrink-0">
-                            {obj.objectiveCapabilities.length} capability{obj.objectiveCapabilities.length !== 1 ? 'ies' : 'y'} linked
+                            {obj.objectiveCapabilities.length} {obj.objectiveCapabilities.length === 1 ? 'capability' : 'capabilities'} linked
                           </span>
                         </div>
                         {obj.description && <p className="text-xs text-muted-foreground">{obj.description}</p>}
