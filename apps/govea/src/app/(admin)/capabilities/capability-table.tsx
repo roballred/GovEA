@@ -305,10 +305,23 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
           <TableBody>
             {displayRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-8">
-                  {capabilities.length === 0
-                    ? 'No capabilities yet. Add one to get started.'
-                    : 'No capabilities match the current filters.'}
+                <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-10">
+                  {capabilities.length === 0 ? (
+                    <div className="space-y-3">
+                      <p>No capabilities yet.</p>
+                      {canEdit && (
+                        <p className="text-xs">
+                          Add your first capability, or{' '}
+                          <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">
+                            apply a starter pack in Settings
+                          </Link>{' '}
+                          to populate a small example city.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    'No capabilities match the current filters.'
+                  )}
                 </TableCell>
               </TableRow>
             )}

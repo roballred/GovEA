@@ -530,10 +530,23 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
             <TableBody>
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-8">
-                    {applications.length === 0
-                      ? 'No applications yet. Add one to get started.'
-                      : 'No applications match the current filters.'}
+                  <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-10">
+                    {applications.length === 0 ? (
+                      <div className="space-y-3">
+                        <p>No applications yet.</p>
+                        {canEdit && (
+                          <p className="text-xs">
+                            Add your first application, or{' '}
+                            <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">
+                              apply a starter pack in Settings
+                            </Link>{' '}
+                            to populate a small example city.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      'No applications match the current filters.'
+                    )}
                   </TableCell>
                 </TableRow>
               )}
@@ -631,11 +644,24 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       {viewMode === 'portfolio' && (
         <div>
           {portfolioSorted.length === 0 ? (
-            <p className="py-12 text-center text-muted-foreground text-sm">
-              {applications.length === 0
-                ? 'No applications yet. Add one to get started.'
-                : 'No applications match the current filters.'}
-            </p>
+            applications.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground text-sm space-y-3">
+                <p>No applications yet.</p>
+                {canEdit && (
+                  <p className="text-xs">
+                    Add your first application, or{' '}
+                    <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">
+                      apply a starter pack in Settings
+                    </Link>{' '}
+                    to populate a small example city.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="py-12 text-center text-muted-foreground text-sm">
+                No applications match the current filters.
+              </p>
+            )
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {portfolioSorted.map(a => (

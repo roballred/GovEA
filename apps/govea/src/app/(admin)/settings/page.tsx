@@ -4,6 +4,7 @@ import { db } from '@/db/client'
 import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
+import { StarterContentSection } from '@/components/starter-content-section'
 import { ModuleToggles } from '@/components/module-toggles'
 import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
@@ -54,6 +55,20 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-1">Organization configuration and preferences.</p>
       </div>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Starter Content</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Apply an example content pack so the catalog isn&rsquo;t empty before you&rsquo;ve built your own.
+            Each item ends with a plain-language marker so you can replace or delete it later.
+            Re-applying the same pack skips items that already exist.
+          </p>
+        </div>
+        <StarterContentSection />
+      </section>
+
+      <hr />
 
       <section className="space-y-4">
         <div>
