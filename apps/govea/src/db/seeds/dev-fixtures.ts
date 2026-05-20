@@ -330,6 +330,33 @@ export const DEV_CAPABILITY_RELATIONSHIPS: { parentName: string; childName: stri
   { parentName: 'Digital Identity & Authentication', childName: 'IAM Audit Trail' },
 ]
 
+// ─── TOGAF Architecture Domain mappings (City of Riverdale capabilities) ─────
+// Illustrative assignments so the Application Landscape report renders non-empty
+// out of the box. These are demonstrative seed data, not authoritative TOGAF
+// classification — orgs are expected to assign their own mappings in practice.
+// See #582 / #580 (Domain Architect persona walk).
+export type TogafDomainLabel =
+  | 'Business Architecture'
+  | 'Application Architecture'
+  | 'Technology Architecture'
+  | 'Data Architecture'
+
+export const DEV_CAPABILITY_TOGAF_DOMAINS: Record<string, TogafDomainLabel> = {
+  'Online Permitting':                'Application Architecture',
+  'Business License Management':      'Business Architecture',
+  'HR Self-Service':                  'Business Architecture',
+  'GIS Mapping':                      'Application Architecture',
+  'Budget Reporting':                 'Application Architecture',
+  'Service Request Management':       'Business Architecture',
+  'Digital Identity & Authentication':'Application Architecture',
+  'Cross-Agency Data Sharing':        'Data Architecture',
+  'Print & Mail Services':            'Technology Architecture',
+  'User and Role Management':         'Application Architecture',
+  'Role-Based Access Control':        'Application Architecture',
+  'SSO and Local Authentication':     'Application Architecture',
+  'IAM Audit Trail':                  'Data Architecture',
+}
+
 // ─── Applications (City of Riverdale) ────────────────────────────────────────
 // Coverage: lifecycleStatus = active ✓, sunset ✓, decommissioned ✓, planned ✓
 //           hostingModel = saas ✓, on-prem ✓, hybrid ✓

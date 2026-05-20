@@ -5,7 +5,7 @@ import {
   DEV_USERS, STATE_USERS, SYSTEM_USERS,
   DEFAULT_PERSONA_TYPES, DEFAULT_PERSONA_TAGS,
   DEV_PERSONA_TAG_ASSIGNMENTS,
-  DEV_PERSONAS, DEV_CAPABILITIES, DEV_CAPABILITY_RELATIONSHIPS, DEV_APPLICATIONS,
+  DEV_PERSONAS, DEV_CAPABILITIES, DEV_CAPABILITY_RELATIONSHIPS, DEV_CAPABILITY_TOGAF_DOMAINS, DEV_APPLICATIONS,
   DEV_OBJECTIVES, DEV_GOALS, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
   DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
   DEV_DATA_ENTITIES, DEV_DATA_ATTRIBUTES, DEV_DATA_LINKS, DEV_DATA_BUSINESS_KEYS,
@@ -42,6 +42,7 @@ import {
   taxonomyTerms, entityTaxonomyDefinitions,
   services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
+  frameworkMappings,
   instanceSettings,
   dataEntities, dataAttributes, dataLinks, dataBusinessKeys,
   dataEntityOwners, dataAttributeOwners, dataLinkOwners, dataBusinessKeyOwners,
@@ -250,6 +251,35 @@ async function seed() {
     if (!exists) await db.insert(capabilityRelationships).values({ parentId, childId })
   }
   console.log(`  ✓ ${DEV_CAPABILITY_RELATIONSHIPS.length} capability parent-child relationships`)
+
+  // TOGAF Architecture Domain mappings for Riverdale capabilities (#582 — seed
+  // the Application Landscape report so it renders non-empty out of the box).
+  let togafMappingCount = 0
+  for (const [capName, domainLabel] of Object.entries(DEV_CAPABILITY_TOGAF_DOMAINS)) {
+    const capId = devCapabilityIds[capName]
+    if (!capId) continue
+    const exists = await db.query.frameworkMappings.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(
+          e(t.organizationId, devOrgId),
+          e(t.entityType, 'capability'),
+          e(t.entityId, capId),
+          e(t.framework, 'togaf'),
+          e(t.conceptLabel, domainLabel),
+        ),
+    })
+    if (!exists) {
+      await db.insert(frameworkMappings).values({
+        organizationId: devOrgId,
+        entityType: 'capability',
+        entityId: capId,
+        framework: 'togaf',
+        conceptLabel: domainLabel,
+      })
+      togafMappingCount++
+    }
+  }
+  console.log(`  ✓ ${togafMappingCount} TOGAF domain mappings (capabilities)`)
 
   // Applications + capability links
   const devApplicationIds: Record<string, string> = {}
