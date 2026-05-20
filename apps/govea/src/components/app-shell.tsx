@@ -66,6 +66,10 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/reports',    label: 'Reports' },
       { href: '/executive',  label: 'Executive Summary' },
+      // Audit Log is visible to Contributors and Admins. The page filters its
+      // own rows: contributors see the architecture-content slice only,
+      // admins see everything (#597).
+      { href: '/audit',      label: 'Audit Log', contributorOnly: true },
     ],
   },
   {
@@ -75,7 +79,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/taxonomy',    label: 'Taxonomy' },
       { href: '/users',       label: 'Users' },
       { href: '/connections', label: 'Connections' },
-      { href: '/audit',       label: 'Audit Log' },
       { href: '/settings',    label: 'Settings' },
       { href: '/settings/notices', label: 'Notices' },
     ],

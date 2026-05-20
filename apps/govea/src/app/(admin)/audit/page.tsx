@@ -1,9 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { isAdmin } from '@/lib/rbac'
-import { db } from '@/db/client'
-import { auditLog, users } from '@/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { canEdit, isAdmin } from '@/lib/rbac'
+import { getAuditEntries } from '@/lib/audit-view'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -11,21 +9,23 @@ import {
 export default async function AuditPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  if (!isAdmin(session.user)) redirect('/dashboard')
+  if (!canEdit(session.user)) redirect('/dashboard')
 
-  const entries = await db
-    .select({ log: auditLog, user: users })
-    .from(auditLog)
-    .leftJoin(users, eq(auditLog.userId, users.id))
-    .where(eq(auditLog.organizationId, session.user.organizationId!))
-    .orderBy(desc(auditLog.createdAt))
-    .limit(200)
+  const isUserAdmin = isAdmin(session.user)
+  const role: 'admin' | 'contributor' = isUserAdmin ? 'admin' : 'contributor'
+  const orgId = session.user.organizationId!
+
+  const entries = await getAuditEntries(orgId, role)
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Audit Log</h1>
-        <p className="text-muted-foreground mt-1">A record of all actions taken in this organization.</p>
+        <p className="text-muted-foreground mt-1">
+          {isUserAdmin
+            ? 'A record of all actions taken in this organization.'
+            : 'Changes to architecture content in this organization. Authentication, user management, and organization settings stay admin-only.'}
+        </p>
       </div>
       <div className="rounded-lg border bg-card">
         <Table>
