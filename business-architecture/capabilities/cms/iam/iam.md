@@ -16,7 +16,7 @@ The system must control who can access it, how they authenticate, and what they 
 | Role-Based Access Control | [iam-role-based-access-control.md](./iam-role-based-access-control.md) | Enforce Admin / Contributor / Viewer roles and permissions |
 | Instance Administration | [iam-instance-administration.md](./iam-instance-administration.md) | Govern tenant lifecycle, platform admin access, and audited break-glass operations |
 | Local Authentication | [iam-local-authentication.md](./iam-local-authentication.md) | Email and password login with password reset |
-| SSO Authentication | [iam-sso-authentication.md](./iam-sso-authentication.md) | Microsoft Entra ID sign-in via OpenID Connect with admin-managed pre-provisioned access |
+| SSO Authentication | [iam-sso-authentication.md](./iam-sso-authentication.md) | OpenID Connect sign-in with admin-managed pre-provisioned access; current provider wiring targets Microsoft Entra ID |
 | IAM Audit Trail | [iam-audit-trail.md](./iam-audit-trail.md) | Immutable log of all identity and access events |
 | First-Run Setup | [iam-first-run-setup.md](./iam-first-run-setup.md) | Bootstrap initial Admin account on first launch |
 | API Auth Decision | [iam-api-auth-decision.md](./iam-api-auth-decision.md) | Auth strategy for API routes (session-based, not token-based in v1) |

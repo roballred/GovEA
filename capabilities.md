@@ -32,7 +32,7 @@ Controls authentication, authorization, and all identity events.
 | User Management | Implemented | Create, edit, deactivate, and assign org-scoped roles to user accounts |
 | Role-Based Access Control | Implemented | Enforce Admin / Contributor / Viewer roles across all content and actions, with `instance_admin` layered separately for platform operations |
 | Instance Administration | Implemented | Instance-scoped admin role, `/instance` console, org inventory, user view, audit view, org suspension, instance-admin promotion/demotion, audited break-glass sessions, and scoped act-as support actions without taking over org-scoped settings |
-| SSO Authentication | Implemented | Microsoft Entra ID sign-in via OpenID Connect (OIDC) with admin-managed pre-provisioned access |
+| SSO Authentication | Implemented | OpenID Connect (OIDC) SSO with admin-managed pre-provisioned access; current provider wiring targets Microsoft Entra ID |
 | Local Authentication | Implemented | Email and password login; always available as SSO fallback |
 | IAM Audit Trail | Implemented | Immutable log of all identity and access events, including instance-scoped platform events |
 | First-Run Setup | Implemented | Bootstrap the initial Admin account on first launch |

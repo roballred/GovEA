@@ -9,9 +9,9 @@ GovEA supports two sign-in paths:
 | Sign-in path | Purpose | Notes |
 |---|---|---|
 | Local credentials | Development, fallback, and self-hosted operation | Password hashes are stored for local users |
-| Microsoft Entra ID OIDC | Government SSO path | SSO users must be pre-provisioned before sign-in |
+| OIDC SSO | Government SSO path | Current provider wiring targets Microsoft Entra ID; Okta, Auth0, or other OIDC providers fit the same architectural pattern |
 
-Auth is implemented with Auth.js in `apps/govea/src/lib/auth.ts`. Middleware uses the edge-safe Auth.js configuration from `apps/govea/src/middleware.ts` so route protection does not pull Node-only APIs into the Edge Runtime.
+Auth is implemented with Auth.js in `apps/govea/src/lib/auth.ts`. The current code uses the Microsoft Entra ID provider package, but the architectural boundary is OIDC-backed SSO plus pre-provisioned GovEA users rather than a Microsoft-only identity model. Middleware uses the edge-safe Auth.js configuration from `apps/govea/src/middleware.ts` so route protection does not pull Node-only APIs into the Edge Runtime.
 
 SSO does not auto-create usable tenant users. The sign-in callback checks that the external identity maps to a pre-provisioned, active user with an organization assignment. This keeps tenant access admin-managed.
 
