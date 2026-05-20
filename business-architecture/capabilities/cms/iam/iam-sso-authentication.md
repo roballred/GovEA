@@ -1,7 +1,7 @@
 # Capability: SSO Authentication
 
 ## What It Does
-The system must allow users to sign in using their agency's identity provider via OpenID Connect. Microsoft Entra ID is the primary target. SSO is optional — the system works without it.
+The system must allow users to sign in using their agency's identity provider via OpenID Connect (OIDC). Microsoft Entra ID is the current configured provider target, but the capability should remain provider-neutral so Okta, Auth0, or other OIDC providers can be supported through the same sign-in and pre-provisioning model. SSO is optional — the system works without it.
 
 ## Personas
 - **CMS Administrator** — configures SSO via the admin UI; no code changes required

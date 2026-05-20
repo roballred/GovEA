@@ -81,7 +81,7 @@ Middleware performs coarse route protection. Server actions and domain helpers p
 
 | Concern | Current implementation |
 |---|---|
-| Authentication | Auth.js with local credentials and optional Microsoft Entra ID OIDC |
+| Authentication | Auth.js with local credentials and optional OIDC SSO; current provider wiring targets Microsoft Entra ID |
 | Authorization | Org-scoped roles plus separate `instance_admin` operating role |
 | Audit | Immutable audit log for content, identity, instance, and support-access events |
 | Taxonomy | Org-scoped controlled vocabularies reused across multiple entity types |

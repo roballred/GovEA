@@ -14,7 +14,7 @@ Free. Open source. Runs on-prem or as a hosted service.
 - **Language:** TypeScript
 - **Database:** PostgreSQL
 - **ORM:** Drizzle
-- **Authentication:** Auth.js with Microsoft Entra ID via OIDC first, using admin-managed pre-provisioned SSO access; SAML support can be added later through BoxyHQ SAML Jackson
+- **Authentication:** Auth.js with OpenID Connect (OIDC) SSO first, using admin-managed pre-provisioned access; Microsoft Entra ID is the current configured provider target, and Okta, Auth0, or other OIDC providers can be supported through the same architectural pattern. SAML support can be added later through BoxyHQ SAML Jackson
 - **UI:** Tailwind CSS + shadcn/ui
 - **Deployment:** Docker and web-hosted deployments, with containers available for on-prem installs
 - **Product architecture:** build toward a reusable `@govea/core` package for CMS-pattern primitives such as content types, field validation, taxonomy, RBAC, audit trail, workflow, and recipe-based seeding
@@ -228,7 +228,7 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Audit trail: immutable before/after log of all changes
 - Taxonomy management: org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
 - Shared taxonomy foundation now proven across applications and capabilities, including capability-priority classification as the second pilot
-- Identity & access management: SSO via Microsoft Entra ID (OIDC) with admin-managed pre-provisioned access, local auth fallback, Admin/Contributor/Viewer roles
+- Identity & access management: OIDC SSO with admin-managed pre-provisioned access, current Microsoft Entra ID provider wiring, local auth fallback, Admin/Contributor/Viewer roles
 - Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, audited break-glass sessions, scoped act-as support actions, and instance-level platform configuration
 - Clear product boundary: org admins manage their own workspace settings; instance admins govern the shared platform and tenant lifecycle
 - User management and first-run setup flow
