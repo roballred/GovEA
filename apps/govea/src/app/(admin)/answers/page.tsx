@@ -102,12 +102,23 @@ export default async function AnswerPage({ searchParams }: AnswerPageProps) {
       </form>
 
       {!hasQuery && (
-        <div className="rounded-lg border border-dashed p-10 text-center space-y-2 text-muted-foreground">
+        <div className="rounded-lg border border-dashed p-10 text-center space-y-3 text-muted-foreground">
           <p className="font-medium text-foreground">Ask a question about your architecture</p>
-          <p className="text-sm">
-            Try: &ldquo;permitting&rdquo;, &ldquo;replaced systems&rdquo;, &ldquo;digital
-            services&rdquo;, &ldquo;financial reporting&rdquo;
-          </p>
+          {/* Example prompts as click-to-submit shortcuts (#550) — clearer
+              than plain-text suggestions, which the audit found confused
+              stakeholders who didn't realise the input above already exists. */}
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <span className="text-sm">Try:</span>
+            {['permitting', 'replaced systems', 'digital services', 'financial reporting'].map(prompt => (
+              <Link
+                key={prompt}
+                href={`/answers?q=${encodeURIComponent(prompt)}`}
+                className="inline-flex items-center rounded-full border border-input bg-background px-3 py-1 text-xs font-medium hover:bg-muted transition-colors"
+              >
+                {prompt}
+              </Link>
+            ))}
+          </div>
           <p className="text-xs pt-2">
             Results draw from published capabilities, services, applications, initiatives, and
             objectives — assembled for a stakeholder briefing, not raw search results.

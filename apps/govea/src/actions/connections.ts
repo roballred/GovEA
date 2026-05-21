@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import { orgConnections, organizations } from '@/db/schema'
-import { eq, or, and, ne } from 'drizzle-orm'
+import { eq, or, and } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -26,14 +26,16 @@ export async function getConnections() {
   })
 }
 
-// All orgs on the instance except the caller's own org. Used for the connection-target picker.
+// All tenants on the instance except the caller's own org. Used for the connection-target picker.
 // Restricted to admins because non-admins do not need to discover other tenants on the instance.
+// System orgs are excluded — they're a platform-administration construct, not a tenant, and a
+// "connection" request to the system org would be malformed (#542).
 export async function getOtherOrganizations() {
   const session = await requireAdmin()
   const orgId = session.user.organizationId!
 
   return db.query.organizations.findMany({
-    where: ne(organizations.id, orgId),
+    where: (o, { and, ne, eq }) => and(ne(o.id, orgId), eq(o.isSystemOrg, false)),
     orderBy: (o, { asc }) => [asc(o.name)],
   })
 }

@@ -19,6 +19,7 @@ import {
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
+import { FreshnessLine } from '@/components/freshness-line'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -99,6 +100,10 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
             </span>
           </div>
         </div>
+
+        {/* For ADRs, the "Decided" date matters more than "last edited" —
+            the entire genre exists to record when a decision was made (#553). */}
+        <FreshnessLine updatedAt={adr.createdAt} updatedLabel="Decided" />
 
         {adr.supersededByAdr && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
