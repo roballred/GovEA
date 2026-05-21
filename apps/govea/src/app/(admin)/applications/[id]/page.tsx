@@ -210,6 +210,26 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
       <ApplicationImpactPanel impact={impact} />
 
+      {/* #578 — full impact-analysis page link. Programme Director / Business
+          Stakeholder personas want the persona-foundational "what breaks if
+          I decommission this?" answer in one screen; the panel above is the
+          qualitative summary, the linked page is the structured breakdown. */}
+      <div className="rounded-lg border bg-card px-4 py-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Need the full picture before sequencing this app?</p>
+          <p className="text-xs text-muted-foreground">
+            Orphan capabilities, in-flight replacement work, coverage-sharers, downstream services,
+            and recent changes — assembled for delivery decision-making.
+          </p>
+        </div>
+        <Link
+          href={`/applications/${id}/impact`}
+          className="text-sm font-medium text-primary hover:text-primary/80 transition-colors shrink-0"
+        >
+          View impact analysis →
+        </Link>
+      </div>
+
       {application.customFieldDefs.length > 0 && application.customFieldDefs.some(f => application.customData?.[f.name]) && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Custom Fields</h2>
