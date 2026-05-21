@@ -10,6 +10,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { notifySubscribers } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { redirect } from 'next/navigation'
@@ -227,20 +228,15 @@ export async function editADR(id: string, formData: FormData) {
       after: { number, title, status, visibility },
     })
 
-    if (ownerAck.gated) {
-      await writeAuditLog(tx, {
-        action: 'domain_owner.overwrite_acknowledged',
-        entityType: 'adr',
-        entityId: id,
-        userId: session.user.id,
-        organizationId: orgId,
-        metadata: {
-          ownerUserId: ownerAck.ownerUserId,
-          ownerName: ownerAck.ownerName,
-          ownerEmail: ownerAck.ownerEmail,
-        },
-      })
-    }
+    // #581 — notify subscribers of this ADR's change.
+    await notifySubscribers(tx, {
+      organizationId: orgId,
+      entityType: 'adr',
+      entityId: id,
+      action: 'adr.edit',
+      actorUserId: session.user.id,
+      summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${title}`,
+    })
 
     if (debtAck.acknowledged) {
       await writeAuditLog(tx, {

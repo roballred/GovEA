@@ -7,6 +7,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { notifySubscribers } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { autoFlagLifecycleDebt } from '@/lib/lifecycle-debt'
@@ -260,20 +261,15 @@ export async function editApplication(applicationId: string, formData: FormData)
       after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
     })
 
-    if (ownerAck.gated) {
-      await writeAuditLog(tx, {
-        action: 'domain_owner.overwrite_acknowledged',
-        entityType: 'application',
-        entityId: applicationId,
-        userId: session.user.id,
-        organizationId: orgId,
-        metadata: {
-          ownerUserId: ownerAck.ownerUserId,
-          ownerName: ownerAck.ownerName,
-          ownerEmail: ownerAck.ownerEmail,
-        },
-      })
-    }
+    // #581 — notify subscribers of this app's change.
+    await notifySubscribers(tx, {
+      organizationId: orgId,
+      entityType: 'application',
+      entityId: applicationId,
+      action: 'application.edit',
+      actorUserId: session.user.id,
+      summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${name}`,
+    })
 
     if (debtAck.acknowledged) {
       await writeAuditLog(tx, {

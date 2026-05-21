@@ -8,6 +8,7 @@ import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnecte
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { notifySubscribers } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { redirect } from 'next/navigation'
@@ -310,23 +311,15 @@ export async function editCapability(capabilityId: string, formData: FormData) {
       after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
     })
 
-    // #581: when a non-owner overwrite was acknowledged, log it so the
-    // audit log shows who overwrote whose record. Cross-references the
-    // owner so a domain-owner persona review surfaces the row.
-    if (ownerAck.gated) {
-      await writeAuditLog(tx, {
-        action: 'domain_owner.overwrite_acknowledged',
-        entityType: 'capability',
-        entityId: capabilityId,
-        userId: session.user.id,
-        organizationId: orgId,
-        metadata: {
-          ownerUserId: ownerAck.ownerUserId,
-          ownerName: ownerAck.ownerName,
-          ownerEmail: ownerAck.ownerEmail,
-        },
-      })
-    }
+    // #581 — fan out to subscribers. Notify everyone but the actor.
+    await notifySubscribers(tx, {
+      organizationId: orgId,
+      entityType: 'capability',
+      entityId: capabilityId,
+      action: 'capability.edit',
+      actorUserId: session.user.id,
+      summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${name}`,
+    })
 
     // #381 PR-3: when the publish-debt gate was acknowledged, log it.
     if (debtAck.acknowledged) {

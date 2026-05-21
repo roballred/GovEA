@@ -20,10 +20,8 @@ import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
 import { FreshnessLine } from '@/components/freshness-line'
-import { DomainOwnerLine } from '@/components/domain-owner-line'
-import { db } from '@/db/client'
-import { users } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { SubscribeButton } from '@/components/subscribe-button'
+import { isSubscribed } from '@/actions/notifications'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -57,7 +55,11 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const [adr, enabledModules] = await Promise.all([getADR(id), getEnabledModules()])
+  const [adr, enabledModules, alreadySubscribed] = await Promise.all([
+    getADR(id),
+    getEnabledModules(),
+    isSubscribed('adr', id),
+  ])
   if (!adr) notFound() // also catches viewer status gate enforced in getADR (#208)
 
   const editor = canEdit(session.user)
@@ -114,11 +116,9 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
 
         {/* For ADRs, the "Decided" date matters more than "last edited" —
             the entire genre exists to record when a decision was made (#553). */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <FreshnessLine updatedAt={adr.createdAt} updatedLabel="Decided" />
-          {domainOwner && (
-            <DomainOwnerLine ownerName={domainOwner.name} ownerEmail={domainOwner.email} />
-          )}
+          <SubscribeButton entityType="adr" entityId={id} initialSubscribed={alreadySubscribed} />
         </div>
 
         {adr.supersededByAdr && (
