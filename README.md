@@ -233,6 +233,9 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - Clear product boundary: org admins manage their own workspace settings; instance admins govern the shared platform and tenant lifecycle
 - User management and first-run setup flow
 - Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
+- Email configuration surface with encrypted SMTP settings, delivery log, and an admin dashboard warning when email is not configured
+- EasyEA starter content and empty-state prompts for new practices that need a credible first repository quickly
+- CSV import/export for Applications and Capabilities, with broader entity coverage planned
 - Prototype multi-org federation: connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
 - Demo seed data and dev login roster for Riverdale, GovEA Project dogfooding, Office of Digital Services, Hartfield TOGAF overlay, and dev-only instance-admin scenarios
 - Reusable `@govea/core` package: RBAC, audit, taxonomy, workflow, content type, and recipe primitives
@@ -243,25 +246,26 @@ Capabilities are defined one at a time through the EasyEA workflow: persona vali
 - ADRs: basic CRUD, detail pages, and linkage exist, but the authoring experience is still maturing relative to the core portfolio records
 - Planning semantics: useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
 - Long-form authoring: markdown now renders on detail pages, but editing still uses plain textareas rather than a richer toolbar/preview workflow
-- Admin configuration beyond core settings
+- Admin configuration beyond core settings, including the real SMTP send path behind the shipped Email Configuration UI
+- Repository portability beyond Application and Capability CSV round-trips
 - Risk tracking is defined as a proposed Repository & Modelling capability, but the first-class product surface has not been implemented yet
-- Deeper end-to-end traceability analysis and conceptual/logical Data Architecture expansion
+- Data Architecture quality signals, naming-standard hints, and any later conceptual/logical expansion
 
 **Active work:**
+- Finishing actual SMTP email transport so configured email can support notifications and password reset
+- Continuing CSV import/export across the next high-value entity types
+- Adding Data Architecture quality cues and Data Vault naming-standard hints
+- Adding authoring guardrails for duplicate names, unsaved changes, and publish-readiness guidance
 - Building a traceable release pipeline for the Azure demo so deployments are tied to a known commit, image digest, and post-deploy smoke result
-- Implementing the inherited system glossary and menu definitions so glossary, tour, onboarding, and contextual help use the same language
-- Deciding the Data Architecture v1 boundary before expanding conceptual/logical modeling
-- Validating assumed stakeholder personas and starting a lightweight feedback loop for analysis surfaces
-- Deciding whether user-facing product language should remain "module" or shift to "tool"
-- Expanding automated test coverage
 - Keeping documentation aligned with rapid product-shape changes
 
 **Near-term:**
+- Ship the #528 SMTP transport follow-up, then split the #581 change-notification substrate into small slices
+- Continue #596 after Capabilities with Personas and ADRs as the next likely import/export targets
+- Ship #570 and the Layer 1 / Layer 2 portions of #573 before broadening Data Architecture scope
+- Ship #566 / #567 authoring guardrails as shared patterns across content forms
 - Ship #504 for traceable demo releases and rollback
-- Implement #499 for inherited glossary/menu definitions
-- Split or close #363 based on the Data Architecture v1 boundary decision
-- Run #384 and #103 Phase 1 feedback capture for stakeholder-facing analysis surfaces
-- Resolve #446 before broader onboarding, glossary, or tour copy work
+- Complete #512 before broader #499 onboarding, glossary, or tour copy work
 
 **Longer-term:**
 - End-to-end traceability expansion and risk-informed decision support
