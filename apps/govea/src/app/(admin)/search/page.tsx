@@ -9,6 +9,20 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// Map of entity types whose plural is irregular. The naive `+ 's'` rule works
+// for personas, applications, services, principles, decisions, etc. but
+// produces "Capabilitys" — wrong. Treat as a small allowlist of exceptions
+// rather than a full pluralization library (#550).
+const PLURAL_OVERRIDES: Record<string, string> = {
+  capability: 'capabilities',
+  // Future irregulars (entity type → desired plural) go here.
+}
+
+function pluralize(entityType: string): string {
+  const lower = entityType.toLowerCase()
+  return PLURAL_OVERRIDES[lower] ?? `${entityType}s`
+}
+
 function groupByType(results: SearchResult[]): Map<string, SearchResult[]> {
   const map = new Map<string, SearchResult[]>()
   for (const r of results) {
@@ -88,7 +102,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           {Array.from(grouped.entries()).map(([entityType, items]) => (
             <div key={entityType}>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-                {capitalize(entityType)}s
+                {capitalize(pluralize(entityType))}
               </h2>
               <div className="space-y-2">
                 {items.map(item => (

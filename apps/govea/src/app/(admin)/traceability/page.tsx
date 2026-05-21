@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { getGoalTrace, getObjectiveTrace, getCapabilityTrace, getServiceTrace } from '@/actions/traceability'
 import type { GoalTrace, ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp } from '@/actions/traceability'
+import { getObjectives } from '@/actions/objectives'
+import { getCapabilities } from '@/actions/capabilities'
+import { getServices } from '@/actions/services'
 import { dedupeById } from '@/lib/dedup'
 
 // ── Status colours ────────────────────────────────────────────────────────────
@@ -478,7 +481,15 @@ export default async function TraceabilityPage({
   if (!session?.user) redirect('/login')
 
   const { from, id } = await searchParams
-  if (!from || !id) notFound()
+
+  // No params → render a hub view listing published starting points so
+  // stakeholders can find a trace without drilling in from another page (#549).
+  // The Elected Official, Department Director, and Business Stakeholder
+  // personas all need to *find* traceability views; they don't always arrive
+  // already on the right entity page.
+  if (!from || !id) {
+    return <TraceabilityHub />
+  }
 
   let trace = null
   let backHref = '/'
@@ -545,6 +556,130 @@ export default async function TraceabilityPage({
           Edit links on the detail page.
         </Link>
       </p>
+    </div>
+  )
+}
+
+// ── Hub view (#549) ───────────────────────────────────────────────────────────
+//
+// Landing page when /traceability is hit with no params. Lists published
+// Strategic Objectives, Capabilities (grouped by domain), and Services as
+// starting points. Each row has a "Trace →" link that resolves to the
+// existing detail view of the trace. Matches the audit's Option A (index
+// view) rather than Option B (featured default) — A is more honest to the
+// data model and discoverable for stakeholders who may not know which
+// objective to start from.
+
+async function TraceabilityHub() {
+  const [objectives, capabilities, services] = await Promise.all([
+    getObjectives(),
+    getCapabilities(),
+    getServices(),
+  ])
+
+  // Viewer-only filter: traceability already enforces visibility at the
+  // entity-level actions. For the hub, we restrict to published items so
+  // stakeholders aren't shown drafts they can't actually trace.
+  const publishedObjectives = objectives.filter(o => o.status === 'published')
+  const publishedCapabilities = capabilities.filter(c => c.status === 'published')
+  const publishedServices = services.filter(s => s.status === 'published')
+
+  // Group capabilities by their business domain for scanability.
+  const capsByDomain = new Map<string, typeof publishedCapabilities>()
+  for (const cap of publishedCapabilities) {
+    const domain = cap.domain ?? 'No domain'
+    const list = capsByDomain.get(domain) ?? []
+    list.push(cap)
+    capsByDomain.set(domain, list)
+  }
+  const domainsSorted = Array.from(capsByDomain.keys()).sort((a, b) =>
+    a === 'No domain' ? 1 : b === 'No domain' ? -1 : a.localeCompare(b)
+  )
+
+  const hasAny = publishedObjectives.length + publishedCapabilities.length + publishedServices.length > 0
+
+  return (
+    <div className="space-y-8 max-w-3xl">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Traceability</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Trace from a strategic objective, capability, or service down to the technology that supports it.
+          Pick a starting point below.
+        </p>
+      </div>
+
+      {!hasAny && (
+        <p className="text-sm text-muted-foreground rounded-lg border bg-card p-8 text-center">
+          No published content yet. Publish at least one objective, capability, or service to begin tracing.
+        </p>
+      )}
+
+      {publishedObjectives.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold">Strategic Objectives</h2>
+          <div className="rounded-lg border bg-card divide-y divide-border">
+            {publishedObjectives.map(o => (
+              <Link
+                key={o.id}
+                href={`/traceability?from=objective&id=${o.id}`}
+                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-sm font-medium">{o.name}</p>
+                  {o.timeHorizon && (
+                    <p className="text-xs text-muted-foreground">{o.timeHorizon}</p>
+                  )}
+                </div>
+                <span className="text-xs text-primary shrink-0">Trace →</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {publishedCapabilities.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold">Capabilities</h2>
+          {domainsSorted.map(domain => {
+            const caps = capsByDomain.get(domain)!
+            return (
+              <div key={domain} className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{domain}</p>
+                <div className="rounded-lg border bg-card divide-y divide-border">
+                  {caps.map(c => (
+                    <Link
+                      key={c.id}
+                      href={`/traceability?from=capability&id=${c.id}`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                    >
+                      <p className="text-sm font-medium">{c.name}</p>
+                      <span className="text-xs text-primary shrink-0">Trace →</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </section>
+      )}
+
+      {publishedServices.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold">Services</h2>
+          <div className="rounded-lg border bg-card divide-y divide-border">
+            {publishedServices.map(s => (
+              <Link
+                key={s.id}
+                href={`/traceability?from=service&id=${s.id}`}
+                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+              >
+                <p className="text-sm font-medium">{s.name}</p>
+                <span className="text-xs text-primary shrink-0">Trace →</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

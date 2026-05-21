@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getCapability, markCapabilityReviewed } from '@/actions/capabilities'
 import { MarkReviewedForm } from '@/components/mark-reviewed-button'
+import { FreshnessLine } from '@/components/freshness-line'
 import { getApplications } from '@/actions/applications'
 import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
@@ -171,6 +172,8 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             </span>
           </div>
         </div>
+
+        <FreshnessLine updatedAt={capability.updatedAt} lastReviewedAt={capability.lastReviewedAt} />
 
         {capability.description && (
           <MarkdownContent>{capability.description}</MarkdownContent>

@@ -19,6 +19,7 @@ import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
 import { MarkdownContent } from '@/components/markdown-content'
+import { FreshnessLine } from '@/components/freshness-line'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 import { getApplicationImpact } from '@/actions/impact'
 import { ApplicationImpactPanel } from '@/components/impact-panel'
@@ -109,6 +110,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             </span>
           </div>
         </div>
+
+        <FreshnessLine updatedAt={application.updatedAt} lastReviewedAt={application.lastReviewedAt} />
 
         {application.description && (
           <MarkdownContent>{application.description}</MarkdownContent>
