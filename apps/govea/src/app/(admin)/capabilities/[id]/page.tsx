@@ -30,6 +30,11 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { getCapabilityImpact } from '@/actions/impact'
 import { CapabilityImpactPanel } from '@/components/impact-panel'
 import { CapabilityEditButton } from '@/components/capability-edit-button'
+import { DomainOwnerLine } from '@/components/domain-owner-line'
+import { getOrgUsersForPicker } from '@/actions/org-users'
+import { db } from '@/db/client'
+import { users } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 import {
   approveCrossOrgLink,
@@ -92,6 +97,19 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
       ])
     : [[], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }, []]
 
+  // Domain owner (#581 follow-up): fetch picker list for editors, plus the
+  // owner attribution row for the detail line. Owner lookup is conditional
+  // because it's null for most records today.
+  const [orgUsers, domainOwner] = await Promise.all([
+    canMutate ? getOrgUsersForPicker() : Promise.resolve([]),
+    capability.domainOwnerUserId
+      ? db.query.users.findFirst({
+          where: eq(users.id, capability.domainOwnerUserId),
+          columns: { id: true, name: true, email: true },
+        })
+      : Promise.resolve(null),
+  ])
+
   const addPersona = linkCapabilityPersona.bind(null, id)
   const removePersona = unlinkCapabilityPersona.bind(null, id)
   const addApplication = linkCapabilityApplication.bind(null, id)
@@ -149,9 +167,12 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
             visibility: capability.visibility,
             personaIds: capability.capabilityPersonas.map(cp => cp.persona.id),
             parentId: capability.parentRelationships[0]?.parentId ?? null,
+            domainOwnerUserId: capability.domainOwnerUserId,
           }}
           taxonomyDefinitions={capability.taxonomyDefinitions}
           currentTaxonomyValues={capability.taxonomyValues}
+          currentUserId={session.user.id}
+          orgUsers={orgUsers}
         />
       )}
 
@@ -173,7 +194,12 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
           </div>
         </div>
 
-        <FreshnessLine updatedAt={capability.updatedAt} lastReviewedAt={capability.lastReviewedAt} />
+        <div className="flex items-center gap-3 flex-wrap">
+          <FreshnessLine updatedAt={capability.updatedAt} lastReviewedAt={capability.lastReviewedAt} />
+          {domainOwner && (
+            <DomainOwnerLine ownerName={domainOwner.name} ownerEmail={domainOwner.email} />
+          )}
+        </div>
 
         {capability.description && (
           <MarkdownContent>{capability.description}</MarkdownContent>

@@ -21,6 +21,8 @@ export const adrs = pgTable('adrs', {
   supersededBy: uuid('superseded_by').references((): AnyPgColumn => adrs.id, { onDelete: 'set null' }),
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),
+  // #581 follow-up: optional domain owner attribution — see capabilities.ts.
+  domainOwnerUserId: uuid('domain_owner_user_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [

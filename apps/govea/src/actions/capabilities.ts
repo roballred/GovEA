@@ -9,6 +9,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
+import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
@@ -154,6 +155,7 @@ export async function createCapability(formData: FormData) {
   const personaIds = formData.getAll('personaIds') as string[]
   const parentId = (formData.get('parentId') as string) || null
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  const domainOwnerUserId = (formData.get('domainOwnerUserId') as string) || null
 
   // Verify every supplied junction target belongs to the caller's org.
   // Cross-org references are only allowed through crossOrgLinks (#415).
@@ -162,6 +164,9 @@ export async function createCapability(formData: FormData) {
   }
   if (parentId) {
     await assertEntityInOrg('capability', parentId, orgId)
+  }
+  if (domainOwnerUserId) {
+    await assertUserInOrg(domainOwnerUserId, orgId)
   }
 
   // Mutation + audit are wrapped in a single transaction so a DB-layer audit
@@ -176,6 +181,7 @@ export async function createCapability(formData: FormData) {
       capabilityType,
       status,
       visibility,
+      domainOwnerUserId,
       organizationId: orgId,
       createdBy: session.user.id,
       updatedBy: session.user.id,
@@ -221,6 +227,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
   const personaIds = formData.getAll('personaIds') as string[]
   const parentId = (formData.get('parentId') as string) || null
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  const domainOwnerUserId = (formData.get('domainOwnerUserId') as string) || null
 
   const before = await db.query.capabilities.findFirst({ where: eq(capabilities.id, capabilityId) })
   assertOwnership(before?.organizationId, orgId)
@@ -233,6 +240,21 @@ export async function editCapability(capabilityId: string, formData: FormData) {
   if (parentId) {
     await assertEntityInOrg('capability', parentId, orgId)
   }
+  // Domain owner must be a user in the caller's org. Cross-org owners are
+  // not meaningful — domain ownership is an intra-org coordination signal.
+  if (domainOwnerUserId) {
+    await assertUserInOrg(domainOwnerUserId, orgId)
+  }
+
+  // Domain-owner overwrite gate (#581): if the object is owned by another
+  // user, require explicit acknowledgment. The gate uses the pre-edit owner
+  // (not the form field) — that's what the actor is overwriting.
+  const acknowledgeOverwrite = formData.get('acknowledgeOverwrite') === 'on'
+  const ownerAck = await ensureDomainOwnerOverwriteAck({
+    beforeOwnerUserId: before?.domainOwnerUserId,
+    actorUserId: session.user.id,
+    acknowledged: acknowledgeOverwrite,
+  })
 
   // Publish-time debt gate (#381 PR-3): when transitioning to 'published'
   // with linked critical/high open debt, require explicit ack from the form.
@@ -257,6 +279,7 @@ export async function editCapability(capabilityId: string, formData: FormData) {
       capabilityType,
       status,
       visibility,
+      domainOwnerUserId,
       updatedBy: session.user.id,
       updatedAt: new Date(),
     }).where(and(eq(capabilities.id, capabilityId), eq(capabilities.organizationId, orgId)))
@@ -286,6 +309,24 @@ export async function editCapability(capabilityId: string, formData: FormData) {
       before: { name: before?.name, status: before?.status, visibility: before?.visibility },
       after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
     })
+
+    // #581: when a non-owner overwrite was acknowledged, log it so the
+    // audit log shows who overwrote whose record. Cross-references the
+    // owner so a domain-owner persona review surfaces the row.
+    if (ownerAck.gated) {
+      await writeAuditLog(tx, {
+        action: 'domain_owner.overwrite_acknowledged',
+        entityType: 'capability',
+        entityId: capabilityId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          ownerUserId: ownerAck.ownerUserId,
+          ownerName: ownerAck.ownerName,
+          ownerEmail: ownerAck.ownerEmail,
+        },
+      })
+    }
 
     // #381 PR-3: when the publish-debt gate was acknowledged, log it.
     if (debtAck.acknowledged) {

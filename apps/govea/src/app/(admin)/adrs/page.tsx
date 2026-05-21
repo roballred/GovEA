@@ -7,6 +7,7 @@ import { getInitiatives } from '@/actions/initiatives'
 import { getObjectives } from '@/actions/objectives'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { ADRTable } from './adr-table'
+import { getOrgUsersForPicker } from '@/actions/org-users'
 
 export default async function ADRsPage() {
   const session = await auth()
@@ -15,13 +16,14 @@ export default async function ADRsPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [adrList, capabilityList, applicationList, initiativeList, objectiveList, taxonomyDefinitions] = await Promise.all([
+  const [adrList, capabilityList, applicationList, initiativeList, objectiveList, taxonomyDefinitions, orgUsers] = await Promise.all([
     getADRs(),
     getCapabilities(),
     getApplications(),
     getInitiatives(),
     getObjectives(),
     getEntityTaxonomyDefinitions(orgId, 'adr'),
+    getOrgUsersForPicker(),
   ])
 
   const adrIds = adrList.map(a => a.id)
@@ -45,8 +47,10 @@ export default async function ADRsPage() {
         objectives={objectiveList}
         role={role}
         currentOrgId={orgId}
+        currentUserId={session.user.id}
         taxonomyDefinitions={taxonomyDefinitions}
         taxonomyValueMap={taxonomyValueMap}
+        orgUsers={orgUsers}
       />
     </div>
   )

@@ -11,6 +11,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
+import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { redirect } from 'next/navigation'
 
 async function requireContributor() {
@@ -109,6 +110,11 @@ export async function createADR(formData: FormData) {
   const objectiveIds = formData.getAll('objectiveIds') as string[]
 
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  const domainOwnerUserId = (formData.get('domainOwnerUserId') as string) || null
+
+  if (domainOwnerUserId) {
+    await assertUserInOrg(domainOwnerUserId, orgId)
+  }
 
   await db.transaction(async (tx) => {
     const [adr] = await tx.insert(adrs).values({
@@ -120,6 +126,7 @@ export async function createADR(formData: FormData) {
       status,
       visibility,
       supersededBy,
+      domainOwnerUserId,
       organizationId: orgId,
       createdBy: session.user.id,
       updatedBy: session.user.id,
@@ -158,10 +165,24 @@ export async function editADR(id: string, formData: FormData) {
   const initiativeIds = formData.getAll('initiativeIds') as string[]
   const objectiveIds = formData.getAll('objectiveIds') as string[]
 
+  const domainOwnerUserId = (formData.get('domainOwnerUserId') as string) || null
+
   const before = await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
   assertOwnership(before?.organizationId, orgId)
 
+  if (domainOwnerUserId) {
+    await assertUserInOrg(domainOwnerUserId, orgId)
+  }
+
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+
+  // Domain-owner overwrite gate (#581) — see capabilities.ts for context.
+  const acknowledgeOverwrite = formData.get('acknowledgeOverwrite') === 'on'
+  const ownerAck = await ensureDomainOwnerOverwriteAck({
+    beforeOwnerUserId: before?.domainOwnerUserId,
+    actorUserId: session.user.id,
+    acknowledged: acknowledgeOverwrite,
+  })
 
   // Publish-time debt gate (#381 PR-3). For ADRs, "publish" = accepted.
   const transitioningToAccepted = before?.status !== 'accepted' && status === 'accepted'
@@ -183,6 +204,7 @@ export async function editADR(id: string, formData: FormData) {
       status,
       visibility,
       supersededBy,
+      domainOwnerUserId,
       updatedBy: session.user.id,
       updatedAt: new Date(),
     }).where(and(eq(adrs.id, id), eq(adrs.organizationId, orgId)))
@@ -204,6 +226,21 @@ export async function editADR(id: string, formData: FormData) {
       before: { number: before?.number, title: before?.title, status: before?.status },
       after: { number, title, status, visibility },
     })
+
+    if (ownerAck.gated) {
+      await writeAuditLog(tx, {
+        action: 'domain_owner.overwrite_acknowledged',
+        entityType: 'adr',
+        entityId: id,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          ownerUserId: ownerAck.ownerUserId,
+          ownerName: ownerAck.ownerName,
+          ownerEmail: ownerAck.ownerEmail,
+        },
+      })
+    }
 
     if (debtAck.acknowledged) {
       await writeAuditLog(tx, {

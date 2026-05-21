@@ -20,6 +20,10 @@ import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
 import { MarkdownContent } from '@/components/markdown-content'
 import { FreshnessLine } from '@/components/freshness-line'
+import { DomainOwnerLine } from '@/components/domain-owner-line'
+import { db } from '@/db/client'
+import { users } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 import { getApplicationImpact } from '@/actions/impact'
 import { ApplicationImpactPanel } from '@/components/impact-panel'
@@ -71,6 +75,13 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       ])
     : [[], [], []]
 
+  const domainOwner = application.domainOwnerUserId
+    ? await db.query.users.findFirst({
+        where: eq(users.id, application.domainOwnerUserId),
+        columns: { id: true, name: true, email: true },
+      })
+    : null
+
   const addCapability = linkApplicationCapability.bind(null, id)
   const removeCapability = unlinkApplicationCapability.bind(null, id)
   const addInitiative = linkApplicationInitiative.bind(null, id)
@@ -111,7 +122,12 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           </div>
         </div>
 
-        <FreshnessLine updatedAt={application.updatedAt} lastReviewedAt={application.lastReviewedAt} />
+        <div className="flex items-center gap-3 flex-wrap">
+          <FreshnessLine updatedAt={application.updatedAt} lastReviewedAt={application.lastReviewedAt} />
+          {domainOwner && (
+            <DomainOwnerLine ownerName={domainOwner.name} ownerEmail={domainOwner.email} />
+          )}
+        </div>
 
         {application.description && (
           <MarkdownContent>{application.description}</MarkdownContent>
