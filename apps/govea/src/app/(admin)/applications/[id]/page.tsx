@@ -20,6 +20,8 @@ import { isModuleEnabled } from '@/lib/modules'
 import { dedupeById } from '@/lib/dedup'
 import { MarkdownContent } from '@/components/markdown-content'
 import { FreshnessLine } from '@/components/freshness-line'
+import { SubscribeButton } from '@/components/subscribe-button'
+import { isSubscribed } from '@/actions/notifications'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 import { getApplicationImpact } from '@/actions/impact'
 import { ApplicationImpactPanel } from '@/components/impact-panel'
@@ -54,7 +56,11 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const [application, enabledModules] = await Promise.all([getApplication(id), getEnabledModules()])
+  const [application, enabledModules, alreadySubscribed] = await Promise.all([
+    getApplication(id),
+    getEnabledModules(),
+    isSubscribed('application', id),
+  ])
   if (!application) notFound()
 
   const impact = await getApplicationImpact(id)
@@ -111,7 +117,10 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           </div>
         </div>
 
-        <FreshnessLine updatedAt={application.updatedAt} lastReviewedAt={application.lastReviewedAt} />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <FreshnessLine updatedAt={application.updatedAt} lastReviewedAt={application.lastReviewedAt} />
+          <SubscribeButton entityType="application" entityId={id} initialSubscribed={alreadySubscribed} />
+        </div>
 
         {application.description && (
           <MarkdownContent>{application.description}</MarkdownContent>

@@ -92,12 +92,14 @@ function SidebarContent({
   pathname,
   enabledModules,
   isInstanceAdmin,
+  unreadNotificationCount,
   onClose,
 }: {
   role: Role
   pathname: string
   enabledModules: Record<string, boolean>
   isInstanceAdmin?: boolean
+  unreadNotificationCount?: number
   onClose?: () => void
 }) {
   const isAdmin = role === 'admin'
@@ -132,6 +134,25 @@ function SidebarContent({
         )}
       >
         Executive Summary
+      </Link>
+
+      {/* Notifications inbox (#581) */}
+      <Link
+        href="/notifications"
+        onClick={onClose}
+        className={cn(
+          'flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          pathname === '/notifications' || pathname.startsWith('/notifications/')
+            ? 'bg-white/15 text-white'
+            : 'text-white/70 hover:bg-white/10 hover:text-white'
+        )}
+      >
+        <span>Notifications</span>
+        {unreadNotificationCount && unreadNotificationCount > 0 ? (
+          <span className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+            {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+          </span>
+        ) : null}
       </Link>
 
       <div className="mt-2 space-y-4">
@@ -227,6 +248,8 @@ interface AppShellProps {
   themeStyle: string
   isInstanceAdmin: boolean
   enabledModules: Record<string, boolean>
+  /** Caller's unread notification count — drives the nav badge (#581). */
+  unreadNotificationCount?: number
   signOutSlot: ReactNode
   children: ReactNode
 }
@@ -238,6 +261,7 @@ export function AppShell({
   themeStyle,
   isInstanceAdmin,
   enabledModules,
+  unreadNotificationCount,
   signOutSlot,
   children,
 }: AppShellProps) {
@@ -296,7 +320,7 @@ export function AppShell({
             GovEA
           </Link>
         </div>
-        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} />
+        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} unreadNotificationCount={unreadNotificationCount} />
       </aside>
 
       {/* ── Mobile overlay backdrop ── */}

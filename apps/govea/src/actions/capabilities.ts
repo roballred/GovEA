@@ -8,6 +8,7 @@ import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnecte
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { notifySubscribers } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -285,6 +286,16 @@ export async function editCapability(capabilityId: string, formData: FormData) {
       organizationId: orgId,
       before: { name: before?.name, status: before?.status, visibility: before?.visibility },
       after: { name, description, domain, capabilityType, status, visibility, personaIds, parentId },
+    })
+
+    // #581 — fan out to subscribers. Notify everyone but the actor.
+    await notifySubscribers(tx, {
+      organizationId: orgId,
+      entityType: 'capability',
+      entityId: capabilityId,
+      action: 'capability.edit',
+      actorUserId: session.user.id,
+      summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${name}`,
     })
 
     // #381 PR-3: when the publish-debt gate was acknowledged, log it.
