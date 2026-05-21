@@ -1,6 +1,6 @@
 # Product Priority Shortlist
 
-Last groomed: 2026-05-16 (no open PRs; #507 and #508 merged after the prior grooming pass)
+Last groomed: 2026-05-21 (no open PRs; reviewed recent merged PRs through #608)
 
 This note summarizes the top next product moves from the current capability inventory, open issues, and recent pull requests. It is intentionally short so it can be reviewed during backlog planning without replacing GitHub issues as the source of execution detail.
 
@@ -8,43 +8,36 @@ Use this alongside [`docs/risk-register.md`](./risk-register.md) when a backlog 
 
 ## Current Signal
 
-The security hardening wave remains closed end-to-end. The remaining security-adjacent backlog is productized control work, not emergency remediation.
+The latest persona-journey and follow-up work shifted the backlog from broad foundation building toward specific adoption blockers:
 
-The repository-completeness, repository-confidence, and architecture-debt streams are now shipped baselines rather than active build streams:
-
-- [#380](https://github.com/roballred/GovEA/issues/380) shipped snapshot foundations, settings, drill-downs, ranked cleanup actions, RAG indicators, trend history, stakeholder surfaces, and auto-suppression through PRs [#448](https://github.com/roballred/GovEA/pull/448), [#450](https://github.com/roballred/GovEA/pull/450), [#454](https://github.com/roballred/GovEA/pull/454), and [#457](https://github.com/roballred/GovEA/pull/457).
-- [#381](https://github.com/roballred/GovEA/issues/381) shipped architecture debt CRUD, linked-debt panels, dashboard priority signals, publish-time acknowledgement, and lifecycle-based system-detected debt through PRs [#459](https://github.com/roballred/GovEA/pull/459), [#466](https://github.com/roballred/GovEA/pull/466), [#467](https://github.com/roballred/GovEA/pull/467), and [#486](https://github.com/roballred/GovEA/pull/486).
-- [#437](https://github.com/roballred/GovEA/issues/437) is complete through [#502](https://github.com/roballred/GovEA/pull/502), which added scoped act-as sessions gated by break-glass and a first cross-tenant support action.
-
-The Data Architecture stream from [#363](https://github.com/roballred/GovEA/issues/363) is also a real shipped module: schema and CRUD foundation, relationship editing, business-architecture docs, Chen notation visualization, dedicated sidebar group, and representative demo fixtures have all landed. What remains is a product boundary decision: close the issue as v1-complete, or split conceptual/logical model expansion into explicit follow-up issues.
-
-Recent merged PRs changed the next-work queue:
-
-- [#503](https://github.com/roballred/GovEA/pull/503) recovered the seed cleanup and GovEA Project value-chain enrichment from [#496](https://github.com/roballred/GovEA/pull/496) and [#497](https://github.com/roballred/GovEA/pull/497) onto `main`, closing [#492](https://github.com/roballred/GovEA/issues/492) and adding a PR base-check workflow.
-- [#501](https://github.com/roballred/GovEA/pull/501) documented first-class risk tracking and closed [#500](https://github.com/roballred/GovEA/issues/500) as a design/capability-definition slice.
-- [#505](https://github.com/roballred/GovEA/pull/505) merged the 2026-05-15 backlog-grooming refresh into `main`.
-- [#507](https://github.com/roballred/GovEA/pull/507) aligned module group controls with the sidebar group model and closed [#506](https://github.com/roballred/GovEA/issues/506).
-- [#508](https://github.com/roballred/GovEA/pull/508) shipped the org-scoped half of admin notices from [#456](https://github.com/roballred/GovEA/issues/456). Instance-wide notices remain the planned second slice.
+- [#603](https://github.com/roballred/GovEA/pull/603) made the audit log readable by Contributors, scoped to architecture content.
+- [#604](https://github.com/roballred/GovEA/pull/604) shipped the first CSV import/export beachhead for Capabilities under [#596](https://github.com/roballred/GovEA/issues/596).
+- [#605](https://github.com/roballred/GovEA/pull/605) shipped EasyEA starter content and empty-state CTAs for new practices under [#587](https://github.com/roballred/GovEA/issues/587).
+- [#606](https://github.com/roballred/GovEA/pull/606) shipped the Email Configuration UI, encrypted SMTP settings, delivery log, and dashboard warning under [#528](https://github.com/roballred/GovEA/issues/528). Actual SMTP sending remains the follow-up.
+- [#607](https://github.com/roballred/GovEA/pull/607) closed a batch of small persona-audit quality issues: connection target filtering, traceability hub behavior, guided-answer prompt chips, detail-page freshness lines, and taxonomy deduplication.
+- [#608](https://github.com/roballred/GovEA/pull/608) shipped the self-service application dependency-impact view under [#578](https://github.com/roballred/GovEA/issues/578).
 - There are no open pull requests at this grooming point.
+
+The practical implication: several previously ranked items are now done or partially done. The next best work should build on those shipped surfaces instead of opening another broad exploratory stream.
 
 ## Top 5 Next Things To Do
 
 | Rank | Recommended next thing | Why now | Primary issue(s) |
 |---|---|---|---|
-| 1 | Finish admin notices with the instance-wide slice | #508 shipped org-scoped notices, but #456 is only complete when instance admins can post distinct instance-wide notices and the UI handles both scopes clearly. | [#456](https://github.com/roballred/GovEA/issues/456) |
-| 2 | Build a traceable release pipeline for the Azure demo | Demo stability is now good enough to protect. Manual deploys still make it too hard to know which commit, image digest, and runtime configuration are live. | [#504](https://github.com/roballred/GovEA/issues/504) |
-| 3 | Decide module/tool terminology, then implement inherited glossary/menu definitions | Glossary-backed menu definitions and product tours will spread language across the app. Make the #446 wording decision first, then use #499 to seed shared definitions. | [#446](https://github.com/roballred/GovEA/issues/446), [#499](https://github.com/roballred/GovEA/issues/499) |
-| 4 | Decide the Data Architecture v1 boundary and split #363 if needed | Data Architecture is no longer speculative. With the v1 metamodel, relationships, diagram, nav, fixtures, and settings alignment shipped, the remaining conceptual/logical scope needs a deliberate follow-up shape. | [#363](https://github.com/roballred/GovEA/issues/363) |
-| 5 | Run the persona-validation and feedback-capture slice | GovEA is shipping stakeholder-facing confidence, roadmap, reporting, Data Architecture, risk, and architecture-debt concepts based on assumed personas. Validate before adding more analysis workflows. | [#384](https://github.com/roballred/GovEA/issues/384), [#103](https://github.com/roballred/GovEA/issues/103) |
+| 1 | Finish email transport, then start the change-notification substrate | #606 made email configurable, but sends still return the stub failure. Real SMTP is the prerequisite for password reset, object/domain subscriptions, and the change-notification needs now repeated by Programme Director, Domain Architect, Consultant, and Agency EA Coordinator personas. | [#528](https://github.com/roballred/GovEA/issues/528), [#581](https://github.com/roballred/GovEA/issues/581), [#87](https://github.com/roballred/GovEA/issues/87) |
+| 2 | Continue CSV import/export across the next high-value entity types | #604 proved the pattern for Capabilities. The Consultant / SI and Early-Maturity Practice Lead personas still need reusable starter libraries and handoff exports beyond Applications and Capabilities. Prioritize Personas and ADRs next, then Initiatives, Objectives, Services, Value Streams, Principles, Glossary, and Data Architecture. | [#596](https://github.com/roballred/GovEA/issues/596), [#86](https://github.com/roballred/GovEA/issues/86) |
+| 3 | Add data-architecture quality cues and naming-standard hints | Data Architecture is now a shipped module, and the remaining gaps are reviewer/operator quality loops: Data Vault physical-name hints, per-row quality cues, and a roll-up scorecard summary. These are cheaper and safer than expanding conceptual/logical modeling. | [#570](https://github.com/roballred/GovEA/issues/570), [#573](https://github.com/roballred/GovEA/issues/573) |
+| 4 | Add authoring guardrails for duplicate names, unsaved changes, and publish-readiness guidance | Persona walks keep finding the same authoring failure mode across entities: easy duplicate creation, silent discard, and weak required-field guidance. A shared guardrail pattern would improve quality across the repository without inventing a new product area. | [#566](https://github.com/roballred/GovEA/issues/566), [#567](https://github.com/roballred/GovEA/issues/567) |
+| 5 | Build a traceable release pipeline for the Azure demo | The demo is now product-critical: starter content, impact analysis, email configuration, and persona-facing reports all depend on reviewers seeing the expected build. Manual deploys still make it too hard to prove which commit, image digest, and runtime configuration are live. | [#504](https://github.com/roballred/GovEA/issues/504) |
 
 ## Product Manager Notes
 
-- #456 should now be split into an instance-notice PR rather than reopened as another broad design pass. #508 already settled most of the shared notice semantics.
-- #504 should be treated as operational product work, not infrastructure polish. The demo is how many users will first understand GovEA.
-- #507 reduces the settings/navigation mismatch, so #479 can move when the team wants a usability-focused navigation-density slice. It sits just outside the top five because the current top items reduce broader product and operating risk.
-- #500/#501 created the risk-tracking capability definition. Do not jump straight to implementation until persona validation clarifies which risk summaries leadership and practitioners actually trust.
-- #482 is important process work, but it has an explicit maintainer-review-first workflow. Do not bypass that by bundling an AI-session-start document into ordinary grooming PRs.
-- #436 remains a future security hardening option after enough operational experience with #502's act-as flow. It is not the next security item unless read-surface risk becomes urgent.
+- Treat #528 as unfinished until a real SMTP transport lands. The configuration UI unblocks downstream work, but notification features cannot ship on a stub sender.
+- #581 is too broad to build in one pass. Split it into an event/subscription foundation, domain-owner attribution, non-owner edit warning, and email digest delivery.
+- #596 should keep moving in small per-entity PRs. Preserve the export -> unchanged import -> zero-diff property from #604.
+- #573 Layer 1 and Layer 2 are the right near-term data-architecture scope. A full Hoberman-style scorecard should wait for persona validation.
+- #512 should be handled before expanding #499 glossary-backed menu definitions. "Modules" is now the settled term; cleanup and a CI guard are process hygiene, but they sit just outside the top five.
+- #510 and #511 remain worthwhile documentation/capability-definition work for operating GovEA, especially for non-technical decision-makers. They are good candidates when the team wants a docs-only or capability-only slice.
 
 ## Security Remediation Status
 
