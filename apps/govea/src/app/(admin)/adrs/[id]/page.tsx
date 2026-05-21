@@ -20,6 +20,8 @@ import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
 import { FreshnessLine } from '@/components/freshness-line'
+import { SubscribeButton } from '@/components/subscribe-button'
+import { isSubscribed } from '@/actions/notifications'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -53,7 +55,11 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const [adr, enabledModules] = await Promise.all([getADR(id), getEnabledModules()])
+  const [adr, enabledModules, alreadySubscribed] = await Promise.all([
+    getADR(id),
+    getEnabledModules(),
+    isSubscribed('adr', id),
+  ])
   if (!adr) notFound() // also catches viewer status gate enforced in getADR (#208)
 
   const editor = canEdit(session.user)
@@ -103,7 +109,10 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
 
         {/* For ADRs, the "Decided" date matters more than "last edited" —
             the entire genre exists to record when a decision was made (#553). */}
-        <FreshnessLine updatedAt={adr.createdAt} updatedLabel="Decided" />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <FreshnessLine updatedAt={adr.createdAt} updatedLabel="Decided" />
+          <SubscribeButton entityType="adr" entityId={id} initialSubscribed={alreadySubscribed} />
+        </div>
 
         {adr.supersededByAdr && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">

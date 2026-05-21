@@ -7,6 +7,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { notifySubscribers } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { autoFlagLifecycleDebt } from '@/lib/lifecycle-debt'
 import { redirect } from 'next/navigation'
@@ -237,6 +238,16 @@ export async function editApplication(applicationId: string, formData: FormData)
       organizationId: orgId,
       before: { name: before?.name, status: before?.status, visibility: before?.visibility },
       after: { name, vendor, lifecycleStatus, status, visibility, capabilityIds },
+    })
+
+    // #581 — notify subscribers of this app's change.
+    await notifySubscribers(tx, {
+      organizationId: orgId,
+      entityType: 'application',
+      entityId: applicationId,
+      action: 'application.edit',
+      actorUserId: session.user.id,
+      summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${name}`,
     })
 
     if (debtAck.acknowledged) {

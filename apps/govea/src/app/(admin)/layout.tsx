@@ -11,6 +11,7 @@ import { isInstanceAdmin } from '@/lib/rbac'
 import { AppShell } from '@/components/app-shell'
 import { AdminNoticeBanner } from '@/components/admin-notice-banner'
 import { getCurrentModuleSettings } from '@/lib/get-enabled-modules'
+import { getMyUnreadCount } from '@/actions/notifications'
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
   admin: 'bg-violet-100 text-violet-800 border-violet-200',
@@ -23,6 +24,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session?.user) redirect('/login')
 
   const role = session.user.role
+
+  // Unread notification count for the nav badge (#581). Fetched at the
+  // layout level so the badge is up-to-date on every navigation; the
+  // /notifications page itself revalidates this path after mark-read.
+  const unreadNotificationCount = await getMyUnreadCount()
 
   // Load org settings (theme + enabled modules)
   let themeStyle = ''
@@ -66,6 +72,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       themeStyle={themeStyle}
       isInstanceAdmin={isInstanceAdmin(session.user)}
       enabledModules={enabledModules}
+      unreadNotificationCount={unreadNotificationCount}
       signOutSlot={signOutSlot}
     >
       {session.user.organizationId && (

@@ -3,6 +3,8 @@ import { redirect, notFound } from 'next/navigation'
 import { getCapability, markCapabilityReviewed } from '@/actions/capabilities'
 import { MarkReviewedForm } from '@/components/mark-reviewed-button'
 import { FreshnessLine } from '@/components/freshness-line'
+import { SubscribeButton } from '@/components/subscribe-button'
+import { isSubscribed } from '@/actions/notifications'
 import { getApplications } from '@/actions/applications'
 import { getObjectives } from '@/actions/objectives'
 import { getInitiatives } from '@/actions/initiatives'
@@ -68,7 +70,11 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const [capability, enabledModules] = await Promise.all([getCapability(id), getEnabledModules()])
+  const [capability, enabledModules, alreadySubscribed] = await Promise.all([
+    getCapability(id),
+    getEnabledModules(),
+    isSubscribed('capability', id),
+  ])
   if (!capability) notFound()
 
   const impact = await getCapabilityImpact(id)
@@ -173,7 +179,10 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
           </div>
         </div>
 
-        <FreshnessLine updatedAt={capability.updatedAt} lastReviewedAt={capability.lastReviewedAt} />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <FreshnessLine updatedAt={capability.updatedAt} lastReviewedAt={capability.lastReviewedAt} />
+          <SubscribeButton entityType="capability" entityId={id} initialSubscribed={alreadySubscribed} />
+        </div>
 
         {capability.description && (
           <MarkdownContent>{capability.description}</MarkdownContent>
