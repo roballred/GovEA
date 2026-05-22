@@ -21,6 +21,7 @@ import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from
 import type { EntityTaxonomyValue } from '@/db/schema'
 import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 
 type ADRRow = ADR & {
   organization: { id: string; name: string } | null
@@ -170,6 +171,16 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
         )}
       </div>
 
+      {/* Empty state — when the org has no ADRs at all (#587 follow-up). */}
+      {adrs.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="ADR"
+          description="ADRs record the architecture decisions you've made — what was decided, why, and what it implies. They give later teams the context behind today's choices."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -264,6 +275,8 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={open => { if (!open && !confirmDiscard(createDirty)) return; if (!open) { createDirty.reset(); setCreateOpen(false) } }}>

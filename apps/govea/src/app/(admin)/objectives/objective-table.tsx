@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
@@ -145,6 +146,16 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
         )}
       </div>
 
+      {/* Empty state — when the org has no objectives at all (#587 follow-up). */}
+      {objectives.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="objective"
+          description="Strategic objectives are the measurable outcomes the organization is working toward. Capabilities and initiatives trace back to them."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -238,6 +249,8 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={(o) => { if (!o && !confirmDiscard(createDirty)) return; if (!o) createDirty.reset(); setCreateOpen(o) }}>

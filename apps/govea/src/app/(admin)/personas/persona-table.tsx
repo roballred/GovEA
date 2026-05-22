@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
@@ -178,6 +179,16 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
         </div>
       </div>
 
+      {/* Empty state — when the org has no personas at all (#587 follow-up). */}
+      {personas.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="persona"
+          description="Personas describe the people the organization serves and the staff who deliver. Everything else in EasyEA traces back to a persona."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -292,6 +303,8 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={(o) => { if (!o && !confirmDiscard(createDirty)) return; if (!o) createDirty.reset(); setCreateOpen(o) }}>

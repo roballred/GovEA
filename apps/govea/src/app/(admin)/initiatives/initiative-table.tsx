@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
@@ -175,6 +176,16 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
         )}
       </div>
 
+      {/* Empty state — when the org has no initiatives at all (#587 follow-up). */}
+      {initiatives.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="initiative"
+          description="Initiatives are the projects and programs you're running to change capabilities, applications, or services."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -269,6 +280,8 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={open => { if (!open && !confirmDiscard(createDirty)) return; if (!open) { createDirty.reset(); setCreateOpen(false); setSelectedCaps([]) } }}>

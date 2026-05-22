@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyInputs, TaxonomyFilters, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 
@@ -175,6 +176,16 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
         )}
       </div>
 
+      {/* Empty state — when the org has no services at all (#587 follow-up). */}
+      {services.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="service"
+          description="Services are the channels through which personas interact with the organization — what your residents, businesses, and staff actually do with you."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -257,6 +268,8 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={(o) => { if (!o && !confirmDiscard(createDirty)) return; if (!o) createDirty.reset(); setCreateOpen(o) }}>
