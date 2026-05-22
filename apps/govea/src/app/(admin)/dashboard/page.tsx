@@ -25,6 +25,7 @@ import {
   type RagBucket,
 } from '@/lib/completeness-signals'
 import Link from 'next/link'
+import { FirstSignInModal } from '@/components/first-sign-in-modal'
 
 const RAG_TEXT_CLASS: Record<RagBucket, string> = {
   green:   'text-green-700 dark:text-green-400',
@@ -224,6 +225,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* First-sign-in modal (#587 follow-up). Self-managed via localStorage;
+          renders nothing on subsequent visits. Admin-only. */}
+      <FirstSignInModal role={session.user.role} />
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
