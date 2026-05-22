@@ -7,7 +7,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
-import { notifySubscribers } from './notifications'
+import { notifySubscribers, notifyDomainOwner } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { autoFlagLifecycleDebt } from '@/lib/lifecycle-debt'
@@ -284,6 +284,15 @@ export async function editApplication(applicationId: string, formData: FormData)
           ownerName: ownerAck.ownerName,
           ownerEmail: ownerAck.ownerEmail,
         },
+      })
+      await notifyDomainOwner(tx, {
+        organizationId: orgId,
+        entityType: 'application',
+        entityId: applicationId,
+        action: 'application.edit_by_non_owner',
+        actorUserId: session.user.id,
+        ownerUserId: ownerAck.ownerUserId,
+        summary: `${session.user.name ?? session.user.email ?? 'Someone'} edited your application "${name}"`,
       })
     }
 
