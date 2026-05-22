@@ -39,6 +39,9 @@ Operational requirement: the database role used by the application must be grant
 
 Acknowledged limitation: an operator with direct superuser database access can bypass application-level controls. This is accepted in v1. Mitigation options for future consideration include append-only cloud storage exports and WAL-based tamper detection.
 
+## Implementation Status
+Shipped (v1). The `audit_log` table records auth, account, and content events with actor + timestamp; the `/audit` admin view exposes URL-backed actor/action/time-window filtering (#617). Immutability is enforced at the database layer by a Postgres trigger that blocks UPDATE and DELETE (#417), in addition to application-level read-only access. CSV export is the recommended path for retaining entries beyond the configured retention window.
+
 ## Links
 - Depends on: User Management, Local Authentication, SSO Authentication
 - Related: Role-Based Access Control

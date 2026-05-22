@@ -22,7 +22,7 @@ The system must allow administrators to control the visual presentation of the p
 - Any authenticated user may set their own dark/light mode preference
 - Dark mode must meet WCAG 2.1 AA contrast requirements
 
-## Current Scope
+## Implementation Status
 - Predefined org-level theme selection is implemented
 - Per-user dark/light mode toggle is implemented (localStorage-backed; cross-device sync is future work)
 - Separate front-end/admin themes, arbitrary branding controls, and template-level rendering customization are future work

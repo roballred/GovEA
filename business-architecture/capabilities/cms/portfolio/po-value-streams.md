@@ -99,4 +99,3 @@ The authoring capability (this document) covers creating and maintaining value s
 
 - Depends on: `iam-rbac`, `cm-content-workflow`, `po-capability-map`, `iam-audit-trail`
 - Related: `fd-value-streams.md`, `po-application-portfolio`, `pl-strategic-objectives`
-- Personas served: CMS Contributor, CMS Administrator, Enterprise Architect (Central IT), Agency EA Coordinator

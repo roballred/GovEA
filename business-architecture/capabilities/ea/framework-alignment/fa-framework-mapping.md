@@ -47,4 +47,3 @@ Not yet shipped:
 
 - Depends on: Framework Reference Management, Content Relationships, Taxonomy Management
 - Related: TOGAF-Aligned Reporting, ADM Phase Alignment, End-to-End Traceability
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director

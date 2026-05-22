@@ -191,9 +191,13 @@ Those are review judgments. The standard makes drift visible; reviewers still ow
 
 ---
 
+## Architecture-Decision Files
+
+Some capability folders host inline architecture-decision records (e.g. `iam-api-auth-decision.md`, `rm-query-performance-decision.md`) for proximity to the capability they constrain. These follow ADR conventions, not the sub-capability template above. Filename suffix `-decision.md` marks them; the lint script skips them. Use them when the decision is small enough to live inside the capability folder; otherwise file under `docs/decisions/`.
+
 ## Compliance and Enforcement
 
-Compliance is currently checked manually during PR review. A CI lint check is a deferred follow-up — see the linked issue.
+Compliance is enforced by [`scripts/lint-business-architecture.mjs`](../scripts/lint-business-architecture.mjs), wired into CI. Run locally with `node scripts/lint-business-architecture.mjs`.
 
 When adding or editing a persona or capability file:
 

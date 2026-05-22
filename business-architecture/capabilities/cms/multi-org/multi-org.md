@@ -37,5 +37,18 @@ Still maturing:
 - Broader test coverage across role and visibility combinations
 - Deeper cross-org management UX
 
+## Success Criteria
+
+- A central IT org and an agency can establish a connection, share `instance` or `connections` visibility capabilities, and have the agency link to enterprise counterparts within the same admin session
+- Single-org installs continue to work identically with no federation UI surface area exposed
+- An org admin can answer "which other orgs are we connected to, and what have we shared?" without leaving the connections page
+- Removing a connection immediately revokes cross-org link visibility and prevents new outbound requests
+- Cross-org link approval decisions appear in the audit log with actor + timestamp
+
 ## Design Principle
 Federation must feel like a professional network, not an audit. Agencies connect and share because it is useful to them, not because it is required.
+
+## Links
+- Depends on: IAM — Role-Based Access Control, IAM — Audit Trail, Content Management — Content Workflow
+- Enables: Cross-Org Linking, Cross-Org Link Approval
+- Related: Frontend Display (federation-aware detail pages)

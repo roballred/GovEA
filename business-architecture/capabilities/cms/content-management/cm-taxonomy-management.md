@@ -39,11 +39,15 @@ The current implementation covers the Domain dimension: the `domain` field on ca
 Administrative Services, Public Safety, Infrastructure & Public Works, Community Development, Health & Human Services, Parks/Recreation/Culture, Transportation, Information Technology, Finance & Revenue, Legislative & Executive
 
 ## Rules
-- Deleting a taxonomy term does not delete content tagged with it — the tag is removed from the content item
-- Taxonomy types and values must be scoped to an organization
+- Taxonomy types and values are scoped to the organization — they are never shared across orgs or visible instance-wide
 - Taxonomy values must be unique within their type for that organization
 - The seeded Domain vocabulary is editable — agencies can rename, add, or remove values
 - Capability and glossary forms should prefer taxonomy-backed Domain values rather than free-text drift
+- Only Admins and Contributors may create or edit taxonomy terms; only Admins may delete them
+- Deleting a type cascade-deletes all its values — orphaned values with no type are not permitted
+- Deleting a type or value does **not** remove the stored domain string from existing capabilities or glossary terms; those records retain their value until edited
+- `createDomainValue` deduplicates case-insensitively within the org — calling it with "IT" when "it" exists returns the existing term
+- Slug is auto-generated from the name and is used for system lookups (the "Domain" type is found by `slug = 'domain'`)
 
 ### Taxonomy Management Page
 
@@ -94,16 +98,6 @@ Seeded via `DEV=true pnpm db:seed`. Creates a **Domain** type with 10 values:
 
 All seed capabilities and glossary terms are mapped to one of these values.
 
-## Rules
-
-- Taxonomy types and values are scoped to the organization — they are never shared across orgs or visible instance-wide
-- Only Admins and Contributors may create or edit taxonomy terms
-- Only Admins may delete taxonomy terms
-- Deleting a type cascade-deletes all its values — orphaned values with no type are not permitted
-- Deleting a type or value does **not** remove the stored domain string from existing capabilities or glossary terms; those records retain their value until edited
-- `createDomainValue` deduplicates case-insensitively within the org — calling it with "IT" when "it" exists returns the existing term
-- Slug is auto-generated from the name and is used for system lookups (the "Domain" type is found by `slug = 'domain'`)
-
 ## Implementation Status
 
 | Behavior | Status |
@@ -121,6 +115,5 @@ All seed capabilities and glossary terms are mapped to one of these values.
 ## Links
 
 - Depends on: IAM — Role-Based Access Control
-- Used by: Content Management — Capabilities, Glossary
+- Enables: Content Management — Capabilities, Glossary
 - Related: Content Search & Filtering, Admin Dashboard (Capabilities by Domain)
-- Issues: #156 (taxonomy as first-class UX), #171 (controlled domain vocabulary)

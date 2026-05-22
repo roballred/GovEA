@@ -46,4 +46,3 @@ Not yet shipped:
 
 - Depends on: Framework Mapping, ADM Phase Alignment, End-to-End Traceability, Planning & Roadmap
 - Related: Reporting & Documentation target surface, Repository Completeness
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director

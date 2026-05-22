@@ -31,6 +31,9 @@ The system must allow users to sign in using their agency's identity provider vi
 - This 24h residual access window is an accepted v1 trade-off
 - SCIM-based real-time provisioning sync is out of scope for v1
 
+## Implementation Status
+Shipped (v1). OIDC sign-in via Microsoft Entra ID is enabled at deploy time through `AUTH_MICROSOFT_ENTRA_ID_*` environment variables; the login page conditionally renders the SSO button based on env presence. Pre-provisioning is enforced — unprovisioned identities are blocked. Self-serve tenant SSO configuration through the admin UI is a follow-up gap surfaced under #530. Failover-mode behavior is tracked under #7.
+
 ## Links
 - Depends on: User Management, Role-Based Access Control
 - Related: Local Authentication, IAM Audit Trail

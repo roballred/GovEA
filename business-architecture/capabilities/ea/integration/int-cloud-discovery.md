@@ -48,4 +48,3 @@ The specific pain this solves: government IT teams have adopted cloud services f
 
 - Depends on: `po-application-portfolio`, `rm-repository-completeness`, `ac-admin-dashboard`
 - Related: `int-itsm-cmdb.md`, `int-api-management.md`
-- Personas served: Enterprise Architect, Agency EA Coordinator, Junior EA Analyst, CMS Administrator

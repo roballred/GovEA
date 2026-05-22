@@ -1,4 +1,6 @@
-# Capability Group: Repository & Modelling
+# Capability: Repository & Modelling
+
+## What It Does
 
 The system must maintain a reliable, navigable, and self-auditing store of all architecture objects — capabilities, applications, personas, decisions, and technology — and surface the relationships, gaps, and accumulated debt within that store so that architects and decision-makers can trust what they see. In the current product, most of this group remains roadmap work beyond the existing audit trail and early coverage signals.
 
@@ -44,3 +46,28 @@ The following market research capabilities in this group are substantively addre
 ## Design Principle
 
 Trust is the foundation of this capability group. An architecture repository that nobody believes is worse than no repository at all. Every capability in this group exists to increase trust: traceability shows the chain is real, debt tracking makes the gaps honest, and completeness signals tell users exactly what to rely on and what to take with caution.
+
+## Success Criteria
+
+- An architect can answer "what does this change affect?" by opening any capability, application, or initiative and seeing its downstream traceability chain inline
+- Architecture debt items surface on the admin dashboard with severity tiers so the first thing leadership sees reflects what is actually at risk
+- A new staff member can read the repository confidence summary and know within a minute which areas of the repository are trustworthy and which need maintenance
+- Every published record is reachable from a portfolio or traceability view — no orphaned records hide from review
+
+## Rules
+
+- All repository content follows the standard `draft / published / archived` content workflow plus federation visibility (`org`, `connections`, `instance`)
+- The core GovEA relationship chain (Application → Capability → Persona) is enforced at publish time and cannot be bypassed by traceability or debt records
+- Severity tiers (`critical / high / medium / low`) are defined once in [`rm-architecture-debt.md`](./rm-architecture-debt.md) and referenced by all repository signals — they are not redefined per capability
+- Debt items, broken-chain indicators, and staleness warnings roll up into a single unified priority signal on the admin dashboard rather than three independent panels
+- The audit trail records every state transition on repository content (immutable per [`iam-audit-trail`](../../cms/iam/iam-audit-trail.md))
+
+## Implementation Status
+
+Shipped (v1, partial). End-to-end traceability ships for objectives, capabilities, and services, with application and capability impact analysis for change and decommission scenarios. Architecture debt tracking ships with the documented filter chips and severity tiers. Repository completeness ships as scaffolded dashboard signals. Risk tracking and a unified cross-object impact workspace remain future work.
+
+## Links
+
+- Depends on: Content Management — Content Relationships, IAM — Audit Trail, Portfolio (Capabilities, Applications, ADRs)
+- Enables: Frontend Display (Traceability Views, Repository Confidence Summary), Admin Configuration (Admin Dashboard)
+- Related: Data Architecture, Framework Alignment

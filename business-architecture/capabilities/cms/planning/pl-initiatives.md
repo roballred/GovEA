@@ -27,7 +27,9 @@ The system must allow organizations to document change programmes (initiatives, 
 - Impact labels on capability links are optional but recommended; they communicate whether the initiative is building new capability or changing existing capability
 - Viewer access is not currently driven by a published-only planning workflow; admin surfaces render initiatives based on auth, organization, federation visibility, and route access rules
 
+## Implementation Status
+Shipped (v1). Initiative CRUD with planning lifecycle states, capability and objective linking with impact labels, roadmap visualization, cross-org federation, and a cross-initiative overlap/conflict view (#602) are all in place.
+
 ## Links
 - Depends on: Content Management — Content Workflow, Content Relationships
 - Related: Strategic Objectives, Capabilities, Roadmap
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director, Business Stakeholder

@@ -22,6 +22,9 @@ The system must allow administrators to establish explicit connections between o
 - Central IT admins do not have special authority to force a connection — they request like any other org
 - Removing a connection does not delete either org's content; it only removes cross-org visibility
 
+## Implementation Status
+Shipped (v1). Org-to-org connection requests, accept/reject, removal, and bidirectional active state are implemented in the admin connections management page. In-app notifications for incoming requests now route through the notification inbox (#610).
+
 ## Links
 - Depends on: IAM — User Management, Role-Based Access Control
 - Enables: Content Visibility, Cross-Org Linking, Cross-Org Link Approval

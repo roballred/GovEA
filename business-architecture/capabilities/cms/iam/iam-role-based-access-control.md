@@ -32,6 +32,9 @@ The system must control what each user can see and do based on their assigned ro
 - Role assignments must be scoped to an organization
 - Org-scoped Admin retains ownership of org settings; instance-scoped authority is defined separately under Instance Administration
 
+## Implementation Status
+Shipped (v1). The three fixed roles (Admin / Contributor / Viewer) plus the instance-scoped `instance_admin` operating role are enforced server-side in [apps/govea/src/lib/rbac.ts](apps/govea/src/lib/rbac.ts), with parallel definitions in [packages/core/src/rbac/index.ts](packages/core/src/rbac/index.ts) pending consolidation under #34. Domain-owner attribution + overwrite-protection (#611) layer on top of RBAC for content-owner ergonomics.
+
 ## Links
 - Depends on: User Management
 - Related: SSO Authentication, Local Authentication

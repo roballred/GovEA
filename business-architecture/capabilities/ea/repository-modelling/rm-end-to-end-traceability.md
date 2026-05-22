@@ -69,4 +69,3 @@ Traversal respects content visibility at every hop. A relationship link is only 
 
 - Depends on: `cm-content-relationships`, `po-capability-map`, `po-application-portfolio`, `mo-content-visibility`, `mo-cross-org-linking`, `mo-org-connections`
 - Related: `rm-repository-completeness`, `pl-strategic-objectives`, `pl-initiatives`, `pl-roadmap`
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director, Domain Architect, Business Stakeholder

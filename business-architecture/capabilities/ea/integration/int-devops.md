@@ -43,4 +43,3 @@ The specific pain this solves: architects discover that delivery has already bui
 
 - Depends on: `po-application-portfolio`, `pl-initiatives`, `po-architecture-decisions`
 - Related: `int-itsm-cmdb.md`, `int-rest-api.md`
-- Personas served: Domain Architect, Enterprise Architect, Agency EA Coordinator, Junior EA Analyst

@@ -32,6 +32,9 @@ The system must allow an agency to link one of its own capabilities or personas 
 - Removing an org connection removes cross-org links that depended on that trust relationship
 - Notification and approval-history surfaces are still future work; the current prototype relies on in-app status visibility on the linked records themselves
 
+## Implementation Status
+Shipped (v1). Cross-org linking for capabilities and personas with the three link types (implements / extends / maps_to), status lifecycle (pending → active), inbound/outbound visibility, and withdraw is in place. Reverse-direction seed data for source-side approval testing is tracked under #543.
+
 ## Links
 - Depends on: Content Visibility, Org Connections, Cross-Org Link Approval
 - Related: Content Relationships

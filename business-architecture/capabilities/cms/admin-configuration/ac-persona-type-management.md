@@ -21,6 +21,9 @@ The system must allow organization administrators to manage the taxonomy-backed 
 - Removing a persona type does not cascade to null out existing personas — they retain their stored type label until edited
 - The `Persona Type` taxonomy branch is the source of truth for current selectable options in the UI
 
+## Implementation Status
+Shipped (v1). Persona type values are managed through the Taxonomy Management page under the `Persona Type` branch; the personas page exposes a type filter and the create/edit dialogs use taxonomy-backed values.
+
 ## Links
 - Depends on: IAM — Role-Based Access Control, Content Management — Taxonomy Management
-- Used by: Content Management — Personas
+- Enables: Content Management — Personas

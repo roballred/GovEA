@@ -46,4 +46,3 @@ The specific pain this solves: a Department Director asks for a capability heat 
 
 - Depends on: `po-application-portfolio`, `po-capability-map`, `pl-strategic-objectives`, `pl-initiatives`, `ac-admin-dashboard`
 - Related: `int-rest-api.md`
-- Personas served: Enterprise Architect, Budget & Performance Analyst, Department Director, CMS Administrator
