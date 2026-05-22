@@ -8,6 +8,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { redirect } from 'next/navigation'
 
 async function requireContributor() {
@@ -128,6 +129,9 @@ export async function createObjective(formData: FormData) {
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const capabilityIds = formData.getAll('capabilityIds') as string[]
   const valueStreamIds = formData.getAll('valueStreamIds') as string[]
+
+  // #566 — soft-warn on duplicate names.
+  await ensureNoDuplicateName('objective', orgId, name, formData.get('acknowledgeDuplicate') === 'on')
 
   await db.transaction(async (tx) => {
     const [obj] = await tx.insert(strategicObjectives).values({

@@ -10,6 +10,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { redirect } from 'next/navigation'
 import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from '@/lib/entity-taxonomy-helpers'
 
@@ -105,6 +106,9 @@ export async function createService(formData: FormData) {
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const personaIds = formData.getAll('personaIds') as string[]
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+
+  // #566 — soft-warn on duplicate names.
+  await ensureNoDuplicateName('service', orgId, name, formData.get('acknowledgeDuplicate') === 'on')
 
   await db.transaction(async (tx) => {
     const [service] = await tx.insert(services).values({

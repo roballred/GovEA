@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
@@ -74,9 +75,15 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createObjective(formData)
-      setCreateOpen(false)
-      refresh()
+      try {
+        await submitWithDuplicateAck(createObjective, formData)
+        setCreateOpen(false)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Create failed')
+        }
+      }
     })
   }
 

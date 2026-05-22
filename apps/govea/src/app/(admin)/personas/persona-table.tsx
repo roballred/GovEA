@@ -15,6 +15,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
@@ -83,9 +84,15 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createPersona(formData)
-      setCreateOpen(false)
-      refresh()
+      try {
+        await submitWithDuplicateAck(createPersona, formData)
+        setCreateOpen(false)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Create failed')
+        }
+      }
     })
   }
 

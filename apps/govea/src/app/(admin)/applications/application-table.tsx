@@ -15,6 +15,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
@@ -317,9 +318,15 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createApplication(formData)
-      setCreateOpen(false)
-      refresh()
+      try {
+        await submitWithDuplicateAck(createApplication, formData)
+        setCreateOpen(false)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Create failed')
+        }
+      }
     })
   }
 

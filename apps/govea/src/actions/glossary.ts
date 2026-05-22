@@ -7,6 +7,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { redirect } from 'next/navigation'
 import { validateWebUrl } from '@/lib/url'
 
@@ -89,6 +90,9 @@ export async function createGlossaryTerm(formData: FormData) {
   const sourcesJson = formData.get('sources') as string | null
   const parsedSources: { name: string; url?: string; definition: string }[] | null =
     sourcesJson ? JSON.parse(sourcesJson) : null
+
+  // #566 — soft-warn on duplicate term names.
+  await ensureNoDuplicateName('glossary', orgId, term, formData.get('acknowledgeDuplicate') === 'on')
 
   await db.transaction(async (tx) => {
     const [entry] = await tx.insert(glossaryTerms).values({

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
@@ -97,10 +98,16 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createInitiative(formData)
-      setCreateOpen(false)
-      setSelectedCaps([])
-      refresh()
+      try {
+        await submitWithDuplicateAck(createInitiative, formData)
+        setCreateOpen(false)
+        setSelectedCaps([])
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Create failed')
+        }
+      }
     })
   }
 

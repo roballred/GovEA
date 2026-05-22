@@ -7,6 +7,7 @@ import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/l
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
@@ -86,6 +87,9 @@ export async function createPersona(formData: FormData) {
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const tagIds = formData.getAll('tagIds') as string[]
+
+  // #566 — soft-warn on duplicate names.
+  await ensureNoDuplicateName('persona', orgId, name, formData.get('acknowledgeDuplicate') === 'on')
 
   await db.transaction(async (tx) => {
     const [persona] = await tx.insert(personas).values({
