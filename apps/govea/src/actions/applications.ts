@@ -9,6 +9,7 @@ import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { notifySubscribers, notifyDomainOwner } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
+import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { autoFlagLifecycleDebt } from '@/lib/lifecycle-debt'
 import { redirect } from 'next/navigation'
@@ -130,6 +131,9 @@ export async function createApplication(formData: FormData) {
   if (domainOwnerUserId) {
     await assertUserInOrg(domainOwnerUserId, orgId)
   }
+
+  // #566 — soft-warn on duplicate names.
+  await ensureNoDuplicateName('application', orgId, name, formData.get('acknowledgeDuplicate') === 'on')
 
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customData = extractCustomData(formData, fieldDefs.map(f => f.name))

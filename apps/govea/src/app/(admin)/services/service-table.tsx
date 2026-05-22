@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
+import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyInputs, TaxonomyFilters, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 
@@ -95,9 +96,15 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createService(formData)
-      setCreateOpen(false)
-      refresh()
+      try {
+        await submitWithDuplicateAck(createService, formData)
+        setCreateOpen(false)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Create failed')
+        }
+      }
     })
   }
 

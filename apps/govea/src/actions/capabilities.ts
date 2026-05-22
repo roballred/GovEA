@@ -10,6 +10,7 @@ import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { notifySubscribers, notifyDomainOwner } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
+import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -169,6 +170,10 @@ export async function createCapability(formData: FormData) {
   if (domainOwnerUserId) {
     await assertUserInOrg(domainOwnerUserId, orgId)
   }
+
+  // #566 — soft-warn on duplicate names. Throws unless the form sent
+  // `acknowledgeDuplicate=on`. Client form catches + re-submits with ack.
+  await ensureNoDuplicateName('capability', orgId, name, formData.get('acknowledgeDuplicate') === 'on')
 
   // Mutation + audit are wrapped in a single transaction so a DB-layer audit
   // failure rolls back the capability insert and its junction rows (#416).

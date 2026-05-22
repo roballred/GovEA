@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils'
 import { isSafeUrl } from '@/lib/url'
 import type { Role } from '@/lib/rbac'
+import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
 type GlossaryRow = GlossaryTerm & {
@@ -73,9 +74,15 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createGlossaryTerm(formData)
-      setCreateOpen(false)
-      refresh()
+      try {
+        await submitWithDuplicateAck(createGlossaryTerm, formData)
+        setCreateOpen(false)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Create failed')
+        }
+      }
     })
   }
 

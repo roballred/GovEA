@@ -11,6 +11,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
+import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 
 async function requireContributor() {
   const session = await auth()
@@ -87,6 +88,9 @@ export async function createInitiative(formData: FormData) {
 
   const orgId = session.user.organizationId as string
   const userId = session.user.id
+
+  // #566 — soft-warn on duplicate names.
+  await ensureNoDuplicateName('initiative', orgId, formData.get('name') as string, formData.get('acknowledgeDuplicate') === 'on')
 
   await db.transaction(async (tx) => {
     const [row] = await tx.insert(initiatives).values({

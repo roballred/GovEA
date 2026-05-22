@@ -21,6 +21,8 @@ import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { buildCapabilityTree, flattenTree, collectDescendantIds, resolveCapabilityDomain } from '@/lib/capability-tree'
+import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 
 type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'capabilityType' | 'status' | 'visibility' | 'createdAt' | 'organizationId' | 'domainOwnerUserId'> & {
@@ -89,6 +91,10 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<CapabilityRow | null>(null)
+  // #567 Part A — track unsaved changes on the create/edit forms so closing
+  // the dialog or hitting Cancel doesn't silently discard work.
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<CapabilityRow | null>(null)
 
   // CSV import dialog state (#596). Two-step flow: preview (dryRun) →
@@ -167,9 +173,16 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
-      await createCapability(formData)
-      setCreateOpen(false)
-      refresh()
+      try {
+        await submitWithDuplicateAck(createCapability, formData)
+        createDirty.reset()
+        setCreateOpen(false)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Create failed')
+        }
+      }
     })
   }
 
@@ -178,6 +191,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
     startTransition(async () => {
       try {
         await editCapability(editTarget.id, formData)
+        editDirty.reset()
         setEditTarget(null)
         refresh()
       } catch (err) {
@@ -189,6 +203,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
           if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? Your acknowledgment will be logged in the audit trail.')) {
             formData.set('acknowledgeOpenDebt', 'on')
             await editCapability(editTarget.id, formData)
+            editDirty.reset()
             setEditTarget(null)
             refresh()
             return
@@ -438,12 +453,20 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
       </div>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(o) => {
+          // #567 Part A — guard against accidental discard via backdrop / Esc / × button.
+          if (!o && !confirmDiscard(createDirty)) return
+          if (!o) createDirty.reset()
+          setCreateOpen(o)
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Capability</DialogTitle>
           </DialogHeader>
-          <form action={handleCreate} className="space-y-3">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required />
             <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue="" />
@@ -499,7 +522,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
               orgUsers={orgUsers}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create capability'}</Button>
             </DialogFooter>
           </form>
@@ -507,12 +530,19 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={open => {
+          if (!open && !confirmDiscard(editDirty)) return
+          if (!open) editDirty.reset()
+          if (!open) setEditTarget(null)
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Capability</DialogTitle>
           </DialogHeader>
-          <form action={handleEdit} className="space-y-3">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <DomainCombobox options={domainTerms.map(t => t.name)} defaultValue={editTarget?.domain ?? ''} />
@@ -579,7 +609,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
               />
             )}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>
