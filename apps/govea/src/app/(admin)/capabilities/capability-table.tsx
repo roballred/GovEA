@@ -23,6 +23,7 @@ import { MarkdownEditor } from '@/components/markdown-editor'
 import { buildCapabilityTree, flattenTree, collectDescendantIds, resolveCapabilityDomain } from '@/lib/capability-tree'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 
 type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'capabilityType' | 'status' | 'visibility' | 'createdAt' | 'organizationId' | 'domainOwnerUserId'> & {
@@ -306,6 +307,17 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
         </div>
       </div>
 
+      {/* Empty state — when the org has no capabilities at all (not filtered).
+          See #587 follow-up for the persona need. */}
+      {capabilities.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="capability"
+          description="Capabilities describe what your organization must be able to do — the foundation everything else maps back to."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -451,6 +463,8 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
       <Dialog

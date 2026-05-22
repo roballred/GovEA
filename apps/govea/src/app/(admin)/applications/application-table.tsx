@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
@@ -521,8 +522,18 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         </div>
       )}
 
+      {/* Empty state — when the org has no applications at all (#587 follow-up). */}
+      {applications.length === 0 && (
+        <EmptyStateCTA
+          entityLabel="application"
+          description="Applications are the systems and platforms your organization runs to deliver services and capabilities."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      )}
+
       {/* Table view */}
-      {viewMode === 'table' && (
+      {viewMode === 'table' && applications.length > 0 && (
         <div className="rounded-lg border bg-card">
           <Table>
             <TableHeader>
@@ -651,7 +662,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       )}
 
       {/* Portfolio view */}
-      {viewMode === 'portfolio' && (
+      {viewMode === 'portfolio' && applications.length > 0 && (
         <div>
           {portfolioSorted.length === 0 ? (
             applications.length === 0 ? (

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { isSafeUrl } from '@/lib/url'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
 type GlossaryRow = GlossaryTerm & {
@@ -131,6 +132,16 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
         )}
       </div>
 
+      {/* Empty state — when the org has no terms at all (#587 follow-up). */}
+      {terms.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="glossary term"
+          description="A shared glossary keeps everyone using the same words. Useful when different teams call the same thing different names."
+          onAdd={canEditRole ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -216,6 +227,8 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={open => { if (!open) setCreateOpen(false) }}>
