@@ -20,9 +20,10 @@ import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyInputs, TaxonomyFilters, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import { CustomFieldInputs } from '@/components/custom-field-inputs'
+import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 import type { CustomFieldDefinition } from '@/db/schema'
 
-type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor' | 'version' | 'hostingModel' | 'lifecycleStatus' | 'status' | 'visibility' | 'createdAt' | 'organizationId' | 'customData'> & {
+type ApplicationRow = Pick<Application, 'id' | 'name' | 'description' | 'vendor' | 'version' | 'hostingModel' | 'lifecycleStatus' | 'status' | 'visibility' | 'createdAt' | 'organizationId' | 'customData' | 'domainOwnerUserId'> & {
   organization: { id: string; name: string } | null
   applicationCapabilities: { capability: Pick<Capability, 'id' | 'name' | 'domain'> }[]
 }
@@ -32,9 +33,11 @@ interface Props {
   capabilities: Pick<Capability, 'id' | 'name'>[]
   role: Role
   currentOrgId: string
+  currentUserId: string
   taxonomyDefinitions: EnrichedTaxonomyDefinition[]
   taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
   customFieldDefs: CustomFieldDefinition[]
+  orgUsers: { id: string; name: string | null; email: string }[]
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -242,7 +245,7 @@ function PortfolioCard({
 
 type ViewMode = 'table' | 'portfolio'
 
-export function ApplicationTable({ applications, capabilities, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap, customFieldDefs }: Props) {
+export function ApplicationTable({ applications, capabilities, role, currentOrgId, currentUserId, taxonomyDefinitions, taxonomyValueMap, customFieldDefs, orgUsers }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -744,6 +747,11 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
                 <option value="instance">Instance-wide</option>
               </select>
             </div>
+            <DomainOwnerFormSection
+              currentUserId={currentUserId}
+              initialOwnerUserId={null}
+              orgUsers={orgUsers}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create application'}</Button>
@@ -824,6 +832,13 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
                 <option value="instance">Instance-wide</option>
               </select>
             </div>
+            {editTarget && (
+              <DomainOwnerFormSection
+                currentUserId={currentUserId}
+                initialOwnerUserId={editTarget.domainOwnerUserId}
+                orgUsers={orgUsers}
+              />
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>

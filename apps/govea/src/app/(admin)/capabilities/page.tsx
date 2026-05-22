@@ -5,6 +5,7 @@ import { getPersonas } from '@/actions/personas'
 import { getTaxonomyDomains } from '@/actions/taxonomy'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { CapabilityTable } from './capability-table'
+import { getOrgUsersForPicker } from '@/actions/org-users'
 export default async function CapabilitiesPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
@@ -12,11 +13,12 @@ export default async function CapabilitiesPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [capabilityList, personaList, domainTerms, taxonomyDefinitions] = await Promise.all([
+  const [capabilityList, personaList, domainTerms, taxonomyDefinitions, orgUsers] = await Promise.all([
     getCapabilities(),
     getPersonas(),
     getTaxonomyDomains(),
     getEntityTaxonomyDefinitions(orgId, 'capability'),
+    getOrgUsersForPicker(),
   ])
 
   const capabilityIds = capabilityList.map(c => c.id)
@@ -38,6 +40,8 @@ export default async function CapabilitiesPage() {
         taxonomyValueMap={taxonomyValueMap}
         role={role}
         currentOrgId={orgId}
+        currentUserId={session.user.id}
+        orgUsers={orgUsers}
       />
     </div>
   )

@@ -20,6 +20,12 @@ export const capabilities = pgTable('capabilities', {
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),
   lastReviewedBy: uuid('last_reviewed_by').references(() => users.id),
+  // #581 follow-up: optional domain owner attribution. When set, a non-owner
+  // edit requires explicit overwrite acknowledgment in the form. Nullable
+  // because the column is optional — most pre-existing rows have no owner
+  // until someone assigns one. `set null` on user delete so removing a user
+  // doesn't cascade-orphan their owned architecture objects.
+  domainOwnerUserId: uuid('domain_owner_user_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   lastReviewedAt: timestamp('last_reviewed_at'),

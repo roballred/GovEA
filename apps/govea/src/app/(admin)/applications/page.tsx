@@ -5,6 +5,7 @@ import { getCapabilities } from '@/actions/capabilities'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import { getCustomFieldSchema } from '@/actions/custom-fields'
 import { ApplicationTable } from './application-table'
+import { getOrgUsersForPicker } from '@/actions/org-users'
 
 export default async function ApplicationsPage() {
   const session = await auth()
@@ -13,11 +14,12 @@ export default async function ApplicationsPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [applicationList, capabilityList, taxonomyDefinitions, customFieldDefs] = await Promise.all([
+  const [applicationList, capabilityList, taxonomyDefinitions, customFieldDefs, orgUsers] = await Promise.all([
     getApplications(),
     getCapabilities(),
     getEntityTaxonomyDefinitions(orgId, 'application'),
     getCustomFieldSchema(orgId, 'application'),
+    getOrgUsersForPicker(),
   ])
 
   const applicationIds = applicationList.map(a => a.id)
@@ -34,9 +36,11 @@ export default async function ApplicationsPage() {
         capabilities={capabilityList}
         role={role}
         currentOrgId={orgId}
+        currentUserId={session.user.id}
         taxonomyDefinitions={taxonomyDefinitions}
         taxonomyValueMap={taxonomyValueMap}
         customFieldDefs={customFieldDefs}
+        orgUsers={orgUsers}
       />
     </div>
   )

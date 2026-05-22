@@ -21,8 +21,9 @@ import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { buildCapabilityTree, flattenTree, collectDescendantIds, resolveCapabilityDomain } from '@/lib/capability-tree'
+import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 
-type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'capabilityType' | 'status' | 'visibility' | 'createdAt' | 'organizationId'> & {
+type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'capabilityType' | 'status' | 'visibility' | 'createdAt' | 'organizationId' | 'domainOwnerUserId'> & {
   organization: { id: string; name: string } | null
   capabilityPersonas: { persona: Pick<Persona, 'id' | 'name'> }[]
   childRelationships: { parentId: string; childId: string }[]
@@ -37,6 +38,8 @@ interface Props {
   taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
   role: Role
   currentOrgId: string
+  currentUserId: string
+  orgUsers: { id: string; name: string | null; email: string }[]
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -62,7 +65,7 @@ const TYPE_STYLES: Record<string, string> = {
   technical: 'bg-cyan-100 text-cyan-800 border-cyan-200',
 }
 
-export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyDefinitions, taxonomyValueMap, role, currentOrgId }: Props) {
+export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyDefinitions, taxonomyValueMap, role, currentOrgId, currentUserId, orgUsers }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -490,6 +493,11 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
                 <option value="instance">Instance-wide</option>
               </select>
             </div>
+            <DomainOwnerFormSection
+              currentUserId={currentUserId}
+              initialOwnerUserId={null}
+              orgUsers={orgUsers}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create capability'}</Button>
@@ -563,6 +571,13 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
                 <option value="instance">Instance-wide</option>
               </select>
             </div>
+            {editTarget && (
+              <DomainOwnerFormSection
+                currentUserId={currentUserId}
+                initialOwnerUserId={editTarget.domainOwnerUserId}
+                orgUsers={orgUsers}
+              />
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>

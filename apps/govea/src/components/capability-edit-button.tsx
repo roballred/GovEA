@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
+import { DomainOwnerFormSection, type OrgUserOption } from '@/components/domain-owner-form-section'
 import type { EntityTaxonomyValue } from '@/db/schema'
 
 interface CapabilityEditButtonProps {
@@ -23,12 +24,15 @@ interface CapabilityEditButtonProps {
     visibility: 'org' | 'connections' | 'instance'
     personaIds: string[]
     parentId: string | null
+    domainOwnerUserId: string | null
   }
   taxonomyDefinitions: EnrichedTaxonomyDefinition[]
   currentTaxonomyValues: EntityTaxonomyValue[]
+  currentUserId: string
+  orgUsers: OrgUserOption[]
 }
 
-export function CapabilityEditButton({ capabilityId, initial, taxonomyDefinitions, currentTaxonomyValues }: CapabilityEditButtonProps) {
+export function CapabilityEditButton({ capabilityId, initial, taxonomyDefinitions, currentTaxonomyValues, currentUserId, orgUsers }: CapabilityEditButtonProps) {
   const [editing, setEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -134,6 +138,14 @@ export function CapabilityEditButton({ capabilityId, initial, taxonomyDefinition
             <option value="connections">Connected orgs</option>
             <option value="instance">Instance-wide</option>
           </select>
+        </div>
+
+        <div className="sm:col-span-2">
+          <DomainOwnerFormSection
+            currentUserId={currentUserId}
+            initialOwnerUserId={initial.domainOwnerUserId}
+            orgUsers={orgUsers}
+          />
         </div>
       </div>
 

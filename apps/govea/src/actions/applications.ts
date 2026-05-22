@@ -9,6 +9,7 @@ import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { notifySubscribers } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
+import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { autoFlagLifecycleDebt } from '@/lib/lifecycle-debt'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -124,6 +125,11 @@ export async function createApplication(formData: FormData) {
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const capabilityIds = formData.getAll('capabilityIds') as string[]
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  const domainOwnerUserId = (formData.get('domainOwnerUserId') as string) || null
+
+  if (domainOwnerUserId) {
+    await assertUserInOrg(domainOwnerUserId, orgId)
+  }
 
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
@@ -140,6 +146,7 @@ export async function createApplication(formData: FormData) {
       status,
       visibility,
       customData,
+      domainOwnerUserId,
       organizationId: orgId,
       createdBy: session.user.id,
       updatedBy: session.user.id,
@@ -189,12 +196,25 @@ export async function editApplication(applicationId: string, formData: FormData)
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const capabilityIds = formData.getAll('capabilityIds') as string[]
   const taxonomyTermIds = formData.getAll('taxonomyTermIds') as string[]
+  const domainOwnerUserId = (formData.get('domainOwnerUserId') as string) || null
 
   const before = await db.query.applications.findFirst({ where: eq(applications.id, applicationId) })
   assertOwnership(before?.organizationId, orgId)
 
+  if (domainOwnerUserId) {
+    await assertUserInOrg(domainOwnerUserId, orgId)
+  }
+
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customData = extractCustomData(formData, fieldDefs.map(f => f.name))
+
+  // Domain-owner overwrite gate (#581) — see capabilities.ts for context.
+  const acknowledgeOverwrite = formData.get('acknowledgeOverwrite') === 'on'
+  const ownerAck = await ensureDomainOwnerOverwriteAck({
+    beforeOwnerUserId: before?.domainOwnerUserId,
+    actorUserId: session.user.id,
+    acknowledged: acknowledgeOverwrite,
+  })
 
   // Publish-time debt gate (#381 PR-3)
   const transitioningToPublished = before?.status !== 'published' && status === 'published'
@@ -217,6 +237,7 @@ export async function editApplication(applicationId: string, formData: FormData)
       status,
       visibility,
       customData,
+      domainOwnerUserId,
       updatedBy: session.user.id,
       updatedAt: new Date(),
     }).where(and(eq(applications.id, applicationId), eq(applications.organizationId, orgId)))
@@ -249,6 +270,22 @@ export async function editApplication(applicationId: string, formData: FormData)
       actorUserId: session.user.id,
       summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${name}`,
     })
+
+    // #581 follow-up: domain-owner overwrite acknowledgment audit row.
+    if (ownerAck.gated) {
+      await writeAuditLog(tx, {
+        action: 'domain_owner.overwrite_acknowledged',
+        entityType: 'application',
+        entityId: applicationId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          ownerUserId: ownerAck.ownerUserId,
+          ownerName: ownerAck.ownerName,
+          ownerEmail: ownerAck.ownerEmail,
+        },
+      })
+    }
 
     if (debtAck.acknowledged) {
       await writeAuditLog(tx, {

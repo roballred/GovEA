@@ -22,6 +22,10 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { FreshnessLine } from '@/components/freshness-line'
 import { SubscribeButton } from '@/components/subscribe-button'
 import { isSubscribed } from '@/actions/notifications'
+import { DomainOwnerLine } from '@/components/domain-owner-line'
+import { db } from '@/db/client'
+import { users } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -75,6 +79,13 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
       ])
     : [[], [], [], []]
 
+  const domainOwner = adr.domainOwnerUserId
+    ? await db.query.users.findFirst({
+        where: eq(users.id, adr.domainOwnerUserId),
+        columns: { id: true, name: true, email: true },
+      })
+    : null
+
   const addCapability = linkAdrCapability.bind(null, id)
   const removeCapability = unlinkAdrCapability.bind(null, id)
   const addApplication = linkAdrApplication.bind(null, id)
@@ -110,7 +121,12 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
         {/* For ADRs, the "Decided" date matters more than "last edited" —
             the entire genre exists to record when a decision was made (#553). */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <FreshnessLine updatedAt={adr.createdAt} updatedLabel="Decided" />
+          <div className="flex items-center gap-3 flex-wrap">
+            <FreshnessLine updatedAt={adr.createdAt} updatedLabel="Decided" />
+            {domainOwner && (
+              <DomainOwnerLine ownerName={domainOwner.name} ownerEmail={domainOwner.email} />
+            )}
+          </div>
           <SubscribeButton entityType="adr" entityId={id} initialSubscribed={alreadySubscribed} />
         </div>
 

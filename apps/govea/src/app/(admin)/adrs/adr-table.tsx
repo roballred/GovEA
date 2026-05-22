@@ -19,6 +19,7 @@ import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
+import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 
 type ADRRow = ADR & {
   organization: { id: string; name: string } | null
@@ -37,8 +38,10 @@ interface Props {
   objectives: Pick<StrategicObjective, 'id' | 'name'>[]
   role: Role
   currentOrgId: string
+  currentUserId: string
   taxonomyDefinitions: EnrichedTaxonomyDefinition[]
   taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
+  orgUsers: { id: string; name: string | null; email: string }[]
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -67,7 +70,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function ADRTable({ adrs, capabilities, applications, initiatives, objectives, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
+export function ADRTable({ adrs, capabilities, applications, initiatives, objectives, role, currentOrgId, currentUserId, taxonomyDefinitions, taxonomyValueMap, orgUsers }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
@@ -290,6 +293,11 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
               defaultVisibility="org"
               defaultSupersededBy={null}
             />
+            <DomainOwnerFormSection
+              currentUserId={currentUserId}
+              initialOwnerUserId={null}
+              orgUsers={orgUsers}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create ADR'}</Button>
@@ -335,6 +343,13 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
               defaultVisibility={editTarget?.visibility ?? 'org'}
               defaultSupersededBy={editTarget?.supersededBy ?? null}
             />
+            {editTarget && (
+              <DomainOwnerFormSection
+                currentUserId={currentUserId}
+                initialOwnerUserId={editTarget.domainOwnerUserId}
+                orgUsers={orgUsers}
+              />
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
