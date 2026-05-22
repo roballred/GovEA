@@ -8,6 +8,8 @@ import { getObjectives } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getServices } from '@/actions/services'
 import { dedupeById } from '@/lib/dedup'
+import { PrintExportButton } from '@/components/print-export'
+import { PrintCoverSheet } from '@/components/print-cover-sheet'
 
 // ── Status colours ────────────────────────────────────────────────────────────
 
@@ -530,6 +532,9 @@ export default async function TraceabilityPage({
 
   return (
     <div className="space-y-8">
+      {/* Print cover sheet (#559). */}
+      <PrintCoverSheet orgName="" title={title} />
+
       <div className="space-y-1">
         <Link
           href={backHref}
@@ -537,9 +542,12 @@ export default async function TraceabilityPage({
         >
           {backLabel}
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+          </div>
+          <PrintExportButton />
         </div>
       </div>
 

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { getAnswerContent, type AnswerItem, type AnswerSection } from '@/actions/answers'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { PrintExportButton } from '@/components/print-export'
+import { PrintCoverSheet } from '@/components/print-cover-sheet'
 
 interface AnswerPageProps {
   searchParams: Promise<{ q?: string }>
@@ -70,19 +72,25 @@ export default async function AnswerPage({ searchParams }: AnswerPageProps) {
           ← Back to search results
         </Link>
 
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">
-            {query ? `"${query}"` : 'Guided Answer'}
-          </h1>
-          {answer && (
-            <p className="text-sm text-muted-foreground">
-              {totalItems === 0
-                ? 'No published content found for this question.'
-                : `${totalItems} item${totalItems === 1 ? '' : 's'} across ${answer.sections.length} area${answer.sections.length === 1 ? '' : 's'}`}
-            </p>
-          )}
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {query ? `"${query}"` : 'Guided Answer'}
+            </h1>
+            {answer && (
+              <p className="text-sm text-muted-foreground">
+                {totalItems === 0
+                  ? 'No published content found for this question.'
+                  : `${totalItems} item${totalItems === 1 ? '' : 's'} across ${answer.sections.length} area${answer.sections.length === 1 ? '' : 's'}`}
+              </p>
+            )}
+          </div>
+          {hasQuery && <PrintExportButton />}
         </div>
       </div>
+
+      {/* Print cover sheet (#559). */}
+      {hasQuery && <PrintCoverSheet orgName="" title={`Question: "${query}"`} />}
 
       <form action="/answers" method="get" className="flex gap-2">
         <input

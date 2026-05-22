@@ -73,4 +73,33 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Print stylesheet (#559).
+   *
+   * Government persona walks (department-director, elected-official,
+   * budget-performance-analyst) all need presentation-ready output for
+   * budget hearings, oversight sessions, and constituent briefings.
+   * The on-screen app shell (sidebar, header, role badge, sign-out)
+   * is noise on a printed handout — strip it for @media print.
+   *
+   * App shell uses data-print-hide="true" on the regions that should
+   * disappear when printing. The .print-only utility flips the inverse
+   * (visible only when printing) — used by the export cover sheet.
+   */
+  @media print {
+    [data-print-hide="true"] { display: none !important; }
+    /* App shell <main> is wrapped at 1 column when sidebar is hidden;
+     * undo the lg:pl-56 offset so content uses the full page width. */
+    main[data-print-main] { padding: 0 !important; margin: 0 !important; }
+    /* Common interactive controls that shouldn't appear on a handout. */
+    button[type="button"]:not([data-print-keep]),
+    .print-hide { display: none !important; }
+    /* Encourage page breaks before each major heading region. */
+    section { break-inside: avoid; }
+    /* Default monochrome — better for B&W printers, cheaper to ink. */
+    body { background: #fff !important; color: #000 !important; }
+    a { color: inherit !important; text-decoration: none !important; }
+  }
+  .print-only { display: none; }
+  @media print { .print-only { display: block !important; } }
 }

@@ -305,6 +305,7 @@ export function AppShell({
 
       {/* ── Desktop sidebar (fixed, always visible on lg+) ── */}
       <aside
+        data-print-hide="true"
         className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-56 z-40 border-r"
         style={{ backgroundColor: sidebarBg, borderColor: sidebarBorder }}
       >
@@ -334,6 +335,7 @@ export function AppShell({
 
       {/* ── Mobile sidebar (slide-in drawer) ── */}
       <aside
+        data-print-hide="true"
         className={cn(
           'flex flex-col fixed inset-y-0 left-0 w-72 z-50 lg:hidden border-r transition-transform duration-200 ease-in-out',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -365,6 +367,7 @@ export function AppShell({
 
         {/* Top header */}
         <header
+          data-print-hide="true"
           className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b px-4 lg:px-6"
           style={{
             backgroundColor: sidebarBg,
@@ -441,7 +444,7 @@ export function AppShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6">
+        <main data-print-main className="flex-1 p-4 lg:p-6">
           {children}
         </main>
       </div>

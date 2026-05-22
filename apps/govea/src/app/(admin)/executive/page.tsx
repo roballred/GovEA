@@ -9,6 +9,8 @@ import { and, count, desc, eq, inArray, isNull, lt } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { ConfidenceSummary } from '@/components/confidence-summary'
+import { PrintExportButton } from '@/components/print-export'
+import { PrintCoverSheet } from '@/components/print-cover-sheet'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -280,12 +282,18 @@ export default async function ExecutiveDashboardPage() {
   return (
     <div className="space-y-8 max-w-4xl">
 
+      {/* Print-only cover sheet (#559) — first page of the handout. */}
+      <PrintCoverSheet orgName={org?.name ?? 'Your organisation'} title="Executive Summary" />
+
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Executive Summary</h1>
-        <p className="text-muted-foreground mt-1">
-          {org?.name ?? 'Your organisation'} · {generatedDate}
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Executive Summary</h1>
+          <p className="text-muted-foreground mt-1">
+            {org?.name ?? 'Your organisation'} · {generatedDate}
+          </p>
+        </div>
+        <PrintExportButton />
       </div>
 
       {/* Repository confidence — shown when org has authenticated visibility on (#380 PR-4) */}
