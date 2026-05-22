@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
@@ -282,6 +284,9 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ApplicationRow | null>(null)
+  // #567 Part A — unsaved-changes guard.
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<ApplicationRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
@@ -320,6 +325,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
     startTransition(async () => {
       try {
         await submitWithDuplicateAck(createApplication, formData)
+        createDirty.reset()
         setCreateOpen(false)
         refresh()
       } catch (err) {
@@ -335,6 +341,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
     startTransition(async () => {
       try {
         await editApplication(editTarget.id, formData)
+        editDirty.reset()
         setEditTarget(null)
         refresh()
       } catch (err) {
@@ -344,6 +351,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? Your acknowledgment will be logged in the audit trail.')) {
             formData.set('acknowledgeOpenDebt', 'on')
             await editApplication(editTarget.id, formData)
+            editDirty.reset()
             setEditTarget(null)
             refresh()
             return
@@ -531,8 +539,18 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         </div>
       )}
 
+      {/* Empty state — when the org has no applications at all (#587 follow-up). */}
+      {applications.length === 0 && (
+        <EmptyStateCTA
+          entityLabel="application"
+          description="Applications are the systems and platforms your organization runs to deliver services and capabilities."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      )}
+
       {/* Table view */}
-      {viewMode === 'table' && (
+      {viewMode === 'table' && applications.length > 0 && (
         <div className="rounded-lg border bg-card">
           <Table>
             <TableHeader>
@@ -661,7 +679,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       )}
 
       {/* Portfolio view */}
-      {viewMode === 'portfolio' && (
+      {viewMode === 'portfolio' && applications.length > 0 && (
         <div>
           {portfolioSorted.length === 0 ? (
             applications.length === 0 ? (
@@ -702,10 +720,17 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       )}
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(o) => {
+          if (!o && !confirmDiscard(createDirty)) return
+          if (!o) createDirty.reset()
+          setCreateOpen(o)
+        }}
+      >
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>New Application</DialogTitle></DialogHeader>
-          <form action={handleCreate} className="space-y-3">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required />
             <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <div className="grid grid-cols-2 gap-3">
@@ -770,7 +795,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
               orgUsers={orgUsers}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create application'}</Button>
             </DialogFooter>
           </form>
@@ -778,10 +803,16 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={open => {
+          if (!open && !confirmDiscard(editDirty)) return
+          if (!open) { editDirty.reset(); setEditTarget(null) }
+        }}
+      >
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Application</DialogTitle></DialogHeader>
-          <form action={handleEdit} className="space-y-3">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <div className="grid grid-cols-2 gap-3">
@@ -857,7 +888,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
               />
             )}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>

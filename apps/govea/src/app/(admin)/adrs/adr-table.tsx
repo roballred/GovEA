@@ -20,6 +20,8 @@ import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
 import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 
 type ADRRow = ADR & {
   organization: { id: string; name: string } | null
@@ -77,6 +79,8 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
   const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ADRRow | null>(null)
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<ADRRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
@@ -96,6 +100,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
       await createADR(formData)
+      createDirty.reset()
       setCreateOpen(false)
       refresh()
     })
@@ -106,6 +111,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
     startTransition(async () => {
       try {
         await editADR(editTarget.id, formData)
+        editDirty.reset()
         setEditTarget(null)
         refresh()
       } catch (err) {
@@ -115,6 +121,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
           if (typeof window !== 'undefined' && window.confirm(msg + '\n\nAccept anyway? Your acknowledgment will be logged in the audit trail.')) {
             formData.set('acknowledgeOpenDebt', 'on')
             await editADR(editTarget.id, formData)
+            editDirty.reset()
             setEditTarget(null)
             refresh()
             return
@@ -164,6 +171,16 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
         )}
       </div>
 
+      {/* Empty state — when the org has no ADRs at all (#587 follow-up). */}
+      {adrs.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="ADR"
+          description="ADRs record the architecture decisions you've made — what was decided, why, and what it implies. They give later teams the context behind today's choices."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -258,14 +275,16 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={open => { if (!open) setCreateOpen(false) }}>
+      <Dialog open={createOpen} onOpenChange={open => { if (!open && !confirmDiscard(createDirty)) return; if (!open) { createDirty.reset(); setCreateOpen(false) } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Architecture Decision Record</DialogTitle>
           </DialogHeader>
-          <form action={handleCreate} className="space-y-4">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Number" name="number" required placeholder="ADR-001" />
               <div className="col-span-2">
@@ -299,7 +318,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
               orgUsers={orgUsers}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create ADR'}</Button>
             </DialogFooter>
           </form>
@@ -307,12 +326,12 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open && !confirmDiscard(editDirty)) return; if (!open) { editDirty.reset(); setEditTarget(null) } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Architecture Decision Record</DialogTitle>
           </DialogHeader>
-          <form action={handleEdit} className="space-y-4">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Number" name="number" required defaultValue={editTarget?.number} />
               <div className="col-span-2">
@@ -351,7 +370,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
               />
             )}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>

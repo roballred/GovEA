@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
-import { submitWithPublishReadinessAck } from '@/lib/publish-readiness-client'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
@@ -67,6 +68,8 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<PersonaRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
@@ -87,6 +90,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
     startTransition(async () => {
       try {
         await submitWithDuplicateAck(createPersona, formData)
+        createDirty.reset()
         setCreateOpen(false)
         refresh()
       } catch (err) {
@@ -100,15 +104,10 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
   async function handleEdit(formData: FormData) {
     if (!editTarget) return
     startTransition(async () => {
-      try {
-        await submitWithPublishReadinessAck((fd) => editPersona(editTarget.id, fd), formData)
-        setEditTarget(null)
-        refresh()
-      } catch (err) {
-        if (typeof window !== 'undefined') {
-          window.alert(err instanceof Error ? err.message : 'Save failed')
-        }
-      }
+      await editPersona(editTarget.id, formData)
+      editDirty.reset()
+      setEditTarget(null)
+      refresh()
     })
   }
 
@@ -180,6 +179,16 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
         </div>
       </div>
 
+      {/* Empty state — when the org has no personas at all (#587 follow-up). */}
+      {personas.length === 0 ? (
+        <EmptyStateCTA
+          entityLabel="persona"
+          description="Personas describe the people the organization serves and the staff who deliver. Everything else in EasyEA traces back to a persona."
+          onAdd={canEdit ? () => setCreateOpen(true) : undefined}
+          canApplyStarterPack={role === 'admin'}
+        />
+      ) : (
+      <>
       {/* Table */}
       <div className="rounded-lg border bg-card">
         <Table>
@@ -294,14 +303,16 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(o) => { if (!o && !confirmDiscard(createDirty)) return; if (!o) createDirty.reset(); setCreateOpen(o) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New Persona</DialogTitle>
           </DialogHeader>
-          <form action={handleCreate} className="space-y-3">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required />
             <MarkdownEditor label="Description" name="description" rows={3} placeholder="Markdown supported" />
             <div className="space-y-1.5">
@@ -343,7 +354,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create persona'}</Button>
             </DialogFooter>
           </form>
@@ -351,12 +362,12 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open && !confirmDiscard(editDirty)) return; if (!open) { editDirty.reset(); setEditTarget(null) } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Persona</DialogTitle>
           </DialogHeader>
-          <form action={handleEdit} className="space-y-3">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={3} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <div className="space-y-1.5">
@@ -401,7 +412,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>
