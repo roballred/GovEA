@@ -21,6 +21,7 @@ import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from
 import type { EntityTaxonomyValue } from '@/db/schema'
 import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
+import { EmptyStateCTA } from '@/components/empty-state-cta'
 
 type ADRRow = ADR & {
   organization: { id: string; name: string } | null
