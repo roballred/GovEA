@@ -9,6 +9,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
+import { ensurePublishReady } from '@/lib/publish-readiness-gate'
 import { redirect } from 'next/navigation'
 
 async function requireContributor() {
@@ -180,6 +181,15 @@ export async function editObjective(objectiveId: string, formData: FormData) {
   })
   assertOwnership(before?.organizationId, orgId)
 
+  // #567 Part B — publish-readiness gate.
+  const transitioningToPublished = before?.status !== 'published' && status === 'published'
+  const publishReadyResult = ensurePublishReady({
+    entityType: 'objective',
+    formData,
+    transitioningToPublished,
+    acknowledged: formData.get('acknowledgePublishIncomplete') === 'on',
+  })
+
   await db.transaction(async (tx) => {
     await tx.update(strategicObjectives).set({
       name, description, successMetric, timeHorizon, status, visibility,
@@ -209,6 +219,17 @@ export async function editObjective(objectiveId: string, formData: FormData) {
       before: { name: before?.name, status: before?.status },
       after: { name, status },
     })
+
+    if (publishReadyResult.missingFields.length > 0) {
+      await writeAuditLog(tx, {
+        action: 'publish.acknowledged_incomplete',
+        entityType: 'objective',
+        entityId: objectiveId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: { missingFields: publishReadyResult.missingFields },
+      })
+    }
   })
 }
 

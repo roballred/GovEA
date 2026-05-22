@@ -28,6 +28,12 @@ function capForm(overrides: Record<string, string> = {}): FormData {
   fd.set('visibility', overrides.visibility ?? 'org')
   if (overrides.description) fd.set('description', overrides.description)
   if (overrides.domain) fd.set('domain', overrides.domain)
+  // #567 Part B: tests that publish a capability through this helper aren't
+  // testing the publish-readiness gate — they pre-acknowledge the missing
+  // fields so the gate doesn't trip their unrelated assertions.
+  if ((overrides.status ?? 'draft') === 'published') {
+    fd.set('acknowledgePublishIncomplete', 'on')
+  }
   return fd
 }
 

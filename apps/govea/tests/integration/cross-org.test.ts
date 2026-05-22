@@ -30,6 +30,11 @@ function capForm(overrides: Record<string, string> = {}): FormData {
   fd.set('name', overrides.name ?? 'Cross-Org Attempt')
   fd.set('status', overrides.status ?? 'published')
   fd.set('visibility', overrides.visibility ?? 'org')
+  // #567 Part B — the cross-org tests are about org boundaries, not the
+  // publish-readiness gate; pre-acknowledge so the gate doesn't trip them.
+  if ((overrides.status ?? 'published') === 'published') {
+    fd.set('acknowledgePublishIncomplete', 'on')
+  }
   return fd
 }
 

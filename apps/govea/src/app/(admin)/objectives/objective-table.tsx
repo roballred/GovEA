@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { submitWithPublishReadinessAck } from '@/lib/publish-readiness-client'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
@@ -90,9 +91,15 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
   async function handleEdit(formData: FormData) {
     if (!editTarget) return
     startTransition(async () => {
-      await editObjective(editTarget.id, formData)
-      setEditTarget(null)
-      refresh()
+      try {
+        await submitWithPublishReadinessAck((fd) => editObjective(editTarget.id, fd), formData)
+        setEditTarget(null)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Save failed')
+        }
+      }
     })
   }
 

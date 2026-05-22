@@ -349,6 +349,16 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
             return
           }
         }
+        // #567 Part B — publish-readiness gate.
+        if (msg.includes('Publishing this') && msg.includes('makes the record harder to use')) {
+          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? The missing fields will be logged in the audit trail.')) {
+            formData.set('acknowledgePublishIncomplete', 'on')
+            await editApplication(editTarget.id, formData)
+            setEditTarget(null)
+            refresh()
+            return
+          }
+        }
         throw err
       }
     })

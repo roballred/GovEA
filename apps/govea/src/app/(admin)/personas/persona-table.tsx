@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { submitWithPublishReadinessAck } from '@/lib/publish-readiness-client'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
@@ -99,9 +100,15 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
   async function handleEdit(formData: FormData) {
     if (!editTarget) return
     startTransition(async () => {
-      await editPersona(editTarget.id, formData)
-      setEditTarget(null)
-      refresh()
+      try {
+        await submitWithPublishReadinessAck((fd) => editPersona(editTarget.id, fd), formData)
+        setEditTarget(null)
+        refresh()
+      } catch (err) {
+        if (typeof window !== 'undefined') {
+          window.alert(err instanceof Error ? err.message : 'Save failed')
+        }
+      }
     })
   }
 
