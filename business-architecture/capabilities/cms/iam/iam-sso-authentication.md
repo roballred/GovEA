@@ -4,7 +4,7 @@
 The system must allow users to sign in using their agency's identity provider via OpenID Connect (OIDC). Microsoft Entra ID is the current configured provider target, but the capability should remain provider-neutral so Okta, Auth0, or other OIDC providers can be supported through the same sign-in and pre-provisioning model. SSO is optional — the system works without it.
 
 ## Personas
-- **CMS Administrator** — configures SSO via the admin UI; no code changes required
+- **CMS Administrator** — has SSO enabled for their organization at deploy time via environment variables; no code changes required. (v1 limitation: tenant SSO binding is not yet self-serve through the admin UI.)
 - **Content Viewer** — signs in transparently with their existing agency credentials
 
 ## Behaviors
