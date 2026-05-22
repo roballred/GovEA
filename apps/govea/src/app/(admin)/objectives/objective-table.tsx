@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
@@ -56,6 +57,8 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
   ).entries())
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ObjectiveRow | null>(null)
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<ObjectiveRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
@@ -77,6 +80,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
     startTransition(async () => {
       try {
         await submitWithDuplicateAck(createObjective, formData)
+        createDirty.reset()
         setCreateOpen(false)
         refresh()
       } catch (err) {
@@ -91,6 +95,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
     if (!editTarget) return
     startTransition(async () => {
       await editObjective(editTarget.id, formData)
+      editDirty.reset()
       setEditTarget(null)
       refresh()
     })
@@ -235,10 +240,10 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
       </div>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(o) => { if (!o && !confirmDiscard(createDirty)) return; if (!o) createDirty.reset(); setCreateOpen(o) }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>New Objective</DialogTitle></DialogHeader>
-          <form action={handleCreate} className="space-y-3">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required placeholder="e.g. Reduce permit processing time by 40%" />
             <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <FormField label="Success metric" name="successMetric" placeholder="How will achievement be measured?" />
@@ -290,7 +295,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create'}</Button>
             </DialogFooter>
           </form>
@@ -298,10 +303,10 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open && !confirmDiscard(editDirty)) return; if (!open) { editDirty.reset(); setEditTarget(null) } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Edit Objective</DialogTitle></DialogHeader>
-          <form action={handleEdit} className="space-y-3">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <FormField label="Success metric" name="successMetric" defaultValue={editTarget?.successMetric ?? ''} />
@@ -358,7 +363,7 @@ export function ObjectiveTable({ objectives, capabilities, valueStreams, role, c
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>
