@@ -22,6 +22,10 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { FreshnessLine } from '@/components/freshness-line'
 import { SubscribeButton } from '@/components/subscribe-button'
 import { isSubscribed } from '@/actions/notifications'
+import { DomainOwnerLine } from '@/components/domain-owner-line'
+import { db } from '@/db/client'
+import { users } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { TaxonomyChips } from '@/components/taxonomy-ui'
 import { getApplicationImpact } from '@/actions/impact'
 import { ApplicationImpactPanel } from '@/components/impact-panel'
@@ -125,7 +129,12 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </div>
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <FreshnessLine updatedAt={application.updatedAt} lastReviewedAt={application.lastReviewedAt} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <FreshnessLine updatedAt={application.updatedAt} lastReviewedAt={application.lastReviewedAt} />
+            {domainOwner && (
+              <DomainOwnerLine ownerName={domainOwner.name} ownerEmail={domainOwner.email} />
+            )}
+          </div>
           <SubscribeButton entityType="application" entityId={id} initialSubscribed={alreadySubscribed} />
         </div>
 

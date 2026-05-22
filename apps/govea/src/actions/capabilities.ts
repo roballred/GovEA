@@ -321,6 +321,24 @@ export async function editCapability(capabilityId: string, formData: FormData) {
       summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${name}`,
     })
 
+    // #581 follow-up: when a non-owner overwrite was acknowledged, log it so
+    // the audit log shows who overwrote whose record. Cross-references the
+    // owner so a domain-owner persona review surfaces the row.
+    if (ownerAck.gated) {
+      await writeAuditLog(tx, {
+        action: 'domain_owner.overwrite_acknowledged',
+        entityType: 'capability',
+        entityId: capabilityId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          ownerUserId: ownerAck.ownerUserId,
+          ownerName: ownerAck.ownerName,
+          ownerEmail: ownerAck.ownerEmail,
+        },
+      })
+    }
+
     // #381 PR-3: when the publish-debt gate was acknowledged, log it.
     if (debtAck.acknowledged) {
       await writeAuditLog(tx, {

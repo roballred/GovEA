@@ -238,6 +238,22 @@ export async function editADR(id: string, formData: FormData) {
       summary: `${session.user.name ?? session.user.email ?? 'Someone'} updated ${title}`,
     })
 
+    // #581 follow-up: domain-owner overwrite acknowledgment audit row.
+    if (ownerAck.gated) {
+      await writeAuditLog(tx, {
+        action: 'domain_owner.overwrite_acknowledged',
+        entityType: 'adr',
+        entityId: id,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: {
+          ownerUserId: ownerAck.ownerUserId,
+          ownerName: ownerAck.ownerName,
+          ownerEmail: ownerAck.ownerEmail,
+        },
+      })
+    }
+
     if (debtAck.acknowledged) {
       await writeAuditLog(tx, {
         action: 'publish.acknowledged_open_debt',
