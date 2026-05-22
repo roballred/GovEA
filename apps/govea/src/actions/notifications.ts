@@ -84,6 +84,52 @@ export async function isSubscribed(entityType: NotifiableEntityType, entityId: s
 }
 
 /**
+ * Owner-overwrite notification (#581 follow-up bridge).
+ *
+ * Sibling to `notifySubscribers`, called from inside an edit action's
+ * transaction. When a non-owner edits an architecture object that has
+ * a `domainOwnerUserId`, this writes a notification row for the owner
+ * with a distinct `*.edit_by_non_owner` action label.
+ *
+ * Distinct from `notifySubscribers` for two reasons:
+ *   - Owner notifications fire regardless of whether the owner subscribed.
+ *     The persona walk's pain ("changes happen with no signal to the
+ *     domain owner") is specifically about the owner not having to
+ *     opt-in to be told their record was touched.
+ *   - The action label is different so the inbox UI / future email
+ *     digest could weight owner-overwrite differently from a generic
+ *     subscriber-fan-out — an owner-overwrite is structurally more
+ *     attention-worthy.
+ *
+ * No-ops when the owner field is null or the owner is the actor.
+ */
+export async function notifyDomainOwner(
+  tx: Pick<typeof db, 'insert'>,
+  params: {
+    organizationId: string
+    entityType: NotifiableEntityType
+    entityId: string
+    action: string // e.g. 'capability.edit_by_non_owner'
+    actorUserId: string
+    ownerUserId: string | null | undefined
+    summary: string
+  },
+): Promise<number> {
+  if (!params.ownerUserId || params.ownerUserId === params.actorUserId) return 0
+  await tx.insert(notifications).values({
+    organizationId: params.organizationId,
+    userId: params.ownerUserId,
+    entityType: params.entityType,
+    entityId: params.entityId,
+    action: params.action,
+    actorUserId: params.actorUserId,
+    summary: params.summary,
+  })
+  revalidatePath('/notifications')
+  return 1
+}
+
+/**
  * Fan-out helper called from inside an edit action's transaction.
  *
  * The caller passes the tx so this insert participates in the same

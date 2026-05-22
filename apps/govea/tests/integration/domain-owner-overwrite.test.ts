@@ -14,7 +14,7 @@
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { db } from '@/db/client'
 import {
-  capabilities, applications, adrs, auditLog,
+  capabilities, applications, adrs, auditLog, notifications,
 } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
@@ -175,6 +175,75 @@ describe('domain-owner overwrite gate (#581)', () => {
     const meta = auditRows[0].metadata as { ownerUserId: string; ownerName: string }
     expect(meta.ownerUserId).toBe(owner.id)
     expect(meta.ownerName).toBe('Carlos Carter')
+
+    // Bridge: the owner should also have an inbox notification with the
+    // distinct edit_by_non_owner action label, regardless of subscription.
+    const ownerNotes = await db.select().from(notifications).where(and(
+      eq(notifications.entityId, cap.id),
+      eq(notifications.userId, owner.id),
+      eq(notifications.action, 'capability.edit_by_non_owner'),
+    ))
+    expect(ownerNotes).toHaveLength(1)
+    expect(ownerNotes[0].summary).toMatch(/edited your capability/i)
+  })
+
+  // ── Bridge: applications + ADRs also notify the owner ────────────────────
+
+  it('applications: a non-owner ack edit sends an edit_by_non_owner notification', async () => {
+    const app = await seedApp(orgId, 'Owner App Bridge', owner.id)
+    mockAuth.mockResolvedValue(makeSession(intruder))
+    const fd = new FormData()
+    fd.set('name', 'Owner App Bridge renamed')
+    fd.set('lifecycleStatus', 'active')
+    fd.set('status', 'draft')
+    fd.set('visibility', 'org')
+    fd.set('domainOwnerUserId', owner.id)
+    fd.set('acknowledgeOverwrite', 'on')
+    await editApplication(app.id, fd)
+    const ownerNotes = await db.select().from(notifications).where(and(
+      eq(notifications.entityId, app.id),
+      eq(notifications.userId, owner.id),
+      eq(notifications.action, 'application.edit_by_non_owner'),
+    ))
+    expect(ownerNotes).toHaveLength(1)
+  })
+
+  it('adrs: a non-owner ack edit sends an edit_by_non_owner notification', async () => {
+    const adr = await seedAdr(orgId, 'Owner ADR Bridge', owner.id)
+    mockAuth.mockResolvedValue(makeSession(intruder))
+    const fd = new FormData()
+    fd.set('number', adr.number)
+    fd.set('title', 'Owner ADR Bridge renamed')
+    fd.set('status', 'proposed')
+    fd.set('visibility', 'org')
+    fd.set('domainOwnerUserId', owner.id)
+    fd.set('acknowledgeOverwrite', 'on')
+    await editADR(adr.id, fd)
+    const ownerNotes = await db.select().from(notifications).where(and(
+      eq(notifications.entityId, adr.id),
+      eq(notifications.userId, owner.id),
+      eq(notifications.action, 'adr.edit_by_non_owner'),
+    ))
+    expect(ownerNotes).toHaveLength(1)
+  })
+
+  // ── Bridge: owner editing their own record does NOT self-notify ──────────
+
+  it('owner self-edit does not fire the edit_by_non_owner notification', async () => {
+    const cap = await seedCap(orgId, 'Owner Self Bridge', owner.id)
+    mockAuth.mockResolvedValue(makeSession(owner))
+    const fd = new FormData()
+    fd.set('name', 'Owner Self Bridge renamed')
+    fd.set('status', 'draft')
+    fd.set('visibility', 'org')
+    fd.set('domainOwnerUserId', owner.id)
+    await editCapability(cap.id, fd)
+    const selfNotes = await db.select().from(notifications).where(and(
+      eq(notifications.entityId, cap.id),
+      eq(notifications.userId, owner.id),
+      eq(notifications.action, 'capability.edit_by_non_owner'),
+    ))
+    expect(selfNotes).toHaveLength(0)
   })
 
   // ── Cross-org owner pick rejected ──────────────────────────────────────────

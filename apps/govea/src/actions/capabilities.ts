@@ -8,7 +8,7 @@ import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnecte
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
-import { notifySubscribers } from './notifications'
+import { notifySubscribers, notifyDomainOwner } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { redirect } from 'next/navigation'
@@ -336,6 +336,17 @@ export async function editCapability(capabilityId: string, formData: FormData) {
           ownerName: ownerAck.ownerName,
           ownerEmail: ownerAck.ownerEmail,
         },
+      })
+      // Bridge: notify the owner via the in-app inbox. Owners shouldn't
+      // have to subscribe to their own records to hear about overwrites.
+      await notifyDomainOwner(tx, {
+        organizationId: orgId,
+        entityType: 'capability',
+        entityId: capabilityId,
+        action: 'capability.edit_by_non_owner',
+        actorUserId: session.user.id,
+        ownerUserId: ownerAck.ownerUserId,
+        summary: `${session.user.name ?? session.user.email ?? 'Someone'} edited your capability "${name}"`,
       })
     }
 
