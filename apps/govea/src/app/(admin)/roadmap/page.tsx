@@ -2,6 +2,11 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getInitiatives } from '@/actions/initiatives'
 import { ConfidenceSummary } from '@/components/confidence-summary'
+import { PrintExportButton } from '@/components/print-export'
+import { PrintCoverSheet } from '@/components/print-cover-sheet'
+import { db } from '@/db/client'
+import { organizations } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -253,7 +258,10 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
 
   const orgId = session.user.organizationId!
   const role = session.user.role
-  const allInitiatives = await getInitiatives()
+  const [allInitiatives, org] = await Promise.all([
+    getInitiatives(),
+    db.query.organizations.findFirst({ where: eq(organizations.id, orgId), columns: { name: true } }),
+  ])
   const hasInitiatives = allInitiatives.length > 0
 
   // Grid view: group by status in display order
@@ -268,6 +276,9 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Print-only cover sheet (#559). */}
+      <PrintCoverSheet orgName={org?.name ?? 'Your organisation'} title="Roadmap" />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -279,8 +290,10 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
           </p>
         </div>
 
+        <div className="flex items-center gap-2 shrink-0">
+          <PrintExportButton />
         {/* View toggle */}
-        <div className="flex shrink-0 items-center rounded-lg border bg-muted/40 p-1 gap-0.5">
+        <div className="flex items-center rounded-lg border bg-muted/40 p-1 gap-0.5">
           <Link
             href="/roadmap"
             className={cn(
@@ -303,6 +316,7 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
           >
             Grid
           </Link>
+        </div>
         </div>
       </div>
 
