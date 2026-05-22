@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
@@ -66,6 +67,8 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<PersonaRow | null>(null)
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<PersonaRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
@@ -86,6 +89,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
     startTransition(async () => {
       try {
         await submitWithDuplicateAck(createPersona, formData)
+        createDirty.reset()
         setCreateOpen(false)
         refresh()
       } catch (err) {
@@ -100,6 +104,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
     if (!editTarget) return
     startTransition(async () => {
       await editPersona(editTarget.id, formData)
+      editDirty.reset()
       setEditTarget(null)
       refresh()
     })
@@ -289,12 +294,12 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
       </div>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(o) => { if (!o && !confirmDiscard(createDirty)) return; if (!o) createDirty.reset(); setCreateOpen(o) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New Persona</DialogTitle>
           </DialogHeader>
-          <form action={handleCreate} className="space-y-3">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required />
             <MarkdownEditor label="Description" name="description" rows={3} placeholder="Markdown supported" />
             <div className="space-y-1.5">
@@ -336,7 +341,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create persona'}</Button>
             </DialogFooter>
           </form>
@@ -344,12 +349,12 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open && !confirmDiscard(editDirty)) return; if (!open) { editDirty.reset(); setEditTarget(null) } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Persona</DialogTitle>
           </DialogHeader>
-          <form action={handleEdit} className="space-y-3">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={3} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <div className="space-y-1.5">
@@ -394,7 +399,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>
