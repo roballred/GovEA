@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { getGoalTrace, getObjectiveTrace, getCapabilityTrace, getServiceTrace } from '@/actions/traceability'
 import type { GoalTrace, ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp } from '@/actions/traceability'
+import { getGoals } from '@/actions/goals'
 import { getObjectives } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getServices } from '@/actions/services'
@@ -139,6 +140,7 @@ function GoalTraceView({ trace }: { trace: GoalTrace }) {
   const allCapabilities = dedupeById(
     trace.objectives.flatMap(o => o.capabilities.map(c => ({ ...c, href: `/capabilities/${c.id}` })))
   )
+  const allApps = dedupeById(allCapabilities.flatMap(c => c.applications))
   const allInitiatives = dedupeById(
     trace.objectives.flatMap(o => o.initiatives.map(i => ({ ...i, href: `/initiatives/${i.id}` })))
   )
@@ -196,6 +198,11 @@ function GoalTraceView({ trace }: { trace: GoalTrace }) {
         </TraceCard>
       )}
 
+      {/* Applications */}
+      <Connector label="supported by" />
+      <LayerLabel>Applications</LayerLabel>
+      <AppLayer apps={allApps} />
+
       {/* Initiatives */}
       {allInitiatives.length > 0 && (
         <>
@@ -225,7 +232,25 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
 
   return (
     <div className="space-y-1 max-w-2xl">
+      {/* Upstream: Goals */}
+      <LayerLabel>Goals</LayerLabel>
+      {trace.goals.length === 0 ? (
+        <Gap message="No goals linked — the strategic outcome for this objective is not yet documented." />
+      ) : (
+        <TraceCard>
+          {trace.goals.map(g => (
+            <TraceRow
+              key={g.id}
+              href={`/goals/${g.id}`}
+              name={g.name}
+              meta={g.planningHorizon ?? undefined}
+            />
+          ))}
+        </TraceCard>
+      )}
+
       {/* Anchor */}
+      <Connector label="sets direction for" />
       <LayerLabel>Strategic Objective</LayerLabel>
       <TraceCard>
         <div className="px-4 py-4">
@@ -290,7 +315,25 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
 function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
   return (
     <div className="space-y-1 max-w-2xl">
+      {/* Upstream: Goals */}
+      <LayerLabel>Goals</LayerLabel>
+      {trace.goals.length === 0 ? (
+        <Gap message="No goals linked upstream — the strategic outcome for this capability is not yet documented." />
+      ) : (
+        <TraceCard>
+          {trace.goals.map(g => (
+            <TraceRow
+              key={g.id}
+              href={`/goals/${g.id}`}
+              name={g.name}
+              meta={g.planningHorizon ?? undefined}
+            />
+          ))}
+        </TraceCard>
+      )}
+
       {/* Upstream: Strategic Objectives */}
+      <Connector label="sets direction for" />
       <LayerLabel>Strategic Objectives</LayerLabel>
       {trace.objectives.length === 0 ? (
         <Gap message="Not linked to any strategic objective — the mission justification for this capability is not yet documented." />
@@ -490,7 +533,7 @@ export default async function TraceabilityPage({
   // personas all need to *find* traceability views; they don't always arrive
   // already on the right entity page.
   if (!from || !id) {
-    return <TraceabilityHub />
+    return <TraceabilityHub organizationId={session.user.organizationId!} role={session.user.role} />
   }
 
   let trace = null
@@ -526,8 +569,8 @@ export default async function TraceabilityPage({
 
   const subtitle =
     trace.kind === 'goal'      ? 'Goal → Objectives → Capabilities → Technology Trace' :
-    trace.kind === 'objective' ? 'Mission → Technology Trace' :
-    trace.kind === 'capability' ? 'Objective → Capability → Delivery Trace' :
+    trace.kind === 'objective' ? 'Goal → Objective → Technology Trace' :
+    trace.kind === 'capability' ? 'Goal → Objective → Capability → Delivery Trace' :
     'Persona → Service → Technology Trace'
 
   return (
@@ -571,15 +614,16 @@ export default async function TraceabilityPage({
 // ── Hub view (#549) ───────────────────────────────────────────────────────────
 //
 // Landing page when /traceability is hit with no params. Lists published
-// Strategic Objectives, Capabilities (grouped by domain), and Services as
+// Goals, Strategic Objectives, Capabilities (grouped by domain), and Services as
 // starting points. Each row has a "Trace →" link that resolves to the
 // existing detail view of the trace. Matches the audit's Option A (index
 // view) rather than Option B (featured default) — A is more honest to the
 // data model and discoverable for stakeholders who may not know which
 // objective to start from.
 
-async function TraceabilityHub() {
-  const [objectives, capabilities, services] = await Promise.all([
+async function TraceabilityHub({ organizationId, role }: { organizationId: string; role: string }) {
+  const [goals, objectives, capabilities, services] = await Promise.all([
+    getGoals(organizationId, role),
     getObjectives(),
     getCapabilities(),
     getServices(),
@@ -588,6 +632,7 @@ async function TraceabilityHub() {
   // Viewer-only filter: traceability already enforces visibility at the
   // entity-level actions. For the hub, we restrict to published items so
   // stakeholders aren't shown drafts they can't actually trace.
+  const publishedGoals = goals.filter(g => g.status === 'published')
   const publishedObjectives = objectives.filter(o => o.status === 'published')
   const publishedCapabilities = capabilities.filter(c => c.status === 'published')
   const publishedServices = services.filter(s => s.status === 'published')
@@ -604,22 +649,45 @@ async function TraceabilityHub() {
     a === 'No domain' ? 1 : b === 'No domain' ? -1 : a.localeCompare(b)
   )
 
-  const hasAny = publishedObjectives.length + publishedCapabilities.length + publishedServices.length > 0
+  const hasAny = publishedGoals.length + publishedObjectives.length + publishedCapabilities.length + publishedServices.length > 0
 
   return (
     <div className="space-y-8 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Traceability</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Trace from a strategic objective, capability, or service down to the technology that supports it.
+          Trace from a goal, strategic objective, capability, or service down to the technology that supports it.
           Pick a starting point below.
         </p>
       </div>
 
       {!hasAny && (
         <p className="text-sm text-muted-foreground rounded-lg border bg-card p-8 text-center">
-          No published content yet. Publish at least one objective, capability, or service to begin tracing.
+          No published content yet. Publish at least one goal, objective, capability, or service to begin tracing.
         </p>
+      )}
+
+      {publishedGoals.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold">Goals</h2>
+          <div className="rounded-lg border bg-card divide-y divide-border">
+            {publishedGoals.map(g => (
+              <Link
+                key={g.id}
+                href={`/traceability?from=goal&id=${g.id}`}
+                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-sm font-medium">{g.name}</p>
+                  {g.planningHorizon && (
+                    <p className="text-xs text-muted-foreground">{g.planningHorizon}</p>
+                  )}
+                </div>
+                <span className="text-xs text-primary shrink-0">Trace →</span>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {publishedObjectives.length > 0 && (

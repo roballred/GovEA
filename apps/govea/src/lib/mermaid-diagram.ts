@@ -19,9 +19,17 @@ function capabilityDiagram(trace: CapabilityTrace): string {
 
   lines.push(`  ${focal}${label(trace.name, trace.domain)}:::capability`)
 
+  for (const g of trace.goals) {
+    const n = nid('goal', g.id)
+    lines.push(`  ${n}${label(g.name, g.planningHorizon)}:::goal`)
+  }
+
   for (const o of trace.objectives) {
     const n = nid('obj', o.id)
     lines.push(`  ${n}${label(o.name, o.timeHorizon)}:::objective`)
+    for (const g of o.goals ?? []) {
+      lines.push(`  ${nid('goal', g.id)} --> ${n}`)
+    }
     lines.push(`  ${n} --> ${focal}`)
   }
 
@@ -56,6 +64,7 @@ function capabilityDiagram(trace: CapabilityTrace): string {
   }
 
   lines.push('')
+  lines.push('  classDef goal        fill:#ecfeff,stroke:#67e8f9,color:#155e75')
   lines.push('  classDef capability fill:#0f172a,stroke:#0f172a,color:#fff,rx:8')
   lines.push('  classDef objective  fill:#f5f3ff,stroke:#c4b5fd,color:#5b21b6')
   lines.push('  classDef application fill:#f8fafc,stroke:#e2e8f0,color:#0f172a')
@@ -72,6 +81,12 @@ function objectiveDiagram(trace: ObjectiveTrace): string {
   const focal = nid('obj', trace.id)
 
   lines.push(`  ${focal}${label(trace.name, trace.timeHorizon)}:::objective`)
+
+  for (const g of trace.goals) {
+    const n = nid('goal', g.id)
+    lines.push(`  ${n}${label(g.name, g.planningHorizon)}:::goal`)
+    lines.push(`  ${n} --> ${focal}`)
+  }
 
   for (const i of trace.initiatives) {
     const n = nid('ini', i.id)
@@ -92,6 +107,7 @@ function objectiveDiagram(trace: ObjectiveTrace): string {
   }
 
   lines.push('')
+  lines.push('  classDef goal        fill:#ecfeff,stroke:#67e8f9,color:#155e75')
   lines.push('  classDef objective  fill:#f5f3ff,stroke:#c4b5fd,color:#5b21b6')
   lines.push('  classDef capability fill:#0f172a,stroke:#0f172a,color:#fff')
   lines.push('  classDef application fill:#f8fafc,stroke:#e2e8f0,color:#0f172a')

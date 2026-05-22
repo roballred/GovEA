@@ -3,8 +3,10 @@
 import { db } from '@/db/client'
 import {
   strategicObjectives, capabilities, services, goals,
+  goalObjectives, objectiveCapabilities, applicationCapabilities,
+  initiativeObjectives, serviceCapabilities,
 } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canReadFederatedEntity } from '@/lib/federation'
@@ -23,6 +25,10 @@ export interface TraceInitiative {
 }
 export interface TraceObjective {
   id: string; name: string; timeHorizon: string | null
+  goals?: TraceGoal[]
+}
+export interface TraceGoal {
+  id: string; name: string; planningHorizon: string | null
 }
 export interface TracePersona {
   id: string; name: string; type: string | null
@@ -40,6 +46,7 @@ export interface ObjectiveTrace {
   kind: 'objective'
   id: string; name: string; description: string | null
   successMetric: string | null; timeHorizon: string | null; status: string
+  goals: TraceGoal[]
   capabilities: TraceCapability[]
   initiatives: TraceInitiative[]
 }
@@ -47,6 +54,7 @@ export interface ObjectiveTrace {
 export interface CapabilityTrace {
   kind: 'capability'
   id: string; name: string; domain: string | null; description: string | null; status: string
+  goals: TraceGoal[]
   objectives: TraceObjective[]
   applications: TraceApp[]
   initiatives: TraceInitiative[]
@@ -75,6 +83,61 @@ export interface GoalTrace {
 
 export type TraceData = GoalTrace | ObjectiveTrace | CapabilityTrace | ServiceTrace
 
+function dedupeTraceRows<T extends { id: string }>(rows: T[]): T[] {
+  return Array.from(new Map(rows.map((row) => [row.id, row])).values())
+}
+
+async function getCapabilitiesWithApps(capabilityIds: string[]): Promise<TraceCapability[]> {
+  if (capabilityIds.length === 0) return []
+
+  const [capabilityRows, appLinks] = await Promise.all([
+    db.query.capabilities.findMany({
+      where: inArray(capabilities.id, capabilityIds),
+    }),
+    db.query.applicationCapabilities.findMany({
+      where: inArray(applicationCapabilities.capabilityId, capabilityIds),
+      with: { application: true },
+    }),
+  ])
+
+  const appsByCapability = new Map<string, TraceApp[]>()
+  for (const { capabilityId, application } of appLinks) {
+    const apps = appsByCapability.get(capabilityId) ?? []
+    apps.push({
+      id: application.id,
+      name: application.name,
+      vendor: application.vendor,
+      lifecycleStatus: application.lifecycleStatus,
+    })
+    appsByCapability.set(capabilityId, apps)
+  }
+
+  return capabilityRows.map((c) => ({
+    id: c.id,
+    name: c.name,
+    domain: c.domain,
+    applications: appsByCapability.get(c.id) ?? [],
+  }))
+}
+
+async function getGoalsByObjective(objectiveIds: string[]): Promise<Map<string, TraceGoal[]>> {
+  const goalsByObjective = new Map<string, TraceGoal[]>()
+  if (objectiveIds.length === 0) return goalsByObjective
+
+  const goalRows = await db.query.goalObjectives.findMany({
+    where: inArray(goalObjectives.objectiveId, objectiveIds),
+    with: { goal: true },
+  })
+
+  for (const { objectiveId, goal } of goalRows) {
+    const goals_ = goalsByObjective.get(objectiveId) ?? []
+    goals_.push({ id: goal.id, name: goal.name, planningHorizon: goal.planningHorizon })
+    goalsByObjective.set(objectiveId, goals_)
+  }
+
+  return goalsByObjective
+}
+
 // ── Goal trace ────────────────────────────────────────────────────────────────
 
 export async function getGoalTrace(id: string): Promise<GoalTrace | null> {
@@ -83,29 +146,49 @@ export async function getGoalTrace(id: string): Promise<GoalTrace | null> {
 
   const row = await db.query.goals.findFirst({
     where: eq(goals.id, id),
-    with: {
-      goalObjectives: {
-        with: {
-          objective: {
-            with: {
-              objectiveCapabilities: {
-                with: {
-                  capability: {
-                    with: { applicationCapabilities: { with: { application: true } } },
-                  },
-                },
-              },
-              initiativeObjectives: { with: { initiative: true } },
-            },
-          },
-        },
-      },
-    },
   })
 
   if (!row) return null
   const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
   if (!visible) return null
+
+  const goalObjectiveRows = await db.query.goalObjectives.findMany({
+    where: eq(goalObjectives.goalId, id),
+    with: { objective: true },
+  })
+  const objectiveIds = goalObjectiveRows.map(({ objectiveId }) => objectiveId)
+
+  const [objectiveCapRows, initiativeRows] = objectiveIds.length > 0
+    ? await Promise.all([
+        db.query.objectiveCapabilities.findMany({
+          where: inArray(objectiveCapabilities.objectiveId, objectiveIds),
+        }),
+        db.query.initiativeObjectives.findMany({
+          where: inArray(initiativeObjectives.objectiveId, objectiveIds),
+          with: { initiative: true },
+        }),
+      ])
+    : [[], []] as const
+
+  const capabilityIds = [...new Set(objectiveCapRows.map(({ capabilityId }) => capabilityId))]
+  const capabilityTraceRows = await getCapabilitiesWithApps(capabilityIds)
+  const capabilitiesById = new Map(capabilityTraceRows.map((capability) => [capability.id, capability]))
+
+  const capabilitiesByObjective = new Map<string, TraceCapability[]>()
+  for (const { objectiveId, capabilityId } of objectiveCapRows) {
+    const capability = capabilitiesById.get(capabilityId)
+    if (!capability) continue
+    const objectiveCapabilities_ = capabilitiesByObjective.get(objectiveId) ?? []
+    objectiveCapabilities_.push(capability)
+    capabilitiesByObjective.set(objectiveId, objectiveCapabilities_)
+  }
+
+  const initiativesByObjective = new Map<string, TraceInitiative[]>()
+  for (const { objectiveId, initiative } of initiativeRows) {
+    const initiatives = initiativesByObjective.get(objectiveId) ?? []
+    initiatives.push({ id: initiative.id, name: initiative.name, status: initiative.status })
+    initiativesByObjective.set(objectiveId, initiatives)
+  }
 
   return {
     kind: 'goal',
@@ -115,21 +198,12 @@ export async function getGoalTrace(id: string): Promise<GoalTrace | null> {
     planningHorizon: row.planningHorizon,
     owner: row.owner,
     status: row.status,
-    objectives: row.goalObjectives.map(({ objective: o }) => ({
+    objectives: goalObjectiveRows.map(({ objective: o }) => ({
       id: o.id,
       name: o.name,
       timeHorizon: o.timeHorizon,
-      capabilities: o.objectiveCapabilities.map(({ capability: c }) => ({
-        id: c.id,
-        name: c.name,
-        domain: c.domain,
-        applications: c.applicationCapabilities.map(({ application: a }) => ({
-          id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
-        })),
-      })),
-      initiatives: o.initiativeObjectives.map(({ initiative: i }) => ({
-        id: i.id, name: i.name, status: i.status,
-      })),
+      capabilities: capabilitiesByObjective.get(o.id) ?? [],
+      initiatives: initiativesByObjective.get(o.id) ?? [],
     })),
   }
 }
@@ -142,23 +216,26 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
 
   const row = await db.query.strategicObjectives.findFirst({
     where: eq(strategicObjectives.id, id),
-    with: {
-      objectiveCapabilities: {
-        with: {
-          capability: {
-            with: {
-              applicationCapabilities: { with: { application: true } },
-            },
-          },
-        },
-      },
-      initiativeObjectives: { with: { initiative: true } },
-    },
   })
 
   if (!row) return null
   const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
   if (!visible) return null
+
+  const [objectiveCapRows, initiativeRows] = await Promise.all([
+    db.query.objectiveCapabilities.findMany({
+      where: eq(objectiveCapabilities.objectiveId, id),
+    }),
+    db.query.initiativeObjectives.findMany({
+      where: eq(initiativeObjectives.objectiveId, id),
+      with: { initiative: true },
+    }),
+  ])
+  const capabilityIds = objectiveCapRows.map(({ capabilityId }) => capabilityId)
+  const [capabilityTraceRows, goalsByObjective] = await Promise.all([
+    getCapabilitiesWithApps(capabilityIds),
+    getGoalsByObjective([id]),
+  ])
 
   return {
     kind: 'objective',
@@ -168,15 +245,11 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
     successMetric: row.successMetric,
     timeHorizon: row.timeHorizon,
     status: row.status,
-    capabilities: row.objectiveCapabilities.map(({ capability: c }) => ({
-      id: c.id,
-      name: c.name,
-      domain: c.domain,
-      applications: c.applicationCapabilities.map(({ application: a }) => ({
-        id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
-      })),
-    })),
-    initiatives: row.initiativeObjectives.map(({ initiative: i }) => ({
+    goals: goalsByObjective.get(row.id) ?? [],
+    capabilities: objectiveCapRows
+      .map(({ capabilityId }) => capabilityTraceRows.find((c) => c.id === capabilityId))
+      .filter((c): c is TraceCapability => Boolean(c)),
+    initiatives: initiativeRows.map(({ initiative: i }) => ({
       id: i.id, name: i.name, status: i.status,
     })),
   }
@@ -204,6 +277,12 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
   const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
   if (!visible) return null
 
+  const objectiveIds = row.objectiveCapabilities.map(({ objective }) => objective.id)
+  const goalsByObjective = await getGoalsByObjective(objectiveIds)
+  const goalTraceRows = dedupeTraceRows(
+    objectiveIds.flatMap((objectiveId) => goalsByObjective.get(objectiveId) ?? [])
+  )
+
   return {
     kind: 'capability',
     id: row.id,
@@ -211,8 +290,10 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     domain: row.domain,
     description: row.description,
     status: row.status,
+    goals: goalTraceRows,
     objectives: row.objectiveCapabilities.map(({ objective: o }) => ({
       id: o.id, name: o.name, timeHorizon: o.timeHorizon,
+      goals: goalsByObjective.get(o.id) ?? [],
     })),
     applications: row.applicationCapabilities.map(({ application: a }) => ({
       id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
@@ -242,21 +323,17 @@ export async function getServiceTrace(id: string): Promise<ServiceTrace | null> 
     where: eq(services.id, id),
     with: {
       servicePersonas: { with: { persona: true } },
-      serviceCapabilities: {
-        with: {
-          capability: {
-            with: {
-              applicationCapabilities: { with: { application: true } },
-            },
-          },
-        },
-      },
     },
   })
 
   if (!row) return null
   const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
   if (!visible) return null
+
+  const serviceCapRows = await db.query.serviceCapabilities.findMany({
+    where: eq(serviceCapabilities.serviceId, id),
+  })
+  const capabilityTraceRows = await getCapabilitiesWithApps(serviceCapRows.map(({ capabilityId }) => capabilityId))
 
   return {
     kind: 'service',
@@ -268,13 +345,8 @@ export async function getServiceTrace(id: string): Promise<ServiceTrace | null> 
     personas: row.servicePersonas.map(({ persona: p }) => ({
       id: p.id, name: p.name, type: p.type,
     })),
-    capabilities: row.serviceCapabilities.map(({ capability: c }) => ({
-      id: c.id,
-      name: c.name,
-      domain: c.domain,
-      applications: c.applicationCapabilities.map(({ application: a }) => ({
-        id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
-      })),
-    })),
+    capabilities: serviceCapRows
+      .map(({ capabilityId }) => capabilityTraceRows.find((c) => c.id === capabilityId))
+      .filter((c): c is TraceCapability => Boolean(c)),
   }
 }
