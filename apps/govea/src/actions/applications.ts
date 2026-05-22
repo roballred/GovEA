@@ -11,6 +11,7 @@ import { notifySubscribers, notifyDomainOwner } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
+import { ensurePublishReady } from '@/lib/publish-readiness-gate'
 import { autoFlagLifecycleDebt } from '@/lib/lifecycle-debt'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -230,6 +231,15 @@ export async function editApplication(applicationId: string, formData: FormData)
     acknowledged: acknowledgeOpenDebt,
   })
 
+  // #567 Part B — publish-readiness. capabilityIds is in the form.
+  const publishReadyResult = ensurePublishReady({
+    entityType: 'application',
+    formData,
+    linkCounts: { capabilityCount: capabilityIds.length },
+    transitioningToPublished,
+    acknowledged: formData.get('acknowledgePublishIncomplete') === 'on',
+  })
+
   await db.transaction(async (tx) => {
     await tx.update(applications).set({
       name,
@@ -312,6 +322,17 @@ export async function editApplication(applicationId: string, formData: FormData)
           highCount: debtAck.highCount,
           publishedAt: new Date().toISOString(),
         },
+      })
+    }
+
+    if (publishReadyResult.missingFields.length > 0) {
+      await writeAuditLog(tx, {
+        action: 'publish.acknowledged_incomplete',
+        entityType: 'application',
+        entityId: applicationId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: { missingFields: publishReadyResult.missingFields },
       })
     }
   })

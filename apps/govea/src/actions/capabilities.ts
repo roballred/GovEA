@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { capabilities, capabilityPersonas, capabilityRelationships, entityTaxonomyValues, personas } from '@/db/schema'
+import { capabilities, capabilityPersonas, capabilityRelationships, entityTaxonomyValues, personas, applicationCapabilities, objectiveCapabilities } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
 import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
@@ -12,6 +12,7 @@ import { notifySubscribers, notifyDomainOwner } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
+import { ensurePublishReady } from '@/lib/publish-readiness-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
@@ -273,6 +274,31 @@ export async function editCapability(capabilityId: string, formData: FormData) {
     acknowledged: acknowledgeOpenDebt,
   })
 
+  // #567 Part B — publish-readiness gate. Only fires on the
+  // transition-to-published edge. Counts applications + objectives
+  // from the DB because those links live on separate detail-page
+  // panels rather than in the edit form.
+  let publishReadyResult = { missingFields: [] as string[] }
+  if (transitioningToPublished) {
+    const [appLinks, objLinks] = await Promise.all([
+      db.select({ id: applicationCapabilities.applicationId }).from(applicationCapabilities)
+        .where(eq(applicationCapabilities.capabilityId, capabilityId)),
+      db.select({ id: objectiveCapabilities.objectiveId }).from(objectiveCapabilities)
+        .where(eq(objectiveCapabilities.capabilityId, capabilityId)),
+    ])
+    publishReadyResult = ensurePublishReady({
+      entityType: 'capability',
+      formData,
+      linkCounts: {
+        personaCount: personaIds.length,
+        applicationCount: appLinks.length,
+        objectiveCount: objLinks.length,
+      },
+      transitioningToPublished,
+      acknowledged: formData.get('acknowledgePublishIncomplete') === 'on',
+    })
+  }
+
   // Mutation + audit + cross-org-link flag/clear are all in one transaction
   // so a failure anywhere rolls back the entire edit (#416).
   await db.transaction(async (tx) => {
@@ -368,6 +394,19 @@ export async function editCapability(capabilityId: string, formData: FormData) {
           highCount: debtAck.highCount,
           publishedAt: new Date().toISOString(),
         },
+      })
+    }
+
+    // #567 Part B: when the publish-readiness gate was acknowledged, log it
+    // with the missing-field list so a later review can see what was waved.
+    if (publishReadyResult.missingFields.length > 0) {
+      await writeAuditLog(tx, {
+        action: 'publish.acknowledged_incomplete',
+        entityType: 'capability',
+        entityId: capabilityId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: { missingFields: publishReadyResult.missingFields },
       })
     }
 

@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
+import { ensurePublishReady } from '@/lib/publish-readiness-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
@@ -134,6 +135,15 @@ export async function editPersona(personaId: string, formData: FormData) {
   const before = await db.query.personas.findFirst({ where: eq(personas.id, personaId) })
   assertOwnership(before?.organizationId, orgId)
 
+  // #567 Part B — publish-readiness gate.
+  const transitioningToPublished = before?.status !== 'published' && status === 'published'
+  const publishReadyResult = ensurePublishReady({
+    entityType: 'persona',
+    formData,
+    transitioningToPublished,
+    acknowledged: formData.get('acknowledgePublishIncomplete') === 'on',
+  })
+
   await db.transaction(async (tx) => {
     await tx.update(personas).set({
       name,
@@ -162,6 +172,17 @@ export async function editPersona(personaId: string, formData: FormData) {
       before: { name: before?.name, description: before?.description, type: before?.type, status: before?.status },
       after: { name, description, type, status, tagIds },
     })
+
+    if (publishReadyResult.missingFields.length > 0) {
+      await writeAuditLog(tx, {
+        action: 'publish.acknowledged_incomplete',
+        entityType: 'persona',
+        entityId: personaId,
+        userId: session.user.id,
+        organizationId: orgId,
+        metadata: { missingFields: publishReadyResult.missingFields },
+      })
+    }
 
     // Flag or clear cross-org links when visibility changes.
     const prevVis = before?.visibility
