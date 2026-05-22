@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { validatePassword } from '@/lib/password'
+import { getOrgSecuritySettings } from '@/lib/security-policy'
 import { redirect } from 'next/navigation'
 
 async function requireAdmin() {
@@ -43,7 +44,8 @@ export async function createUser(formData: FormData) {
   const password = formData.get('password') as string
   const role = formData.get('role') as 'admin' | 'contributor' | 'viewer'
 
-  const pwValidation = validatePassword(password)
+  const policy = await getOrgSecuritySettings(orgId)
+  const pwValidation = validatePassword(password, policy)
   if (!pwValidation.valid) throw new Error(pwValidation.message)
 
   // Guard against duplicate email across orgs (users.email is globally unique, #269)
@@ -196,9 +198,15 @@ export async function editUser(userId: string, formData: FormData) {
   }
 
   if (newPassword) {
-    const pwValidation = validatePassword(newPassword)
+    const policy = await getOrgSecuritySettings(orgId)
+    const pwValidation = validatePassword(newPassword, policy)
     if (!pwValidation.valid) throw new Error(pwValidation.message)
     updates.passwordHash = await bcrypt.hash(newPassword, 12)
+    // #527 — reset password-change clock + clear lockout state when an
+    // admin resets a user's password. Mirrors the self-service path.
+    updates.lastPasswordChangedAt = new Date()
+    updates.failedLoginAttempts = 0
+    updates.lockoutUntil = null
   }
 
   await db.transaction(async (tx) => {

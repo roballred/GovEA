@@ -9,6 +9,8 @@ import { ModuleToggles } from '@/components/module-toggles'
 import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
 import { CompletenessSettingsForm } from '@/components/completeness-settings'
+import { SecuritySettingsForm } from '@/components/security-settings-form'
+import { getSecuritySettingsForUi } from '@/actions/security-settings'
 import { CustomFieldsManager } from '@/components/custom-fields-manager'
 import { EmailSettingsSection } from '@/components/email-settings-section'
 import { getEmailSettingsForUi, getRecentEmailDeliveries } from '@/actions/email-settings'
@@ -33,7 +35,7 @@ export default async function SettingsPage() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) redirect('/dashboard')
 
-  const [org, moduleSettings, appCustomFields, emailSettingsUi, emailDeliveries] = await Promise.all([
+  const [org, moduleSettings, appCustomFields, emailSettingsUi, emailDeliveries, securitySettings] = await Promise.all([
     session.user.organizationId
       ? db.query.organizations.findFirst({
           where: eq(organizations.id, session.user.organizationId),
@@ -45,6 +47,7 @@ export default async function SettingsPage() {
       : Promise.resolve([]),
     getEmailSettingsForUi(),
     getRecentEmailDeliveries(10),
+    getSecuritySettingsForUi(),
   ])
 
   const activeTheme = org?.theme ?? 'govea'
@@ -149,6 +152,20 @@ export default async function SettingsPage() {
           recentDeliveries={emailDeliveries}
           adminEmail={session.user.email ?? null}
         />
+      </section>
+
+      <hr />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Security</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Password policy, session timeout, account lockout, and password
+            expiry. Changes apply to future logins and password changes —
+            existing sessions are not immediately terminated. (#527)
+          </p>
+        </div>
+        <SecuritySettingsForm initial={securitySettings} />
       </section>
 
       <hr />

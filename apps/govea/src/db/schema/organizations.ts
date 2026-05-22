@@ -3,6 +3,51 @@ import { type AnyPgColumn, boolean, jsonb, pgEnum, pgTable, text, timestamp, uui
 export const visibilityEnum = pgEnum('visibility', ['org', 'connections', 'instance'])
 
 /**
+ * Per-organization security policy (#527 / ac-security-settings).
+ *
+ * Surfaced by the CMS Administrator persona walk: government IT admins
+ * are routinely required to set agency-standard password and lockout
+ * policies — touching a config file is a non-starter, so the policy
+ * must be admin-configurable from the UI.
+ *
+ * Stored as JSONB so adding a new policy knob doesn't require a migration.
+ * Per the capability rule, changes apply to FUTURE logins and sessions —
+ * existing sessions are not immediately terminated.
+ *
+ *  - `passwordMinLength` / `require*`     — enforced by validatePassword
+ *  - `sessionTimeoutMinutes`              — enforced by the jwt callback
+ *  - `lockoutThreshold` / `lockoutDur..`  — enforced by the credentials provider
+ *  - `passwordExpiryDays`                 — enforced by the admin-layout redirect
+ *
+ * A value of 0 for `lockoutThreshold` / `passwordExpiryDays` means
+ * disabled (no enforcement). `sessionTimeoutMinutes` falls back to the
+ * 24h NextAuth default if missing.
+ */
+export type SecuritySettings = {
+  passwordMinLength: number
+  requireUppercase: boolean
+  requireLowercase: boolean
+  requireDigit: boolean
+  requireSpecial: boolean
+  sessionTimeoutMinutes: number
+  lockoutThreshold: number
+  lockoutDurationMinutes: number
+  passwordExpiryDays: number
+}
+
+export const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
+  passwordMinLength: 8,
+  requireUppercase: false,
+  requireLowercase: false,
+  requireDigit: false,
+  requireSpecial: false,
+  sessionTimeoutMinutes: 1440, // 24h — matches NextAuth's previous static default
+  lockoutThreshold: 5,
+  lockoutDurationMinutes: 30,
+  passwordExpiryDays: 0,
+}
+
+/**
  * Confidence-summary publication settings (#380 PR-2).
  *
  * `enabled` is retained for backwards compatibility with PR-1 callers — it
@@ -77,6 +122,7 @@ export const organizations = pgTable('organizations', {
   enabledModules: jsonb('enabled_modules').$type<Record<string, boolean>>().notNull().default({}),
   confidenceSettings: jsonb('confidence_settings').$type<ConfidenceSettings>(),
   completenessSettings: jsonb('completeness_settings').$type<CompletenessSettings>(),
+  securitySettings: jsonb('security_settings').$type<SecuritySettings>(),
   isSystemOrg: boolean('is_system_org').notNull().default(false),
   parentId: uuid('parent_id').references((): AnyPgColumn => organizations.id, { onDelete: 'set null' }),
   suspendedAt: timestamp('suspended_at'),

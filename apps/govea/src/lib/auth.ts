@@ -10,6 +10,7 @@ import { writeAuditLog } from '@/lib/audit'
 import type { Role } from '@/lib/rbac'
 import { authConfig } from '@/lib/auth.config'
 import { checkSsoProvisioning } from '@/lib/sso-guard'
+import { getOrgSecuritySettings } from '@/lib/security-policy'
 
 // Identity model: users.email is globally unique across all organizations (#269).
 // Auth lookups by bare email (credentials provider, jwt callback) are therefore
@@ -57,16 +58,56 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           })
           return null
         }
-        const valid = await bcrypt.compare(credentials.password as string, user.passwordHash)
-        if (!valid) {
+
+        // #527 — account lockout enforcement. Per ac-security-settings, a
+        // user is locked when failed_login_attempts >= threshold, and the
+        // lockout self-clears `lockoutDurationMinutes` after the lock was
+        // set. We check the lockout BEFORE comparing the password so a
+        // continuous attack on a locked account doesn't get a timing oracle
+        // about password correctness (NIST 800-63B §5.2.2).
+        if (user.lockoutUntil && new Date(user.lockoutUntil) > new Date()) {
           await writeAuditLog(db, {
-            action: 'auth.login_failed',
+            action: 'auth.login_blocked_locked',
             entityType: 'user',
+            entityId: user.id,
             organizationId: user.organizationId,
-            metadata: { email },
+            metadata: { email, lockoutUntil: user.lockoutUntil.toISOString() },
           })
           return null
         }
+
+        const valid = await bcrypt.compare(credentials.password as string, user.passwordHash)
+        if (!valid) {
+          // Increment failed_login_attempts. If the new count crosses the
+          // org's threshold, set lockoutUntil. Threshold of 0 disables
+          // the lockout entirely (per-org opt-out).
+          const policy = await getOrgSecuritySettings(user.organizationId)
+          const newCount = user.failedLoginAttempts + 1
+          const shouldLock = policy.lockoutThreshold > 0 && newCount >= policy.lockoutThreshold
+          const lockoutUntil = shouldLock
+            ? new Date(Date.now() + policy.lockoutDurationMinutes * 60 * 1000)
+            : null
+          await db.update(users)
+            .set({ failedLoginAttempts: newCount, lockoutUntil })
+            .where(eq(users.id, user.id))
+
+          await writeAuditLog(db, {
+            action: shouldLock ? 'auth.login_failed_locked' : 'auth.login_failed',
+            entityType: 'user',
+            entityId: user.id,
+            organizationId: user.organizationId,
+            metadata: { email, attempts: newCount, lockedUntil: lockoutUntil?.toISOString() ?? null },
+          })
+          return null
+        }
+
+        // Success — reset the failure counter + any prior lock.
+        if (user.failedLoginAttempts > 0 || user.lockoutUntil) {
+          await db.update(users)
+            .set({ failedLoginAttempts: 0, lockoutUntil: null })
+            .where(eq(users.id, user.id))
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -107,6 +148,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.organizationId = dbUser?.organizationId ?? null
         token.instanceRole = (dbUser?.instanceRole as 'instance_admin' | null) ?? null
         token.checkedAt = Date.now()
+        // #527 — record session-issued-at + last-password-changed-at so the
+        // per-org session-timeout and password-expiry checks have something
+        // to compare against. JWT `iat` is also set by NextAuth, but we
+        // duplicate it as a number for clarity.
+        token.issuedAt = Date.now()
+        token.lastPasswordChangedAt = dbUser?.lastPasswordChangedAt
+          ? new Date(dbUser.lastPasswordChangedAt).getTime()
+          : null
+        // Snapshot the policy fields that the edge middleware needs to make
+        // a redirect decision. The middleware can't query the DB (edge
+        // runtime / no `net`), so we mirror the policy into the token and
+        // refresh it on the same 5-minute cadence as the active-user check.
+        if (dbUser?.organizationId) {
+          const policy = await getOrgSecuritySettings(dbUser.organizationId)
+          token.sessionTimeoutMinutes = policy.sessionTimeoutMinutes
+          token.passwordExpiryDays = policy.passwordExpiryDays
+        }
       } else if (token.id) {
         // Subsequent requests — re-validate isActive every 5 minutes so that
         // deactivating a user takes effect without waiting for the 24h JWT to
@@ -120,6 +178,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!dbUser || dbUser.isActive !== 'true') return null
           token.instanceRole = (dbUser?.instanceRole as 'instance_admin' | null) ?? null
           token.checkedAt = Date.now()
+          // Refresh the password-change timestamp so a self-service password
+          // change doesn't keep the user redirecting to /change-password.
+          token.lastPasswordChangedAt = dbUser?.lastPasswordChangedAt
+            ? new Date(dbUser.lastPasswordChangedAt).getTime()
+            : null
+          if (dbUser?.organizationId) {
+            const policy = await getOrgSecuritySettings(dbUser.organizationId)
+            token.sessionTimeoutMinutes = policy.sessionTimeoutMinutes
+            token.passwordExpiryDays = policy.passwordExpiryDays
+          }
+        }
+
+        // #527 — per-org session timeout. NextAuth's static `maxAge` is a
+        // ceiling (24h); the per-org policy lowers it. Comparing against
+        // `issuedAt` (set at initial sign-in) rather than a sliding window
+        // matches NIST 800-63B's "reauthenticate after N minutes of session
+        // age", not "of inactivity".
+        const timeoutMin = token.sessionTimeoutMinutes as number | undefined
+        if (timeoutMin && token.issuedAt) {
+          const ageMs = Date.now() - (token.issuedAt as number)
+          if (ageMs > timeoutMin * 60 * 1000) {
+            return null // expires the session — user must re-login
+          }
         }
       }
       return token
@@ -129,6 +210,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = token.role as Role
       session.user.organizationId = token.organizationId as string | null
       session.user.instanceRole = (token.instanceRole as 'instance_admin' | null) ?? null
+      // #527 — mirror policy snapshot into session.user (see auth.config.ts).
+      session.user.lastPasswordChangedAt = (token.lastPasswordChangedAt as number | null) ?? null
+      session.user.passwordExpiryDays = (token.passwordExpiryDays as number | undefined) ?? 0
       return session
     },
   },
