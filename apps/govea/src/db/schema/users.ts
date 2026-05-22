@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { organizations } from './organizations'
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'contributor', 'viewer'])
@@ -14,6 +14,12 @@ export const users = pgTable('users', {
   role: userRoleEnum('role').notNull().default('viewer'),
   instanceRole: text('instance_role'),
   isActive: text('is_active').notNull().default('true'),
+  // #527: account lockout + password expiry tracking (per-org policy lives
+  // on organizations.securitySettings; these columns store the per-user
+  // state that the policy is evaluated against on each login).
+  failedLoginAttempts: integer('failed_login_attempts').notNull().default(0),
+  lockoutUntil: timestamp('lockout_until'),
+  lastPasswordChangedAt: timestamp('last_password_changed_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => [

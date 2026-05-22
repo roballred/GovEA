@@ -8,6 +8,9 @@ declare module 'next-auth' {
       role: Role
       organizationId: string | null
       instanceRole: 'instance_admin' | null
+      // #527 — propagated from JWT for middleware password-expiry redirect.
+      lastPasswordChangedAt: number | null
+      passwordExpiryDays: number
     } & DefaultSession['user']
   }
 }
