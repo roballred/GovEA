@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { isSafeUrl } from '@/lib/url'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
-import { EmptyStateCTA } from '@/components/empty-state-cta'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { MarkdownEditor } from '@/components/markdown-editor'
 
 type GlossaryRow = GlossaryTerm & {
@@ -59,6 +59,8 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
   const [domainFilter, setDomainFilter] = useState('all')
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<GlossaryRow | null>(null)
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<GlossaryRow | null>(null)
 
   const canEditRole = role === 'admin' || role === 'contributor'
@@ -77,6 +79,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
     startTransition(async () => {
       try {
         await submitWithDuplicateAck(createGlossaryTerm, formData)
+        createDirty.reset()
         setCreateOpen(false)
         refresh()
       } catch (err) {
@@ -91,6 +94,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
     if (!editTarget) return
     startTransition(async () => {
       await editGlossaryTerm(editTarget.id, formData)
+      editDirty.reset()
       setEditTarget(null)
       refresh()
     })
@@ -231,7 +235,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
       )}
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={open => { if (!open) setCreateOpen(false) }}>
+      <Dialog open={createOpen} onOpenChange={open => { if (!open && !confirmDiscard(createDirty)) return; if (!open) { createDirty.reset(); setCreateOpen(false) } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Glossary Term</DialogTitle>
@@ -240,7 +244,8 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
             domainTerms={domainTerms}
             isPending={isPending}
             onSubmit={handleCreate}
-            onCancel={() => setCreateOpen(false)}
+            onCancel={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}
+            onDirty={createDirty.markDirty}
             submitLabel="Create Term"
             pendingLabel="Creating…"
           />
@@ -248,7 +253,7 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open && !confirmDiscard(editDirty)) return; if (!open) { editDirty.reset(); setEditTarget(null) } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Glossary Term</DialogTitle>
@@ -259,7 +264,8 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
             domainTerms={domainTerms}
             isPending={isPending}
             onSubmit={handleEdit}
-            onCancel={() => setEditTarget(null)}
+            onCancel={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}
+            onDirty={editDirty.markDirty}
             submitLabel="Save changes"
             pendingLabel="Saving…"
           />
@@ -295,6 +301,7 @@ function TermForm({
   isPending,
   onSubmit,
   onCancel,
+  onDirty,
   submitLabel,
   pendingLabel,
 }: {
@@ -303,6 +310,7 @@ function TermForm({
   isPending: boolean
   onSubmit: (fd: FormData) => void
   onCancel: () => void
+  onDirty?: () => void
   submitLabel: string
   pendingLabel: string
 }) {
@@ -347,7 +355,7 @@ function TermForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} onChange={onDirty} className="space-y-4">
       <FormField label="Term" name="term" required defaultValue={term?.term} placeholder="e.g. Capability" />
 
       {/* Definition with attribution */}

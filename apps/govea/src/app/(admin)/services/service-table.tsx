@@ -17,7 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
-import { EmptyStateCTA } from '@/components/empty-state-cta'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyInputs, TaxonomyFilters, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 
@@ -77,6 +77,8 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ServiceRow | null>(null)
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<ServiceRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
@@ -99,6 +101,7 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
     startTransition(async () => {
       try {
         await submitWithDuplicateAck(createService, formData)
+        createDirty.reset()
         setCreateOpen(false)
         refresh()
       } catch (err) {
@@ -113,6 +116,7 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
     if (!editTarget) return
     startTransition(async () => {
       await editService(editTarget.id, formData)
+      editDirty.reset()
       setEditTarget(null)
       refresh()
     })
@@ -267,12 +271,12 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
       )}
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(o) => { if (!o && !confirmDiscard(createDirty)) return; if (!o) createDirty.reset(); setCreateOpen(o) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Service</DialogTitle>
           </DialogHeader>
-          <form action={handleCreate} className="space-y-3">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required />
             <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" />
@@ -281,7 +285,7 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
             <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <StatusVisibilityFields />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create service'}</Button>
             </DialogFooter>
           </form>
@@ -289,12 +293,12 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open && !confirmDiscard(editDirty)) return; if (!open) { editDirty.reset(); setEditTarget(null) } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Service</DialogTitle>
           </DialogHeader>
-          <form action={handleEdit} className="space-y-3">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <FormField label="Service owner" name="serviceOwner" placeholder="Team or individual responsible" defaultValue={editTarget?.serviceOwner ?? ''} />
@@ -306,7 +310,7 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
             />
             <StatusVisibilityFields status={editTarget?.status} visibility={editTarget?.visibility} />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>

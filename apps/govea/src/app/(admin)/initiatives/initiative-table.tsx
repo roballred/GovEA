@@ -17,7 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
-import { EmptyStateCTA } from '@/components/empty-state-cta'
+import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { MarkdownEditor } from '@/components/markdown-editor'
 import { TaxonomyFilters, TaxonomyInputs, type EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
 import type { EntityTaxonomyValue } from '@/db/schema'
@@ -68,6 +68,8 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
   ).entries())
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<InitiativeRow | null>(null)
+  const createDirty = useDirtyTracker()
+  const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<InitiativeRow | null>(null)
   // Track selected capability IDs for the create/edit form impact fields
   const [selectedCaps, setSelectedCaps] = useState<string[]>([])
@@ -101,6 +103,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
     startTransition(async () => {
       try {
         await submitWithDuplicateAck(createInitiative, formData)
+        createDirty.reset()
         setCreateOpen(false)
         setSelectedCaps([])
         refresh()
@@ -116,6 +119,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
     if (!editTarget) return
     startTransition(async () => {
       await editInitiative(editTarget.id, formData)
+      editDirty.reset()
       setEditTarget(null)
       setSelectedCaps([])
       refresh()
@@ -279,10 +283,10 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
       )}
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={open => { if (!open) { setCreateOpen(false); setSelectedCaps([]) } }}>
+      <Dialog open={createOpen} onOpenChange={open => { if (!open && !confirmDiscard(createDirty)) return; if (!open) { createDirty.reset(); setCreateOpen(false); setSelectedCaps([]) } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>New Initiative</DialogTitle></DialogHeader>
-          <form action={handleCreate} className="space-y-3">
+          <form action={handleCreate} onChange={createDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required placeholder="e.g. Replace OpenText Livelink" />
             <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <div className="grid grid-cols-2 gap-3">
@@ -311,7 +315,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
             <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <StatusAndVisibilityFields defaultStatus="proposed" />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); setSelectedCaps([]) }}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(createDirty)) { createDirty.reset(); setCreateOpen(false); setSelectedCaps([]) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create'}</Button>
             </DialogFooter>
           </form>
@@ -319,10 +323,10 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) { setEditTarget(null); setSelectedCaps([]) } }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open && !confirmDiscard(editDirty)) return; if (!open) { editDirty.reset(); setEditTarget(null); setSelectedCaps([]) } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Edit Initiative</DialogTitle></DialogHeader>
-          <form action={handleEdit} className="space-y-3">
+          <form action={handleEdit} onChange={editDirty.markDirty} className="space-y-3">
             <FormField label="Name" name="name" required defaultValue={editTarget?.name} />
             <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <div className="grid grid-cols-2 gap-3">
@@ -357,7 +361,7 @@ export function InitiativeTable({ initiatives, capabilities, objectives, role, c
             />
             <StatusAndVisibilityFields defaultStatus={editTarget?.status ?? 'proposed'} defaultVisibility={editTarget?.visibility ?? 'org'} />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { setEditTarget(null); setSelectedCaps([]) }}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { if (confirmDiscard(editDirty)) { editDirty.reset(); setEditTarget(null); setSelectedCaps([]) } }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
             </DialogFooter>
           </form>
