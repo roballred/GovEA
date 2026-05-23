@@ -3,6 +3,7 @@
 import { db } from '@/db/client'
 import {
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives, entityTaxonomyValues,
+  capabilities, applications, initiatives, strategicObjectives,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
@@ -14,6 +15,8 @@ import { notifySubscribers, notifyDomainOwner } from './notifications'
 import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { parseCsv, splitSemicolonList } from '@/lib/csv'
 
 async function requireContributor() {
   const session = await auth()
@@ -306,6 +309,221 @@ export async function deleteADR(id: string) {
 }
 
 type DBOrTx = Pick<typeof db, 'insert'>
+
+// ── CSV Import (#596) ────────────────────────────────────────────────────────
+
+export type ADRImportResult = {
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}
+
+const VALID_ADR_STATUS = new Set(['proposed', 'accepted', 'deprecated', 'superseded'])
+const VALID_ADR_VISIBILITY = new Set(['org', 'connections', 'instance'])
+
+/**
+ * ADR CSV import — #596. Mirrors importCapabilities / importPersonas with two
+ * ADR-specific wrinkles:
+ *   - Upsert key is `number` (e.g. "ADR-001"), not `name`.
+ *   - `superseded_by` references another ADR by its number; the reference is
+ *     resolved against the org's ADR set (including newly-created rows in the
+ *     same import), so round-trip exports import cleanly even when one ADR
+ *     supersedes another within the same batch.
+ *   - Four junction tables (capabilities / applications / initiatives /
+ *     objectives) — unknown names report as warnings, not row failures.
+ */
+export async function importADRs(formData: FormData, dryRun = false): Promise<ADRImportResult> {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const file = formData.get('csvFile') as File | null
+  if (!file) return { created: 0, updated: 0, skipped: 0, errors: ['No file provided'] }
+
+  const text = await file.text()
+  const rows = parseCsv(text)
+  if (rows.length === 0) return { created: 0, updated: 0, skipped: 0, errors: ['CSV has no data rows'] }
+
+  // Pre-fetch existing ADRs and all four junction targets, org-scoped.
+  const [existing, orgCaps, orgApps, orgInits, orgObjs] = await Promise.all([
+    db.query.adrs.findMany({
+      where: eq(adrs.organizationId, orgId),
+      columns: { id: true, number: true },
+    }),
+    db.query.capabilities.findMany({
+      where: eq(capabilities.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+    db.query.applications.findMany({
+      where: eq(applications.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+    db.query.initiatives.findMany({
+      where: eq(initiatives.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+    db.query.strategicObjectives.findMany({
+      where: eq(strategicObjectives.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+  ])
+  const existingByNumber = new Map(existing.map(a => [a.number.toLowerCase(), a.id]))
+  const capByName = new Map(orgCaps.map(c => [c.name.toLowerCase(), c.id]))
+  const appByName = new Map(orgApps.map(a => [a.name.toLowerCase(), a.id]))
+  const initByName = new Map(orgInits.map(i => [i.name.toLowerCase(), i.id]))
+  const objByName = new Map(orgObjs.map(o => [o.name.toLowerCase(), o.id]))
+
+  type ValidRow = {
+    number: string
+    title: string
+    context: string | null
+    decision: string | null
+    consequences: string | null
+    status: 'proposed' | 'accepted' | 'deprecated' | 'superseded'
+    visibility: 'org' | 'connections' | 'instance'
+    supersededByNumber: string | null
+    capabilityIds: string[]
+    applicationIds: string[]
+    initiativeIds: string[]
+    objectiveIds: string[]
+    existingId: string | undefined
+  }
+  const validRows: ValidRow[] = []
+  let created = 0, updated = 0, skipped = 0
+  const errors: string[] = []
+
+  for (const [i, row] of rows.entries()) {
+    const rowNum = i + 2
+    const number = row['number']?.trim()
+    const title = row['title']?.trim()
+    if (!number) { errors.push(`Row ${rowNum}: missing required field "number"`); skipped++; continue }
+    if (!title) { errors.push(`Row ${rowNum}: missing required field "title"`); skipped++; continue }
+
+    const status = (row['status'] || 'proposed').trim()
+    const visibility = (row['visibility'] || 'org').trim()
+    if (!VALID_ADR_STATUS.has(status)) {
+      errors.push(`Row ${rowNum}: invalid status "${status}"`)
+      skipped++; continue
+    }
+    if (!VALID_ADR_VISIBILITY.has(visibility)) {
+      errors.push(`Row ${rowNum}: invalid visibility "${visibility}"`)
+      skipped++; continue
+    }
+
+    const resolveList = (
+      values: string[],
+      lookup: Map<string, string>,
+      label: string,
+    ): string[] => {
+      const ids: string[] = []
+      for (const v of values) {
+        const id = lookup.get(v.toLowerCase())
+        if (id) ids.push(id)
+        else errors.push(`Row ${rowNum}: ${label} "${v}" not found in this org — skipped`)
+      }
+      return ids
+    }
+
+    const capabilityIds = resolveList(splitSemicolonList(row['capabilities']), capByName, 'capability')
+    const applicationIds = resolveList(splitSemicolonList(row['applications']), appByName, 'application')
+    const initiativeIds = resolveList(splitSemicolonList(row['initiatives']), initByName, 'initiative')
+    const objectiveIds = resolveList(splitSemicolonList(row['objectives']), objByName, 'objective')
+
+    const existingId = existingByNumber.get(number.toLowerCase())
+    if (existingId) updated++; else created++
+
+    validRows.push({
+      number,
+      title,
+      context: row['context'] || null,
+      decision: row['decision'] || null,
+      consequences: row['consequences'] || null,
+      status: status as 'proposed' | 'accepted' | 'deprecated' | 'superseded',
+      visibility: visibility as 'org' | 'connections' | 'instance',
+      supersededByNumber: row['superseded_by']?.trim() || null,
+      capabilityIds,
+      applicationIds,
+      initiativeIds,
+      objectiveIds,
+      existingId,
+    })
+  }
+
+  if (!dryRun && (created > 0 || updated > 0)) {
+    await db.transaction(async (tx) => {
+      // First pass: upsert ADR rows and remember the resolved id by number so
+      // a later supersedes_by reference can resolve even if the target was
+      // created in the same import.
+      const idByNumber = new Map<string, string>(existingByNumber)
+      for (const r of validRows) {
+        let adrId = r.existingId
+        if (adrId) {
+          await tx.update(adrs).set({
+            title: r.title,
+            context: r.context,
+            decision: r.decision,
+            consequences: r.consequences,
+            status: r.status,
+            visibility: r.visibility,
+            updatedBy: session.user.id,
+            updatedAt: new Date(),
+          }).where(and(eq(adrs.id, adrId), eq(adrs.organizationId, orgId)))
+          // Replace all four junctions wholesale — same semantics as editADR.
+          await tx.delete(adrCapabilities).where(eq(adrCapabilities.adrId, adrId))
+          await tx.delete(adrApplications).where(eq(adrApplications.adrId, adrId))
+          await tx.delete(adrInitiatives).where(eq(adrInitiatives.adrId, adrId))
+          await tx.delete(adrObjectives).where(eq(adrObjectives.adrId, adrId))
+        } else {
+          const [inserted] = await tx.insert(adrs).values({
+            number: r.number,
+            title: r.title,
+            context: r.context,
+            decision: r.decision,
+            consequences: r.consequences,
+            status: r.status,
+            visibility: r.visibility,
+            organizationId: orgId,
+            createdBy: session.user.id,
+            updatedBy: session.user.id,
+          }).returning({ id: adrs.id })
+          adrId = inserted.id
+        }
+        idByNumber.set(r.number.toLowerCase(), adrId)
+
+        await insertJunctions(tx, adrId!, r.capabilityIds, r.applicationIds, r.initiativeIds, r.objectiveIds)
+      }
+
+      // Second pass: resolve `supersededBy` references now that every row in
+      // this batch has an id. Unresolved references report as warnings.
+      for (const r of validRows) {
+        if (!r.supersededByNumber) continue
+        const targetId = idByNumber.get(r.supersededByNumber.toLowerCase())
+        const sourceId = idByNumber.get(r.number.toLowerCase())
+        if (!sourceId) continue
+        if (!targetId) {
+          errors.push(`Row for "${r.number}": superseded_by "${r.supersededByNumber}" not found in this org — left unlinked`)
+          continue
+        }
+        await tx.update(adrs)
+          .set({ supersededBy: targetId, updatedAt: new Date() })
+          .where(and(eq(adrs.id, sourceId), eq(adrs.organizationId, orgId)))
+      }
+
+      await writeAuditLog(tx, {
+        action: 'adr.import',
+        entityType: 'adr',
+        entityId: orgId,
+        userId: session.user.id,
+        organizationId: orgId,
+        after: { created, updated, skipped, errorCount: errors.length },
+      })
+    })
+
+    revalidatePath('/adrs')
+  }
+
+  return { created, updated, skipped, errors }
+}
 
 async function insertJunctions(
   tx: DBOrTx,

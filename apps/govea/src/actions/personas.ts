@@ -12,6 +12,8 @@ import { ensurePublishReady } from '@/lib/publish-readiness-gate'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
+import { parseCsv, splitSemicolonList } from '@/lib/csv'
+import { taxonomyTerms } from '@/db/schema'
 
 async function requireContributor() {
   const session = await auth()
@@ -241,4 +243,163 @@ export async function markPersonaReviewed(personaId: string, _formData: FormData
   })
 
   revalidatePath(`/personas/${personaId}`)
+}
+
+// ── CSV Import (#596) ────────────────────────────────────────────────────────
+
+export type PersonaImportResult = {
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}
+
+const VALID_PERSONA_STATUS = new Set(['draft', 'published', 'archived'])
+const VALID_PERSONA_VISIBILITY = new Set(['org', 'connections', 'instance'])
+
+/**
+ * Persona CSV import — #596. Same shape as importCapabilities:
+ *   - Two-step flow via `dryRun` flag (preview → confirm)
+ *   - Name match is case-insensitive (matches the export's upsert convention)
+ *   - Tags resolve from semicolon-joined names against the "Persona Tag"
+ *     taxonomy branch; unknown names report as row warnings, not row failures
+ *   - On update, existing tag links are replaced wholesale (matches editPersona)
+ */
+export async function importPersonas(formData: FormData, dryRun = false): Promise<PersonaImportResult> {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const file = formData.get('csvFile') as File | null
+  if (!file) return { created: 0, updated: 0, skipped: 0, errors: ['No file provided'] }
+
+  const text = await file.text()
+  const rows = parseCsv(text)
+  if (rows.length === 0) return { created: 0, updated: 0, skipped: 0, errors: ['CSV has no data rows'] }
+
+  // Pre-fetch existing personas (for upsert) and the "Persona Tag" branch
+  // (children of the top-level taxonomy term whose slug is `persona-tag`).
+  const existing = await db.query.personas.findMany({
+    where: eq(personas.organizationId, orgId),
+    columns: { id: true, name: true },
+  })
+  const existingByName = new Map(existing.map(p => [p.name.toLowerCase(), p.id]))
+
+  const tagRoot = await db.query.taxonomyTerms.findFirst({
+    where: and(
+      eq(taxonomyTerms.organizationId, orgId),
+      eq(taxonomyTerms.slug, 'persona-tag'),
+    ),
+    columns: { id: true },
+  })
+  const tagByName = new Map<string, string>()
+  if (tagRoot) {
+    const tags = await db.query.taxonomyTerms.findMany({
+      where: and(
+        eq(taxonomyTerms.organizationId, orgId),
+        eq(taxonomyTerms.parentId, tagRoot.id),
+      ),
+      columns: { id: true, name: true },
+    })
+    for (const t of tags) tagByName.set(t.name.toLowerCase(), t.id)
+  }
+
+  type ValidRow = {
+    name: string
+    description: string | null
+    type: string | null
+    status: 'draft' | 'published' | 'archived'
+    visibility: 'org' | 'connections' | 'instance'
+    tagIds: string[]
+    existingId: string | undefined
+  }
+  const validRows: ValidRow[] = []
+  let created = 0, updated = 0, skipped = 0
+  const errors: string[] = []
+
+  for (const [i, row] of rows.entries()) {
+    const rowNum = i + 2
+    const name = row['name']?.trim()
+    if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
+
+    const status = (row['status'] || 'draft').trim()
+    const visibility = (row['visibility'] || 'org').trim()
+
+    if (!VALID_PERSONA_STATUS.has(status)) {
+      errors.push(`Row ${rowNum}: invalid status "${status}"`)
+      skipped++; continue
+    }
+    if (!VALID_PERSONA_VISIBILITY.has(visibility)) {
+      errors.push(`Row ${rowNum}: invalid visibility "${visibility}"`)
+      skipped++; continue
+    }
+
+    const tagIds: string[] = []
+    for (const tagName of splitSemicolonList(row['tags'])) {
+      const id = tagByName.get(tagName.toLowerCase())
+      if (id) tagIds.push(id)
+      else errors.push(`Row ${rowNum}: tag "${tagName}" not found in this org — skipped`)
+    }
+
+    const existingId = existingByName.get(name.toLowerCase())
+    if (existingId) updated++; else created++
+
+    validRows.push({
+      name,
+      description: row['description'] || null,
+      type: row['type'] || null,
+      status: status as 'draft' | 'published' | 'archived',
+      visibility: visibility as 'org' | 'connections' | 'instance',
+      tagIds,
+      existingId,
+    })
+  }
+
+  if (!dryRun && (created > 0 || updated > 0)) {
+    await db.transaction(async (tx) => {
+      for (const r of validRows) {
+        let personaId = r.existingId
+        if (personaId) {
+          await tx.update(personas).set({
+            description: r.description,
+            type: r.type,
+            status: r.status,
+            visibility: r.visibility,
+            updatedBy: session.user.id,
+            updatedAt: new Date(),
+          }).where(and(eq(personas.id, personaId), eq(personas.organizationId, orgId)))
+          await tx.delete(personaTags).where(eq(personaTags.personaId, personaId))
+        } else {
+          const [inserted] = await tx.insert(personas).values({
+            name: r.name,
+            description: r.description,
+            type: r.type,
+            status: r.status,
+            visibility: r.visibility,
+            organizationId: orgId,
+            createdBy: session.user.id,
+            updatedBy: session.user.id,
+          }).returning({ id: personas.id })
+          personaId = inserted.id
+        }
+        if (r.tagIds.length > 0) {
+          await tx.insert(personaTags).values(
+            r.tagIds.map(tagId => ({ personaId: personaId!, tagId }))
+          )
+        }
+      }
+
+      await writeAuditLog(tx, {
+        action: 'persona.import',
+        entityType: 'persona',
+        entityId: orgId,
+        userId: session.user.id,
+        organizationId: orgId,
+        after: { created, updated, skipped, errorCount: errors.length },
+      })
+    })
+
+    revalidatePath('/personas')
+  }
+
+  return { created, updated, skipped, errors }
 }

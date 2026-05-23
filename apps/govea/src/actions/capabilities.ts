@@ -13,6 +13,7 @@ import { ensurePublishOpenDebtAck } from '@/lib/debt-publish-gate'
 import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { ensurePublishReady } from '@/lib/publish-readiness-gate'
+import { parseCsv, splitSemicolonList } from '@/lib/csv'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
@@ -474,49 +475,7 @@ const VALID_CAPABILITY_TYPE = new Set(['', 'business', 'technical'])
 const VALID_CAPABILITY_STATUS = new Set(['draft', 'published', 'archived'])
 const VALID_CAPABILITY_VISIBILITY = new Set(['org', 'connections', 'instance'])
 
-/**
- * Quote-aware CSV row splitter. Walks the full text character-by-character
- * tracking quote state so that embedded newlines inside quoted fields stay
- * with their row. Capabilities exports include multi-line `behaviors` and
- * `rules` cells, so a naive `text.split('\n')` would split a single row into
- * many malformed ones (#596 regression test fixture).
- */
-function splitCsvRows(text: string): string[][] {
-  const rows: string[][] = []
-  let row: string[] = []
-  let field = ''
-  let inQuotes = false
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]
-    if (ch === '"') {
-      if (inQuotes && text[i + 1] === '"') { field += '"'; i++ }
-      else inQuotes = !inQuotes
-    } else if (ch === ',' && !inQuotes) {
-      row.push(field); field = ''
-    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
-      if (ch === '\r' && text[i + 1] === '\n') i++
-      row.push(field); field = ''
-      if (row.some(c => c.length > 0)) rows.push(row)
-      row = []
-    } else {
-      field += ch
-    }
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field)
-    if (row.some(c => c.length > 0)) rows.push(row)
-  }
-  return rows
-}
-
-function parseCapabilityCsv(text: string): Record<string, string>[] {
-  const rows = splitCsvRows(text)
-  if (rows.length < 2) return []
-  const headers = rows[0].map(h => h.trim())
-  return rows.slice(1).map(values =>
-    Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? '').trim()]))
-  )
-}
+// CSV parser lives in `@/lib/csv` — shared with personas + ADRs per #596.
 
 export async function importCapabilities(formData: FormData, dryRun = false): Promise<CapabilityImportResult> {
   const session = await requireContributor()
@@ -526,7 +485,7 @@ export async function importCapabilities(formData: FormData, dryRun = false): Pr
   if (!file) return { created: 0, updated: 0, skipped: 0, errors: ['No file provided'] }
 
   const text = await file.text()
-  const rows = parseCapabilityCsv(text)
+  const rows = parseCsv(text)
   if (rows.length === 0) return { created: 0, updated: 0, skipped: 0, errors: ['CSV has no data rows'] }
 
   // Pre-fetch existing capabilities for upsert + persona name → id lookup.
@@ -586,7 +545,7 @@ export async function importCapabilities(formData: FormData, dryRun = false): Pr
     // Resolve personas — unknown names report as warnings, not row failures.
     // The capability still imports; just without the unresolvable links.
     const personaIds: string[] = []
-    const personaNames = (row['personas'] || '').split(/;|\n/).map(s => s.trim()).filter(Boolean)
+    const personaNames = splitSemicolonList(row['personas'])
     for (const personaName of personaNames) {
       const id = personaIdByName.get(personaName.toLowerCase())
       if (id) personaIds.push(id)
