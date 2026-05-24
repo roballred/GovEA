@@ -5,6 +5,12 @@ import type {
   DataEntity, DataAttribute, DataLink, DataBusinessKey,
   PhysicalAttributeType, PhysicalLinkType,
 } from '@/db/schema'
+import {
+  type DataVaultPrefix,
+  DATA_VAULT_PREFIX_LABELS,
+  suggestDataVaultName,
+  matchesDataVaultPrefix,
+} from '@/lib/data-vault-naming'
 
 type Status = 'draft' | 'published' | 'archived'
 type Visibility = 'org' | 'connections' | 'instance'
@@ -55,6 +61,64 @@ function NameField({ value, onChange }: { value: string; onChange: (v: string) =
         onChange={e => onChange(e.target.value)}
         className="w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
+    </div>
+  )
+}
+
+/**
+ * #570 — Soft Data Vault naming hint for physical-table-name fields.
+ *
+ * Shows the convention as helper text, offers a one-click suggestion derived
+ * from the entity / link / attribute name, and gently flags values that
+ * don't match the expected prefix. Submit is never blocked — orgs that
+ * don't run Data Vault keep full control.
+ */
+function PhysicalTableNameField({
+  id, prefix, sourceName, value, onChange, placeholder,
+}: {
+  id: string
+  prefix: DataVaultPrefix
+  /** The "Customer Order" entity / link / attribute name suggestions are derived from. */
+  sourceName: string
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+}) {
+  const kindLabel = DATA_VAULT_PREFIX_LABELS[prefix]
+  const suggestion = suggestDataVaultName(prefix, sourceName)
+  const canSuggest = !!suggestion && value !== suggestion
+  const trimmed = value.trim()
+  const looksOff = trimmed.length > 0 && !matchesDataVaultPrefix(prefix, trimmed)
+
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium">
+        Physical {kindLabel} Table Name <span className="text-muted-foreground font-normal">(optional)</span>
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          id={id} name={id}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1 rounded-md border bg-background px-3 py-2 text-sm font-mono"
+        />
+        {canSuggest && (
+          <button
+            type="button"
+            onClick={() => onChange(suggestion)}
+            className="shrink-0 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted whitespace-nowrap"
+            title={`Fill with "${suggestion}"`}
+          >
+            Suggest: <code className="font-mono">{suggestion}</code>
+          </button>
+        )}
+      </div>
+      <p className={`text-xs ${looksOff ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+        {looksOff
+          ? `This doesn't look like a Data Vault ${kindLabel} name (expected to start with "${prefix}_"). You can keep it as-is, or use the Suggest button.`
+          : `Data Vault convention: ${kindLabel}s are prefixed with "${prefix}_" (e.g. ${prefix}_${prefix === 's' ? 'customer_profile' : prefix === 'l' ? 'customer_order' : 'customer'}).`}
+      </p>
     </div>
   )
 }
@@ -229,18 +293,14 @@ export function DataEntityForm({
       <NameField value={name} onChange={setName} />
       <DescriptionField value={description ?? ''} onChange={setDescription} />
       <StatusVisibilityRow status={status} onStatus={setStatus} visibility={visibility} onVisibility={setVisibility} />
-      <div className="space-y-1.5">
-        <label htmlFor="physicalHubTableName" className="text-sm font-medium">
-          Physical Hub Table Name <span className="text-muted-foreground font-normal">(optional)</span>
-        </label>
-        <input
-          id="physicalHubTableName" name="physicalHubTableName"
-          value={physicalHubTableName ?? ''}
-          onChange={e => setHub(e.target.value)}
-          placeholder="e.g. hub_customer"
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-        />
-      </div>
+      <PhysicalTableNameField
+        id="physicalHubTableName"
+        prefix="h"
+        sourceName={name}
+        value={physicalHubTableName ?? ''}
+        onChange={setHub}
+        placeholder="e.g. h_customer"
+      />
       <PhysicalLocationFields
         server={serverName ?? ''} onServer={setServer}
         database={databaseName ?? ''} onDatabase={setDatabase}
@@ -298,18 +358,14 @@ export function DataAttributeForm({
       <DescriptionField value={description ?? ''} onChange={setDescription} />
       <StatusVisibilityRow status={status} onStatus={setStatus} visibility={visibility} onVisibility={setVisibility} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label htmlFor="physicalSatelliteTableName" className="text-sm font-medium">
-            Physical Satellite Table Name <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <input
-            id="physicalSatelliteTableName" name="physicalSatelliteTableName"
-            value={physicalSatelliteTableName ?? ''}
-            onChange={e => setSat(e.target.value)}
-            placeholder="e.g. sat_customer_address"
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-          />
-        </div>
+        <PhysicalTableNameField
+          id="physicalSatelliteTableName"
+          prefix="s"
+          sourceName={name}
+          value={physicalSatelliteTableName ?? ''}
+          onChange={setSat}
+          placeholder="e.g. s_customer_profile"
+        />
         <div className="space-y-1.5">
           <label htmlFor="physicalAttributeType" className="text-sm font-medium">
             Physical Attribute Type
@@ -384,18 +440,14 @@ export function DataLinkForm({
       <DescriptionField value={description ?? ''} onChange={setDescription} />
       <StatusVisibilityRow status={status} onStatus={setStatus} visibility={visibility} onVisibility={setVisibility} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label htmlFor="physicalLinkTableName" className="text-sm font-medium">
-            Physical Link Table Name <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <input
-            id="physicalLinkTableName" name="physicalLinkTableName"
-            value={physicalLinkTableName ?? ''}
-            onChange={e => setLink(e.target.value)}
-            placeholder="e.g. lnk_customer_address"
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-          />
-        </div>
+        <PhysicalTableNameField
+          id="physicalLinkTableName"
+          prefix="l"
+          sourceName={name}
+          value={physicalLinkTableName ?? ''}
+          onChange={setLink}
+          placeholder="e.g. l_customer_address"
+        />
         <div className="space-y-1.5">
           <label htmlFor="physicalLinkType" className="text-sm font-medium">
             Physical Relationship Type
