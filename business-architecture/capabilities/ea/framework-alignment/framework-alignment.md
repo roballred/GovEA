@@ -1,5 +1,7 @@
 # Capability: Framework Alignment
 
+**Scope:** v1
+
 ## What It Does
 
 The system must allow organizations to align GovEA content to external architecture frameworks such as TOGAF without replacing GovEA's EasyEA-based, people-centered operating model. Framework alignment is an optional overlay: it helps trained architects produce familiar views and evidence, while preserving plain-language content for government practitioners and stakeholders.

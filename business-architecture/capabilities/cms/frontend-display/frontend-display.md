@@ -1,5 +1,7 @@
 # Capability: Front-end Display
 
+**Scope:** v1
+
 ## What It Does
 The system must present EA content to users in a way that is clear, navigable, and useful without EA training. The authenticated experience is substantial today; optional public unauthenticated publishing remains future work.
 

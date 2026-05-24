@@ -1,5 +1,7 @@
 # Capability: Identity and Access Management (IAM)
 
+**Scope:** v1
+
 ## What It Does
 The system must control who can access it, how they authenticate, and what they are permitted to do. IAM underpins every other capability — no user interaction is possible without it.
 

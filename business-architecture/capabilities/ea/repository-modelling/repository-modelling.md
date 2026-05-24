@@ -1,5 +1,7 @@
 # Capability: Repository & Modelling
 
+**Scope:** v1
+
 ## What It Does
 
 The system must maintain a reliable, navigable, and self-auditing store of all architecture objects — capabilities, applications, personas, decisions, and technology — and surface the relationships, gaps, and accumulated debt within that store so that architects and decision-makers can trust what they see. In the current product, most of this group remains roadmap work beyond the existing audit trail and early coverage signals.

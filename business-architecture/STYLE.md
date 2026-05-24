@@ -107,6 +107,26 @@ Capability group files are the parent file at the root of each group folder. Fil
 
 The canonical heading for current state is `## Implementation Status`. Do not use `Current Scope`, `Current State`, `Current Maturity`, or other variants. Single name keeps lint and search reliable.
 
+### Scope field
+
+Group parent files declare a release-scope signal so non-technical readers (Department Director, Elected Official) can tell what is in v1 vs deferred without parsing every capability doc. The field lives immediately under the H1, before `## What It Does`:
+
+```markdown
+# Capability: <Group Name>
+
+**Scope:** v1
+```
+
+Allowed values:
+
+- **v1** — included in the v1 release.
+- **v2** — planned for a later release. Use sparingly; "future work" is also documented in `## Deferred to v2` when it earns more detail.
+- **out of scope** — intentionally excluded. **Required:** add a rationale on the same line, e.g. *"out of scope — replaced by external IdP; see ADR-007."* No silent out-of-scope declarations.
+
+Sub-capability (leaf) files may carry a `Scope:` field when they meaningfully deviate from their parent group's scope (e.g. parent is v1 but one leaf is v2). When the leaf's scope matches its parent, the field is optional.
+
+The lint does not enforce Scope today — backfill is an explicit content decision. If enforcement is added later it will apply to group parents first.
+
 ---
 
 ## Sub-Capability Files

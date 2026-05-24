@@ -283,6 +283,18 @@ GovEA is free and open source. There is no licensing fee. The real cost is staff
 - **Ongoing maintenance:** periodic updates, user provisioning, and backup verification; no dedicated admin role required
 - **Hosting:** runs on any server or container platform; no proprietary cloud dependency
 
+### What does it take to run this?
+
+| Concern | Today | Where it's documented |
+|---|---|---|
+| **Deployment** | Single container against a Postgres database. Three documented workflows: host app + containerized DB, DB-only, full container stack. ~1 hour from clean environment to working demo instance. | [Local Containers](#local-containers) above; capability: [`do-deployment`](business-architecture/capabilities/cms/deployment-operations/do-deployment.md) |
+| **Configuration** | Environment variables only — `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` required; SSO and SMTP optional. No source-code edit required to deploy. | [`apps/govea/.env.local`](./apps/govea/.env.local) shape; capability: [`do-deployment`](business-architecture/capabilities/cms/deployment-operations/do-deployment.md) |
+| **Health & monitoring** | Drop into a generic uptime + log-aggregation tool. Operator-relevant events go to the platform audit log (`/instance/audit`). A dedicated `/api/healthz` endpoint and a documented log shape are planned. | Capability: [`do-health-monitoring`](business-architecture/capabilities/cms/deployment-operations/do-health-monitoring.md) |
+| **Upgrades** | Pre-production: `pnpm --filter govea db:push` syncs schema. Once a real tenant exists, the workflow shifts to migration files — procedure documented in advance. | Capability: [`do-upgrade-migration`](business-architecture/capabilities/cms/deployment-operations/do-upgrade-migration.md); [#4](https://github.com/roballred/GovEA/issues/4) |
+| **Admin time/month** | Estimated 1–4 hours for an active small-to-mid-tenant install, dominated by user provisioning and content review nudges — not platform operations. | Capability group: [`cms/deployment-operations`](business-architecture/capabilities/cms/deployment-operations/deployment-operations.md) |
+
+The full operator-facing capability surface is documented under [`business-architecture/capabilities/cms/deployment-operations/`](business-architecture/capabilities/cms/deployment-operations/).
+
 
 
 ## Contributing
