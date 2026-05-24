@@ -1,5 +1,7 @@
 # Capability: Content Management
 
+**Scope:** v1
+
 ## What It Does
 The system must provide a complete content management foundation — defining content structure, authoring content items, managing their lifecycle, organizing them with taxonomy, linking them together, and enabling users to find what they need. In the current product, core authoring and relationships are strong, while repository-wide search and fully consistent workflow behavior are still maturing.
 

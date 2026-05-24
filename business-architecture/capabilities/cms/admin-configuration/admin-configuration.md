@@ -1,5 +1,7 @@
 # Capability: Admin & Configuration
 
+**Scope:** v1
+
 ## What It Does
 The system must provide administrators with the tools needed to configure, monitor, and maintain the site without requiring code changes or server access. In the current product this is an early admin toolkit rather than a complete operations surface.
 

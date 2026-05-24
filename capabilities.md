@@ -20,6 +20,7 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 | 8 | [Repository & Modelling](#8-repository--modelling) | Partially implemented |
 | 9 | [Data Architecture](#9-data-architecture) | Partially implemented |
 | 10 | [Framework Alignment](#10-framework-alignment) | Partially implemented |
+| 11 | [Deployment & Operations](#11-deployment--operations) | Partially implemented |
 
 ---
 
@@ -237,6 +238,20 @@ Current reality: GovEA now ships the first framework-alignment slice. Applicatio
 **Design principle:** Framework support should increase credibility without increasing friction. TOGAF-aware architects should be able to recognize familiar concepts and reporting structures, while ordinary GovEA users continue working with plain-language personas, capabilities, services, applications, objectives, initiatives, principles, and decisions.
 
 Framework alignment is distinct from formal modelling notation. GovEA can map content to TOGAF concepts and produce TOGAF-friendly reports without adding mandatory ADM workflow, ArchiMate modelling, or meta-model customization.
+
+---
+
+## 11. Deployment & Operations
+
+Makes the operator-facing surface (deploy, monitor, upgrade) explicit so the cost of running GovEA is legible before deployment.
+
+| Capability | Status | Description |
+|---|---|---|
+| Deployment | Implemented | Container-based deployment with Podman or Docker, three documented workflows, env-var-only configuration |
+| Health & Monitoring | Partially implemented | Platform audit log captures operator-relevant events; dedicated `/api/healthz` endpoint and documented log shape are planned |
+| Upgrade & Migration | Not implemented | Schema transition from pre-production `db:push` to migration files lands with the first real tenant; cross-links to [#4](https://github.com/roballred/GovEA/issues/4) |
+
+Current reality: deployment is solid (the `pnpm demo:*` workflows are exercised by CI on every PR), monitoring is operator-roll-your-own, and the upgrade story is forthcoming. The group was added to close [ARB Finding #10](https://github.com/roballred/GovEA/issues/10) — making the cost of ownership visible to evaluating Central IT directors.
 
 ---
 

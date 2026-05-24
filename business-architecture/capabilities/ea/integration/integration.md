@@ -1,5 +1,7 @@
 # Capability: Integration
 
+**Scope:** v2
+
 ## What It Does
 
 GovEA must connect to the operational, business, and governance systems that government IT already runs — not require architects to maintain a parallel data store that diverges from reality the moment the meeting ends. The integration capability family defines how GovEA ingests, reconciles, and exchanges data with adjacent systems to keep the architecture repository grounded in what is actually deployed, funded, and running.

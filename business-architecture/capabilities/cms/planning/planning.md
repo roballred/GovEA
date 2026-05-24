@@ -1,5 +1,7 @@
 # Capability: Planning
 
+**Scope:** v1
+
 ## What It Does
 
 The system must allow organizations to document their strategic direction, track the initiatives delivering on that direction, and visualize the relationship between strategy, initiatives, and the architecture portfolio. In the current product this is a strong early-v1 capability: demo-ready and useful, but not yet semantically uniform across every planning artifact.

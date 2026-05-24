@@ -1,5 +1,7 @@
 # Capability: Multi-Organization Federation
 
+**Scope:** v1
+
 ## What It Does
 The system must allow multiple organizations to connect with each other, share appropriate content across organizational boundaries, and link local EA artifacts to enterprise-wide counterparts — while preserving each organization's autonomy and keeping single-org installs simple. In the current product this is a prototype capability: connected-org visibility, approval-based cross-org links, and server-enforced ownership guardrails are shipped, while deeper management workflows and notification/history layers remain in progress.
 

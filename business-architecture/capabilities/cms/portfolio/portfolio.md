@@ -1,5 +1,7 @@
 # Capability: Portfolio Management
 
+**Scope:** v1
+
 ## What It Does
 The system must allow contributors to maintain a structured inventory of the organization's applications, business capabilities, architecture decisions, and supporting reference content. Portfolio management is the authoring side — contributors create and update records; viewers consume them through portfolio views on the front end.
 
