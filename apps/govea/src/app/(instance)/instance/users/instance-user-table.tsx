@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,9 +35,13 @@ interface Props {
   users: InstanceUserRow[]
   organizations: OrgOption[]
   currentUserId: string
+  /** #436 — count of tenant users filtered out because no active break-glass for their org. */
+  hiddenUserCount: number
+  /** #436 — count of distinct tenant orgs whose users were filtered out. */
+  hiddenOrgCount: number
 }
 
-export function InstanceUserTable({ users, organizations, currentUserId }: Props) {
+export function InstanceUserTable({ users, organizations, currentUserId, hiddenUserCount, hiddenOrgCount }: Props) {
   const router = useRouter()
   const [createOpen, setCreateOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -58,12 +63,29 @@ export function InstanceUserTable({ users, organizations, currentUserId }: Props
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground mt-1">All users across all tenant organisations.</p>
+          <p className="text-muted-foreground mt-1">Platform admins are always visible. Tenant users are only visible for organisations you currently hold break-glass access to.</p>
         </div>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           + Create account
         </Button>
       </div>
+
+      {/* #436 — honest disclosure when tenant users are filtered out. */}
+      {hiddenUserCount > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 text-sm flex items-start justify-between gap-4">
+          <div>
+            <p className="font-medium text-amber-900 dark:text-amber-200">
+              {hiddenUserCount} tenant user{hiddenUserCount === 1 ? '' : 's'} hidden across {hiddenOrgCount} organisation{hiddenOrgCount === 1 ? '' : 's'}.
+            </p>
+            <p className="text-amber-800 dark:text-amber-400 mt-0.5">
+              Tenant-user PII is gated behind active, approved break-glass sessions. Grant break-glass from the organisation&apos;s detail page to view its users here.
+            </p>
+          </div>
+          <Link href="/instance/orgs" className="shrink-0">
+            <Button variant="outline" size="sm">Go to Organisations</Button>
+          </Link>
+        </div>
+      )}
 
       <div className="rounded-lg border bg-card">
         <Table>
