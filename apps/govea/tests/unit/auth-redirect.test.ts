@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { safeCallbackUrl } from '@/lib/auth-redirect'
+import { safeCallbackUrl, defaultLandingPath } from '@/lib/auth-redirect'
 
 describe('safeCallbackUrl', () => {
   describe('valid destinations — returned as-is', () => {
@@ -83,5 +83,24 @@ describe('safeCallbackUrl', () => {
     it('uses the supplied fallback for dead-end routes', () => {
       expect(safeCallbackUrl('/login', '/home')).toBe('/home')
     })
+  })
+})
+
+// #548 — role-aware landing rule pinned as a pure function so the routing
+// surface is testable without spinning up React Server Components.
+describe('defaultLandingPath', () => {
+  it('sends instance admins to /instance regardless of their role', () => {
+    expect(defaultLandingPath({ role: 'admin',       isInstanceAdmin: true })).toBe('/instance')
+    expect(defaultLandingPath({ role: 'contributor', isInstanceAdmin: true })).toBe('/instance')
+    expect(defaultLandingPath({ role: 'viewer',      isInstanceAdmin: true })).toBe('/instance')
+  })
+
+  it('sends Viewer-role users to /executive', () => {
+    expect(defaultLandingPath({ role: 'viewer', isInstanceAdmin: false })).toBe('/executive')
+  })
+
+  it('sends Admin and Contributor users to /dashboard', () => {
+    expect(defaultLandingPath({ role: 'admin',       isInstanceAdmin: false })).toBe('/dashboard')
+    expect(defaultLandingPath({ role: 'contributor', isInstanceAdmin: false })).toBe('/dashboard')
   })
 })

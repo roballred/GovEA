@@ -26,6 +26,7 @@ import {
 } from '@/lib/completeness-signals'
 import Link from 'next/link'
 import { FirstSignInModal } from '@/components/first-sign-in-modal'
+import { ViewerDashboard } from './viewer-dashboard'
 
 const RAG_TEXT_CLASS: Record<RagBucket, string> = {
   green:   'text-green-700 dark:text-green-400',
@@ -74,6 +75,14 @@ export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
+
+  // #548 — Viewer-mode dashboard. Auth-redirect routes Viewers to /executive
+  // by default; this branch covers the case where they navigate to /dashboard
+  // directly. The admin metrics surface is technically and behaviorally wrong
+  // for non-authoring stakeholders.
+  if (session.user.role === 'viewer') {
+    return <ViewerDashboard orgId={orgId} userName={session.user.name ?? null} />
+  }
 
   const orgRow = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),

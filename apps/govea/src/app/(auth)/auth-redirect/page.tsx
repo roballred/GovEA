@@ -1,11 +1,16 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { isInstanceAdmin } from '@/lib/rbac'
-import { safeCallbackUrl } from '@/lib/auth-redirect'
+import { safeCallbackUrl, defaultLandingPath } from '@/lib/auth-redirect'
 
-// Role-aware post-signin bouncer (#520). Instance admins land on /instance;
-// everyone else lands on /dashboard. An explicit, safe `callbackUrl` always
-// wins over the role-based default.
+/**
+ * Role-aware post-signin bouncer.
+ *
+ * Routing order:
+ *   1. An explicit, safe `callbackUrl` always wins (preserves deep-links).
+ *   2. Otherwise, fall back to `defaultLandingPath(role, isInstanceAdmin)`
+ *      — see that helper for the role-based routing rule.
+ */
 export default async function AuthRedirectPage({
   searchParams,
 }: {
@@ -20,6 +25,8 @@ export default async function AuthRedirectPage({
     if (explicit) redirect(explicit)
   }
 
-  if (isInstanceAdmin(session.user)) redirect('/instance')
-  redirect('/dashboard')
+  redirect(defaultLandingPath({
+    role: session.user.role,
+    isInstanceAdmin: isInstanceAdmin(session.user),
+  }))
 }
