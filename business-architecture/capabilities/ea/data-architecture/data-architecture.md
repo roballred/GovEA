@@ -16,7 +16,7 @@ The system must support the practice of Data Architecture as defined by the DAMA
 | Capability | File | Status | Description |
 |---|---|---|---|
 | Physical Metamodel | [da-physical-metamodel.md](./da-physical-metamodel.md) | Shipped (v1) | Data Vault-aligned physical-layer metamodel: entities (Hubs), attributes (Satellites), links, and business keys, with four cross-object semantic relationship kinds |
-| Chen Notation Visualization | [da-chen-visualization.md](./da-chen-visualization.md) | Planned — not yet implemented | Read-only Chen Notation graph rendering of the metamodel so architects can see the full picture rather than navigating object by object |
+| Chen Notation Visualization | [da-chen-visualization.md](./da-chen-visualization.md) | Shipped (v1) | Read-only Chen Notation graph rendering of the metamodel so architects can see the full picture rather than navigating object by object |
 
 ## Success Criteria
 
@@ -54,9 +54,7 @@ The system must support the practice of Data Architecture as defined by the DAMA
 
 **Shipped (v1):**
 - `da-physical-metamodel` via PRs [#471](https://github.com/roballred/EasyEA/pull/471) (schema + CRUD, schema actually merged at roballred/GovEA#471) and [#472](https://github.com/roballred/GovEA/pull/472) (cross-object semantic relationships). Four CRUD-able object types with the Data Vault metadata fields the SME specified; three cross-object semantic relationship junctions (entity ↔ entity, entity ↔ attribute, attribute ↔ attribute) plus the structural FK for entity ↔ business-key "instantiates"
-
-**Planned:**
-- `da-chen-visualization` — tracked at [#470](https://github.com/roballred/GovEA/issues/470)
+- `da-chen-visualization` — `/data/diagram` ships the documented Chen Notation graph with all four filters, live counts, and read-only edit-back links. Confirmed during the Data Modeler persona journey audit ([#569](https://github.com/roballred/GovEA/issues/569))
 
 ## Links
 
