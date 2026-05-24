@@ -23,6 +23,9 @@ The system must allow Contributors and Admins to create, edit, and preview conte
 - Saving always creates a new version — edits never overwrite history
 - A content item cannot be published if required fields are empty
 
+## Implementation Status
+Shipped (v1). All seven core content types (capabilities, applications, personas, services, value streams, objectives, ADRs) have full CRUD authoring with create/edit dialogs, required-field validation, draft/published workflow, and duplicate-name guard rails (#615/#619).
+
 ## Links
 - Depends on: Content Types, IAM — Role-Based Access Control
 - Related: Content Workflow, Content Versioning, Content Relationships

@@ -28,6 +28,9 @@ The system must allow users to view the organization's value streams — end-to-
 - A stage may link to zero or more capabilities
 - A capability may appear in multiple value streams and in multiple stages
 
+## Implementation Status
+Shipped (v1). Value streams have list and detail pages with stakeholder persona, value item, ordered stages, per-stage capability assignment, and inline stage management for admins and contributors.
+
 ## Links
 - Depends on: IAM — Role-Based Access Control, Content Management — Personas, Content Management — Capabilities
 - Related: Strategic Objectives, Initiatives

@@ -46,4 +46,3 @@ The specific pain this solves: government IT architects produce roadmaps disconn
 
 - Depends on: `pl-initiatives`, `pl-roadmap`, `pl-strategic-objectives`
 - Related: `int-erp-financial.md`, `int-devops.md`
-- Personas served: Enterprise Architect, Domain Architect, Department Director, Budget & Performance Analyst, Early-Maturity Practice Lead

@@ -1,4 +1,6 @@
-# Capability Group: Framework Alignment
+# Capability: Framework Alignment
+
+## What It Does
 
 The system must allow organizations to align GovEA content to external architecture frameworks such as TOGAF without replacing GovEA's EasyEA-based, people-centered operating model. Framework alignment is an optional overlay: it helps trained architects produce familiar views and evidence, while preserving plain-language content for government practitioners and stakeholders.
 
@@ -33,6 +35,13 @@ Framework reference sources are inputs to capability design, not GovEA capabilit
 - Plain-language views for Department Directors and other non-architect stakeholders must remain free of framework jargon by default.
 - Framework mappings can support reporting and governance, but they must not override GovEA's authoritative capability definitions.
 
+## Success Criteria
+
+- A TOGAF-aware enterprise architect can find Architecture Domain and ADM-phase mapping affordances on capability and application detail pages without leaving the standard authoring surface
+- A non-architect Department Director can browse the same repository without encountering TOGAF jargon by default — framework overlay is invisible to them
+- Enabling or disabling the framework overlay is a per-org admin action with no downstream content destruction
+- The Architecture Vision and TOGAF Application Landscape reports reflect current published content automatically; no separate data-entry surface is required
+
 ## Out of Scope
 
 | Item | Rationale |
@@ -46,7 +55,7 @@ Framework reference sources are inputs to capability design, not GovEA capabilit
 
 Framework support should increase credibility without increasing friction. A TOGAF-trained architect should be able to recognize the structure of the work, while an agency practitioner should still experience GovEA as a simple mission-to-technology repository.
 
-## Current State
+## Implementation Status
 
 GovEA now ships the first framework-alignment slice:
 
@@ -61,3 +70,8 @@ Still not shipped:
 - Admin-managed framework reference records
 - Broader framework mappings beyond the current TOGAF domain slice
 - Per-framework configuration deeper than a single overlay toggle
+
+## Links
+
+- Depends on: Content Management — Content Relationships, IAM — Role-Based Access Control
+- Related: Portfolio (Capabilities, Applications), Repository & Modelling (TOGAF reports), Admin Configuration (overlay toggle)

@@ -33,6 +33,9 @@ Retaining every version of every content item indefinitely creates unbounded sto
 - The currently published and immediately preceding versions are never automatically pruned
 - Version history is visible to Admins and Contributors; not visible to Viewers
 
+## Implementation Status
+Planned — not yet implemented. GovEA today retains who/when/what via the immutable `audit_log` table (`iam-audit-trail`), but does not maintain a per-record version history with diff or restore capability. The retention policy described above and the diff/restore UI are not present in v1.
+
 ## Links
 - Depends on: Content Authoring
 - Related: Content Workflow, IAM — IAM Audit Trail

@@ -47,4 +47,3 @@ The specific pain this solves: EA teams produce capability and application recor
 
 - Depends on: `po-application-portfolio`, `po-capability-map`
 - Related: `int-api-management.md`, `int-rest-api.md`
-- Personas served: Enterprise Architect, Domain Architect, Agency EA Coordinator, CMS Administrator

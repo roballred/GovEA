@@ -29,4 +29,3 @@ The roadmap is a view over existing planning content, not a standalone data stor
 ## Links
 - Depends on: Initiatives, Strategic Objectives, Capabilities
 - Related: Portfolio Views, Front-End Display
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director, Business Stakeholder, Early-Maturity Practice Lead

@@ -42,6 +42,9 @@ The system cannot enforce this, but the following should be captured before an a
 - Automated setup via environment variables must produce the same result as the UI wizard
 - There is no account hierarchy among Admin users — any Admin can create, edit, or deactivate any other non-Admin user
 
+## Implementation Status
+Shipped (v1). The `/setup` route auto-runs on a fresh DB and creates the initial Admin + organization, then redirects to the dashboard; non-setup routes are blocked until completion. Headless setup via env vars supports Docker and CI flows. The lockout-recovery path remains a deployment-guide concern and is referenced from the IAM group doc.
+
 ## Links
 - Depends on: User Management, Role-Based Access Control, Local Authentication
 - Related: IAM Audit Trail, Admin & Configuration

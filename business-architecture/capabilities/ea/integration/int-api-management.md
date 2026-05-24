@@ -48,4 +48,3 @@ The specific pain this solves: architects cannot tell which applications are tig
 
 - Depends on: `po-application-portfolio`, `rm-end-to-end-traceability`
 - Related: `int-data-governance.md`, `int-cloud-discovery.md`, `int-rest-api.md`
-- Personas served: Enterprise Architect, Domain Architect, Agency EA Coordinator

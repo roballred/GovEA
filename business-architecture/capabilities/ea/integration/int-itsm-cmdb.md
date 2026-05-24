@@ -56,4 +56,3 @@ The specific pain this solves: architects spend significant time reconciling the
 
 - Depends on: `po-application-portfolio`, `rm-repository-completeness`, `rm-architecture-debt`, `ac-admin-dashboard`
 - Related: `int-devops.md`, `int-cloud-discovery.md`, `int-rest-api.md`
-- Personas served: Enterprise Architect, Agency EA Coordinator, Junior EA Analyst, CMS Administrator

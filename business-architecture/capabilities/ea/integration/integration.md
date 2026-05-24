@@ -1,4 +1,6 @@
-# Capability Group: Integration
+# Capability: Integration
+
+## What It Does
 
 GovEA must connect to the operational, business, and governance systems that government IT already runs — not require architects to maintain a parallel data store that diverges from reality the moment the meeting ends. The integration capability family defines how GovEA ingests, reconciles, and exchanges data with adjacent systems to keep the architecture repository grounded in what is actually deployed, funded, and running.
 
@@ -76,3 +78,28 @@ These gaps are not primarily technical; they reflect a product philosophy in com
 ## Design Principle
 
 Data quality is an architecture problem, not an operations problem. Every integration capability exists to close the gap between what the repository says and what is actually deployed, funded, and running. An EA model that architects do not trust is an EA model nobody uses. Integration is how GovEA earns that trust over time, even as the estate changes beneath it.
+
+## Success Criteria
+
+- An architect can answer "is this application still running, and where?" by viewing the GovEA application record — without leaving the tool to check CMDB or the cloud console
+- Capability and application records reflect operational reality within the configured sync cadence; staleness is surfaced when integration credentials lapse
+- Adding a new integration target follows a documented pattern (auth, mapping, reconciliation report) rather than requiring bespoke code per system
+- No integration ever writes back to a system of record without an explicit user-initiated action and audit trail entry
+
+## Rules
+
+- Integration is opt-in per org and per integration target — no integration starts collecting data without an Admin action
+- GovEA is never the system of record for operational data (CIs, tickets, deploys, funding lines); integrations populate context, they do not replace upstream sources
+- All integrations apply the same RBAC and visibility rules as the rest of GovEA — federated content never escapes its org or visibility scope through an integration channel
+- Conflict resolution between GovEA-authored content and integration-sourced content is explicit — automatic overwrite of architect-authored fields is not permitted
+- Credentials for outbound integration calls are encrypted at rest; secrets never appear in plaintext in the UI or audit log
+
+## Implementation Status
+
+Planned — not yet implemented. The Tier 1–3 sub-capability files describe the target shape; none are wired into the product. The foundational REST API (#382) is the first slice and remains design-stage. Track integration progress through the individual sub-capability issues and the parent #382.
+
+## Links
+
+- Depends on: IAM — Role-Based Access Control, IAM — Audit Trail, Admin Configuration — Security Settings
+- Enables: Portfolio (Applications, Capabilities), Planning (Initiatives), Repository & Modelling (Architecture Debt)
+- Related: Data Architecture, Framework Alignment

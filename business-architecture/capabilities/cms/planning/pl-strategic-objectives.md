@@ -27,7 +27,9 @@ The system must allow organizations to define measurable strategic objectives, l
 - Linking to capabilities and value streams is optional but recommended; unlinked objectives are architecturally orphaned and should surface as a completeness signal
 - Admin planning surfaces are authenticated workspace views; visibility across organizations is controlled by federation scope rather than a separate planning-only publication rule
 
+## Implementation Status
+Shipped (v1). Strategic Objective CRUD, capability and value-stream linking, goal anchoring, standard `draft / published / archived` workflow, and cross-org federation are in place. Aggregate roll-ups and completeness signals for unlinked objectives are surfaced on the admin dashboard.
+
 ## Links
 - Depends on: Content Management — Content Workflow, Content Relationships
 - Related: Goals, Capabilities, Value Streams, Initiatives, Roadmap
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director, Business Stakeholder, Early-Maturity Practice Lead

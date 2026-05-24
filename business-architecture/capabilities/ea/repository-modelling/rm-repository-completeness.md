@@ -55,4 +55,3 @@ A repository where everything appears equally authoritative — regardless of wh
 
 - Depends on: `ac-admin-dashboard`, `cm-content-relationships`, `po-capability-map`, `po-application-portfolio`
 - Related: `rm-architecture-debt`, `rm-end-to-end-traceability`
-- Personas served: Enterprise Architect, Agency EA Coordinator, CMS Administrator, Junior EA Analyst, Early-Maturity Practice Lead

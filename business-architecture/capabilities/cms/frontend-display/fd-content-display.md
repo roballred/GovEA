@@ -40,6 +40,9 @@ This list is provisional. It should be validated against real users — specific
 - Content display must not require JavaScript to render — core content is server-rendered
 - Editor-only enhancements such as inline relationship management should layer on top of the read-only detail page rather than replacing it
 
+## Implementation Status
+Shipped (v1). All seven core content types have detail pages with plain-language field labels, taxonomy chips, related-content panels, and inline edit affordances gated by RBAC. Server-rendered. The plain-language label audit is partially complete; remaining viewer-experience polish is tracked under #556.
+
 ## Links
 - Depends on: Content Management — Content Authoring, Content Management — Content Workflow
 - Related: Navigation, Relationship Navigation, Responsive Layout

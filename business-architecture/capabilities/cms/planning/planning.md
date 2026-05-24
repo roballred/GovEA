@@ -1,4 +1,6 @@
-# Capability Group: Planning
+# Capability: Planning
+
+## What It Does
 
 The system must allow organizations to document their strategic direction, track the initiatives delivering on that direction, and visualize the relationship between strategy, initiatives, and the architecture portfolio. In the current product this is a strong early-v1 capability: demo-ready and useful, but not yet semantically uniform across every planning artifact.
 
@@ -19,9 +21,27 @@ The system must allow organizations to document their strategic direction, track
 ## Design Principle
 Planning capabilities are a lens on existing architecture content — they do not exist in isolation. Goals roll up strategic intent. Strategic objectives trace to capabilities and value streams. Initiatives trace to objectives and capabilities. The roadmap visualizes initiative timelines against the architecture they affect. Nothing in this capability group is meaningful unless the underlying capability and persona content is maintained.
 
-## Current Semantic Model
-- Goals and strategic objectives are treated like governed content: they use the standard workflow (`draft`, `published`, `archived`) plus visibility settings.
-- Goals sit above objectives in the shipped hierarchy: Goal -> Objective -> Initiative.
-- Initiatives are treated like planning records: they use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates.
-- The roadmap is a rendered view over initiative records. It groups initiatives by planning status and shows their linked objectives and capabilities.
-- This is still an evolving area, but the biggest early semantic blur has now been corrected by separating goals from objectives in the shipped planning model.
+## Success Criteria
+
+- A leader can answer "what is our strategy in this domain, and what is changing it?" by walking from a goal through its objectives to the initiatives in flight, without leaving the planning surface
+- Every published strategic objective is traceable to at least one capability — orphaned objectives surface as a completeness signal
+- Initiatives surface their impact on capabilities (`builds`, `enhances`, `retires`, `depends-on`) so the roadmap is meaningful at the capability level, not just a Gantt chart
+- The roadmap renders the same data the planning records hold — no separate authoring surface for roadmap layout
+- Cross-org federation visibility applies consistently to goals, objectives, initiatives, and roadmap views
+
+## Rules
+
+- Goals and strategic objectives use the standard `draft / published / archived` content workflow plus visibility settings (`org`, `connections`, `instance`)
+- Goals sit above objectives in the shipped hierarchy: Goal → Objective → Initiative
+- Initiatives use planning lifecycle states (`proposed`, `active`, `on-hold`, `complete`, `cancelled`) plus optional start/end dates — not the standard content workflow
+- The roadmap is a rendered view over initiative records — there is no separate authoring surface
+- ADRs and initiatives apply the viewer-status mappings defined in [Content Workflow](../content-management/cm-content-workflow.md), not the published-only core rule
+
+## Implementation Status
+
+Shipped (v1). Goals, Strategic Objectives, Initiatives (with cross-initiative overlap/conflict view #602), and the roadmap visualization are all in place with their respective lifecycle states, linkages, and federation visibility. The biggest early semantic blur — Goal vs Objective — was corrected by separating goals from objectives in the shipped planning model.
+
+## Links
+
+- Depends on: Content Management — Content Workflow, Content Management — Content Relationships, IAM — Role-Based Access Control
+- Related: Portfolio (Capabilities, Value Streams), Frontend Display (Executive Roadmap Timeline)

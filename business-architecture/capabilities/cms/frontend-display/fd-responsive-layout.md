@@ -18,6 +18,9 @@ The system must render correctly on any screen size — desktop, tablet, and mob
 - Core content must be readable without pinch-to-zoom on a standard mobile screen
 - Responsive behavior is handled via CSS — no separate mobile site or user-agent detection
 
+## Implementation Status
+Shipped (v1). Tailwind-driven responsive layout across admin and viewer surfaces; mobile menu collapse, table scroll containers, and touch-friendly tap targets are in place.
+
 ## Links
 - Depends on: Content Display, Navigation
 - Related: Portfolio Views, Public & Authenticated Views

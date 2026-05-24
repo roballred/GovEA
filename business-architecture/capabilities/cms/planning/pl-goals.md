@@ -29,4 +29,3 @@ The system must allow organizations to define broad strategic goals above strate
 ## Links
 - Depends on: Strategic Objectives, Content Workflow, Content Relationships
 - Related: Initiatives, Roadmap, Traceability Views
-- Personas served: Enterprise Architect, Agency EA Coordinator, Department Director, Programme Director

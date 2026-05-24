@@ -50,4 +50,3 @@ The REST API is the integration fallback and the integration foundation. Every n
 
 - Depends on: all entity actions (capabilities, applications, personas, services, ADRs, objectives, initiatives), `iam-audit-trail`, RBAC
 - Related: `int-itsm-cmdb.md`, `int-devops.md`, `int-bi-analytics.md`, all other integration capabilities
-- Personas served: CMS Administrator, Enterprise Architect, Domain Architect, Junior EA Analyst, Consultant/SI

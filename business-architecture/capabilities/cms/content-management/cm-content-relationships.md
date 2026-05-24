@@ -38,6 +38,9 @@ Capabilities are the canonical bridge from mission and service context to techno
 - Relationships are bidirectional - both sides are visible in the UI
 - Objective and Service application panels are read-only derived views; editors should link Capabilities first when the supporting technology is unknown
 
+## Implementation Status
+Shipped (v1). The core Application → Capability → Persona chain is enforced via junction tables and validated at publish time. All seven core content types expose their relationships on detail pages and through the traceability views.
+
 ## Links
 - Depends on: Content Types, Content Authoring
 - Related: Content Workflow, Content Search & Filtering

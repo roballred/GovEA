@@ -41,5 +41,8 @@ The following outcomes indicate Front-end Display is working well for a 1–3 pe
 - Core content must render without JavaScript — progressive enhancement only
 - Front-end display must be usable by non-technical users without training
 
+## Implementation Status
+Shipped (v1, partial). All authenticated viewer surfaces ship: content detail pages, navigation, relationship navigation, portfolio and traceability views, application risk portfolio (#608 dependency-impact), executive roadmap, repository confidence summary, guided answers, responsive layout, and theming. Print/export-ready output landed under #618. Public unauthenticated access (#547) and a role-tailored landing for Viewers (#548) remain follow-up work under the viewer-experience epic (#556).
+
 ## Links
 - Depends on: IAM, Content Management

@@ -35,4 +35,3 @@ Not implemented. GovEA has glossary source-definition support today and a shippe
 
 - Depends on: Glossary, Taxonomy Management, Audit Trail
 - Related: Framework Mapping, Framework Overlay Configuration
-- Personas served: Enterprise Architect, Agency EA Coordinator, CMS Administrator

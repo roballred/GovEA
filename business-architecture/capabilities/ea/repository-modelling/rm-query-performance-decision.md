@@ -96,4 +96,3 @@ Accepted — pre-implementation requirement for `rm-end-to-end-traceability` and
 - ARB finding: roballred/GovEA#134
 - Closes: roballred/GovEA#134
 - Capabilities affected: `rm-end-to-end-traceability`, `rm-repository-completeness`
-- Personas served: Enterprise Architect (Central IT), Agency EA Coordinator, CMS Administrator

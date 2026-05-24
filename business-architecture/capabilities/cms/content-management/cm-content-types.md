@@ -38,6 +38,9 @@ Recommended values:
 - Content types must be scoped to an organization
 - Built-in content types (Organization, Persona, Capability, Application, ADR) are editable but not deletable in v1
 
+## Implementation Status
+Partial. The seven core content types (Capability, Application, Persona, Service, Value Stream, Strategic Objective, ADR) are shipped as fixed Drizzle schemas with required/optional fields, validation, and taxonomy-backed relations. Admin-driven schema definition (adding new content types or fields without code changes) is **not yet implemented** — content types are code-defined in v1, not user-defined.
+
 ## Links
 - Depends on: IAM — Role-Based Access Control
 - Related: Content Authoring, Content Relationships, Taxonomy Management

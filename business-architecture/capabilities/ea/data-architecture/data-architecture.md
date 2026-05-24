@@ -1,4 +1,6 @@
-# Capability Group: Data Architecture
+# Capability: Data Architecture
+
+## What It Does
 
 The system must support the practice of Data Architecture as defined by the DAMA Knowledge Areas — capturing the data assets that exist in an organization, the structural model that relates them, and the layered representations (conceptual / logical / physical) that let architects, modelers, and database administrators each work at the level their role expects. The objective is to support a Data Architect and their team in a Data & Analytics organization end to end, not to ship a replacement for any dedicated modelling tool.
 

@@ -45,4 +45,3 @@ The specific pain this solves: architects build capability maps linked to operat
 
 - Depends on: `po-capability-map`, `po-application-portfolio`
 - Related: `int-erp-financial.md`, `int-ppm.md`
-- Personas served: Enterprise Architect, Domain Architect, Agency EA Coordinator, CMS Administrator

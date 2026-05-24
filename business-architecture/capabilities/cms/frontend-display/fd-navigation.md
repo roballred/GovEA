@@ -21,6 +21,9 @@ The system must provide clear, consistent navigation so that users can find cont
 - Navigation must be usable on mobile without a horizontal scroll
 - If a module is disabled for the organization, direct navigation to its route should fail closed rather than exposing the page shell
 
+## Implementation Status
+Shipped (v1). Primary sidebar navigation, breadcrumbs, back paths, mobile responsive layout, and module-disabled fail-closed routing are all in place. Collapsible groups in the admin sidebar remain a follow-up (#479).
+
 ## Links
 - Depends on: Content Management — Content Workflow
 - Related: Content Display, Portfolio Views, Responsive Layout

@@ -23,6 +23,9 @@ The system must allow an organization to review, approve, or reject incoming cro
 - Approval decisions are logged in the audit trail
 - Notification feeds, approval history views, and target-side revocation remain future work
 
+## Implementation Status
+Shipped (v1). Approve / reject of incoming cross-org link requests happens inline on capability and persona detail pages. Approvals and rejections write to the audit trail. Dedicated approval inbox, history view, and target-side revocation flows remain future work.
+
 ## Links
 - Depends on: Cross-Org Linking, Org Connections, IAM — Role-Based Access Control
 - Related: IAM — Audit Trail

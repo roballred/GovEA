@@ -48,4 +48,3 @@ The specific pain this solves: an architect presenting an application rationalis
 
 - Depends on: `po-application-portfolio`, `po-capability-map`, `ac-admin-dashboard`
 - Related: `int-ppm.md`, `int-rest-api.md`
-- Personas served: Enterprise Architect, Budget & Performance Analyst, Department Director, Agency EA Coordinator

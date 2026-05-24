@@ -25,7 +25,10 @@ The system must allow organization administrators to manage taxonomy-backed pers
 - Deleting a tag cascades — all `persona_tags` rows referencing that tag are removed automatically (FK cascade)
 - The `Persona Tag` taxonomy branch is the source of truth for current selectable tags in the UI
 
+## Implementation Status
+Shipped (v1). Persona tags are managed through the Taxonomy Management page as values under the `Persona Tag` taxonomy type; the persona table displays tag pills and offers a tag filter, and the create/edit dialogs include a multi-select tag list.
+
 ## Links
 - Depends on: IAM — Role-Based Access Control, Content Management — Taxonomy Management
-- Used by: Content Management — Personas
+- Enables: Content Management — Personas
 - Related: Persona Type Management

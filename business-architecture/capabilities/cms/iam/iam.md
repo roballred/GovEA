@@ -21,7 +21,7 @@ The system must control who can access it, how they authenticate, and what they 
 | First-Run Setup | [iam-first-run-setup.md](./iam-first-run-setup.md) | Bootstrap initial Admin account on first launch |
 | API Auth Decision | [iam-api-auth-decision.md](./iam-api-auth-decision.md) | Auth strategy for API routes (session-based, not token-based in v1) |
 
-## Current State
+## Implementation Status
 
 IAM is one of GovEA's strongest product areas and is credible as a core v1 pillar. Authentication, authorization, audit logging, meaningful E2E test coverage, and the full instance-admin console are all present.
 
@@ -44,3 +44,8 @@ The following outcomes indicate IAM is working well for a 1–3 person governmen
 - SSO sign-in is allowed only for active pre-provisioned users with an organization binding
 - Instance administration is separate from org-scoped administration and must not silently expand into tenant content ownership
 - All IAM events are logged and immutable
+
+## Links
+- Depends on: IAM — User Management (foundational)
+- Enables: Content Management, Admin & Configuration, Multi-Org, Frontend Display
+- Related: Instance Administration, Audit Trail
