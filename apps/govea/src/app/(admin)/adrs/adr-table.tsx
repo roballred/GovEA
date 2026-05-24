@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createADR, editADR, deleteADR } from '@/actions/adrs'
+import { createADR, editADR, deleteADR, importADRs, type ADRImportResult } from '@/actions/adrs'
 import type { ADR, Capability, Application, Initiative, StrategicObjective } from '@/db/schema'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -82,6 +82,42 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
   const createDirty = useDirtyTracker()
   const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<ADRRow | null>(null)
+
+  // CSV import dialog state (#596) — same shape as Capabilities / Personas.
+  const [importOpen, setImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPreview, setImportPreview] = useState<ADRImportResult | null>(null)
+  const [importResult, setImportResult] = useState<ADRImportResult | null>(null)
+
+  async function handleImportPreview() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.append('csvFile', importFile)
+      const result = await importADRs(fd, true)
+      setImportPreview(result)
+    })
+  }
+
+  async function handleImportConfirm() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData()
+      fd.append('csvFile', importFile)
+      const result = await importADRs(fd, false)
+      setImportResult(result)
+      setImportPreview(null)
+      setImportFile(null)
+      router.refresh()
+    })
+  }
+
+  function openImport() {
+    setImportOpen(true)
+    setImportResult(null)
+    setImportPreview(null)
+    setImportFile(null)
+  }
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
@@ -164,11 +200,19 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
           filters={taxonomyFilters}
           onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
         />
-        {canEdit && (
-          <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
-            + New Architecture Decision Record
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          <a href="/api/adrs/export">
+            <Button variant="outline" size="sm">Export CSV</Button>
+          </a>
+          {canEdit && (
+            <>
+              <Button variant="outline" size="sm" onClick={openImport}>Import CSV</Button>
+              <Button onClick={() => setCreateOpen(true)} size="sm">
+                + New Architecture Decision Record
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Empty state — when the org has no ADRs at all (#587 follow-up). */}
@@ -389,6 +433,70 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
             <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
               {isPending ? 'Deleting…' : 'Delete'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import dialog (#596) */}
+      <Dialog open={importOpen} onOpenChange={open => { if (!open) setImportOpen(false) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Import ADRs</DialogTitle></DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">
+              Upload a CSV with columns: <code className="bg-muted px-1 rounded">number</code>, <code className="bg-muted px-1 rounded">title</code>, <code className="bg-muted px-1 rounded">context</code>, <code className="bg-muted px-1 rounded">decision</code>, <code className="bg-muted px-1 rounded">consequences</code>, <code className="bg-muted px-1 rounded">status</code>, <code className="bg-muted px-1 rounded">visibility</code>, <code className="bg-muted px-1 rounded">superseded_by</code>, and semicolon-joined name lists for <code className="bg-muted px-1 rounded">capabilities</code>, <code className="bg-muted px-1 rounded">applications</code>, <code className="bg-muted px-1 rounded">initiatives</code>, and <code className="bg-muted px-1 rounded">objectives</code>.
+              Existing ADRs are matched by number (case-insensitive) and updated. Unknown linked-entity names are reported as warnings without failing the row.
+            </p>
+
+            {!importResult && (
+              <div className="space-y-1.5">
+                <Label>CSV file</Label>
+                <Input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={e => { setImportFile(e.target.files?.[0] ?? null); setImportPreview(null) }}
+                />
+              </div>
+            )}
+
+            {importPreview && !importResult && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+                <p className="font-medium">Preview</p>
+                <p>Will create <strong>{importPreview.created}</strong> · update <strong>{importPreview.updated}</strong> · skip <strong>{importPreview.skipped}</strong></p>
+                {importPreview.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importPreview.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {importResult && (
+              <div className="rounded-md border bg-emerald-50 border-emerald-200 p-3 space-y-1">
+                <p className="font-medium text-emerald-800">Import complete</p>
+                <p className="text-emerald-700">Created <strong>{importResult.created}</strong> · updated <strong>{importResult.updated}</strong> · skipped <strong>{importResult.skipped}</strong></p>
+                {importResult.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setImportOpen(false)}>
+              {importResult ? 'Close' : 'Cancel'}
+            </Button>
+            {!importResult && !importPreview && (
+              <Button onClick={handleImportPreview} disabled={!importFile || isPending}>
+                {isPending ? 'Checking…' : 'Preview'}
+              </Button>
+            )}
+            {importPreview && !importResult && (
+              <Button onClick={handleImportConfirm} disabled={isPending || importPreview.created + importPreview.updated === 0}>
+                {isPending ? 'Importing…' : `Import ${importPreview.created + importPreview.updated} records`}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

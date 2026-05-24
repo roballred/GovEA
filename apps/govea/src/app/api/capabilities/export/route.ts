@@ -3,13 +3,7 @@ import { canEdit } from '@/lib/rbac'
 import { getCapabilities } from '@/actions/capabilities'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import type { EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
-
-function escapeCsv(val: string): string {
-  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-    return `"${val.replace(/"/g, '""')}"`
-  }
-  return val
-}
+import { escapeCsv } from '@/lib/csv'
 
 type CapabilityForExport = Awaited<ReturnType<typeof getCapabilities>>[number]
 
