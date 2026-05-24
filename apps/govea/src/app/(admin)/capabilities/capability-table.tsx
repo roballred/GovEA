@@ -510,20 +510,9 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
             />
             <MarkdownEditor label="Behaviors" name="behaviors" id="create-behaviors" rows={4} placeholder="Markdown supported — use - bullets, **bold**, etc." />
             <MarkdownEditor label="Rules" name="rules" id="create-rules" rows={3} placeholder="Markdown supported — use - bullets, **bold**, etc." />
-            <div className="space-y-1.5">
-              <Label>Personas</Label>
-              <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">
-                {personas.length === 0
-                  ? <p className="text-sm text-muted-foreground">No personas yet.</p>
-                  : personas.map(p => (
-                    <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" name="personaIds" value={p.id} className="rounded" />
-                      {p.name}
-                    </label>
-                  ))
-                }
-              </div>
-            </div>
+            {/* #366 — persona links are managed live from the detail page's
+                RelationshipPanel, not bulk-replaced on save here. Keeps the
+                create / edit dialogs to scalar fields only. */}
             <TaxonomyInputs defs={taxonomyDefinitions} currentValues={[]} />
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -586,26 +575,15 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
             />
             <MarkdownEditor label="Behaviors" name="behaviors" id="edit-behaviors" rows={4} defaultValue={editTarget?.behaviors ?? ''} placeholder="Markdown supported — use - bullets, **bold**, etc." />
             <MarkdownEditor label="Rules" name="rules" id="edit-rules" rows={3} defaultValue={editTarget?.rules ?? ''} placeholder="Markdown supported — use - bullets, **bold**, etc." />
-            <div className="space-y-1.5">
-              <Label>Personas</Label>
-              <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">
-                {personas.length === 0
-                  ? <p className="text-sm text-muted-foreground">No personas yet.</p>
-                  : personas.map(p => (
-                    <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="personaIds"
-                        value={p.id}
-                        defaultChecked={editTarget?.capabilityPersonas.some(cp => cp.persona.id === p.id)}
-                        className="rounded"
-                      />
-                      {p.name}
-                    </label>
-                  ))
-                }
-              </div>
-            </div>
+            {/* #366 — persona links are managed live from the detail page's
+                RelationshipPanel. The bulk checkbox path is removed; the
+                existing persona ids are preserved as hidden inputs so the
+                edit action's replace-on-save semantics don't silently drop
+                them. Same pattern the inline edit button (capability-edit-
+                button.tsx) uses. */}
+            {editTarget?.capabilityPersonas.map(cp => (
+              <input key={cp.persona.id} type="hidden" name="personaIds" value={cp.persona.id} />
+            ))}
             <TaxonomyInputs
               defs={taxonomyDefinitions}
               currentValues={taxonomyValueMap[editTarget?.id ?? ''] ?? []}
