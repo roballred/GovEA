@@ -50,7 +50,13 @@ export default async function globalSetup() {
       await page.getByLabel('Password').fill(role.password)
       await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     }
-    await page.waitForURL(`${baseURL}/dashboard`)
+    // Role-aware landing per defaultLandingPath() in @/lib/auth-redirect:
+    //   instance admin → /instance
+    //   viewer         → /executive (#548)
+    //   everyone else  → /dashboard
+    // Wait for any of the three so the seed-step works regardless of which
+    // role this iteration is signing in as.
+    await page.waitForURL(/\/(dashboard|executive|instance)(\?|$)/)
 
     await context.storageState({ path: path.join(AUTH_DIR, role.file) })
     await context.close()

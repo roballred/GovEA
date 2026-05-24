@@ -1,12 +1,30 @@
 /**
- * Auth redirect utilities (#386)
+ * Auth redirect utilities (#386, #520, #548)
  *
  * callbackUrl values arrive from query params and are controlled by NextAuth
  * or the browser — they should never send users back into auth/error routes
  * after a successful login.
  */
 
+import type { Role } from './rbac'
+
 const AUTH_DEAD_ENDS = ['/login', '/error', '/api/auth']
+
+/**
+ * Default landing path for a freshly-signed-in user when no explicit
+ * `callbackUrl` was provided.
+ *
+ * Routing rule:
+ *   1. Instance admins → `/instance` (platform-admin console; #520)
+ *   2. Viewers → `/executive` (stakeholder-friendly entry; #548). The admin
+ *      `/dashboard` is too dense to function as a non-authoring reader landing.
+ *   3. Everyone else → `/dashboard`
+ */
+export function defaultLandingPath(opts: { role: Role; isInstanceAdmin: boolean }): string {
+  if (opts.isInstanceAdmin) return '/instance'
+  if (opts.role === 'viewer') return '/executive'
+  return '/dashboard'
+}
 
 /**
  * Returns a safe post-login destination, falling back to `fallback` if the

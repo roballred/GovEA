@@ -11,8 +11,13 @@ import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
-type NavItem = { href: string; label: string; moduleKey?: string; contributorOnly?: boolean }
-type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean }
+// #548 — `viewerHidden` removes the item / group from Viewer-role sidebars.
+// Data Architecture, Architecture Debt, and the EA-jargon-heavy Goals page
+// are author/architect surfaces with no Elected-Official-equivalent reader
+// benefit. The persona-walk audit explicitly flagged the dense default nav
+// as a Viewer adoption blocker.
+type NavItem = { href: string; label: string; moduleKey?: string; contributorOnly?: boolean; viewerHidden?: boolean }
+type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean; viewerHidden?: boolean }
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -22,7 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/value-streams', label: 'Value Streams',  moduleKey: 'value-streams' },
       { href: '/capabilities',  label: 'Capabilities',   moduleKey: 'capabilities' },
       { href: '/services',      label: 'Services',       moduleKey: 'services' },
-      { href: '/principles',    label: 'Principles',     moduleKey: 'principles' },
+      { href: '/principles',    label: 'Principles',     moduleKey: 'principles', viewerHidden: true },
       { href: '/glossary',      label: 'Glossary',       moduleKey: 'glossary' },
     ],
   },
@@ -31,10 +36,9 @@ const NAV_GROUPS: NavGroup[] = [
     // link / business-key + the Chen Notation diagram) the same way
     // Business Architecture surfaces its object types. Every entry is
     // gated on the `data-architecture` module key so toggling the module
-    // hides the whole group. Diagram lives behind PR-3 (#470/#477) — the
-    // link is included here so the nav is complete once that PR lands;
-    // if this PR ships first the link 404s until #477 lands.
+    // hides the whole group. Hidden from Viewer-role sidebars per #548.
     label: 'Data Architecture',
+    viewerHidden: true,
     items: [
       { href: '/data',                label: 'Overview',      moduleKey: 'data-architecture' },
       { href: '/data/entities',       label: 'Entities',      moduleKey: 'data-architecture' },
@@ -49,13 +53,13 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/applications', label: 'Applications', moduleKey: 'applications' },
       { href: '/adrs',         label: 'Decisions',    moduleKey: 'adrs' },
-      { href: '/debt',         label: 'Debt',         moduleKey: 'debt' },
+      { href: '/debt',         label: 'Debt',         moduleKey: 'debt', viewerHidden: true },
     ],
   },
   {
     label: 'Strategy',
     items: [
-      { href: '/goals',       label: 'Goals',       moduleKey: 'objectives' },
+      { href: '/goals',       label: 'Goals',       moduleKey: 'objectives', viewerHidden: true },
       { href: '/objectives',  label: 'Objectives',  moduleKey: 'objectives' },
       { href: '/initiatives', label: 'Initiatives', moduleKey: 'initiatives' },
       { href: '/roadmap',     label: 'Roadmap',     moduleKey: 'roadmap' },
@@ -104,6 +108,7 @@ function SidebarContent({
 }) {
   const isAdmin = role === 'admin'
   const isContributor = role === 'admin' || role === 'contributor'
+  const isViewer = role === 'viewer'
 
   return (
     <nav className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
@@ -156,11 +161,15 @@ function SidebarContent({
       </Link>
 
       <div className="mt-2 space-y-4">
-        {NAV_GROUPS.filter(g => !g.adminOnly || isAdmin).map(group => {
+        {NAV_GROUPS
+          .filter(g => !g.adminOnly || isAdmin)
+          .filter(g => !(g.viewerHidden && isViewer))
+          .map(group => {
           const visibleItems = group.items.filter(
             item =>
               (!item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])) &&
-              (!item.contributorOnly || isContributor)
+              (!item.contributorOnly || isContributor) &&
+              !(item.viewerHidden && isViewer)
           )
           if (visibleItems.length === 0) return null
           return (
