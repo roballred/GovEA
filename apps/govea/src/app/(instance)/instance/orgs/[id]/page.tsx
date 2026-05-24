@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { db } from '@/db/client'
 import { organizations, users, breakGlassSessions } from '@/db/schema'
-import { eq, and, isNull, gt, ne, desc } from 'drizzle-orm'
+import { eq, and, isNull, gt, ne, desc, count } from 'drizzle-orm'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -45,12 +45,11 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
   const session = await requireInstanceAdmin()
 
   const now = new Date()
-  const [org, orgUsers, myActiveSession, pendingFromOthers, bgHistory, govHistory] = await Promise.all([
+  const [org, userCountRow, myActiveSession, pendingFromOthers, bgHistory, govHistory] = await Promise.all([
     db.query.organizations.findFirst({ where: eq(organizations.id, id) }),
-    db.query.users.findMany({
-      where: eq(users.organizationId, id),
-      orderBy: (u, { asc }) => [asc(u.name)],
-    }),
+    // #436 — only the COUNT is metadata. Full user rows are loaded below,
+    // and only when the caller has earned the right to see them.
+    db.select({ n: count(users.id) }).from(users).where(eq(users.organizationId, id)),
     db.query.breakGlassSessions.findFirst({
       where: and(
         eq(breakGlassSessions.instanceAdminId, session.user.id),
@@ -85,6 +84,20 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
   const myActiveIsPending = !!myActiveSession && myActiveSession.requiresApproval && !myActiveSession.approvedAt
 
   if (!org) notFound()
+
+  const userCount = userCountRow[0]?.n ?? 0
+
+  // #436 — gate user PII on active+approved break-glass. The caller can also
+  // see their own home org without break-glass (no cross-tenant boundary
+  // being crossed there).
+  const isHomeOrg = id === session.user.organizationId
+  const canSeeUserPii = isHomeOrg || (!!myActiveSession && !myActiveIsPending)
+  const orgUsers = canSeeUserPii
+    ? await db.query.users.findMany({
+        where: eq(users.organizationId, id),
+        orderBy: (u, { asc }) => [asc(u.name)],
+      })
+    : []
 
   const tierBadge = org.supportTier ? TIER_BADGE[org.supportTier] : null
 
@@ -161,7 +174,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           <div><dt className="text-muted-foreground">Created</dt><dd className="mt-0.5 font-medium">{org.createdAt.toLocaleDateString()}</dd></div>
           <div><dt className="text-muted-foreground">Theme</dt><dd className="mt-0.5 font-medium">{org.theme}</dd></div>
           <div><dt className="text-muted-foreground">System org</dt><dd className="mt-0.5 font-medium">{org.isSystemOrg ? 'Yes' : 'No'}</dd></div>
-          <div><dt className="text-muted-foreground">Users</dt><dd className="mt-0.5 font-medium">{orgUsers.length}</dd></div>
+          <div><dt className="text-muted-foreground">Users</dt><dd className="mt-0.5 font-medium">{userCount}</dd></div>
         </dl>
       </section>
 
@@ -350,49 +363,67 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         )}
       </section>
 
-      {/* Users */}
+      {/* Users — #436 gates PII behind active+approved break-glass. */}
       <section>
-        <h2 className="text-base font-semibold mb-3">Users <span className="text-muted-foreground font-normal text-sm">({orgUsers.length})</span></h2>
-        <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orgUsers.map(u => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name ?? '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                  <TableCell>
-                    <span className="capitalize text-sm">{u.role}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className={cn(
-                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                      u.isActive === 'true'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
-                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                    )}>
-                      {u.isActive === 'true' ? 'Active' : 'Inactive'}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {orgUsers.length === 0 && (
+        <h2 className="text-base font-semibold mb-3">Users <span className="text-muted-foreground font-normal text-sm">({userCount})</span></h2>
+        {canSeeUserPii ? (
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    No users in this organisation
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {orgUsers.map(u => (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-medium">{u.name ?? '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                    <TableCell>
+                      <span className="capitalize text-sm">{u.role}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={cn(
+                        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                        u.isActive === 'true'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                      )}>
+                        {u.isActive === 'true' ? 'Active' : 'Inactive'}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {orgUsers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      No users in this organisation
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-5 text-sm">
+            <p className="font-medium text-amber-900 dark:text-amber-200">
+              User PII hidden — break-glass required
+            </p>
+            <p className="text-amber-800 dark:text-amber-400 mt-1">
+              {userCount === 0
+                ? 'This organisation has no users to display.'
+                : `${userCount} user${userCount === 1 ? '' : 's'} on file. Grant break-glass access above to see names, emails, roles, and account status. Sessions over one hour require a second instance admin to approve.`}
+            </p>
+            {myActiveSession && myActiveIsPending && (
+              <p className="text-amber-700 dark:text-amber-500 mt-2 text-xs">
+                Your break-glass request is pending approval from another instance admin.
+              </p>
+            )}
+          </div>
+        )}
       </section>
     </div>
   )

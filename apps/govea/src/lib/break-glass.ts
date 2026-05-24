@@ -17,10 +17,10 @@ export function isValidBreakGlassTtl(value: number): value is BreakGlassTtlMinut
  * admin + org, or null if no such session exists. A pending-approval session
  * does NOT satisfy `requireBreakGlass` — it must be approved first.
  *
- * Under Option 2 (see #418 design note), this helper has no caller in the
- * read path. It will be consulted by the cross-tenant impersonation feature
- * (#437) once that lands, and by gated cross-tenant reads when #436 promotes
- * to Option 1.
+ * Consulted by:
+ *  - Cross-tenant impersonation flow (#437/#502)
+ *  - Cross-tenant user-PII gating (#436): see `getUnlockedOrgIds` for the
+ *    multi-org variant used by `/instance/users` and `/instance/orgs/[id]`
  */
 export async function requireBreakGlass(
   adminId: string,
@@ -40,4 +40,32 @@ export async function requireBreakGlass(
     ),
   })
   return session ?? null
+}
+
+/**
+ * Returns the set of org IDs the given instance admin currently has active,
+ * approved, non-expired break-glass sessions for. Empty set if none.
+ *
+ * Multi-org variant of `requireBreakGlass` for surfaces that need to filter
+ * a list (e.g., the cross-tenant user list) without N round-trips. Mirrors
+ * the same gating rules: pending-approval sessions do NOT count; expired
+ * and revoked sessions do NOT count.
+ *
+ * Added for #436 (gate cross-tenant user-PII reads on break-glass).
+ */
+export async function getUnlockedOrgIds(adminId: string): Promise<Set<string>> {
+  const now = new Date()
+  const rows = await db.query.breakGlassSessions.findMany({
+    where: and(
+      eq(breakGlassSessions.instanceAdminId, adminId),
+      isNull(breakGlassSessions.revokedAt),
+      gt(breakGlassSessions.expiresAt, now),
+      or(
+        eq(breakGlassSessions.requiresApproval, false),
+        isNotNull(breakGlassSessions.approvedAt),
+      ),
+    ),
+    columns: { targetOrgId: true },
+  })
+  return new Set(rows.map(r => r.targetOrgId))
 }
