@@ -4,10 +4,12 @@
 The system must allow contributors to define and maintain the organization's business capabilities — the things the organization does, independent of how they are implemented. Capabilities are organized by domain and linked to the applications that support them and the personas that depend on them.
 
 ## Personas
-- **CMS Contributor** — creates, edits, and publishes capability records
-- **CMS Administrator** — has all Contributor permissions; can delete records
-- **Content Viewer** — reads published capabilities through the front-end capability map view
+- **Enterprise Architect (Central IT)** — owns the enterprise capability map and uses it as the anchor entity to which applications, personas, and decisions attach
+- **Agency EA Coordinator** — maintains their agency's branch of the capability map
 - **Department Director** — uses the capability map to understand what the organization does and where technology supports it
+- **Business Stakeholder** — references the published map to see what the organization is set up to do
+
+> RBAC roles (Admin / Contributor / Viewer) are not personas. See [`iam-role-based-access-control.md`](../iam/iam-role-based-access-control.md); role behavior is reflected in `## Rules` below.
 
 ## Behaviors
 - Create a capability with: name, description, domain, workflow status, and visibility

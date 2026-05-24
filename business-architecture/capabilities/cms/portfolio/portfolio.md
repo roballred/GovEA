@@ -4,10 +4,12 @@
 The system must allow contributors to maintain a structured inventory of the organization's applications, business capabilities, architecture decisions, and supporting reference content. Portfolio management is the authoring side — contributors create and update records; viewers consume them through portfolio views on the front end.
 
 ## Personas
-- **CMS Contributor** — creates and maintains portfolio records
-- **CMS Administrator** — has all Contributor permissions; manages visibility and lifecycle
-- **Content Viewer** — reads published portfolio content through front-end views
+- **Enterprise Architect (Central IT)** — owns the portfolio at the enterprise level; uses it to model the organization-wide application, capability, and decision landscape
+- **Agency EA Coordinator** — maintains their agency's portfolio as a sub-set of the enterprise view
 - **Department Director** — reads portfolio views to inform investment and planning decisions
+- **Business Stakeholder** — references published portfolio content to understand what the organization can do and what's planned
+
+> RBAC roles (Admin / Contributor / Viewer) are not personas — they describe access, not people. Role behavior is documented in [`iam-role-based-access-control.md`](../iam/iam-role-based-access-control.md) and reflected in each sub-capability's `## Rules` block.
 
 ## Sub-Capabilities
 

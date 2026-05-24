@@ -4,10 +4,11 @@
 The system must allow contributors to capture and maintain the architecture principles that guide design decisions across the organization. Principles articulate the values and rules that constrain how the organization builds and changes its EA — giving decision-makers a stable reference point when evaluating options and trade-offs.
 
 ## Personas
-- **CMS Contributor** — creates, edits, and publishes principle records
-- **CMS Administrator** — has all Contributor permissions; can delete records
-- **Content Viewer** — reads published principles through the front-end view
+- **Enterprise Architect (Central IT)** — authors enterprise-level principles and applies them when reviewing portfolio changes
+- **Domain Architect** — authors domain-specific principles and reviews work against them
 - **Department Director** — references principles to understand the rules of the road before initiating change
+
+> RBAC roles (Admin / Contributor / Viewer) are not personas. See [`iam-role-based-access-control.md`](../iam/iam-role-based-access-control.md); role behavior is reflected in `## Rules` below.
 
 ## Behaviors
 - Create a principle with: name (short label), title (full principle statement), description (one-sentence summary), rationale, implications, status, and visibility

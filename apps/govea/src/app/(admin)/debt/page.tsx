@@ -28,12 +28,14 @@ const STATUS_LABEL: Record<DebtStatus, string> = {
   archived: 'Archived',
 }
 
+// Plain-language labels per #133 — see debt-form.tsx for the long form.
+// Slugs stay as the DB enum; only user-visible labels change.
 const TYPE_LABEL: Record<DebtType, string> = {
   'lifecycle-risk': 'Lifecycle risk',
-  'capability-gap': 'Capability gap',
-  'decision-drift': 'Decision drift',
-  'known-shortcut': 'Known shortcut',
-  unreviewed: 'Unreviewed',
+  'capability-gap': 'Unsupported capability',
+  'decision-drift': 'Drift from decision',
+  'known-shortcut': 'Deliberate trade-off',
+  unreviewed: 'Stale / unreviewed',
 }
 
 export default async function DebtIndexPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
