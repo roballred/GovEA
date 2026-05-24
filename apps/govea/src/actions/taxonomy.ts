@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { taxonomyTerms, principles, entityTaxonomyDefinitions } from '@/db/schema'
+import { taxonomyTerms, principles, entityTaxonomyDefinitions, personas } from '@/db/schema'
 import { eq, and, isNull, inArray, count } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -239,7 +239,49 @@ export async function deleteTaxonomyTerm(termId: string) {
     }
   }
 
+  // ── Persona-type cascade (#49) ──────────────────────────────────────────
+  // personas.type stores the taxonomy term NAME as plain text (no FK), same
+  // pattern as principles.principleType. Unlike principles (which BLOCKS the
+  // delete when in use), the persona-type design is cascade-to-null so the
+  // type is removed and the persona itself is preserved. Computed inside the
+  // transaction below so the rename + audit stay atomic.
+  let cascadeNullForNames: string[] = []
+  if (existing) {
+    if (existing.parentId !== null) {
+      // Deleting a value — check if its parent is "Persona Type"
+      const parent = await db.query.taxonomyTerms.findFirst({
+        where: eq(taxonomyTerms.id, existing.parentId),
+      })
+      if (parent?.slug === 'persona-type') {
+        cascadeNullForNames = [existing.name]
+      }
+    } else if (existing.slug === 'persona-type') {
+      // Deleting the "Persona Type" parent — cascade every child's name
+      const children = await db.query.taxonomyTerms.findMany({
+        where: and(eq(taxonomyTerms.parentId, termId), eq(taxonomyTerms.organizationId, orgId)),
+        columns: { name: true },
+      })
+      cascadeNullForNames = children.map(c => c.name)
+    }
+  }
+
   await db.transaction(async (tx) => {
+    // Persona-type cascade: null out personas.type for affected names BEFORE
+    // deleting the taxonomy rows. We use IN(...) so the cascade for "Persona
+    // Type" parent deletes hits every child in a single statement. Capture
+    // the affected count for the audit log so the cascade is visible.
+    let personasNulledCount = 0
+    if (cascadeNullForNames.length > 0) {
+      const updated = await tx.update(personas)
+        .set({ type: null, updatedAt: new Date() })
+        .where(and(
+          eq(personas.organizationId, orgId),
+          inArray(personas.type, cascadeNullForNames),
+        ))
+        .returning({ id: personas.id })
+      personasNulledCount = updated.length
+    }
+
     // When deleting a type, also delete its values (not promote — orphaned values are useless)
     // When deleting a value, just delete it
     if (existing?.parentId === null) {
@@ -257,6 +299,14 @@ export async function deleteTaxonomyTerm(termId: string) {
       userId: session.user.id,
       organizationId: orgId,
       before: { name: existing?.name },
+      // #49 — record the cascade so an audit reader can see the persona impact
+      metadata: cascadeNullForNames.length > 0
+        ? {
+            cascade: 'personas.type → null',
+            affectedNames: cascadeNullForNames,
+            personasNulledCount,
+          }
+        : undefined,
     })
   })
 }

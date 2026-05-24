@@ -11,7 +11,7 @@ import {
   DEV_DATA_ENTITIES, DEV_DATA_ATTRIBUTES, DEV_DATA_LINKS, DEV_DATA_BUSINESS_KEYS,
   DEV_DATA_ENTITY_RELATIONS, DEV_DATA_ATTRIBUTE_SHARES,
   STATE_PERSONAS, STATE_CAPABILITIES, STATE_APPLICATIONS,
-  DEV_CROSS_ORG_LINKS,
+  DEV_CROSS_ORG_LINKS, STATE_INBOUND_CROSS_ORG_LINKS,
   GOVEA_PROJECT_ORG, GOVEA_PROJECT_USERS,
   GOVEA_PROJECT_PERSONAS, GOVEA_PROJECT_CAPABILITIES, GOVEA_PROJECT_APPLICATIONS,
   GOVEA_PROJECT_VALUE_STREAMS, GOVEA_PROJECT_OBJECTIVES, GOVEA_PROJECT_INITIATIVES,
@@ -1571,6 +1571,48 @@ async function seed() {
         .where(eq(crossOrgLinks.id, existingLink.id))
     }
     console.log(`  ✓ Cross-org link (${link.linkType}): "${link.sourceCapabilityName}" → "${link.targetCapabilityName}"`)
+  }
+
+  // ── Reverse-direction cross-org links (#543) ──────────────────────────────
+  // The links above are all Riverdale → ODS, leaving Alice (Agency EA
+  // Coordinator at Riverdale) with zero inbound requests to approve in the
+  // seed. The "Awaiting your approval" branch in cross-org-links-panel.tsx
+  // was unreachable. Seed the reverse direction so the inbound-approval flow
+  // is exercisable end-to-end in the dev demo.
+
+  const existingReverseConnection = await db.query.orgConnections.findFirst({
+    where: (t, { eq: e, and }) => and(e(t.fromOrgId, stateOrgId), e(t.toOrgId, devOrgId)),
+  })
+  if (!existingReverseConnection) {
+    await db.insert(orgConnections).values({ fromOrgId: stateOrgId, toOrgId: devOrgId, status: 'active' })
+  }
+  console.log('  ✓ Reverse org connection (active): Office of Digital Services → City of Riverdale')
+
+  for (const link of STATE_INBOUND_CROSS_ORG_LINKS) {
+    const sourceCapId = stateCapabilityIds[link.sourceCapabilityName]
+    const targetCapId = devCapabilityIds[link.targetCapabilityName]
+    if (!sourceCapId || !targetCapId) continue
+
+    const existingLink = await db.query.crossOrgLinks.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.sourceEntityId, sourceCapId), e(t.targetEntityId, targetCapId)),
+    })
+    if (!existingLink) {
+      await db.insert(crossOrgLinks).values({
+        sourceOrgId: stateOrgId,
+        sourceEntityType: 'capability',
+        sourceEntityId: sourceCapId,
+        targetOrgId: devOrgId,
+        targetEntityType: 'capability',
+        targetEntityId: targetCapId,
+        linkType: link.linkType,
+        status: 'pending',
+      })
+    } else if (existingLink.status !== 'pending' || existingLink.linkType !== link.linkType) {
+      await db.update(crossOrgLinks)
+        .set({ status: 'pending', linkType: link.linkType })
+        .where(eq(crossOrgLinks.id, existingLink.id))
+    }
+    console.log(`  ✓ Inbound cross-org link (${link.linkType}): "${link.sourceCapabilityName}" → "${link.targetCapabilityName}" [Riverdale-side awaits approval]`)
   }
 
   // ── Org 5: City of Hartfield (TOGAF overlay demo) ───────────────────────

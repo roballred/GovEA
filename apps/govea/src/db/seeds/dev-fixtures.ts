@@ -1749,6 +1749,10 @@ export const DEV_DATA_ATTRIBUTE_SHARES = [
 
 // ─── Cross-org links ──────────────────────────────────────────────────────────
 
+// Riverdale (source) → ODS (target). Exercises the OUTBOUND request and
+// awaiting-target-approval flow from the source persona's perspective
+// (Riverdale's Agency EA Coordinator sees "pending the target org's approval"
+// in the federation activity panel).
 export const DEV_CROSS_ORG_LINKS = [
   {
     sourceCapabilityName: 'Digital Identity & Authentication',
@@ -1764,6 +1768,30 @@ export const DEV_CROSS_ORG_LINKS = [
     sourceCapabilityName: 'Budget Reporting',
     targetCapabilityName: 'State Grants Management',
     linkType: 'maps_to' as const,
+  },
+]
+
+// ODS (source) → Riverdale (target). #543 — adds the reverse direction so
+// the Agency EA Coordinator persona at Riverdale (Alice) can exercise the
+// INBOUND-approval flow that mo-connection-approval.md describes. Without
+// these, the "Awaiting your approval" branch in cross-org-links-panel.tsx
+// is unreachable in the dev seed.
+//
+// Picked believable scenarios: the state's identity service implements a
+// city-level entitlement check (state extends down into city's licensing
+// flow), and the state's open-data feed pulls service-request data from the
+// city. Both target Riverdale capabilities Alice owns and lands as
+// `status: 'pending'` so they appear in her approval queue.
+export const STATE_INBOUND_CROSS_ORG_LINKS = [
+  {
+    sourceCapabilityName: 'Statewide Identity Verification', // ODS
+    targetCapabilityName: 'Business License Management',     // Riverdale
+    linkType: 'implements' as const,
+  },
+  {
+    sourceCapabilityName: 'Open Data Platform',              // ODS
+    targetCapabilityName: 'Service Request Management',      // Riverdale
+    linkType: 'extends' as const,
   },
 ]
 
