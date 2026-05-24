@@ -48,7 +48,7 @@ export function ViewerDashboard({ orgId, userName }: { orgId: string; userName: 
               <CardTitle className="text-base">Roadmap</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Initiatives plotted across fiscal quarters. See what's planned, in progress, and recently complete.
+              {`Initiatives plotted across fiscal quarters. See what's planned, in progress, and recently complete.`}
             </CardContent>
           </Card>
         </Link>
@@ -59,7 +59,7 @@ export function ViewerDashboard({ orgId, userName }: { orgId: string; userName: 
               <CardTitle className="text-base">Guided Answers</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Plain-language questions that resolve to the right content — *"What does the city do?"*, *"Which applications support permitting?"*, *"Why did we choose Postgres?"*
+              {`Plain-language questions that resolve to the right content — "What does the city do?", "Which applications support permitting?", "Why did we choose Postgres?"`}
             </CardContent>
           </Card>
         </Link>
