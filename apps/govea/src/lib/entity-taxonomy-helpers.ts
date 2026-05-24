@@ -114,6 +114,20 @@ export async function getEntityTaxonomyValues(organizationId: string, entityType
  * Pass the caller's transaction handle as `tx` so this helper participates in
  * the same transaction as the surrounding mutation and audit write (#416).
  */
+// Optional single-select taxonomy fields render an empty `<option value="">`
+// for the "— None —" case. When the form submits, `formData.getAll(...)` for
+// that field includes an empty string. Without filtering, the empty string
+// reaches the DB as a `uuid` column value and Postgres throws
+// `invalid input syntax for type uuid: ""` (#631). Also defends against
+// whitespace-only values in case of caller-side trimming bugs.
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function sanitizeTaxonomyTermIds(termIds: string[]): string[] {
+  return termIds
+    .map(id => id.trim())
+    .filter(id => UUID_REGEX.test(id))
+}
+
 export async function syncEntityTaxonomyValues(
   tx: DBOrTx,
   organizationId: string,
@@ -128,9 +142,10 @@ export async function syncEntityTaxonomyValues(
       eq(entityTaxonomyValues.entityId, entityId),
     ))
 
-  if (termIds.length > 0) {
+  const validTermIds = sanitizeTaxonomyTermIds(termIds)
+  if (validTermIds.length > 0) {
     await tx.insert(entityTaxonomyValues).values(
-      termIds.map(termId => ({
+      validTermIds.map(termId => ({
         organizationId,
         entityType,
         entityId,
