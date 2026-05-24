@@ -1,8 +1,13 @@
 'use server'
 
 import { db } from '@/db/client'
-import { strategicObjectives, objectiveCapabilities, objectiveValueStreams, entityTaxonomyValues } from '@/db/schema'
+import {
+  strategicObjectives, objectiveCapabilities, objectiveValueStreams, entityTaxonomyValues,
+  capabilities, valueStreams,
+} from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
+import { parseCsv, splitSemicolonList } from '@/lib/csv'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
@@ -256,4 +261,172 @@ export async function deleteObjective(objectiveId: string) {
       userId: session.user.id, organizationId: orgId, before: { name: before?.name },
     })
   })
+}
+
+// ── CSV Import (#629) ────────────────────────────────────────────────────────
+
+export type ObjectiveImportResult = {
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}
+
+const VALID_OBJECTIVE_STATUS = new Set(['draft', 'published', 'archived'])
+const VALID_OBJECTIVE_VISIBILITY = new Set(['org', 'connections', 'instance'])
+
+/**
+ * Strategic Objective CSV import — #629. Mirrors the established pattern:
+ *   - Two-step preview/confirm via dryRun
+ *   - Case-insensitive upsert by name
+ *   - Capability + Value Stream names resolve against the org's records;
+ *     unknown names report as row warnings, not row failures
+ *   - On upsert, both junctions (capabilities, value_streams) replaced
+ *     wholesale. Goal junctions are out of this slice.
+ */
+export async function importObjectives(formData: FormData, dryRun = false): Promise<ObjectiveImportResult> {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const file = formData.get('csvFile') as File | null
+  if (!file) return { created: 0, updated: 0, skipped: 0, errors: ['No file provided'] }
+
+  const text = await file.text()
+  const rows = parseCsv(text)
+  if (rows.length === 0) return { created: 0, updated: 0, skipped: 0, errors: ['CSV has no data rows'] }
+
+  const [existing, orgCaps, orgVs] = await Promise.all([
+    db.query.strategicObjectives.findMany({
+      where: eq(strategicObjectives.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+    db.query.capabilities.findMany({
+      where: eq(capabilities.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+    db.query.valueStreams.findMany({
+      where: eq(valueStreams.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+  ])
+  const existingByName = new Map(existing.map(r => [r.name.toLowerCase(), r.id]))
+  const capByName = new Map(orgCaps.map(c => [c.name.toLowerCase(), c.id]))
+  const vsByName = new Map(orgVs.map(v => [v.name.toLowerCase(), v.id]))
+
+  type ValidRow = {
+    name: string
+    description: string | null
+    successMetric: string | null
+    timeHorizon: string | null
+    status: 'draft' | 'published' | 'archived'
+    visibility: 'org' | 'connections' | 'instance'
+    capabilityIds: string[]
+    valueStreamIds: string[]
+    existingId: string | undefined
+  }
+  const validRows: ValidRow[] = []
+  let created = 0, updated = 0, skipped = 0
+  const errors: string[] = []
+
+  for (const [i, row] of rows.entries()) {
+    const rowNum = i + 2
+    const name = row['name']?.trim()
+    if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
+
+    const status = (row['status'] || 'draft').trim()
+    const visibility = (row['visibility'] || 'org').trim()
+    if (!VALID_OBJECTIVE_STATUS.has(status)) {
+      errors.push(`Row ${rowNum}: invalid status "${status}"`)
+      skipped++; continue
+    }
+    if (!VALID_OBJECTIVE_VISIBILITY.has(visibility)) {
+      errors.push(`Row ${rowNum}: invalid visibility "${visibility}"`)
+      skipped++; continue
+    }
+
+    const resolveList = (values: string[], lookup: Map<string, string>, label: string): string[] => {
+      const ids: string[] = []
+      for (const v of values) {
+        const id = lookup.get(v.toLowerCase())
+        if (id) ids.push(id)
+        else errors.push(`Row ${rowNum}: ${label} "${v}" not found in this org — skipped`)
+      }
+      return ids
+    }
+
+    const capabilityIds = resolveList(splitSemicolonList(row['capabilities']), capByName, 'capability')
+    const valueStreamIds = resolveList(splitSemicolonList(row['value_streams']), vsByName, 'value stream')
+
+    const existingId = existingByName.get(name.toLowerCase())
+    if (existingId) updated++; else created++
+
+    validRows.push({
+      name,
+      description: row['description'] || null,
+      successMetric: row['success_metric'] || null,
+      timeHorizon: row['time_horizon'] || null,
+      status: status as ValidRow['status'],
+      visibility: visibility as ValidRow['visibility'],
+      capabilityIds,
+      valueStreamIds,
+      existingId,
+    })
+  }
+
+  if (!dryRun && (created > 0 || updated > 0)) {
+    await db.transaction(async (tx) => {
+      for (const r of validRows) {
+        let objectiveId = r.existingId
+        if (objectiveId) {
+          await tx.update(strategicObjectives).set({
+            description: r.description,
+            successMetric: r.successMetric,
+            timeHorizon: r.timeHorizon,
+            status: r.status,
+            visibility: r.visibility,
+            updatedBy: session.user.id,
+            updatedAt: new Date(),
+          }).where(and(eq(strategicObjectives.id, objectiveId), eq(strategicObjectives.organizationId, orgId)))
+          await tx.delete(objectiveCapabilities).where(eq(objectiveCapabilities.objectiveId, objectiveId))
+          await tx.delete(objectiveValueStreams).where(eq(objectiveValueStreams.objectiveId, objectiveId))
+        } else {
+          const [inserted] = await tx.insert(strategicObjectives).values({
+            name: r.name,
+            description: r.description,
+            successMetric: r.successMetric,
+            timeHorizon: r.timeHorizon,
+            status: r.status,
+            visibility: r.visibility,
+            organizationId: orgId,
+            createdBy: session.user.id,
+            updatedBy: session.user.id,
+          }).returning({ id: strategicObjectives.id })
+          objectiveId = inserted.id
+        }
+        if (r.capabilityIds.length > 0) {
+          await tx.insert(objectiveCapabilities).values(
+            r.capabilityIds.map(capabilityId => ({ objectiveId: objectiveId!, capabilityId }))
+          )
+        }
+        if (r.valueStreamIds.length > 0) {
+          await tx.insert(objectiveValueStreams).values(
+            r.valueStreamIds.map(valueStreamId => ({ objectiveId: objectiveId!, valueStreamId }))
+          )
+        }
+      }
+
+      await writeAuditLog(tx, {
+        action: 'objective.import',
+        entityType: 'objective',
+        entityId: orgId,
+        userId: session.user.id,
+        organizationId: orgId,
+        after: { created, updated, skipped, errorCount: errors.length },
+      })
+    })
+
+    revalidatePath('/objectives')
+  }
+
+  return { created, updated, skipped, errors }
 }
