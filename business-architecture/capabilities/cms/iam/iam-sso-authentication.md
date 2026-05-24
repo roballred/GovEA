@@ -23,6 +23,27 @@ The system must allow users to sign in using their agency's identity provider vi
 - If an SSO user is deactivated in GovEA or is not pre-provisioned, sign-in must fail
 - Only one SSO provider is supported in v1
 
+## Identity Provider Failover
+
+GovEA's design choice when the configured identity provider is unavailable is **fail open to local authentication**, not fail closed:
+
+- The SSO sign-in path returns an error to the user when the IdP is unreachable or returns an OIDC error
+- The local-credentials sign-in form remains visible and functional regardless of IdP state — there is no code path that disables local auth based on SSO health
+- A user pre-provisioned with local credentials *and* an SSO identity can sign in either way; an SSO-only user without a local password cannot sign in during an IdP outage (a known v1 trade-off — see Rule above about pre-provisioning)
+- Operators are expected to retain at least one admin account with local credentials so administrative access is never gated solely on a single external dependency
+
+This is a deliberate availability choice: the cost of locking every user out of GovEA while their IdP is degraded is judged higher than the cost of permitting local sign-in for accounts that have it. Operators who require strict fail-closed behavior can remove the local-credentials provider at deploy time and accept the resulting availability profile.
+
+## Integration Boundary (v1)
+
+GovEA's integration boundary in v1 is intentionally narrow:
+
+- **In scope:** OIDC sign-in (one configured provider at a time) and outbound SMTP for system mail (when configured under `ac-email-configuration`)
+- **Out of scope:** SCIM provisioning sync, IdP group → role mapping, multiple simultaneous SSO providers, IdP-driven user deactivation, customer-side configuration of the SSO binding through the admin UI
+- All other inter-system integrations (CMDB, HR, finance, ERP, ITSM, BI) are out of scope for v1 — see the `ea/integration/` capability group for the planned-but-not-built surface
+
+This boundary is explicit so reviewers and operators are not surprised by gaps that are deliberate rather than accidental.
+
 ## Session Invalidation
 
 - Sessions expire after 24 hours and require re-authentication

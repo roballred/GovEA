@@ -26,7 +26,12 @@ Future work tracked separately:
 ## Behaviors
 
 - Create a debt item linked to one or more applications, capabilities, ADRs, or technology records, with a description, debt type, severity, optional target resolution date, and a `security_sensitive` boolean flag
-- Debt types: `lifecycle-risk` (application approaching or past vendor support end), `capability-gap` (capability with no supporting application), `decision-drift` (ADR superseded by practice without formal revision), `known-shortcut` (deliberate technical or architectural compromise), `unreviewed` (object not updated in more than N months)
+- Debt types — UI labels are plain-language per #133; DB slugs are stable for backwards compatibility:
+  - `lifecycle-risk` — **"Lifecycle risk"** — application approaching or past vendor support end
+  - `capability-gap` — **"Unsupported capability"** — capability with no supporting application
+  - `decision-drift` — **"Drift from a recorded decision"** — ADR superseded by practice without formal revision
+  - `known-shortcut` — **"Deliberate trade-off"** — technical or architectural compromise accepted on purpose
+  - `unreviewed` — **"Stale / unreviewed"** — object not updated within the configured window
 - Severity tiers (defined once here; used by this capability and referenced by `rm-end-to-end-traceability` and `rm-repository-completeness`):
   - `critical` — immediate operational or security risk: an application past end-of-life in active use with no remediation plan; a published capability with zero linked personas
   - `high` — significant constraint on future options: application approaching end-of-life, ADR that contradicts current practice without a formal revision

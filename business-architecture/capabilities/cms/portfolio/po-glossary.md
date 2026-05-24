@@ -4,10 +4,11 @@
 The system must allow contributors to maintain a shared terminology reference for the organization's EA repository. The glossary gives architects, contributors, and non-technical stakeholders a common language — reducing ambiguity across capability maps, ADRs, principles, and planning content.
 
 ## Personas
-- **CMS Contributor** — creates, edits, and publishes glossary terms
-- **CMS Administrator** — has all Contributor permissions; can delete records
-- **Content Viewer** — reads published terms to understand EA vocabulary
+- **Junior EA Analyst** — uses the glossary to learn the organization's specific EA vocabulary without specialist training
 - **Department Director** — references the glossary to interpret EA content without needing specialist training
+- **Business Stakeholder** — looks up unfamiliar EA jargon while reading a portfolio view or report
+
+> RBAC roles (Admin / Contributor / Viewer) are not personas. See [`iam-role-based-access-control.md`](../iam/iam-role-based-access-control.md); role behavior is reflected in `## Rules` below.
 
 ## Behaviors
 - Create a glossary term with: term, definition, domain, notes, status, and visibility

@@ -4,9 +4,11 @@
 The system must allow contributors to maintain a structured inventory of the organization's applications, capturing lifecycle status, hosting model, vendor, version, and links to the business capabilities each application supports.
 
 ## Personas
-- **CMS Contributor** — creates, edits, and publishes application records
-- **CMS Administrator** — has all Contributor permissions; can delete records
-- **Content Viewer** — reads published application records through the front-end portfolio view
+- **Enterprise Architect (Central IT)** — owns the application inventory at the enterprise level; uses it as the source of truth for portfolio analysis
+- **Domain Architect** — maintains the slice of the inventory for their domain (e.g. finance, public works) and reviews lifecycle status
+- **Department Director** — reads the inventory to understand what their department depends on and where investment is going
+
+> RBAC roles (Admin / Contributor / Viewer) are not personas. See [`iam-role-based-access-control.md`](../iam/iam-role-based-access-control.md); role behavior is reflected in `## Rules` below.
 
 ## Behaviors
 - Create an application record with: name, description, vendor, version, hosting model, lifecycle status, workflow status, and visibility

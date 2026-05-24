@@ -4,10 +4,11 @@
 The system must allow contributors to record, track, and supersede architecture decisions so the organization has a durable, navigable log of why significant technical choices were made. ADRs use the standard lightweight format: context, decision, consequences.
 
 ## Personas
-- **CMS Contributor** — creates and maintains ADR records
-- **CMS Administrator** — has all Contributor permissions; can delete records
-- **Content Viewer** — reads accepted ADRs through the front-end ADR list and detail views
+- **Domain Architect** — authors most ADRs for their domain; records the why behind each significant decision
+- **Enterprise Architect (Central IT)** — owns enterprise-wide ADRs and reviews domain ADRs for cross-cutting impact
 - **Department Director** — reads significant decisions to understand technical direction and constraints
+
+> RBAC roles (Admin / Contributor / Viewer) are not personas. See [`iam-role-based-access-control.md`](../iam/iam-role-based-access-control.md); role behavior is reflected in `## Rules` below.
 
 ## Behaviors
 - Create an ADR with: number (e.g. ADR-001), title, context, decision, consequences, status, and visibility

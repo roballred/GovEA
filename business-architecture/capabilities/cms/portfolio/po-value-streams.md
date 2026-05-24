@@ -18,11 +18,11 @@ Admin UI: list view, detail view with inline stage and persona management (`apps
 
 ## Personas
 
-- **CMS Contributor** — authors and maintains value stream records; adds stages and assigns capabilities
-- **CMS Administrator** — has all Contributor permissions; can delete value stream records
 - **Enterprise Architect (Central IT)** — uses value streams to communicate how the capability portfolio delivers outcomes to government service recipients; this is the EA practitioner's primary tool for making the mission-technology link legible
 - **Agency EA Coordinator** — maintains their agency's value stream records as a sub-set of the enterprise view
-- **Content Viewer** — reads published value streams and their stages through the frontend display
+- **Department Director** — reads value streams to see how their department's services map to enabling capabilities
+
+> RBAC roles (Admin / Contributor / Viewer) are not personas. See [`iam-role-based-access-control.md`](../iam/iam-role-based-access-control.md); role behavior is reflected in `## Rules` below.
 
 ## Record Fields
 

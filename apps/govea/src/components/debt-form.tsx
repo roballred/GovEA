@@ -35,12 +35,18 @@ interface DebtFormProps {
   prefillInitiativeIds?: string[]
 }
 
-const DEBT_TYPES: { value: DebtType; label: string }[] = [
-  { value: 'lifecycle-risk',  label: 'Lifecycle risk' },
-  { value: 'capability-gap',  label: 'Capability gap' },
-  { value: 'decision-drift',  label: 'Decision drift' },
-  { value: 'known-shortcut',  label: 'Known shortcut' },
-  { value: 'unreviewed',      label: 'Unreviewed' },
+// Labels rewritten under #133 — the original taxonomy (decision-drift,
+// known-shortcut, capability-gap) assumed formal EA vocabulary that the
+// Agency EA Coordinator persona (an assumed persona often from IT operations
+// or project management, not formal EA practice) could not be expected to
+// recognise. Descriptions give the long form so the meaning is plain on hover
+// without losing the structured DB slug. Slugs are unchanged.
+const DEBT_TYPES: { value: DebtType; label: string; description: string }[] = [
+  { value: 'lifecycle-risk', label: 'Lifecycle risk',                description: 'An application is approaching or has passed vendor support end' },
+  { value: 'capability-gap', label: 'Unsupported capability',        description: 'A business capability has no application supporting it' },
+  { value: 'decision-drift', label: 'Drift from a recorded decision', description: 'An ADR is being superseded by practice without a formal revision' },
+  { value: 'known-shortcut', label: 'Deliberate trade-off',          description: 'A technical or architectural compromise was accepted on purpose; record it so it does not get forgotten' },
+  { value: 'unreviewed',     label: 'Stale / unreviewed',            description: 'An object has not been updated or reviewed within the configured window' },
 ]
 
 const SEVERITIES: { value: DebtSeverity; label: string }[] = [
@@ -152,6 +158,9 @@ export function DebtForm({
             className="w-full rounded-md border bg-background px-3 py-2 text-sm">
             {DEBT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
+          <p className="text-xs text-muted-foreground">
+            {DEBT_TYPES.find(t => t.value === debtType)?.description}
+          </p>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="severity" className="text-sm font-medium">Severity</label>
