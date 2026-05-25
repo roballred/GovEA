@@ -1,12 +1,15 @@
+import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import type { Role } from '@/lib/rbac'
 
-// Slice A of #614 — a static stakeholder-facing landing that explains what
-// GovEA is, what is shipped vs maturing, and who it is for. No role-tailored
-// CTA matrix and no priorities-doc sync; those are slices B and C.
+// Slices A + B of #614 — stakeholder-facing landing that explains what GovEA
+// is, what is shipped vs maturing, and who it is for. Slice B adds the
+// "Start here" CTA strip so first-time readers can jump directly to the
+// surfaces that match their role. Slice C will add the live priorities tile.
 //
-// Visible to all authenticated roles. No admin-only configuration details
-// surfaced here.
+// CTAs are role-gated so Viewers never see admin-only routes (#614 acceptance
+// criterion). No admin-only configuration details surfaced in any role.
 
 type Status = 'shipped' | 'partial' | 'planned'
 
@@ -177,9 +180,132 @@ const PERSONAS: Persona[] = [
   { name: 'Instance Administrator', role: 'Runs the platform across organizations.' },
 ]
 
+// ── "Start here" CTAs ────────────────────────────────────────────────────────
+//
+// Each CTA points at a route the user can actually reach. `minRole` is the
+// least-privileged role allowed to see the link, evaluated against the rank
+// order viewer < contributor < admin. This mirrors the sidebar's gating
+// (#548): Viewers never see admin-only routes; Contributors never see
+// admin-only configuration; the audit log is contributor+ per #597/#603.
+
+type CtaCategory = 'read' | 'contribute' | 'administer'
+
+type Cta = {
+  href: string
+  title: string
+  description: string
+  minRole: Role
+  category: CtaCategory
+}
+
+const ROLE_RANK: Record<Role, number> = {
+  viewer: 0,
+  contributor: 1,
+  admin: 2,
+}
+
+const CTAS: Cta[] = [
+  {
+    href: '/executive',
+    title: 'Executive Summary',
+    description: 'Leadership-ready snapshot of the portfolio, capabilities, and initiatives.',
+    minRole: 'viewer',
+    category: 'read',
+  },
+  {
+    href: '/answers',
+    title: 'Ask a question',
+    description: 'Type a plain-language question; get a briefing-style answer drawn from the repository.',
+    minRole: 'viewer',
+    category: 'read',
+  },
+  {
+    href: '/capabilities',
+    title: 'Browse capabilities',
+    description: 'The capability catalogue &mdash; the heart of the people-first traceability chain.',
+    minRole: 'viewer',
+    category: 'read',
+  },
+  {
+    href: '/applications',
+    title: 'Browse applications',
+    description: 'The application portfolio, with lifecycle and risk signals at the list level.',
+    minRole: 'viewer',
+    category: 'read',
+  },
+  {
+    href: '/dashboard',
+    title: 'Practitioner dashboard',
+    description: 'Repository activity, coverage signals, and review-health for active EA work.',
+    minRole: 'contributor',
+    category: 'contribute',
+  },
+  {
+    href: '/audit',
+    title: 'Audit log',
+    description: 'Immutable before/after history of architecture-content changes.',
+    minRole: 'contributor',
+    category: 'contribute',
+  },
+  {
+    href: '/users',
+    title: 'Manage users',
+    description: 'Create, edit, and assign roles for people in this organization.',
+    minRole: 'admin',
+    category: 'administer',
+  },
+  {
+    href: '/settings',
+    title: 'Organization settings',
+    description: 'Workspace settings: theme, enabled modules, and tenancy controls.',
+    minRole: 'admin',
+    category: 'administer',
+  },
+]
+
+const CATEGORY_LABEL: Record<CtaCategory, string> = {
+  read: 'Read & explore',
+  contribute: 'Contribute',
+  administer: 'Administer',
+}
+
+function CtaCard({ cta }: { cta: Cta }) {
+  return (
+    <Link
+      href={cta.href}
+      className="group flex items-start justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+    >
+      <div className="space-y-1">
+        <div className="text-sm font-semibold text-foreground group-hover:text-primary">
+          {cta.title}
+        </div>
+        <div
+          className="text-xs text-muted-foreground leading-relaxed"
+          // Allow &mdash; in the description copy without breaking JSX rules.
+          dangerouslySetInnerHTML={{ __html: cta.description }}
+        />
+      </div>
+      <span
+        aria-hidden
+        className="mt-0.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+      >
+        &rarr;
+      </span>
+    </Link>
+  )
+}
+
 export default async function OverviewPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
+
+  const role: Role = session.user.role
+  const userRank = ROLE_RANK[role]
+  const visibleCtas = CTAS.filter(c => userRank >= ROLE_RANK[c.minRole])
+  const ctaCategoriesInOrder: CtaCategory[] = ['read', 'contribute', 'administer']
+  const ctasByCategory = ctaCategoriesInOrder
+    .map(cat => ({ category: cat, items: visibleCtas.filter(c => c.category === cat) }))
+    .filter(group => group.items.length > 0)
 
   const shipped = CAPABILITY_TILES.filter(t => t.status === 'shipped')
 
@@ -204,6 +330,31 @@ export default async function OverviewPage() {
           . Everything else &mdash; services, objectives, initiatives, decisions,
           data architecture, reports &mdash; layers on top of that chain.
         </p>
+      </section>
+
+      {/* ── Start here (role-aware CTAs) ──────────────────────────────────── */}
+      <section className="space-y-4" data-testid="overview-start-here">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">Start here</h2>
+          <p className="text-sm text-muted-foreground">
+            Jump straight to the surfaces that match what you can do in this
+            workspace.
+          </p>
+        </div>
+        <div className="space-y-5">
+          {ctasByCategory.map(group => (
+            <div key={group.category} className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {CATEGORY_LABEL[group.category]}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {group.items.map(cta => (
+                  <CtaCard key={cta.href} cta={cta} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* ── What you can do today ─────────────────────────────────────────── */}
