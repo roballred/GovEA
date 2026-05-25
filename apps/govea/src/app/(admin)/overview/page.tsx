@@ -3,20 +3,13 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import type { Role } from '@/lib/rbac'
 
-// Slices A + B + C of #614 — stakeholder-facing landing that explains what
-// GovEA is, what is shipped vs maturing, what is coming next, and who it is
-// for. Slice B added the role-aware "Start here" CTAs. Slice C surfaces the
-// current top product priorities so the page does the work of orienting
-// stakeholders to where attention is going.
+// Slices A + B of #614 — stakeholder-facing landing that explains what GovEA
+// is, what is shipped vs maturing, and who it is for. Slice B adds the
+// "Start here" CTA strip so first-time readers can jump directly to the
+// surfaces that match their role. Slice C will add the live priorities tile.
 //
 // CTAs are role-gated so Viewers never see admin-only routes (#614 acceptance
 // criterion). No admin-only configuration details surfaced in any role.
-//
-// MAINTENANCE: the PRIORITIES constant below mirrors the top-five table in
-// `docs/product-priorities.md`. When grooming the doc, update PRIORITIES in
-// lockstep — the doc is the source of truth, this page is the in-product
-// reflection. A future slice may read the doc at build time and remove the
-// duplication, but the static approach is intentional for now (see #614).
 
 type Status = 'shipped' | 'partial' | 'planned'
 
@@ -185,54 +178,6 @@ const PERSONAS: Persona[] = [
   { name: 'Content Viewer', role: 'Non-authoring reader; broad category of stakeholders.' },
   { name: 'CMS Administrator', role: 'Manages users, roles, and org settings.' },
   { name: 'Instance Administrator', role: 'Runs the platform across organizations.' },
-]
-
-// ── Coming next: top product priorities ──────────────────────────────────────
-//
-// Mirrors the top-five table in `docs/product-priorities.md` (groomed 2026-05-25,
-// "Last groomed" date is rendered below). Update this list whenever the doc
-// changes. The doc is the source of truth; this is the in-product reflection.
-
-type Priority = {
-  rank: number
-  title: string
-  why: string
-  refs: string[] // issue numbers, e.g. ['#614']
-}
-
-const PRIORITIES_LAST_GROOMED = '2026-05-25'
-
-const PRIORITIES: Priority[] = [
-  {
-    rank: 1,
-    title: 'In-app stakeholder product overview',
-    why: 'First-time reviewers now land on a richer set of surfaces than they can quickly orient to. This page is that overview; the slice you are reading is part of finishing it.',
-    refs: ['#614'],
-  },
-  {
-    rank: 2,
-    title: 'Traceable release pipeline for the Azure demo',
-    why: 'Every persona-facing feature now depends on the demo being a known build. Manual deploys remain the largest operational risk; promote off On Hold.',
-    refs: ['#504'],
-  },
-  {
-    rank: 3,
-    title: 'Persona validation pass',
-    why: 'Several near-term differentiator items depend on personas whose validation status has not been audited. A focused sweep through `business-architecture/personas/` tagging each as Assumed or Validated unlocks honest prioritisation downstream.',
-    refs: ['#384'],
-  },
-  {
-    rank: 4,
-    title: 'Public-read access — last viewer-experience sub-issue',
-    why: 'Six of seven viewer-experience sub-issues are closed; this is the remaining one and the largest. Persona-validation prerequisite; sequence after rank 3.',
-    refs: ['#547'],
-  },
-  {
-    rank: 5,
-    title: 'Data architecture quality — next slice',
-    why: 'The cheap, persona-validated half is shipped. Remaining Layer 1/2 quality cues and scorecard summary need a product/persona conversation before scoping.',
-    refs: ['#573', '#363'],
-  },
 ]
 
 // ── "Start here" CTAs ────────────────────────────────────────────────────────
