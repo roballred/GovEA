@@ -180,6 +180,25 @@ function GoalTraceView({ trace }: { trace: GoalTrace }) {
         </TraceCard>
       )}
 
+      {/* Initiatives */}
+      <Connector label="advanced by" />
+      <LayerLabel>Strategic Initiatives</LayerLabel>
+      {allInitiatives.length === 0 ? (
+        <Gap message="No initiatives are currently advancing these objectives." />
+      ) : (
+        <TraceCard>
+          {allInitiatives.map(i => (
+            <TraceRow
+              key={i.id}
+              href={`/initiatives/${i.id}`}
+              name={i.name}
+              badge={i.status}
+              badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
+            />
+          ))}
+        </TraceCard>
+      )}
+
       {/* Capabilities */}
       <Connector label="requires" />
       <LayerLabel>Capabilities</LayerLabel>
@@ -202,25 +221,6 @@ function GoalTraceView({ trace }: { trace: GoalTrace }) {
       <Connector label="supported by" />
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={allApps} />
-
-      {/* Initiatives */}
-      {allInitiatives.length > 0 && (
-        <>
-          <Connector label="advanced by" />
-          <LayerLabel>Active Initiatives</LayerLabel>
-          <TraceCard>
-            {allInitiatives.map(i => (
-              <TraceRow
-                key={i.id}
-                href={`/initiatives/${i.id}`}
-                name={i.name}
-                badge={i.status}
-                badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
-              />
-            ))}
-          </TraceCard>
-        </>
-      )}
     </div>
   )
 }
@@ -265,6 +265,25 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
         </div>
       </TraceCard>
 
+      {/* Initiatives */}
+      <Connector label="advanced by" />
+      <LayerLabel>Strategic Initiatives</LayerLabel>
+      {trace.initiatives.length === 0 ? (
+        <Gap message="No initiatives are currently advancing this objective. Consider creating an initiative to track delivery work against this goal." />
+      ) : (
+        <TraceCard>
+          {trace.initiatives.map(i => (
+            <TraceRow
+              key={i.id}
+              href={`/initiatives/${i.id}`}
+              name={i.name}
+              badge={i.status}
+              badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
+            />
+          ))}
+        </TraceCard>
+      )}
+
       {/* Capabilities */}
       <Connector label="requires" />
       <LayerLabel>Capabilities</LayerLabel>
@@ -287,25 +306,6 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
       <Connector label="supported by" />
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={allApps} />
-
-      {/* Initiatives */}
-      <Connector label="advanced by" />
-      <LayerLabel>Active Initiatives</LayerLabel>
-      {trace.initiatives.length === 0 ? (
-        <Gap message="No initiatives are currently advancing this objective. Consider creating an initiative to track delivery work against this goal." />
-      ) : (
-        <TraceCard>
-          {trace.initiatives.map(i => (
-            <TraceRow
-              key={i.id}
-              href={`/initiatives/${i.id}`}
-              name={i.name}
-              badge={i.status}
-              badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
-            />
-          ))}
-        </TraceCard>
-      )}
     </div>
   )
 }
@@ -313,6 +313,9 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
 // ── Capability trace view ─────────────────────────────────────────────────────
 
 function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
+  const strategicInitiativeIds = new Set(trace.strategicInitiatives.map(i => i.id))
+  const directInitiatives = trace.initiatives.filter(i => !strategicInitiativeIds.has(i.id))
+
   return (
     <div className="space-y-1 max-w-2xl">
       {/* Upstream: Goals */}
@@ -350,6 +353,25 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
         </TraceCard>
       )}
 
+      {/* Strategic Initiatives */}
+      <Connector label="advanced by" />
+      <LayerLabel>Strategic Initiatives</LayerLabel>
+      {trace.strategicInitiatives.length === 0 ? (
+        <Gap message="No initiatives linked through these objectives — delivery work is not yet tied to the strategic chain." />
+      ) : (
+        <TraceCard>
+          {trace.strategicInitiatives.map(i => (
+            <TraceRow
+              key={i.id}
+              href={`/initiatives/${i.id}`}
+              name={i.name}
+              badge={i.status}
+              badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
+            />
+          ))}
+        </TraceCard>
+      )}
+
       {/* Anchor: Capability */}
       <Connector label="requires" />
       <LayerLabel>Capability</LayerLabel>
@@ -368,13 +390,13 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={trace.applications} />
 
-      {/* Initiatives */}
-      {trace.initiatives.length > 0 && (
+      {/* Direct capability initiatives */}
+      {directInitiatives.length > 0 && (
         <>
           <Connector label="changed by" />
-          <LayerLabel>Initiatives</LayerLabel>
+          <LayerLabel>Capability Initiatives</LayerLabel>
           <TraceCard>
-            {trace.initiatives.map(i => (
+            {directInitiatives.map(i => (
               <TraceRow
                 key={i.id}
                 href={`/initiatives/${i.id}`}
@@ -568,9 +590,9 @@ export default async function TraceabilityPage({
     trace.name
 
   const subtitle =
-    trace.kind === 'goal'      ? 'Goal → Objectives → Capabilities → Technology Trace' :
-    trace.kind === 'objective' ? 'Goal → Objective → Technology Trace' :
-    trace.kind === 'capability' ? 'Goal → Objective → Capability → Delivery Trace' :
+    trace.kind === 'goal'      ? 'Goal → Objectives → Initiatives → Capabilities → Technology Trace' :
+    trace.kind === 'objective' ? 'Goal → Objective → Initiatives → Technology Trace' :
+    trace.kind === 'capability' ? 'Goal → Objective → Initiatives → Capability → Delivery Trace' :
     'Persona → Service → Technology Trace'
 
   return (
