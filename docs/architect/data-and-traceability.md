@@ -3,10 +3,10 @@
 GovEA's repository model is centered on mission-first traceability. The basic chain is:
 
 ```text
-Personas -> Capabilities -> Applications
+Goals -> Strategic Objectives -> Initiatives -> Capabilities -> Applications
 ```
 
-The rest of the model adds planning, services, decisions, principles, data architecture, and reporting context around that chain.
+Personas and services provide the people-and-delivery context around that chain. Decisions, principles, data architecture, and reporting add governance and portfolio context without replacing the mission-first path.
 
 For field-level schema detail, see `docs/data-model.md`.
 

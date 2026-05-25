@@ -28,9 +28,11 @@ Free. Open source. Runs on-prem or as a hosted service.
 GovEA is built around a mission-first traceability chain:
 
 ```text
-Personas -> Capabilities -> Applications
+Goals -> Strategic Objectives -> Initiatives -> Capabilities -> Applications
 ```
 
+- **Goals** define broad strategic intent above measurable **Strategic Objectives**.
+- **Initiatives** connect strategic objectives to the capabilities and applications changed by delivery work.
 - Every **Application** must link to at least one **Capability**.
 - Every **Capability** must link to at least one **Persona**.
 - **Services** model the government-facing delivery layer and link to personas, capabilities, and value streams. Supporting applications are surfaced through linked capabilities.

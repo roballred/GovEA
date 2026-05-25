@@ -26,6 +26,7 @@ export interface TraceInitiative {
 export interface TraceObjective {
   id: string; name: string; timeHorizon: string | null
   goals?: TraceGoal[]
+  initiatives?: TraceInitiative[]
 }
 export interface TraceGoal {
   id: string; name: string; planningHorizon: string | null
@@ -56,6 +57,7 @@ export interface CapabilityTrace {
   id: string; name: string; domain: string | null; description: string | null; status: string
   goals: TraceGoal[]
   objectives: TraceObjective[]
+  strategicInitiatives: TraceInitiative[]
   applications: TraceApp[]
   initiatives: TraceInitiative[]
   personas: TracePersona[]
@@ -278,9 +280,26 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
   if (!visible) return null
 
   const objectiveIds = row.objectiveCapabilities.map(({ objective }) => objective.id)
-  const goalsByObjective = await getGoalsByObjective(objectiveIds)
+  const [goalsByObjective, initiativeObjectiveRows] = await Promise.all([
+    getGoalsByObjective(objectiveIds),
+    objectiveIds.length > 0
+      ? db.query.initiativeObjectives.findMany({
+          where: inArray(initiativeObjectives.objectiveId, objectiveIds),
+          with: { initiative: true },
+        })
+      : Promise.resolve([]),
+  ])
   const goalTraceRows = dedupeTraceRows(
     objectiveIds.flatMap((objectiveId) => goalsByObjective.get(objectiveId) ?? [])
+  )
+  const initiativesByObjective = new Map<string, TraceInitiative[]>()
+  for (const { objectiveId, initiative } of initiativeObjectiveRows) {
+    const initiatives = initiativesByObjective.get(objectiveId) ?? []
+    initiatives.push({ id: initiative.id, name: initiative.name, status: initiative.status })
+    initiativesByObjective.set(objectiveId, initiatives)
+  }
+  const strategicInitiatives = dedupeTraceRows(
+    objectiveIds.flatMap((objectiveId) => initiativesByObjective.get(objectiveId) ?? [])
   )
 
   return {
@@ -294,7 +313,9 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     objectives: row.objectiveCapabilities.map(({ objective: o }) => ({
       id: o.id, name: o.name, timeHorizon: o.timeHorizon,
       goals: goalsByObjective.get(o.id) ?? [],
+      initiatives: initiativesByObjective.get(o.id) ?? [],
     })),
+    strategicInitiatives,
     applications: row.applicationCapabilities.map(({ application: a }) => ({
       id: a.id, name: a.name, vendor: a.vendor, lifecycleStatus: a.lifecycleStatus,
     })),
