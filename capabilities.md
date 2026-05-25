@@ -131,7 +131,7 @@ How content is presented to authenticated users and, optionally, the public.
 |---|---|---|
 | Navigation | Implemented | App shell with role-aware sidebar navigation plus a distinct instance-admin console shell |
 | Portfolio Views | Implemented | List and detail pages for all EA entity types |
-| Mission-to-Technology Traceability Views | Implemented | Read-only layered trace views from strategic objectives, capabilities, and services to supporting applications and related records |
+| Mission-to-Technology Traceability Views | Implemented | Read-only layered trace views from goals, strategic objectives, initiatives, capabilities, and services to supporting applications and related records |
 | Guided Answer Views | Implemented | `/answers?q=` assembles capabilities, services, technology, active initiatives, and strategic objectives into a plain-language stakeholder answer with relevance explanations |
 | Relationship Navigation | Implemented | Navigate between linked entities (capability <-> application <-> persona) |
 | Value Stream Display | Implemented | Visualize value stream stages with linked capabilities |
