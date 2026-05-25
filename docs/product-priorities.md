@@ -6,6 +6,8 @@ This note summarizes the top next product moves from the current capability inve
 
 Use this alongside [`docs/risk-register.md`](./risk-register.md) when a backlog item depends on unresolved product-fit, scope, operational, or documentation risks.
 
+> **Maintenance note.** The in-product `/overview` page renders a `Coming next` tile that mirrors the top-five table below. When you change the top five (re-rank, add, remove, or rewrite an entry) **also update `PRIORITIES` and `PRIORITIES_LAST_GROOMED` in [`apps/govea/src/app/(admin)/overview/page.tsx`](../apps/govea/src/app/(admin)/overview/page.tsx)** so the in-app view stays honest. This doc is the source of truth; the page is a static reflection until a future slice reads the doc at build time.
+
 ## Current Signal
 
 A nine-PR ship on 2026-05-24 took out the prior top-five in one window:
