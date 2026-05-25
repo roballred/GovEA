@@ -12,6 +12,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 const ROUTES = [
   '/dashboard',
+  '/overview',   // #614 — stakeholder landing, all roles
   '/capabilities',
   '/applications',
   '/adrs',

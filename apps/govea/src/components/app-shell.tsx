@@ -127,6 +127,20 @@ function SidebarContent({
         Dashboard
       </Link>
 
+      {/* Overview (#614) — stakeholder-facing landing, visible to all roles. */}
+      <Link
+        href="/overview"
+        onClick={onClose}
+        className={cn(
+          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          pathname === '/overview' || pathname.startsWith('/overview/')
+            ? 'bg-white/15 text-white'
+            : 'text-white/70 hover:bg-white/10 hover:text-white'
+        )}
+      >
+        Overview
+      </Link>
+
       {/* Executive Summary */}
       <Link
         href="/executive"
