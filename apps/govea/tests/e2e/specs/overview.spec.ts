@@ -87,3 +87,29 @@ test('viewer sees neither Manage users nor Audit log CTA', async ({ browser }) =
   await expect(startHere(page).getByRole('link', { name: /Executive Summary/i })).toBeVisible()
   await ctx.close()
 })
+
+// ── Coming next priorities tile (slice C) ────────────────────────────────────
+//
+// Tile is role-agnostic; same shortlist visible to every role since priorities
+// are honest signal about what is coming next. Maintenance: the rendered
+// content mirrors docs/product-priorities.md (see the page header comment).
+
+test('coming-next tile renders all five priorities for each role', async ({ browser }) => {
+  for (const role of ROLES) {
+    const ctx = await browser.newContext({ storageState: `tests/e2e/.auth/${role}.json` })
+    const page = await ctx.newPage()
+    await page.goto('/overview')
+    const section = page.getByTestId('overview-coming-next')
+    await expect(section, `${role}: coming-next section should render`).toBeVisible()
+    // Each priority renders an <li>; expect exactly 5.
+    await expect(
+      section.locator('ol > li'),
+      `${role}: should see 5 priority rows`,
+    ).toHaveCount(5)
+    // Spot-check the rank-1 title so changes to the doc surface in CI.
+    await expect(
+      section.getByRole('heading', { name: /In-app stakeholder product overview/i }),
+    ).toBeVisible()
+    await ctx.close()
+  }
+})
