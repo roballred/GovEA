@@ -44,6 +44,35 @@ export default async function ReportsPage() {
         </div>
       </section>
 
+      {/* #537 + #538 — Enterprise Architect persona aggregations across the
+          multi-org federation substrate. Visible to every authenticated user
+          (they aggregate only what the caller can already read). */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Enterprise View</h2>
+        <div className="rounded-lg border border-border bg-card divide-y">
+          <Link
+            href="/reports/enterprise-adoption"
+            className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
+          >
+            <div>
+              <p className="text-sm font-medium group-hover:text-primary transition-colors">Capability Adoption</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Which agencies have linked to the capabilities your organization publishes instance-wide. Inbound capability→capability links, aggregated.</p>
+            </div>
+            <span className="text-muted-foreground text-sm">→</span>
+          </Link>
+          <Link
+            href="/reports/enterprise-duplicates"
+            className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
+          >
+            <div>
+              <p className="text-sm font-medium group-hover:text-primary transition-colors">Capability Duplicates</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Candidate-pair duplicates across connected agencies. Domain-grouped, side-by-side. First-cut heuristic — review and decide whether consolidation makes sense.</p>
+            </div>
+            <span className="text-muted-foreground text-sm">→</span>
+          </Link>
+        </div>
+      </section>
+
       {frameworkOverlay && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">TOGAF Framework</h2>
