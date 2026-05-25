@@ -42,7 +42,7 @@ export default async function EnterpriseDuplicatesReport() {
 
       {candidates.length === 0 ? (
         <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          No candidate duplicates surfaced across the capabilities you can currently see. As more agencies connect and publish capabilities, this report will populate. (Same-org duplicates are intentionally excluded — that's a different concern handled inside each org's catalog.)
+          No candidate duplicates surfaced across the capabilities you can currently see. As more agencies connect and publish capabilities, this report will populate. (Same-org duplicates are intentionally excluded — that&apos;s a different concern handled inside each org&apos;s catalog.)
         </div>
       ) : (
         <div className="space-y-8">

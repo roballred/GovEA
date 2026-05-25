@@ -74,7 +74,7 @@ export default async function EnterpriseAdoptionReport() {
 
       {report.publishedCount === 0 ? (
         <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          Your organization has no <code className="rounded bg-muted px-1">instance</code>-visibility capabilities yet. Set a capability's visibility to <em>Instance-wide</em> for it to show up here.
+          Your organization has no <code className="rounded bg-muted px-1">instance</code>-visibility capabilities yet. Set a capability&apos;s visibility to <em>Instance-wide</em> for it to show up here.
         </div>
       ) : (
         <div className="space-y-3">
