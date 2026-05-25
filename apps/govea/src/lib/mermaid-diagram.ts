@@ -16,6 +16,7 @@ function label(primary: string, secondary?: string | null): string {
 function capabilityDiagram(trace: CapabilityTrace): string {
   const lines: string[] = ['graph LR']
   const focal = nid('cap', trace.id)
+  const initiativeNodes = new Set<string>()
 
   lines.push(`  ${focal}${label(trace.name, trace.domain)}:::capability`)
 
@@ -29,6 +30,15 @@ function capabilityDiagram(trace: CapabilityTrace): string {
     lines.push(`  ${n}${label(o.name, o.timeHorizon)}:::objective`)
     for (const g of o.goals ?? []) {
       lines.push(`  ${nid('goal', g.id)} --> ${n}`)
+    }
+    for (const i of o.initiatives ?? []) {
+      const ini = nid('ini', i.id)
+      if (!initiativeNodes.has(ini)) {
+        lines.push(`  ${ini}${label(i.name, i.status)}:::initiative`)
+        initiativeNodes.add(ini)
+      }
+      lines.push(`  ${n} -.-> ${ini}`)
+      lines.push(`  ${ini} -.-> ${focal}`)
     }
     lines.push(`  ${n} --> ${focal}`)
   }
@@ -47,7 +57,10 @@ function capabilityDiagram(trace: CapabilityTrace): string {
 
   for (const i of trace.initiatives) {
     const n = nid('ini', i.id)
-    lines.push(`  ${n}${label(i.name, i.status)}:::initiative`)
+    if (!initiativeNodes.has(n)) {
+      lines.push(`  ${n}${label(i.name, i.status)}:::initiative`)
+      initiativeNodes.add(n)
+    }
     lines.push(`  ${n} -.-> ${focal}`)
   }
 
