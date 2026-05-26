@@ -8,19 +8,22 @@ Capability definitions live in [`business-architecture/capabilities/`](./busines
 
 ## Capability Groups
 
-| # | Group | Status |
-|---|---|---|
-| 1 | [Identity & Access Management](#1-identity--access-management) | Implemented |
-| 2 | [Content Management](#2-content-management) | Partially implemented |
-| 3 | [Portfolio Management](#3-portfolio-management) | Partially implemented |
-| 4 | [Planning & Roadmap](#4-planning--roadmap) | Implemented |
-| 5 | [Frontend Display](#5-frontend-display) | Partially implemented |
-| 6 | [Admin Configuration](#6-admin-configuration) | Partially implemented |
-| 7 | [Multi-Organization Federation](#7-multi-organization-federation) | Prototype |
-| 8 | [Repository & Modelling](#8-repository--modelling) | Partially implemented |
-| 9 | [Data Architecture](#9-data-architecture) | Partially implemented |
-| 10 | [Framework Alignment](#10-framework-alignment) | Partially implemented |
-| 11 | [Deployment & Operations](#11-deployment--operations) | Partially implemented |
+The **Scope** column shows whether a group is in v1 (current release) or v2 (deferred), defined in each group's parent file under `business-architecture/capabilities/`. The **Status** column shows what's actually shipped today against that scope. Scope is the canonical signal for non-technical readers planning around the roadmap; Status reflects the current implementation surface.
+
+| # | Group | Scope | Status |
+|---|---|---|---|
+| 1 | [Identity & Access Management](#1-identity--access-management) | v1 | Implemented |
+| 2 | [Content Management](#2-content-management) | v1 | Partially implemented |
+| 3 | [Portfolio Management](#3-portfolio-management) | v1 | Partially implemented |
+| 4 | [Planning & Roadmap](#4-planning--roadmap) | v1 | Implemented |
+| 5 | [Frontend Display](#5-frontend-display) | v1 | Partially implemented |
+| 6 | [Admin Configuration](#6-admin-configuration) | v1 | Partially implemented |
+| 7 | [Multi-Organization Federation](#7-multi-organization-federation) | v1 | Prototype |
+| 8 | [Repository & Modelling](#8-repository--modelling) | v1 | Partially implemented |
+| 9 | [Data Architecture](#9-data-architecture) | v1 | Partially implemented |
+| 10 | [Framework Alignment](#10-framework-alignment) | v1 | Partially implemented |
+| 11 | [Deployment & Operations](#11-deployment--operations) | v1 | Partially implemented |
+| 12 | [Integration](business-architecture/capabilities/ea/integration/integration.md) | v2 | Not started — deferred to v2 (#10, #382) |
 
 ---
 

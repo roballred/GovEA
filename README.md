@@ -182,22 +182,24 @@ Azure deployments can build images in the cloud via `az acr build` and do not re
 
 ## Capabilities
 
-GovEA's capability surface spans 10 groups, each driven by government EA practitioner personas and validated through the EasyEA workflow:
+GovEA's capability surface spans 12 groups, each driven by government EA practitioner personas and validated through the EasyEA workflow. The **Scope** column tells a non-technical reader which groups are in v1 (current release) vs. deferred to v2 — addressing the ARB finding (#10) that "26 sub-capabilities with no prioritization signal is not useful to a non-technical decision-maker."
 
-| Group | Description |
-|---|---|
-| Repository & Modelling | Architecture repository, traceability, ADRs, debt tracking |
-| Application & IT Portfolio | Portfolio management, technology lifecycle, rationalisation |
-| Business & Capability Architecture | Capability mapping, strategy alignment, operating model |
-| Planning & Analysis | Value streams, roadmapping, scenario planning, heatmaps |
-| Governance & Compliance | Review processes, regulatory mapping, audit trail |
-| Integration | ITSM, CMDB, DevOps, cloud, and business system connectors |
-| Collaboration & Stakeholder Engagement | Role-based access, stakeholder views, change notifications |
-| Reporting & Documentation | Plain-language outputs, configurable reports, KPI tracking |
-| Framework Alignment | Optional TOGAF/SAFe-style overlays, mappings, and framework-aware reports |
-| Data Architecture | Data entities, attributes, categories, business keys, and semantic relationships for data-architecture work |
+| Group | Scope | Description |
+|---|---|---|
+| Identity & Access Management | v1 | OIDC SSO, role-based access, instance administration, immutable audit trail |
+| Content Management | v1 | Authoring workflow, draft/published/archived status, visibility scopes, taxonomy |
+| Portfolio Management | v1 | Applications, ADRs, architecture debt, capability-application linkage |
+| Planning & Roadmap | v1 | Goals, strategic objectives, initiatives, executive roadmap timeline |
+| Frontend Display | v1 | Executive summary, heatmap, roadmap, impact analysis, guided answers, the Overview page |
+| Admin Configuration | v1 | Per-org themes, modules, email configuration, taxonomy admin, notices |
+| Multi-Organization Federation | v1 | Cross-org connections, federated content, cross-org capability links |
+| Repository & Modelling | v1 | Capability mapping, persona modelling, repository completeness, traceability views |
+| Data Architecture | v1 | Entities, attributes, business keys, semantic relationships, Chen-notation diagram |
+| Framework Alignment | v1 | Optional TOGAF/SAFe overlays, mappings, framework-aware reports |
+| Deployment & Operations | v1 | Containerised deployment, health/monitoring, upgrade/migration procedures |
+| Integration | v2 | ITSM, CMDB, DevOps, cloud, and business system connectors — deferred to v2 (#382) |
 
-For the full capability inventory, including implementation status, see [`capabilities.md`](./capabilities.md).
+For the full capability inventory, including implementation status against scope, see [`capabilities.md`](./capabilities.md).
 
 Capabilities are defined one at a time through the EasyEA workflow: persona validation -> capability definition -> ARB review -> implementation issues. Framework alignment is treated as an optional overlay: it may map GovEA content to TOGAF or other frameworks, but it does not replace the core GovEA model.
 
