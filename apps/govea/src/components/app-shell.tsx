@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactNode, type KeyboardEvent } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -8,6 +8,9 @@ import type { Role } from '@/lib/rbac'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
 import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
+import {
+  groupStorageKey, defaultGroupOpen, readGroupOpen, writeGroupOpen,
+} from '@/lib/nav-groups'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
@@ -110,6 +113,49 @@ function SidebarContent({
   const isContributor = role === 'admin' || role === 'contributor'
   const isViewer = role === 'viewer'
 
+  // #479 collapsible group state. Defaults come from `defaultGroupOpen`
+  // (pure logic in @/lib/nav-groups) so the initial render is stable
+  // across SSR + hydration. After mount we sync any stored preferences.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    for (const g of NAV_GROUPS) initial[g.label] = defaultGroupOpen(g.label)
+    return initial
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storage = window.localStorage
+    setOpenGroups(prev => {
+      const next = { ...prev }
+      let changed = false
+      for (const g of NAV_GROUPS) {
+        const stored = readGroupOpen(g.label, storage)
+        if (stored !== prev[g.label]) {
+          next[g.label] = stored
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [])
+
+  const toggleGroup = useCallback((label: string) => {
+    setOpenGroups(prev => {
+      const open = !prev[label]
+      if (typeof window !== 'undefined') {
+        writeGroupOpen(label, open, window.localStorage)
+      }
+      return { ...prev, [label]: open }
+    })
+  }, [])
+
+  const onGroupKeyDown = useCallback((e: KeyboardEvent<HTMLButtonElement>, label: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      toggleGroup(label)
+    }
+  }, [toggleGroup])
+
   return (
     <nav className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
       {/* Dashboard */}
@@ -186,15 +232,47 @@ function SidebarContent({
               !(item.viewerHidden && isViewer)
           )
           if (visibleItems.length === 0) return null
+          const isOpen = openGroups[group.label] ?? defaultGroupOpen(group.label)
+          // Auto-open a collapsed group whose current route is inside it so
+          // active-state highlight stays visible even when the user previously
+          // collapsed the group. Toggling collapses it again.
+          const containsActive = visibleItems.some(item =>
+            pathname === item.href || pathname.startsWith(item.href + '/')
+          )
+          const effectiveOpen = isOpen || containsActive
+          const groupId = groupStorageKey(group.label).replace(/[^a-z0-9]+/gi, '-')
           return (
             <div key={group.label}>
-              <p
+              <button
+                type="button"
+                aria-expanded={effectiveOpen}
+                aria-controls={`navgroup-${groupId}`}
+                onClick={() => toggleGroup(group.label)}
+                onKeyDown={(e) => onGroupKeyDown(e, group.label)}
                 data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : group.label === 'Reports' ? 'nav-reports' : undefined}
-                className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none"
+                className="flex w-full items-center justify-between px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none rounded-sm hover:text-white/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30 transition-colors"
               >
-                {group.label}
-              </p>
-              <div className="mt-0.5 space-y-0.5">
+                <span>{group.label}</span>
+                {/* Disclosure triangle: rotates 90° when open. */}
+                <svg
+                  className={cn(
+                    'h-3 w-3 shrink-0 transition-transform duration-150 ease-out',
+                    effectiveOpen ? 'rotate-90' : 'rotate-0'
+                  )}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <div
+                id={`navgroup-${groupId}`}
+                hidden={!effectiveOpen}
+                className="mt-0.5 space-y-0.5"
+              >
                 {visibleItems.map(item => {
                   const active = pathname === item.href || pathname.startsWith(item.href + '/')
                   return (
