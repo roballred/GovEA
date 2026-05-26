@@ -54,15 +54,15 @@ PR #606 shipped the Email Configuration UI, encrypted SMTP settings, delivery lo
 - **Impact:** High
 - **Likelihood:** Medium
 - **Owner:** Product / Engineering
-- **Status:** Mitigated
+- **Status:** Open
 - **Last reviewed:** 2026-05-25
-- **Mitigation:** #504 release pipeline shipped — see [`docs/release-pipeline.md`](./release-pipeline.md). Main-branch merges build SHA-tagged immutable images, record commit/digest/revision in the run summary, smoke-test the live URL, and expose a one-click rollback workflow.
+- **Mitigation:** Keep CI public, but move Azure deploy, rollback, and schedule automation into a private operator-owned repository or another private deployment system. See [`docs/release-pipeline.md`](./release-pipeline.md).
 
 #### Details
 
 PRs #493 and #498 stabilized the Azure demo runtime and separated demo-mode shortcuts from `NODE_ENV`. That fixed the immediate runtime mismatch, but the process was still too manual for a demo environment that users and reviewers depend on.
 
-#504 closed the gap with two GitHub Actions workflows (`deploy-azure-dev.yml` and `rollback-azure-dev.yml`) using OIDC federated credentials, so no long-lived Azure secrets live in the repo. Risk drops to **Mitigated** once a maintainer completes the one-time Azure AD app + federated-credential setup documented in the release-pipeline doc. Re-open if the demo deployment process regresses to manual operator steps.
+#504 proved the desired release record shape, but public GitHub Actions workflow files and logs expose operator-specific deployment topology in a public repository. The public repo should not contain Azure account-specific workflow definitions, resource identifiers, or release logs. Risk remains **Open** until traceable deploy/rollback/schedule automation is rebuilt in a private operator-controlled location.
 
 ### R-003 - Data Architecture can keep expanding without quality loops or a deliberate v1 boundary
 

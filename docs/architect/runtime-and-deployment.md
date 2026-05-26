@@ -116,11 +116,11 @@ When changing package-manager, Node, container base-image, or entrypoint behavio
 
 ## Azure Demo Implementation
 
-The shared demo currently runs in Azure Container Apps through `scripts/azure-dev.sh`.
+Azure demo deployments can run in Azure Container Apps through `scripts/azure-dev.sh`. Operator-specific Azure account details are intentionally not documented in this public repository.
 
 ```mermaid
 flowchart TD
-  User["Browser"] --> ACA["Azure Container App: govea-dev"]
+  User["Browser"] --> ACA["Azure Container App"]
   ACA --> App["GovEA app container"]
   ACA --> Pg["PostgreSQL sidecar"]
   App --> Pg
@@ -165,17 +165,17 @@ Azure demo commands:
 
 ```bash
 bash scripts/azure-dev.sh status
-az containerapp revision list --name govea-dev --resource-group govea-dev-rg -o table
-az containerapp logs show --name govea-dev --resource-group govea-dev-rg --tail 120
-curl -I -L https://govea-dev.wittyocean-795e193a.eastus.azurecontainerapps.io/login
+az containerapp revision list --name "$GOVEA_AZURE_CONTAINERAPP" --resource-group "$GOVEA_AZURE_RG" -o table
+az containerapp logs show --name "$GOVEA_AZURE_CONTAINERAPP" --resource-group "$GOVEA_AZURE_RG" --tail 120
+curl -I -L "$(bash scripts/azure-dev.sh url)/login"
 ```
 
 ## Current Limitations
 
-- There is not yet a traceable release pipeline from merge to deploy.
+- Traceable release automation belongs in a private operator-owned repository or another private deployment system, not in this public repo.
 - The shared demo uses a sidecar Postgres instance, not a managed production database.
-- Rollback is manual through the target platform's image or revision controls.
-- The Azure deployment script records image tags in output, but the repository does not yet persist a release record automatically.
+- Rollback is manual through the target platform's image or revision controls unless the private operator deployment system provides a rollback workflow.
+- The Azure deployment script records image tags in output, but this public repository does not persist operator release records automatically.
 - Production deployment guidance for non-Azure container platforms is still intentionally light.
 
 Issue #504 tracks the release-pipeline work needed to make demo deployment traceable by commit, image digest, revision, smoke result, and rollback path.
