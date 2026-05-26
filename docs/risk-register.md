@@ -25,7 +25,7 @@ This register is intentionally lightweight:
 | ID | Risk | Category | Impact | Likelihood | Mitigation | Owner | Status | Last reviewed |
 |---|---|---|---|---|---|---|---|---|
 | R-001 | Email-dependent features can appear ready while the SMTP transport is still stubbed | Product / Operations | High | Medium | Finish the real SMTP send path under #528 before starting notification, password-reset, or digest features | Product / Engineering | Open | 2026-05-21 |
-| R-002 | Manual demo deployment can obscure which commit, image, and runtime configuration are live | Operational / Release | High | Medium | Ship #504 so main-branch releases build immutable images, record deployment metadata, smoke test after deploy, and keep rollback clear | Product / Engineering | Open | 2026-05-21 |
+| R-002 | Manual demo deployment can obscure which commit, image, and runtime configuration are live | Operational / Release | High | Medium | #504 release pipeline shipped — see [`docs/release-pipeline.md`](./release-pipeline.md). Main-branch merges build SHA-tagged immutable images, record commit/digest/revision in the run summary, smoke-test the live URL, and expose a one-click rollback workflow. | Product / Engineering | Mitigated | 2026-05-25 |
 | R-003 | Data Architecture can keep expanding without quality loops or a deliberate v1 boundary | Scope | Medium | Medium | Prioritize #570 and #573 quality cues before expanding conceptual/logical modeling under #363 | Product | Open | 2026-05-21 |
 | R-004 | Stakeholder-facing analytics are still driven by assumed personas and unvalidated trust signals | Product Fit | High | High | Run #384 and activate #103 Phase 1 manual feedback logging before building more analysis surfaces | Product | Open | 2026-05-21 |
 | R-005 | Glossary, tour, and navigation help can drift if the settled "Modules" language is not enforced | Product / UX | Medium | Medium | Complete #512 before expanding inherited glossary/menu definitions in #499 | Product | Open | 2026-05-21 |
@@ -54,13 +54,15 @@ PR #606 shipped the Email Configuration UI, encrypted SMTP settings, delivery lo
 - **Impact:** High
 - **Likelihood:** Medium
 - **Owner:** Product / Engineering
-- **Status:** Open
-- **Last reviewed:** 2026-05-21
-- **Mitigation:** Ship #504 so main-branch releases build immutable images, record deployment metadata, smoke test after deploy, and keep rollback clear.
+- **Status:** Mitigated
+- **Last reviewed:** 2026-05-25
+- **Mitigation:** #504 release pipeline shipped — see [`docs/release-pipeline.md`](./release-pipeline.md). Main-branch merges build SHA-tagged immutable images, record commit/digest/revision in the run summary, smoke-test the live URL, and expose a one-click rollback workflow.
 
 #### Details
 
-PRs #493 and #498 stabilized the Azure demo runtime and separated demo-mode shortcuts from `NODE_ENV`. That fixed the immediate runtime mismatch, but the process is still too manual for a demo environment that users and reviewers depend on. Without a traceable release pipeline, maintainers can lose time reconstructing which commit, image digest, and Container Apps revision are actually live.
+PRs #493 and #498 stabilized the Azure demo runtime and separated demo-mode shortcuts from `NODE_ENV`. That fixed the immediate runtime mismatch, but the process was still too manual for a demo environment that users and reviewers depend on.
+
+#504 closed the gap with two GitHub Actions workflows (`deploy-azure-dev.yml` and `rollback-azure-dev.yml`) using OIDC federated credentials, so no long-lived Azure secrets live in the repo. Risk drops to **Mitigated** once a maintainer completes the one-time Azure AD app + federated-credential setup documented in the release-pipeline doc. Re-open if the demo deployment process regresses to manual operator steps.
 
 ### R-003 - Data Architecture can keep expanding without quality loops or a deliberate v1 boundary
 
