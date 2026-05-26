@@ -16,15 +16,17 @@
 #   - az CLI installed and authenticated (az login)
 #   - No local Docker daemon required — image builds run in Azure via az acr build
 #   - Run from repo root
+#   - Set the GOVEA_AZURE_* environment variables listed in `help`
 
 set -euo pipefail
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-RG="govea-dev-rg"
-LOCATION="eastus"
-ACR="goveadevacr"
-ACA_ENV="govea-dev-env"
-ACA_APP="govea-dev"
+RG="${GOVEA_AZURE_RG:-}"
+LOCATION="${GOVEA_AZURE_LOCATION:-eastus}"
+ACR="${GOVEA_AZURE_ACR:-}"
+ACA_ENV="${GOVEA_AZURE_CONTAINERAPP_ENV:-}"
+ACA_APP="${GOVEA_AZURE_CONTAINERAPP:-}"
+IMAGE_REPO="${GOVEA_AZURE_IMAGE_REPO:-govea-app}"
 # IMAGE is set at build time using a timestamp tag so Azure Container Apps
 # always sees a new image reference and pulls the updated image.
 IMAGE=""
@@ -33,7 +35,15 @@ IMAGE=""
 log()  { echo ""; echo "==> $*"; }
 die()  { echo "ERROR: $*" >&2; exit 1; }
 
+require_config() {
+  [[ -n "$RG" ]]      || die "Set GOVEA_AZURE_RG to the target resource group."
+  [[ -n "$ACR" ]]     || die "Set GOVEA_AZURE_ACR to the target Azure Container Registry name."
+  [[ -n "$ACA_ENV" ]] || die "Set GOVEA_AZURE_CONTAINERAPP_ENV to the target Container Apps environment."
+  [[ -n "$ACA_APP" ]] || die "Set GOVEA_AZURE_CONTAINERAPP to the target Container App name."
+}
+
 require_deploy() {
+  require_config
   az containerapp show --name "$ACA_APP" --resource-group "$RG" \
     --query name -o tsv &>/dev/null \
     || die "App not deployed. Run: ./scripts/azure-dev.sh deploy"
@@ -66,13 +76,13 @@ build_and_push() {
   # reference and is forced to pull the updated image (avoids :latest caching).
   local tag
   tag="$(date +%Y%m%d-%H%M%S)"
-  IMAGE="${ACR}.azurecr.io/govea-dev:${tag}"
+  IMAGE="${ACR}.azurecr.io/${IMAGE_REPO}:${tag}"
 
   log "Building image in Azure (az acr build) — tag: ${tag}..."
   az acr build \
     --registry "$ACR" \
-    --image "govea-dev:${tag}" \
-    --image "govea-dev:latest" \
+    --image "${IMAGE_REPO}:${tag}" \
+    --image "${IMAGE_REPO}:latest" \
     --file docker/Containerfile.dev \
     .
 }
@@ -143,6 +153,7 @@ deploy_containerapp() {
 # ── Commands ───────────────────────────────────────────────────────────────────
 
 cmd_deploy() {
+  require_config
   log "Creating resource group (${RG})..."
   az group create --name "$RG" --location "$LOCATION" --output none
 
@@ -255,6 +266,7 @@ cmd_url() {
 }
 
 cmd_status() {
+  require_config
   az containerapp show \
     --name "$ACA_APP" \
     --resource-group "$RG" \
@@ -270,7 +282,7 @@ cmd_status() {
 
 cmd_revisions() {
   # Read-only: lists every Container App revision newest first so
-  # operators can pick a target for the Rollback Azure dev workflow.
+  # operators can pick a target for a private rollback workflow.
   require_deploy
   az containerapp revision list \
     --name "$ACA_APP" \
@@ -324,6 +336,16 @@ Usage: ./scripts/azure-dev.sh <command>
 Cost notes:
   Container Apps consumption plan — no charge when stopped (min-replicas=0).
   ACR Basic tier is ~$5/month regardless of usage.
+
+Required Azure configuration:
+  GOVEA_AZURE_RG                 Target resource group
+  GOVEA_AZURE_ACR                Target Azure Container Registry name
+  GOVEA_AZURE_CONTAINERAPP_ENV   Target Container Apps environment name
+  GOVEA_AZURE_CONTAINERAPP       Target Container App name
+
+Optional Azure configuration:
+  GOVEA_AZURE_LOCATION           Azure region (default: eastus)
+  GOVEA_AZURE_IMAGE_REPO         ACR repository/image name (default: govea-app)
   Set GOVEA_AUTH_SECRET env var to pin the auth secret across redeploys.
 HELP
     ;;

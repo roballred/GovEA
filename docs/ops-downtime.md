@@ -10,14 +10,14 @@ To re-open: unset the variable and restart.
 ```bash
 # Enable
 az containerapp update \
-  --name govea-dev \
-  --resource-group govea \
+  --name "$GOVEA_AZURE_CONTAINERAPP" \
+  --resource-group "$GOVEA_AZURE_RG" \
   --set-env-vars MAINTENANCE_MODE=true
 
 # Disable
 az containerapp update \
-  --name govea-dev \
-  --resource-group govea \
+  --name "$GOVEA_AZURE_CONTAINERAPP" \
+  --resource-group "$GOVEA_AZURE_RG" \
   --remove-env-vars MAINTENANCE_MODE
 ```
 

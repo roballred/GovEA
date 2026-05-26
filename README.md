@@ -176,7 +176,7 @@ pnpm --filter govea db:seed
 
 ### Azure container builds
 
-Azure deployments build images in the cloud via `az acr build` and do not require a local Docker daemon. See `scripts/azure-dev.sh` for the helper-script interface, and [`docs/release-pipeline.md`](./docs/release-pipeline.md) for the automated CI-chained release pipeline (#504) — how merges to `main` produce immutable, traceable demo deployments and how to roll back.
+Azure deployments can build images in the cloud via `az acr build` and do not require a local Docker daemon. See `scripts/azure-dev.sh` for the helper-script interface and [`docs/release-pipeline.md`](./docs/release-pipeline.md) for the deployment privacy policy. Operator-specific Azure account configuration belongs in a private ops repository or local environment variables, not in this public repository.
 
 ---
 
