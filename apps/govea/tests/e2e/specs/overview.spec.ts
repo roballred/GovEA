@@ -87,3 +87,28 @@ test('viewer sees neither Manage users nor Audit log CTA', async ({ browser }) =
   await expect(startHere(page).getByRole('link', { name: /Executive Summary/i })).toBeVisible()
   await ctx.close()
 })
+
+// ── Coming-next priorities tile (slice C) ────────────────────────────────────
+//
+// The tile mirrors docs/product-priorities.md (see the page header comment).
+// Role-agnostic: priorities are honest signal, not workspace configuration.
+// Spot-checking the rank-1 title surfaces any doc/page drift in CI.
+
+test('coming-next tile renders all five priorities for each role', async ({ browser }) => {
+  for (const role of ROLES) {
+    const ctx = await browser.newContext({ storageState: `tests/e2e/.auth/${role}.json` })
+    const page = await ctx.newPage()
+    await page.goto('/overview')
+    const section = page.getByTestId('overview-coming-next')
+    await expect(section, `${role}: coming-next section should render`).toBeVisible()
+    await expect(
+      section.locator('ol > li'),
+      `${role}: should see 5 priority rows`,
+    ).toHaveCount(5)
+    // Rank-1 spot-check: matches docs/product-priorities.md Top Five row 1.
+    await expect(
+      section.getByRole('heading', { name: /Run the first persona-validation Tier-1 interview/i }),
+    ).toBeVisible()
+    await ctx.close()
+  }
+})
