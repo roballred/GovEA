@@ -14,8 +14,10 @@ import {
   DEV_CROSS_ORG_LINKS, STATE_INBOUND_CROSS_ORG_LINKS,
   GOVEA_PROJECT_ORG, GOVEA_PROJECT_USERS,
   GOVEA_PROJECT_PERSONAS, GOVEA_PROJECT_CAPABILITIES, GOVEA_PROJECT_APPLICATIONS,
-  GOVEA_PROJECT_VALUE_STREAMS, GOVEA_PROJECT_OBJECTIVES, GOVEA_PROJECT_INITIATIVES,
+  RETIRED_GOVEA_PROJECT_APPLICATIONS,
+  GOVEA_PROJECT_VALUE_STREAMS, GOVEA_PROJECT_GOALS, GOVEA_PROJECT_OBJECTIVES, GOVEA_PROJECT_INITIATIVES,
   GOVEA_PROJECT_ADRS, GOVEA_PROJECT_PRINCIPLES, GOVEA_PROJECT_GLOSSARY, GOVEA_PROJECT_SERVICES,
+  GOVEA_PROJECT_DEBT,
 } from './dev-fixtures'
 import {
   TOGAF_ORG, TOGAF_USERS,
@@ -47,7 +49,9 @@ import {
   dataEntities, dataAttributes, dataLinks, dataBusinessKeys,
   dataEntityOwners, dataAttributeOwners, dataLinkOwners, dataBusinessKeyOwners,
   dataEntityRelations, dataEntityAttributeLinks, dataAttributeShares,
+  architectureDebtItems, debtCapabilities, debtApplications, debtInitiatives,
 } from '../schema'
+import { and, inArray } from 'drizzle-orm'
 import { MODULE_DEFS } from '../../lib/modules'
 import bcrypt from 'bcryptjs'
 
@@ -1188,6 +1192,20 @@ async function seed() {
   console.log('\n[Org 3] GovEA Project')
   const goveaProjectOrgId = await findOrCreateOrg(GOVEA_PROJECT_ORG.slug, GOVEA_PROJECT_ORG.name)
 
+  // #518 dogfood refresh: remove applications that previously existed in the
+  // GovEA Project org but were retired with the 2026-05-26 seed rewrite (the
+  // upsert pattern would otherwise leave them behind as orphans).
+  if (RETIRED_GOVEA_PROJECT_APPLICATIONS.length > 0) {
+    const retiredNames = [...RETIRED_GOVEA_PROJECT_APPLICATIONS] as string[]
+    const removed = await db.delete(applications).where(and(
+      eq(applications.organizationId, goveaProjectOrgId),
+      inArray(applications.name, retiredNames),
+    )).returning({ name: applications.name })
+    if (removed.length > 0) {
+      console.log(`  ✓ removed ${removed.length} retired applications: ${removed.map(r => r.name).join(', ')}`)
+    }
+  }
+
   for (const u of GOVEA_PROJECT_USERS) {
     await db.insert(users).values({ ...u, passwordHash, organizationId: goveaProjectOrgId, isActive: 'true' }).onConflictDoNothing()
   }
@@ -1331,6 +1349,45 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${GOVEA_PROJECT_OBJECTIVES.length} strategic objectives`)
+
+  // Goals + goalObjectives junction
+  for (const g of GOVEA_PROJECT_GOALS) {
+    const existing = await db.query.goals.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.name, g.name)),
+    })
+    let goalId: string
+    if (existing) {
+      await db.update(goals).set({
+        description: g.description,
+        planningHorizon: g.planningHorizon,
+        owner: g.owner,
+        status: g.status,
+        visibility: g.visibility,
+      }).where(eq(goals.id, existing.id))
+      goalId = existing.id
+    } else {
+      const [inserted] = await db.insert(goals).values({
+        organizationId: goveaProjectOrgId,
+        name: g.name,
+        description: g.description,
+        planningHorizon: g.planningHorizon,
+        owner: g.owner,
+        status: g.status,
+        visibility: g.visibility,
+      }).returning()
+      goalId = inserted.id
+    }
+
+    for (const objName of g.objectives) {
+      const objId = goveaProjectObjectiveIds[objName]
+      if (!objId) continue
+      const exists = await db.query.goalObjectives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.goalId, goalId), e(t.objectiveId, objId)),
+      })
+      if (!exists) await db.insert(goalObjectives).values({ goalId, objectiveId: objId })
+    }
+  }
+  console.log(`  ✓ ${GOVEA_PROJECT_GOALS.length} goals with objective links`)
 
   // Initiatives + capability / application / objective links
   const goveaProjectInitiativeIds: Record<string, string> = {}
@@ -1533,6 +1590,65 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${GOVEA_PROJECT_SERVICES.length} services with capability, persona, and value stream links`)
+
+  // Architecture debt + capability / application / initiative junctions (#518).
+  // Mirrors open ARB findings (#10, #34, #35) and active risk-register items.
+  for (const d of GOVEA_PROJECT_DEBT) {
+    const existing = await db.query.architectureDebtItems.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, goveaProjectOrgId), e(t.title, d.title)),
+    })
+    let debtId: string
+    if (existing) {
+      await db.update(architectureDebtItems).set({
+        description: d.summary,
+        debtType: d.debtType,
+        severity: d.severity,
+        status: d.status,
+        securitySensitive: d.securitySensitive,
+      }).where(eq(architectureDebtItems.id, existing.id))
+      debtId = existing.id
+    } else {
+      const [inserted] = await db.insert(architectureDebtItems).values({
+        organizationId: goveaProjectOrgId,
+        title: d.title,
+        description: d.summary,
+        debtType: d.debtType,
+        severity: d.severity,
+        status: d.status,
+        securitySensitive: d.securitySensitive,
+        source: 'human',
+      }).returning()
+      debtId = inserted.id
+    }
+
+    for (const capName of d.capabilities) {
+      const capId = goveaProjectCapabilityIds[capName]
+      if (!capId) continue
+      const exists = await db.query.debtCapabilities.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.debtItemId, debtId), e(t.capabilityId, capId)),
+      })
+      if (!exists) await db.insert(debtCapabilities).values({ debtItemId: debtId, capabilityId: capId })
+    }
+
+    for (const appName of d.applications) {
+      const appId = goveaProjectApplicationIds[appName]
+      if (!appId) continue
+      const exists = await db.query.debtApplications.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.debtItemId, debtId), e(t.applicationId, appId)),
+      })
+      if (!exists) await db.insert(debtApplications).values({ debtItemId: debtId, applicationId: appId })
+    }
+
+    for (const iniName of d.initiatives) {
+      const iniId = goveaProjectInitiativeIds[iniName]
+      if (!iniId) continue
+      const exists = await db.query.debtInitiatives.findFirst({
+        where: (t, { eq: e, and }) => and(e(t.debtItemId, debtId), e(t.initiativeId, iniId)),
+      })
+      if (!exists) await db.insert(debtInitiatives).values({ debtItemId: debtId, initiativeId: iniId })
+    }
+  }
+  console.log(`  ✓ ${GOVEA_PROJECT_DEBT.length} architecture debt items with capability/application/initiative links`)
 
   // ── Multi-org: connection + cross-org capability links ────────────────────
 
