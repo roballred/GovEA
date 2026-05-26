@@ -1,5 +1,7 @@
 # GovEA — Project Instructions for Claude
 
+> **Start here for any new AI session:** [`docs/AI-SESSION-START.md`](./docs/AI-SESSION-START.md) is the canonical session-bootstrap doc. It points at every other source of truth (Standards.md, this file, STYLE.md, README.md, product-priorities.md, the risk register, the validation plan) and captures the operating policies that drift &mdash; database workflow, GitHub CLI gotchas, deploy / mutating-`az` rules, and the public-repo policy on operator-specific deployment topology.
+>
 > **Governing document:** [Standards.md](./Standards.md) defines the principles, workflow, and traceability requirements for all AI-assisted work on this project. This file extends those standards with Claude-specific context. If anything here conflicts with Standards.md, Standards.md governs.
 
 ## What This Is
