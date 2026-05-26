@@ -15,6 +15,12 @@ if (process.env.NEXT_PUBLIC_APP_URL) {
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // #34: the @govea/core workspace package is the canonical source for RBAC
+  // (and, in time, audit / content-types / taxonomy / workflow / recipes).
+  // It ships TypeScript source, no built dist/. transpilePackages tells the
+  // Next.js build to compile workspace packages on the fly so consumers do
+  // not need a separate `pnpm --filter @govea/core build` step.
+  transpilePackages: ['@govea/core'],
   experimental: {
     serverActions: {
       allowedOrigins,
