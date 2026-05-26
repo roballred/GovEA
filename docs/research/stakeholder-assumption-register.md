@@ -2,8 +2,9 @@
 
 **Purpose:** Map each stakeholder-facing feature to the specific assumptions it depends on, ranked by consequence if the assumption is wrong. Use to prioritize which interview answers matter most before the next build.
 
-**Features covered:** Repository Confidence Summary, Roadmap Timeline, Guided Answers
-**Related issue:** [#216](https://github.com/roballred/GovEA/issues/216)
+**Features covered:** Repository Confidence Summary, Roadmap Timeline, Guided Answers, Repository Modelling (completeness + capability mapping), Integration & Reconciliation
+**Related issues:** [#216](https://github.com/roballred/GovEA/issues/216), [#384](https://github.com/roballred/GovEA/issues/384)
+**Companion docs:** [`validation-plan.md`](./validation-plan.md), [`stakeholder-interview-guide.md`](./stakeholder-interview-guide.md), [`business-architecture/feedback-log.md`](../../business-architecture/feedback-log.md)
 
 **Priority ratings:**
 - **P1** — wrong assumption likely breaks the feature's value proposition entirely
@@ -54,6 +55,42 @@
 
 ---
 
+## Repository Modelling
+
+Added 2026-05-26 for [#384](https://github.com/roballred/GovEA/issues/384). These assumptions sit underneath the repository&apos;s ability to be trusted at all &mdash; they affect every analysis surface, not just one feature.
+
+| ID | Assumption | Persona | If wrong | Priority |
+|----|-----------|---------|----------|----------|
+| RM-1 | Enterprise Architects are willing to maintain capability-to-application linkage as an explicit, ongoing chore | Enterprise Architect (Central IT) | Linkages are entered once and rot. Every downstream confidence / impact / roadmap view inherits stale data and stakeholders silently lose trust. | P1 |
+| RM-2 | Agency EA Coordinators recognise their agency&apos;s applications and services in the centrally-modelled catalogue | Agency EA Coordinator | Agency coordinators can&apos;t find their work in the central model and disengage. Federation features fail before they start. | P1 |
+| RM-3 | The "completeness score" surfaced to admins is interpreted as a quality signal worth acting on, not vanity metrics | Enterprise Architect | Score is dismissed. The cleanup-action ranking is ignored. Repository drifts even when GovEA tells the architect exactly what to fix. | P1 |
+| RM-4 | Domain Architects will accept ownership of a slice of the catalogue when that ownership is named, rather than treating EA work as central-IT&apos;s job | Domain Architect | Domain ownership defaults back to the central EA, who can&apos;t cover every domain, so coverage stays shallow. | P2 |
+| RM-5 | "Capability" reads as an actionable concept to non-EA staff in government (not just to TOGAF-trained architects) | Agency EA Coordinator, Department Director | "Capability" is read as jargon or as a synonym for "feature" or "system" &mdash; the whole information model loses meaning to its primary stakeholders. | P2 |
+| RM-6 | Enterprise Architects find value in seeing what other agencies have catalogued (cross-org visibility), and that visibility justifies the federation effort | Enterprise Architect, Agency EA Coordinator | Federation is built but never used. Single-org becomes the only mode anyone runs. | P3 |
+
+**Riskiest assumption:** RM-1. Linkage rot is the failure mode that quietly invalidates every downstream surface. If maintaining linkages is too expensive for architects, GovEA degrades into a one-time-modelled directory, not a living architecture.
+
+---
+
+## Integration & Reconciliation
+
+Added 2026-05-26 for [#384](https://github.com/roballred/GovEA/issues/384). These assumptions gate named connector work; pin them down before the first integration ships.
+
+| ID | Assumption | Persona | If wrong | Priority |
+|----|-----------|---------|----------|----------|
+| IN-1 | Manual reconciliation between GovEA and an external system of record (CMDB, ITSM, budget) is the EA team&apos;s pain, not someone else&apos;s | Enterprise Architect, Programme Director | The pain lives in finance, ops, or a service-desk team that doesn&apos;t use GovEA &mdash; an EA-side integration solves the wrong team&apos;s problem. | P1 |
+| IN-2 | Data drift between GovEA and the source system happens often enough that an automated freshness signal is meaningfully more useful than a "last synced" timestamp | Enterprise Architect, Agency EA Coordinator | Architects only need to reconcile occasionally; the connector becomes a nice-to-have rather than a must-have, and integration work over-indexes on a sporadic pain. | P1 |
+| IN-3 | The right first integration target is the CMDB, not the ITSM, budget, or DevOps tool | Enterprise Architect | First connector is built against the wrong source of truth &mdash; reconciliation effort moves but doesn&apos;t reduce overall. | P1 |
+| IN-4 | The agency has the political ability to ask the system-of-record team for read-access credentials &mdash; not just the technical ability | Programme Director, Agency EA Coordinator | Connector ships but can&apos;t be turned on in any real agency without an inter-team escalation that nobody wants to drive. | P2 |
+| IN-5 | A push-based or webhook-driven integration is preferred over scheduled polling | Enterprise Architect | Implementation picks the wrong default; first pilots demand the opposite shape and the work is partly rebuilt. | P2 |
+| IN-6 | When GovEA disagrees with a system of record, the architect believes GovEA &mdash; not the other system | Enterprise Architect | Integration becomes one-way reads only; GovEA is treated as the &ldquo;maybe&rdquo; copy and stops being authoritative for any cross-system question. | P3 |
+
+**Riskiest assumption:** IN-1. If reconciliation pain lives in a non-EA team, an integration that ships into the EA UI is solving for the wrong audience even when it works technically.
+
+---
+
 ## Cross-cutting risk
 
 GA-1 and RT-1 share a structural assumption: that elected officials and budget staff use the tool themselves, not through a staff proxy. If the actual user is always a chief of staff or a budget aide, the UX decisions (reading level, question prompts, confidence labels) need to optimize for a different person than the named persona. This is the single most consequential thing to confirm or refute in interviews.
+
+RM-1 and IN-2 share a structural assumption about **maintenance willingness**: that someone will keep linkages or sync signals current. If that maintenance work is too expensive in either case, the failure mode is the same &mdash; the data lies, and confidence surfaces lie with it. Test both in the same architect interview to keep travel/calendar cost low.
