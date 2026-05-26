@@ -214,9 +214,9 @@ jobs:
 
       - name: Run E2E smoke tests
         # smoke.spec.ts is the route-health sweep; overview.spec.ts (#614)
-        # adds role-aware CTA gating coverage. Other specs (iam.spec.ts,
-        # auth-security.spec.ts) intentionally stay out of CI for now —
-        # they mutate state and are run locally.
+        # adds role-aware /overview CTA-gating + Coming-next-tile coverage.
+        # Other specs (iam.spec.ts, auth-security.spec.ts) intentionally
+        # stay out of CI for now — they mutate state and are run locally.
         run: pnpm --filter govea exec playwright test tests/e2e/specs/smoke.spec.ts tests/e2e/specs/overview.spec.ts
 
       - name: Upload Playwright report
