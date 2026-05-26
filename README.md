@@ -68,8 +68,49 @@ The `business-architecture/` folder is the authoritative source for personas and
 Every pull request runs:
 - **Type check** - `tsc --noEmit` against `apps/govea/tsconfig.json` (strict mode)
 - **Lint** - ESLint 9 flat config via `eslint-config-next`
+- **Docs lint** - `node scripts/lint-business-architecture.mjs` (validates persona + capability files against `business-architecture/STYLE.md`)
+- **Production build** - `pnpm --filter govea build`
+- **Integration tests** - vitest against a Postgres service container
+- **E2E smoke tests** - Playwright against the live Next.js server
 
-Both must pass before merge.
+All must pass before a human merges. Only humans merge PRs.
+
+---
+
+## Quick Start: Bootstrap & Verify
+
+From a fresh `git clone`, this is the canonical path to a working dev environment plus confidence that what's on your disk matches what CI will check.
+
+**Prerequisites:** Node >= 20, pnpm >= 9 (`corepack enable pnpm` if missing).
+
+```bash
+git clone https://github.com/roballred/GovEA.git
+cd GovEA
+
+# Run the canonical bootstrap-and-verify path (#35):
+pnpm verify
+```
+
+`pnpm verify` runs `scripts/bootstrap-verify.sh`, which executes the same gates CI runs on every PR — minus the integration suite, which needs a reachable Postgres:
+
+1. Check Node >= 20 and pnpm >= 9 are on PATH
+2. `pnpm install --frozen-lockfile`
+3. Type check (`tsc --noEmit`)
+4. Lint
+5. Business-architecture docs lint
+
+A clean local run predicts a clean CI run. The script exits non-zero on any failure and prints a coloured summary at the end so failures are obvious.
+
+Optional flags:
+
+```bash
+SKIP_INSTALL=1 pnpm verify          # skip pnpm install (dependencies known fresh)
+WITH_INTEGRATION=1 pnpm verify      # also run the vitest integration suite
+                                    #   (requires apps/govea/.env.local DATABASE_URL
+                                    #    pointing at a reachable Postgres)
+```
+
+To run the app interactively after verification passes, see [Local Containers](#local-containers) below.
 
 ---
 

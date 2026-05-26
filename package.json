@@ -6,6 +6,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
+    "verify": "bash scripts/bootstrap-verify.sh",
     "demo:start": "bash scripts/demo-start.sh",
     "demo:db": "bash scripts/demo-db.sh",
     "demo:db:stop": "bash scripts/container-compose.sh dev-db down",
