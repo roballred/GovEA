@@ -1,0 +1,259 @@
+name: Deploy Azure dev
+
+# Traceable release pipeline for the GovEA Azure dev demo (#504).
+#
+# Triggers on a successful CI run on main, or on a manual dispatch.
+# Builds an immutable image in Azure Container Registry tagged with
+# the commit SHA + workflow run number, deploys it to the existing
+# Container App, captures every traceability artefact (commit, tag,
+# digest, revision, URL) into the job summary, then runs a
+# post-deploy smoke check against the live URL.
+#
+# This workflow does nothing useful until the maintainer configures
+# OIDC federated credentials and sets the three Azure secrets on the
+# repository — see docs/ops/release-pipeline.md for the one-time
+# setup procedure.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Manual deploy reason (recorded in summary)
+        required: false
+
+permissions:
+  contents: read
+  id-token: write # OIDC: lets the runner exchange a GitHub token for an Azure token
+
+concurrency:
+  # Serialize deploys to the dev environment. Don't cancel in-progress
+  # runs — a half-rolled-out revision is worse than a queued one.
+  group: azure-dev-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, deploy, smoke
+    runs-on: ubuntu-latest
+
+    # Only run after a *successful* CI completion when chained via
+    # workflow_run. workflow_dispatch always runs (operator intent is explicit).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    env:
+      RG: govea-dev-rg
+      ACR: goveadevacr
+      ACA_ENV: govea-dev-env
+      ACA_APP: govea-dev
+
+    steps:
+      # ── Source resolution ────────────────────────────────────────────────
+      #
+      # When chained off CI (workflow_run) the trigger commit is the head of
+      # the workflow that just finished; for manual dispatch we deploy the
+      # tip of the dispatch ref. Either way the commit SHA is preserved end
+      # to end so the image tag, log lines, and step summary all agree.
+      - name: Resolve source commit
+        id: src
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            sha="${{ github.event.workflow_run.head_sha }}"
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "Source commit: ${sha}"
+
+      - name: Checkout source at deploy commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.src.outputs.sha }}
+
+      # ── Image tag ────────────────────────────────────────────────────────
+      - name: Compute image tag
+        id: tag
+        run: |
+          short=$(echo "${{ steps.src.outputs.sha }}" | cut -c1-7)
+          tag="commit-${short}-run${{ github.run_number }}"
+          image="${ACR}.azurecr.io/govea-dev:${tag}"
+          echo "tag=${tag}"     >> "$GITHUB_OUTPUT"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "Tag:   ${tag}"
+          echo "Image: ${image}"
+
+      # ── Azure login via OIDC ─────────────────────────────────────────────
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ── Build in ACR ─────────────────────────────────────────────────────
+      #
+      # `az acr build` builds remotely inside Azure — no local Docker daemon
+      # required. Pushes both the SHA-pinned tag (immutable record) and
+      # :latest (for humans browsing the registry). The SHA-pinned tag is
+      # what the Container App revision points at.
+      - name: Build image in ACR
+        run: |
+          az acr build \
+            --registry "$ACR" \
+            --image "govea-dev:${{ steps.tag.outputs.tag }}" \
+            --image "govea-dev:latest" \
+            --file docker/Containerfile.dev \
+            .
+
+      - name: Resolve image digest
+        id: digest
+        run: |
+          digest=$(az acr repository show \
+            --name "$ACR" \
+            --image "govea-dev:${{ steps.tag.outputs.tag }}" \
+            --query "digest" -o tsv)
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "Digest: ${digest}"
+
+      # ── Deploy ───────────────────────────────────────────────────────────
+      #
+      # Runtime env mirrors scripts/azure-dev.sh exactly. AUTH_SECRET is
+      # derived from the subscription ID the same way the helper script does
+      # so it survives redeploys; override by setting GOVEA_AUTH_SECRET as a
+      # repo secret if you want to pin it explicitly.
+      - name: Deploy to Container App
+        id: deploy
+        run: |
+          set -euo pipefail
+
+          # Calculate the runtime URL before touching the app so
+          # NEXT_PUBLIC_APP_URL is correct from the new revision's first boot.
+          env_domain=$(az containerapp env show \
+            --name "$ACA_ENV" \
+            --resource-group "$RG" \
+            --query "properties.defaultDomain" -o tsv)
+          app_url="https://${ACA_APP}.${env_domain}"
+          echo "app_url=${app_url}" >> "$GITHUB_OUTPUT"
+          echo "App URL: ${app_url}"
+
+          if [[ -n "${GOVEA_AUTH_SECRET:-}" ]]; then
+            secret="$GOVEA_AUTH_SECRET"
+          else
+            sub=$(az account show --query id -o tsv)
+            secret=$(printf '%s' "$sub" | sha256sum | cut -c1-32)
+          fi
+
+          az containerapp update \
+            --name "$ACA_APP" \
+            --resource-group "$RG" \
+            --image "${{ steps.tag.outputs.image }}" \
+            --set-env-vars \
+              "AUTH_SECRET=${secret}" \
+              "NEXT_PUBLIC_APP_URL=${app_url}" \
+              "AUTH_TRUST_HOST=true" \
+              "DEV=true" \
+              "DEMO_MODE=true" \
+              "NODE_ENV=production" \
+            --output none
+
+          # Capture the newly-created revision name for the summary +
+          # rollback workflow.
+          revision=$(az containerapp revision list \
+            --name "$ACA_APP" \
+            --resource-group "$RG" \
+            --query "reverse(sort_by([], &properties.createdTime))[0].name" \
+            -o tsv)
+          echo "revision=${revision}" >> "$GITHUB_OUTPUT"
+          echo "Revision: ${revision}"
+        env:
+          GOVEA_AUTH_SECRET: ${{ secrets.GOVEA_AUTH_SECRET }}
+
+      # ── Wait for replica ─────────────────────────────────────────────────
+      - name: Wait for revision replica
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            ready=$(az containerapp revision show \
+              --name "$ACA_APP" \
+              --resource-group "$RG" \
+              --revision "${{ steps.deploy.outputs.revision }}" \
+              --query "properties.replicas" -o tsv 2>/dev/null || echo 0)
+            if [[ "${ready:-0}" -ge 1 ]]; then
+              echo "Revision has ${ready} replica(s) running."
+              exit 0
+            fi
+            echo "[$i/30] waiting for replica..."
+            sleep 10
+          done
+          echo "::error::revision did not become ready within 5 minutes"
+          exit 1
+
+      # ── Post-deploy smoke check ──────────────────────────────────────────
+      #
+      # We can't sign in (no test creds in CI), but we can verify:
+      #   1. /login renders the sign-in page (HTTP 200 + expected text)
+      #   2. Demo dev shortcuts are visible (DEMO_MODE active in runtime env)
+      #   3. /dashboard does not 5xx (it should redirect to /login for
+      #      anonymous requests; either is fine, a 5xx is not).
+      - name: Post-deploy smoke check
+        id: smoke
+        run: |
+          set -e
+          base="${{ steps.deploy.outputs.app_url }}"
+          fail=0
+
+          login_status=$(curl -sS -o /tmp/login.html -w "%{http_code}" "${base}/login")
+          if [[ "${login_status}" != "200" ]]; then
+            echo "::error::/login returned status ${login_status} (expected 200)"
+            fail=1
+          fi
+          if ! grep -q "Sign in" /tmp/login.html; then
+            echo "::error::/login did not contain 'Sign in' heading"
+            fail=1
+          fi
+          if ! grep -q "Riverdale Admin" /tmp/login.html; then
+            echo "::error::Demo dev shortcuts missing from /login — DEMO_MODE may not be active"
+            fail=1
+          fi
+
+          dash_status=$(curl -sS -o /dev/null -w "%{http_code}" "${base}/dashboard")
+          if [[ "${dash_status}" -ge 500 ]]; then
+            echo "::error::/dashboard returned server error ${dash_status}"
+            fail=1
+          fi
+
+          if [[ "${fail}" -ne 0 ]]; then
+            echo "smoke=fail" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "smoke=ok" >> "$GITHUB_OUTPUT"
+          echo "All smoke checks passed."
+
+      # ── Release summary ──────────────────────────────────────────────────
+      #
+      # Runs even on failure so reviewers can see what was deployed (and what
+      # broke) without digging through step logs.
+      - name: Write release summary
+        if: always()
+        run: |
+          {
+            echo "## Azure dev deploy"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Commit            | \`${{ steps.src.outputs.sha }}\` |"
+            echo "| Image tag         | \`${{ steps.tag.outputs.tag }}\` |"
+            echo "| Image             | \`${{ steps.tag.outputs.image }}\` |"
+            echo "| Digest            | \`${{ steps.digest.outputs.digest }}\` |"
+            echo "| Revision          | \`${{ steps.deploy.outputs.revision }}\` |"
+            echo "| URL               | <${{ steps.deploy.outputs.app_url }}> |"
+            echo "| Smoke check       | ${{ steps.smoke.outputs.smoke || 'not-run' }} |"
+            echo "| Manual reason     | ${{ inputs.reason || '_(automatic on CI success)_' }} |"
+            echo ""
+            echo "Roll back via the **Rollback Azure dev** workflow, passing the prior revision name."
+          } >> "$GITHUB_STEP_SUMMARY"

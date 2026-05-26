@@ -268,6 +268,22 @@ cmd_status() {
     || echo "Not deployed. Run: ./scripts/azure-dev.sh deploy"
 }
 
+cmd_revisions() {
+  # Read-only: lists every Container App revision newest first so
+  # operators can pick a target for the Rollback Azure dev workflow.
+  require_deploy
+  az containerapp revision list \
+    --name "$ACA_APP" \
+    --resource-group "$RG" \
+    --query "reverse(sort_by([], &properties.createdTime))[].{
+      name: name,
+      active: properties.active,
+      created: properties.createdTime,
+      image: properties.template.containers[0].image
+    }" \
+    -o table
+}
+
 cmd_destroy() {
   echo "This will permanently delete the resource group '${RG}' and"
   echo "ALL resources inside it (ACR, Container Apps, images, etc.)."
@@ -282,26 +298,28 @@ cmd_destroy() {
 
 # ── Entrypoint ─────────────────────────────────────────────────────────────────
 case "${1:-help}" in
-  deploy)   cmd_deploy   ;;
-  update)   cmd_update   ;;
-  start)    cmd_start    ;;
-  stop)     cmd_stop     ;;
-  logs)     cmd_logs     ;;
-  url)      cmd_url      ;;
-  status)   cmd_status   ;;
-  destroy)  cmd_destroy  ;;
+  deploy)    cmd_deploy    ;;
+  update)    cmd_update    ;;
+  start)     cmd_start     ;;
+  stop)      cmd_stop      ;;
+  logs)      cmd_logs      ;;
+  url)       cmd_url       ;;
+  status)    cmd_status    ;;
+  revisions) cmd_revisions ;;
+  destroy)   cmd_destroy   ;;
   help|*)
     cat <<'HELP'
 Usage: ./scripts/azure-dev.sh <command>
 
-  deploy   One-time setup and first deploy
-  update   Rebuild image and roll out new revision (no downtime)
-  start    Resume the app (scale to 1 replica)
-  stop     Pause the app (scale to 0 — no compute charges)
-  logs     Stream live logs
-  url      Print the app URL
-  status   Show current image / replica state
-  destroy  Delete all Azure resources (permanent)
+  deploy     One-time setup and first deploy
+  update     Rebuild image and roll out new revision (no downtime)
+  start      Resume the app (scale to 1 replica)
+  stop       Pause the app (scale to 0 — no compute charges)
+  logs       Stream live logs
+  url        Print the app URL
+  status     Show current image / replica state
+  revisions  List Container App revisions newest first (read-only)
+  destroy    Delete all Azure resources (permanent)
 
 Cost notes:
   Container Apps consumption plan — no charge when stopped (min-replicas=0).
