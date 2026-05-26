@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { adminNotices, type AdminNotice } from '@/db/schema'
 
@@ -32,6 +32,43 @@ export async function listOrgNotices(orgId: string): Promise<AdminNotice[]> {
     where: and(
       eq(adminNotices.scope, 'org'),
       eq(adminNotices.organizationId, orgId),
+    ),
+    orderBy: [desc(adminNotices.updatedAt)],
+  })
+}
+
+/**
+ * Returns the active instance-scoped notice, or null if none is active.
+ *
+ * Instance notices use `organizationId IS NULL` to scope across the whole
+ * instance. Same single-active invariant as org-scoped notices, enforced by
+ * `actions/admin-notices.ts` activation transactions.
+ *
+ * Visible to everyone &mdash; including org admins and instance admins &mdash;
+ * per the design decisions on #456 ("admins are operators; they need to see
+ * what tenants see").
+ */
+export async function getActiveInstanceNotice(): Promise<AdminNotice | null> {
+  const row = await db.query.adminNotices.findFirst({
+    where: and(
+      eq(adminNotices.scope, 'instance'),
+      isNull(adminNotices.organizationId),
+      eq(adminNotices.active, true),
+    ),
+    orderBy: [desc(adminNotices.updatedAt)],
+  })
+  return row ?? null
+}
+
+/**
+ * Returns all instance-scoped notices (active and inactive) for the
+ * instance-admin management UI. Most-recent first.
+ */
+export async function listInstanceNotices(): Promise<AdminNotice[]> {
+  return db.query.adminNotices.findMany({
+    where: and(
+      eq(adminNotices.scope, 'instance'),
+      isNull(adminNotices.organizationId),
     ),
     orderBy: [desc(adminNotices.updatedAt)],
   })
