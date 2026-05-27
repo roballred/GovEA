@@ -142,6 +142,14 @@ export const organizations = pgTable('organizations', {
    * to flag suspiciously-empty exports.
    */
   lastExportBytes: integer('last_export_bytes'),
+  /**
+   * #529 PR2: timestamp of the last successful archive import. Symmetric
+   * with `lastExportAt` so the dashboard can show "last restored" when an
+   * import has overwritten the content more recently than the last export.
+   * Null = never imported.
+   */
+  lastImportAt: timestamp('last_import_at'),
+  lastImportBytes: integer('last_import_bytes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
