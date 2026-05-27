@@ -1,4 +1,4 @@
-import { type AnyPgColumn, boolean, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { type AnyPgColumn, boolean, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const visibilityEnum = pgEnum('visibility', ['org', 'connections', 'instance'])
 
@@ -129,6 +129,19 @@ export const organizations = pgTable('organizations', {
   suspendedReason: text('suspended_reason'),
   supportTier: text('support_tier'),
   internalNotes: text('internal_notes'),
+  /**
+   * #529: timestamp of the last successful backup export (any of recipe,
+   * content, or archive). Updated by the export endpoints in a single
+   * transaction so the dashboard surface stays accurate. Null = never
+   * exported.
+   */
+  lastExportAt: timestamp('last_export_at'),
+  /**
+   * #529: byte size of the most recent export, paired with `lastExportAt`.
+   * Useful for dashboard scale ("Last backup: 2 hours ago, 1.2 MB") and
+   * to flag suspiciously-empty exports.
+   */
+  lastExportBytes: integer('last_export_bytes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })

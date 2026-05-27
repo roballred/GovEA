@@ -181,7 +181,7 @@ export default async function DashboardPage() {
   // suppression banner when the score is currently below threshold.
   const showRanked = canEdit(session.user)
   const isAdminUser = isAdmin(session.user)
-  const [signals, mostNeeded, domainRag, confSummary, emailConfigured] = await Promise.all([
+  const [signals, mostNeeded, domainRag, confSummary, emailConfigured, lastExport] = await Promise.all([
     getCategorizedSignals(orgId),
     showRanked ? getMostNeededActions(orgId) : Promise.resolve([]),
     getDomainRagBuckets(orgId),
@@ -189,6 +189,12 @@ export default async function DashboardPage() {
     // Email banner is admin-only — contributors and viewers shouldn't see
     // an org-config nudge they can't act on (#528 capability rule).
     isAdminUser ? isEmailConfigured(orgId) : Promise.resolve(true),
+    // Last-backup surface (#529 capability rule). Admin-only; contributors
+    // and viewers cannot trigger backups so the surface is noise for them.
+    isAdminUser ? db.select({
+      lastExportAt: organizations.lastExportAt,
+      lastExportBytes: organizations.lastExportBytes,
+    }).from(organizations).where(eq(organizations.id, orgId)).limit(1).then(rows => rows[0] ?? null) : Promise.resolve(null),
   ])
   const summarySuppressed =
     (confSummary.settings.authenticatedVisibility ?? confSummary.settings.enabled) &&
@@ -260,6 +266,42 @@ export default async function DashboardPage() {
             </Link>
             .
           </p>
+        </div>
+      )}
+
+      {/* Last-backup surface (#529 ac-backup-export capability rule).
+          Admin-only; rendered as a compact line, not a full alert, since
+          a fresh install has never exported and we don't want that to
+          read as an error. Links to /settings/backup. */}
+      {isAdminUser && (
+        <div className="flex items-center justify-between gap-3 rounded-md border bg-card px-4 py-2 text-xs">
+          <span className="text-muted-foreground">
+            Last backup:{' '}
+            {lastExport?.lastExportAt ? (
+              <>
+                <span className="text-foreground font-medium">
+                  {lastExport.lastExportAt.toLocaleString()}
+                </span>
+                {lastExport.lastExportBytes != null && (
+                  <span className="text-muted-foreground">
+                    {' '}({lastExport.lastExportBytes < 1024
+                      ? `${lastExport.lastExportBytes} B`
+                      : lastExport.lastExportBytes < 1024 * 1024
+                        ? `${(lastExport.lastExportBytes / 1024).toFixed(1)} KB`
+                        : `${(lastExport.lastExportBytes / (1024 * 1024)).toFixed(1)} MB`})
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-foreground">Never exported</span>
+            )}
+          </span>
+          <Link
+            href="/settings/backup"
+            className="text-foreground underline underline-offset-2 hover:no-underline"
+          >
+            Back up now →
+          </Link>
         </div>
       )}
 
