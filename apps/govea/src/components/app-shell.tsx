@@ -83,11 +83,12 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Configuration',
     adminOnly: true,
     items: [
-      { href: '/taxonomy',    label: 'Taxonomy' },
-      { href: '/users',       label: 'Users' },
-      { href: '/connections', label: 'Connections' },
-      { href: '/settings',    label: 'Settings' },
+      { href: '/taxonomy',        label: 'Taxonomy' },
+      { href: '/users',           label: 'Users' },
+      { href: '/connections',     label: 'Connections' },
+      { href: '/settings',        label: 'Settings' },
       { href: '/settings/notices', label: 'Notices' },
+      { href: '/settings/backup', label: 'Backup' },
     ],
   },
 ]
