@@ -4,6 +4,10 @@ import { isAdmin } from '@/lib/rbac'
 import { db } from '@/db/client'
 import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { importArchiveFromForm } from '@/actions/backup'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 /** Format a byte count as a short human string ("1.2 MB", "850 KB", etc.). */
 function formatBytes(bytes: number): string {
@@ -20,26 +24,35 @@ function formatLastExport(at: Date | null, bytes: number | null): string {
 }
 
 /**
- * /settings/backup — operational backup & export (#529 PR1).
+ * /settings/backup — operational backup & export (#529 PR1 + PR2).
  *
  * Admin-only. Three download buttons (Recipe / Content / Archive); each
  * triggers a JSON file download via `/api/backup/*` and updates the
  * `lastExportAt` timestamp surfaced here and on the dashboard.
  *
- * Import is the natural follow-up (PR2) — left as a "coming soon" note
- * here so admins know where it will live.
+ * Import (PR2): replaces the org&apos;s content + config with an uploaded
+ * archive. Destructive; requires typing RESTORE to enable the submit
+ * button. See `lib/backup-import.ts` for the wipe-then-restore replayer.
  */
-export default async function BackupSettingsPage() {
+export default async function BackupSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ imported?: string }>
+}) {
   const session = await auth()
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) redirect('/dashboard')
   if (!session.user.organizationId) redirect('/dashboard')
+
+  const params = await searchParams
+  const showImportSuccess = params?.imported === '1'
 
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, session.user.organizationId),
   })
 
   const lastExportStr = formatLastExport(org?.lastExportAt ?? null, org?.lastExportBytes ?? null)
+  const lastImportStr = formatLastExport(org?.lastImportAt ?? null, org?.lastImportBytes ?? null)
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -60,10 +73,28 @@ export default async function BackupSettingsPage() {
         </p>
       </div>
 
-      <section className="rounded-lg border bg-card p-5">
+      {showImportSuccess && (
+        <div
+          role="status"
+          className="rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 px-4 py-3 text-sm"
+        >
+          <p className="font-medium text-emerald-900 dark:text-emerald-200">
+            Archive imported successfully.
+          </p>
+          <p className="text-emerald-800 dark:text-emerald-300/80 mt-0.5">
+            The organization&apos;s content and configuration have been replaced.
+          </p>
+        </div>
+      )}
+
+      <section className="rounded-lg border bg-card p-5 space-y-2">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-base font-semibold">Last export</h2>
           <span className="text-xs text-muted-foreground">{lastExportStr}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="text-base font-semibold">Last import</h2>
+          <span className="text-xs text-muted-foreground">{lastImportStr}</span>
         </div>
       </section>
 
@@ -138,17 +169,56 @@ export default async function BackupSettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-dashed bg-card p-5">
-        <h2 className="text-base font-semibold">Import</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Restoring from a previous archive is a destructive operation that
-          replaces the current content. Coming in a follow-up PR of{' '}
-          <a href="https://github.com/roballred/GovEA/issues/529" target="_blank" rel="noopener noreferrer" className="underline">
-            #529
-          </a>{' '}
-          with an explicit destructive-action confirmation per the capability
-          rules.
-        </p>
+      <section className="rounded-lg border border-red-300 dark:border-red-900 bg-red-50/30 dark:bg-red-950/10 p-5 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-red-900 dark:text-red-200">
+            Import &mdash; destructive
+          </h2>
+          <p className="text-sm text-red-800 dark:text-red-300/80 mt-1">
+            Replaces this organization&apos;s entire content and configuration
+            with the uploaded archive. Users, audit log, and SMTP credentials
+            are preserved. Federation connections are cleared. There is no
+            undo &mdash; export an archive first if you might want one.
+          </p>
+        </div>
+        <form action={importArchiveFromForm} className="space-y-4">
+          <div>
+            <Label htmlFor="file">Archive JSON file</Label>
+            <Input
+              id="file"
+              name="file"
+              type="file"
+              accept="application/json,.json"
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Must be an Archive export from this build (format 1.0).
+              Recipe-only and content-only imports are not yet supported.
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="confirm">
+              Type <code className="rounded bg-red-100 dark:bg-red-950/40 px-1 py-0.5 text-[11px] font-mono">RESTORE</code> to enable import
+            </Label>
+            <Input
+              id="confirm"
+              name="confirm"
+              type="text"
+              placeholder="RESTORE"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+              pattern="RESTORE"
+              title="Type RESTORE (case-sensitive) to confirm"
+            />
+          </div>
+          <div>
+            <Button type="submit" variant="destructive">
+              Import archive (replaces current data)
+            </Button>
+          </div>
+        </form>
       </section>
     </div>
   )
