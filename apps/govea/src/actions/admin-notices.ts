@@ -1,10 +1,10 @@
 'use server'
 
-import { and, eq, ne } from 'drizzle-orm'
+import { and, eq, isNull, ne } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
-import { isAdmin } from '@/lib/rbac'
+import { isAdmin, isInstanceAdmin } from '@/lib/rbac'
 import { db } from '@/db/client'
 import {
   adminNotices,
@@ -20,6 +20,16 @@ async function requireOrgAdmin() {
   if (!isAdmin(session.user)) throw new Error('Forbidden')
   if (!session.user.organizationId) throw new Error('Org admin has no org')
   return { session, orgId: session.user.organizationId as string }
+}
+
+// Instance admin is a separate operating role from org admin (see #437 / the
+// IAM capability docs). An org admin is NOT an instance admin by virtue of
+// org role; instance admin is granted via `instance_role = 'instance_admin'`.
+async function requireInstanceAdmin() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  if (!isInstanceAdmin(session.user)) throw new Error('Forbidden')
+  return { session }
 }
 
 interface NoticeInput {
@@ -212,4 +222,180 @@ export async function setOrgNoticeActiveFromForm(formData: FormData): Promise<vo
 export async function deleteOrgNoticeFromForm(formData: FormData): Promise<void> {
   const id = formData.get('id') as string
   await deleteOrgNotice(id)
+}
+
+// ── Instance-scoped notices (PR2 of #456) ────────────────────────────────────
+//
+// Instance notices have `scope='instance'` and `organizationId IS NULL`. They
+// are visible across the whole instance, including to org admins and other
+// instance admins. Only instance admins can create/edit/activate/delete.
+//
+// Audit-log organizationId is null for instance-scope writes (matches the
+// instance-admin pattern in act-as / break-glass actions).
+
+export async function createInstanceNotice(formData: FormData): Promise<void> {
+  const { session } = await requireInstanceAdmin()
+  const input = parseNoticeInput(formData)
+  const activateNow = formData.get('activate') === 'true'
+
+  await db.transaction(async (tx) => {
+    if (activateNow) {
+      await tx.update(adminNotices)
+        .set({ active: false, updatedAt: new Date() })
+        .where(and(
+          eq(adminNotices.scope, 'instance'),
+          isNull(adminNotices.organizationId),
+          eq(adminNotices.active, true),
+        ))
+    }
+
+    const [row] = await tx.insert(adminNotices).values({
+      scope: 'instance',
+      organizationId: null,
+      severity: input.severity,
+      title: input.title,
+      body: input.body,
+      learnMoreUrl: input.learnMoreUrl,
+      active: activateNow,
+      createdBy: session.user.id,
+    }).returning()
+
+    await writeAuditLog(tx, {
+      action: 'admin_notice.create',
+      entityType: 'admin_notice',
+      entityId: row.id,
+      userId: session.user.id,
+      organizationId: null,
+      after: { scope: 'instance', title: input.title, severity: input.severity, active: activateNow },
+    })
+  })
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/instance/notices')
+}
+
+export async function updateInstanceNotice(noticeId: string, formData: FormData): Promise<void> {
+  const { session } = await requireInstanceAdmin()
+  const input = parseNoticeInput(formData)
+
+  const before = await db.query.adminNotices.findFirst({
+    where: eq(adminNotices.id, noticeId),
+  })
+  if (!before) throw new Error('Notice not found')
+  if (before.scope !== 'instance' || before.organizationId !== null) {
+    throw new Error('Forbidden')
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(adminNotices)
+      .set({
+        title: input.title,
+        body: input.body,
+        severity: input.severity,
+        learnMoreUrl: input.learnMoreUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(adminNotices.id, noticeId))
+
+    await writeAuditLog(tx, {
+      action: 'admin_notice.update',
+      entityType: 'admin_notice',
+      entityId: noticeId,
+      userId: session.user.id,
+      organizationId: null,
+      before: { scope: 'instance', title: before.title, severity: before.severity },
+      after: { scope: 'instance', title: input.title, severity: input.severity },
+    })
+  })
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/instance/notices')
+}
+
+export async function setInstanceNoticeActive(noticeId: string, active: boolean): Promise<void> {
+  const { session } = await requireInstanceAdmin()
+
+  const before = await db.query.adminNotices.findFirst({
+    where: eq(adminNotices.id, noticeId),
+  })
+  if (!before) throw new Error('Notice not found')
+  if (before.scope !== 'instance' || before.organizationId !== null) {
+    throw new Error('Forbidden')
+  }
+
+  await db.transaction(async (tx) => {
+    if (active) {
+      // Deactivate any other active instance notice first — single-active
+      // invariant per scope (matches org-scoped behaviour).
+      await tx.update(adminNotices)
+        .set({ active: false, updatedAt: new Date() })
+        .where(and(
+          eq(adminNotices.scope, 'instance'),
+          isNull(adminNotices.organizationId),
+          eq(adminNotices.active, true),
+          ne(adminNotices.id, noticeId),
+        ))
+    }
+
+    await tx.update(adminNotices)
+      .set({ active, updatedAt: new Date() })
+      .where(eq(adminNotices.id, noticeId))
+
+    await writeAuditLog(tx, {
+      action: active ? 'admin_notice.activate' : 'admin_notice.deactivate',
+      entityType: 'admin_notice',
+      entityId: noticeId,
+      userId: session.user.id,
+      organizationId: null,
+      before: { scope: 'instance', active: before.active },
+      after: { scope: 'instance', active },
+    })
+  })
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/instance/notices')
+}
+
+export async function deleteInstanceNotice(noticeId: string): Promise<void> {
+  const { session } = await requireInstanceAdmin()
+
+  const before = await db.query.adminNotices.findFirst({
+    where: eq(adminNotices.id, noticeId),
+  })
+  if (!before) throw new Error('Notice not found')
+  if (before.scope !== 'instance' || before.organizationId !== null) {
+    throw new Error('Forbidden')
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.delete(adminNotices).where(eq(adminNotices.id, noticeId))
+    await writeAuditLog(tx, {
+      action: 'admin_notice.delete',
+      entityType: 'admin_notice',
+      entityId: noticeId,
+      userId: session.user.id,
+      organizationId: null,
+      before: { scope: 'instance', title: before.title, severity: before.severity, active: before.active },
+    })
+  })
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/instance/notices')
+}
+
+// FormData adapters for the instance-admin UI.
+
+export async function createInstanceNoticeFromForm(formData: FormData): Promise<void> {
+  await createInstanceNotice(formData)
+}
+
+export async function setInstanceNoticeActiveFromForm(formData: FormData): Promise<void> {
+  const id = formData.get('id') as string
+  const active = formData.get('active') === 'true'
+  await setInstanceNoticeActive(id, active)
+}
+
+export async function deleteInstanceNoticeFromForm(formData: FormData): Promise<void> {
+  const id = formData.get('id') as string
+  await deleteInstanceNotice(id)
 }

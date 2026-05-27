@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/instance/orgs',     label: 'Organizations' },
   { href: '/instance/users',    label: 'Users' },
   { href: '/instance/features', label: 'Feature Controls' },
+  { href: '/instance/notices',  label: 'Notices' },
   { href: '/instance/audit',    label: 'Audit Log' },
   { href: '/instance/config',   label: 'Configuration' },
 ]
