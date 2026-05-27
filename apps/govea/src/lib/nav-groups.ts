@@ -1,33 +1,20 @@
 /**
- * Pure logic for the admin sidebar's collapsible nav-group state (#479).
+ * Pure logic for the admin sidebar's collapsible nav-group accordion (#662).
  *
- * Lives outside the React component so it can be unit-tested without a DOM,
- * and so the rules ("which groups default open?", "what's the storage key
- * shape?") are visible in one place rather than scattered through the
- * component body.
+ * Single-open accordion: at most one group expanded at a time. State is
+ * stored in `localStorage` under the single key `nav.openGroup`, holding
+ * either a group label (the currently-open group) or absent (all
+ * collapsed). Replaces the per-group key shape introduced in #479 — those
+ * older keys (`nav.group.<slug>.open`) are now ignored.
  *
- * Storage shape: `localStorage` keyed `nav.group.<group-slug>.open`, value
- * `'1'` for open or `'0'` for collapsed. Missing keys fall back to the
- * default-open rule below.
+ * Default-collapsed for every group on first load, per #662. The
+ * containing-active-route guard lives in the component (it's a derived
+ * UI decision, not storage).
  */
 
-/**
- * Groups that default to **open** when the user has no stored preference.
- * Everything else (Strategy, Reports, Configuration, Data Architecture
- * once we add more nav-heavy modules) defaults to **collapsed** per #479
- * scope so a new install does not start with a wall of nav items.
- *
- * NOTE: Data Architecture defaults open per #479; once authoring/admin
- * load expands further it can move to default-collapsed without breaking
- * stored preferences.
- */
-const DEFAULT_OPEN_GROUPS = new Set<string>([
-  'Business Architecture',
-  'Data Architecture',
-  'Portfolio',
-])
+const STORAGE_KEY = 'nav.openGroup'
 
-/** Normalises a group label into a storage-safe slug. */
+/** Normalises a group label into a storage-safe slug — used for aria-controls ids. */
 export function groupSlug(label: string): string {
   return label
     .toLowerCase()
@@ -35,50 +22,43 @@ export function groupSlug(label: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-/** Storage key for a group's open/closed state. */
-export function groupStorageKey(label: string): string {
-  return `nav.group.${groupSlug(label)}.open`
-}
-
-/** True if the group defaults to open when no preference is stored. */
-export function defaultGroupOpen(label: string): boolean {
-  return DEFAULT_OPEN_GROUPS.has(label)
-}
-
 /**
- * Resolve a group's current open/closed state from storage, falling back
- * to the default-open rule when the key is missing or malformed.
- *
- * `storage` is parameterised so tests can pass an in-memory shim and the
- * caller can pass `null` during SSR.
+ * Resolve the currently-open group from storage, or null if none / unavailable.
+ * Returns null when storage is missing, the key is absent, or the stored value
+ * is empty.
  */
-export function readGroupOpen(
-  label: string,
+export function readOpenGroup(
   storage: Pick<Storage, 'getItem'> | null | undefined,
-): boolean {
-  if (!storage) return defaultGroupOpen(label)
+): string | null {
+  if (!storage) return null
   try {
-    const raw = storage.getItem(groupStorageKey(label))
-    if (raw === '1') return true
-    if (raw === '0') return false
-    return defaultGroupOpen(label)
+    const raw = storage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const trimmed = raw.trim()
+    return trimmed.length > 0 ? trimmed : null
   } catch {
-    // Quota / disabled-storage / private-mode edge cases — fall through.
-    return defaultGroupOpen(label)
+    // Quota / disabled-storage / private-mode — treat as "no preference".
+    return null
   }
 }
 
-/** Persist a group's open/closed state. No-op if `storage` is unavailable. */
-export function writeGroupOpen(
-  label: string,
-  open: boolean,
-  storage: Pick<Storage, 'setItem'> | null | undefined,
+/**
+ * Persist the currently-open group label, or clear it. Pass null (or undefined)
+ * to clear. No-op when storage is unavailable.
+ */
+export function writeOpenGroup(
+  label: string | null | undefined,
+  storage: (Pick<Storage, 'setItem'> & Pick<Storage, 'removeItem'>) | null | undefined,
 ): void {
   if (!storage) return
   try {
-    storage.setItem(groupStorageKey(label), open ? '1' : '0')
+    if (label == null || label.length === 0) {
+      storage.removeItem(STORAGE_KEY)
+    } else {
+      storage.setItem(STORAGE_KEY, label)
+    }
   } catch {
     // Quota exceeded or storage disabled — preference is lost for this
-    // session, which is acceptable; the UI continues to work.
+    // session; UI continues to work.
   }
 }
