@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { driver } from 'driver.js'
+import { driver, type DriveStep } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import type { Role } from '@/lib/rbac'
 
@@ -11,15 +11,59 @@ const ROLE_COPY: Record<Role, string> = {
   viewer:      'You have read-only access to published content across the catalog.',
 }
 
+/**
+ * Map data-tour identifiers to the nav group that owns them (#662).
+ *
+ * Children of a collapsed group are hidden via `hidden` on the panel
+ * <div>, which makes driver.js unable to highlight them. Before each
+ * step targeting a child, we call `window.__goveaOpenNavGroup(group)`
+ * to ensure the parent is open. Group-label steps themselves
+ * (nav-business-arch / nav-strategy / nav-reports) also call the
+ * helper so the group expands on focus.
+ *
+ * Top-level targets that aren't inside a collapsible group (dashboard,
+ * search, role-badge) are intentionally absent from the map.
+ */
+const NAV_TOUR_GROUPS: Record<string, string> = {
+  'nav-business-arch': 'Business Architecture',
+  'nav-personas':      'Business Architecture',
+  'nav-value-streams': 'Business Architecture',
+  'nav-capabilities':  'Business Architecture',
+  'nav-services':      'Business Architecture',
+  'nav-applications':  'Portfolio',
+  'nav-adrs':          'Portfolio',
+  'nav-strategy':      'Strategy',
+  'nav-roadmap':       'Strategy',
+  'nav-reports':       'Reports',
+}
+
+/** Extract the `data-tour` token from a `[data-tour="..."]` element selector. */
+function tourTokenFromSelector(selector: string): string | null {
+  const m = selector.match(/\[data-tour="([^"]+)"\]/)
+  return m ? m[1] : null
+}
+
+/**
+ * Builds the onHighlightStarted callback for a step. If the step targets a
+ * nav child whose parent group is collapsible, the callback opens that
+ * group via the global helper registered by AppShell. No-op for steps
+ * outside the nav-group accordion (Dashboard, Search, role badge).
+ */
+function makeNavGroupOpener(elementSelector: string): (() => void) | undefined {
+  const token = tourTokenFromSelector(elementSelector)
+  if (!token) return undefined
+  const group = NAV_TOUR_GROUPS[token]
+  if (!group) return undefined
+  return () => {
+    const w = window as unknown as { __goveaOpenNavGroup?: (label: string) => void }
+    if (typeof w.__goveaOpenNavGroup === 'function') {
+      w.__goveaOpenNavGroup(group)
+    }
+  }
+}
+
 function buildTour(role: Role) {
-  return driver({
-    showProgress: true,
-    progressText: '{{current}} of {{total}}',
-    nextBtnText: 'Next →',
-    prevBtnText: '← Back',
-    doneBtnText: 'Done',
-    popoverClass: 'govea-tour-popover',
-    steps: [
+  const rawSteps: DriveStep[] = [
       {
         popover: {
           title: 'Welcome to GovEA',
@@ -136,7 +180,25 @@ function buildTour(role: Role) {
           align: 'end',
         },
       },
-    ],
+    ]
+  // #662 — for each step that targets a nav-group child, attach an
+  // onHighlightStarted that opens the owning group via AppShell's global
+  // helper. Steps outside the accordion (Dashboard, Search, role badge,
+  // the welcome step) pass through unchanged.
+  const steps = rawSteps.map((step) => {
+    if (!('element' in step) || typeof step.element !== 'string') return step
+    const opener = makeNavGroupOpener(step.element)
+    return opener ? { ...step, onHighlightStarted: opener } : step
+  })
+
+  return driver({
+    showProgress: true,
+    progressText: '{{current}} of {{total}}',
+    nextBtnText: 'Next →',
+    prevBtnText: '← Back',
+    doneBtnText: 'Done',
+    popoverClass: 'govea-tour-popover',
+    steps,
   })
 }
 

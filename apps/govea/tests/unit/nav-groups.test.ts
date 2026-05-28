@@ -1,5 +1,5 @@
 /**
- * Unit tests for the collapsible-nav-group state logic (#479).
+ * Unit tests for the single-open accordion nav-group state logic (#662).
  *
  * Pure logic — no React, no jsdom. Storage is exercised via an in-memory
  * shim so the test runs in any vitest environment.
@@ -8,10 +8,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   groupSlug,
-  groupStorageKey,
-  defaultGroupOpen,
-  readGroupOpen,
-  writeGroupOpen,
+  readOpenGroup,
+  writeOpenGroup,
 } from '@/lib/nav-groups'
 
 // ── In-memory Storage shim ───────────────────────────────────────────────────
@@ -42,121 +40,106 @@ describe('groupSlug', () => {
     expect(groupSlug('Reports & Insights')).toBe('reports-insights')
   })
 
-  it('trims leading and trailing hyphens', () => {
+  it('trims leading/trailing hyphens and collapses separators', () => {
     expect(groupSlug('  Spaced  ')).toBe('spaced')
     expect(groupSlug('!!Reports!!')).toBe('reports')
-  })
-
-  it('collapses multiple separators into one', () => {
     expect(groupSlug('A & B / C')).toBe('a-b-c')
   })
 })
 
-// ── groupStorageKey ──────────────────────────────────────────────────────────
+// ── readOpenGroup ────────────────────────────────────────────────────────────
 
-describe('groupStorageKey', () => {
-  it('uses the documented nav.group.<slug>.open shape', () => {
-    expect(groupStorageKey('Business Architecture')).toBe('nav.group.business-architecture.open')
-    expect(groupStorageKey('Strategy')).toBe('nav.group.strategy.open')
-  })
-})
-
-// ── defaultGroupOpen ─────────────────────────────────────────────────────────
-
-describe('defaultGroupOpen', () => {
-  it('returns true for the default-open groups in #479 scope', () => {
-    expect(defaultGroupOpen('Business Architecture')).toBe(true)
-    expect(defaultGroupOpen('Data Architecture')).toBe(true)
-    expect(defaultGroupOpen('Portfolio')).toBe(true)
+describe('readOpenGroup', () => {
+  it('returns null when storage has no preference (default-all-collapsed)', () => {
+    expect(readOpenGroup(storage)).toBeNull()
   })
 
-  it('returns false for the default-collapsed groups in #479 scope', () => {
-    expect(defaultGroupOpen('Strategy')).toBe(false)
-    expect(defaultGroupOpen('Reports')).toBe(false)
-    expect(defaultGroupOpen('Configuration')).toBe(false)
+  it('returns the stored group label', () => {
+    storage.setItem('nav.openGroup', 'Strategy')
+    expect(readOpenGroup(storage)).toBe('Strategy')
   })
 
-  it('returns false for an unknown group (conservative default)', () => {
-    expect(defaultGroupOpen('Some New Group')).toBe(false)
-  })
-})
-
-// ── readGroupOpen ────────────────────────────────────────────────────────────
-
-describe('readGroupOpen', () => {
-  it('returns the default when the key is missing', () => {
-    expect(readGroupOpen('Business Architecture', storage)).toBe(true)
-    expect(readGroupOpen('Strategy', storage)).toBe(false)
+  it('returns null when storage is unavailable (SSR)', () => {
+    expect(readOpenGroup(null)).toBeNull()
+    expect(readOpenGroup(undefined)).toBeNull()
   })
 
-  it('returns true when the stored value is "1"', () => {
-    storage.setItem('nav.group.strategy.open', '1')
-    expect(readGroupOpen('Strategy', storage)).toBe(true)
+  it('returns null when the stored value is empty / whitespace', () => {
+    storage.setItem('nav.openGroup', '')
+    expect(readOpenGroup(storage)).toBeNull()
+    storage.setItem('nav.openGroup', '   ')
+    expect(readOpenGroup(storage)).toBeNull()
   })
 
-  it('returns false when the stored value is "0"', () => {
-    storage.setItem('nav.group.business-architecture.open', '0')
-    expect(readGroupOpen('Business Architecture', storage)).toBe(false)
-  })
-
-  it('falls back to the default for a malformed stored value', () => {
-    storage.setItem('nav.group.strategy.open', 'true')
-    expect(readGroupOpen('Strategy', storage)).toBe(false)
-    storage.setItem('nav.group.business-architecture.open', 'yes')
-    expect(readGroupOpen('Business Architecture', storage)).toBe(true)
-  })
-
-  it('returns the default when no storage is available (SSR)', () => {
-    expect(readGroupOpen('Business Architecture', null)).toBe(true)
-    expect(readGroupOpen('Strategy', undefined)).toBe(false)
-  })
-
-  it('falls back to the default if getItem throws', () => {
+  it('falls back to null if getItem throws', () => {
     const throwing: Pick<Storage, 'getItem'> = {
       getItem() { throw new Error('storage disabled') },
     }
-    expect(readGroupOpen('Business Architecture', throwing)).toBe(true)
-    expect(readGroupOpen('Strategy', throwing)).toBe(false)
+    expect(readOpenGroup(throwing)).toBeNull()
+  })
+
+  it('ignores the legacy per-group keys from #479', () => {
+    // #479 used per-group keys (nav.group.<slug>.open). The new shape
+    // (#662) reads only nav.openGroup. Legacy keys are intentionally
+    // ignored.
+    storage.setItem('nav.group.business-architecture.open', '1')
+    storage.setItem('nav.group.strategy.open', '1')
+    expect(readOpenGroup(storage)).toBeNull()
   })
 })
 
-// ── writeGroupOpen ───────────────────────────────────────────────────────────
+// ── writeOpenGroup ───────────────────────────────────────────────────────────
 
-describe('writeGroupOpen', () => {
-  it('writes "1" for open and "0" for closed under the documented key', () => {
-    writeGroupOpen('Strategy', true, storage)
-    expect(storage.getItem('nav.group.strategy.open')).toBe('1')
-    writeGroupOpen('Strategy', false, storage)
-    expect(storage.getItem('nav.group.strategy.open')).toBe('0')
+describe('writeOpenGroup', () => {
+  it('writes the label to nav.openGroup', () => {
+    writeOpenGroup('Strategy', storage)
+    expect(storage.getItem('nav.openGroup')).toBe('Strategy')
   })
 
-  it('is a no-op when storage is unavailable (SSR / private mode)', () => {
-    // Should not throw.
-    writeGroupOpen('Strategy', true, null)
-    writeGroupOpen('Strategy', false, undefined)
+  it('removes the key when given null (clears the open group)', () => {
+    storage.setItem('nav.openGroup', 'Strategy')
+    writeOpenGroup(null, storage)
+    expect(storage.getItem('nav.openGroup')).toBeNull()
   })
 
-  it('swallows setItem errors so the UI keeps working', () => {
-    const throwing: Pick<Storage, 'setItem'> = {
+  it('removes the key when given empty string', () => {
+    storage.setItem('nav.openGroup', 'Strategy')
+    writeOpenGroup('', storage)
+    expect(storage.getItem('nav.openGroup')).toBeNull()
+  })
+
+  it('overwrites a previously-stored label (only one open at a time)', () => {
+    writeOpenGroup('Strategy', storage)
+    writeOpenGroup('Reports', storage)
+    expect(storage.getItem('nav.openGroup')).toBe('Reports')
+  })
+
+  it('is a no-op when storage is unavailable', () => {
+    writeOpenGroup('Strategy', null)
+    writeOpenGroup(null, undefined)
+  })
+
+  it('swallows setItem / removeItem errors', () => {
+    const throwing = {
       setItem() { throw new Error('quota exceeded') },
-    }
-    // Should not throw.
-    writeGroupOpen('Strategy', true, throwing)
+      removeItem() { throw new Error('disabled') },
+    } as Pick<Storage, 'setItem' | 'removeItem'>
+    writeOpenGroup('Strategy', throwing)
+    writeOpenGroup(null, throwing)
   })
 })
 
 // ── round-trip ───────────────────────────────────────────────────────────────
 
 describe('round-trip read after write', () => {
-  it('write then read returns the same value', () => {
-    writeGroupOpen('Strategy', true, storage)
-    expect(readGroupOpen('Strategy', storage)).toBe(true)
-    writeGroupOpen('Strategy', false, storage)
-    expect(readGroupOpen('Strategy', storage)).toBe(false)
+  it('write then read returns the same label', () => {
+    writeOpenGroup('Strategy', storage)
+    expect(readOpenGroup(storage)).toBe('Strategy')
   })
 
-  it('does not leak across groups', () => {
-    writeGroupOpen('Strategy', true, storage)
-    expect(readGroupOpen('Reports', storage)).toBe(false) // still its default
+  it('write null then read returns null', () => {
+    writeOpenGroup('Strategy', storage)
+    writeOpenGroup(null, storage)
+    expect(readOpenGroup(storage)).toBeNull()
   })
 })

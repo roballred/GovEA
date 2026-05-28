@@ -8,9 +8,7 @@ import type { Role } from '@/lib/rbac'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
 import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
-import {
-  groupStorageKey, defaultGroupOpen, readGroupOpen, writeGroupOpen,
-} from '@/lib/nav-groups'
+import { groupSlug, readOpenGroup, writeOpenGroup } from '@/lib/nav-groups'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
@@ -114,41 +112,31 @@ function SidebarContent({
   const isContributor = role === 'admin' || role === 'contributor'
   const isViewer = role === 'viewer'
 
-  // #479 collapsible group state. Defaults come from `defaultGroupOpen`
-  // (pure logic in @/lib/nav-groups) so the initial render is stable
-  // across SSR + hydration. After mount we sync any stored preferences.
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {}
-    for (const g of NAV_GROUPS) initial[g.label] = defaultGroupOpen(g.label)
-    return initial
-  })
+  // #662 single-open accordion. Default-collapsed on first load; storage
+  // holds at most one open group at a time under `nav.openGroup`. The
+  // initial render renders all-collapsed so SSR + hydration agree; an
+  // effect syncs from localStorage after mount.
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const storage = window.localStorage
-    setOpenGroups(prev => {
-      const next = { ...prev }
-      let changed = false
-      for (const g of NAV_GROUPS) {
-        const stored = readGroupOpen(g.label, storage)
-        if (stored !== prev[g.label]) {
-          next[g.label] = stored
-          changed = true
-        }
-      }
-      return changed ? next : prev
-    })
+    const stored = readOpenGroup(window.localStorage)
+    if (stored !== null) setOpenGroup(stored)
+  }, [])
+
+  // Open exactly one group; clicking the currently-open group collapses it.
+  // Setting `force=true` always opens (used by the global helper below so
+  // the product tour can pre-open a group regardless of current state).
+  const setOpenGroupAndPersist = useCallback((label: string | null) => {
+    setOpenGroup(label)
+    if (typeof window !== 'undefined') {
+      writeOpenGroup(label, window.localStorage)
+    }
   }, [])
 
   const toggleGroup = useCallback((label: string) => {
-    setOpenGroups(prev => {
-      const open = !prev[label]
-      if (typeof window !== 'undefined') {
-        writeGroupOpen(label, open, window.localStorage)
-      }
-      return { ...prev, [label]: open }
-    })
-  }, [])
+    setOpenGroupAndPersist(openGroup === label ? null : label)
+  }, [openGroup, setOpenGroupAndPersist])
 
   const onGroupKeyDown = useCallback((e: KeyboardEvent<HTMLButtonElement>, label: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -156,6 +144,20 @@ function SidebarContent({
       toggleGroup(label)
     }
   }, [toggleGroup])
+
+  // #662 — expose a global hook so the product tour can ensure a parent
+  // nav group is open before highlighting a child link. Idempotent;
+  // setting the same group again is a no-op. Cleared on unmount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const w = window as unknown as { __goveaOpenNavGroup?: (label: string) => void }
+    w.__goveaOpenNavGroup = (label: string) => {
+      setOpenGroupAndPersist(label)
+    }
+    return () => {
+      delete w.__goveaOpenNavGroup
+    }
+  }, [setOpenGroupAndPersist])
 
   return (
     <nav className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
@@ -233,25 +235,31 @@ function SidebarContent({
               !(item.viewerHidden && isViewer)
           )
           if (visibleItems.length === 0) return null
-          const isOpen = openGroups[group.label] ?? defaultGroupOpen(group.label)
-          // Auto-open a collapsed group whose current route is inside it so
-          // active-state highlight stays visible even when the user previously
-          // collapsed the group. Toggling collapses it again.
+          // Single-open accordion (#662). The group is open if it's the
+          // currently-open one OR it contains the active route (the
+          // containing-active-route guard keeps the active-link highlight
+          // visible without requiring the user to expand the group
+          // manually). The containing-active group also "wins" against
+          // the user's explicit open group when both apply — same group.
           const containsActive = visibleItems.some(item =>
             pathname === item.href || pathname.startsWith(item.href + '/')
           )
-          const effectiveOpen = isOpen || containsActive
-          const groupId = groupStorageKey(group.label).replace(/[^a-z0-9]+/gi, '-')
+          const effectiveOpen = openGroup === group.label || containsActive
+          const groupId = `navgroup-${groupSlug(group.label)}`
           return (
             <div key={group.label}>
               <button
                 type="button"
                 aria-expanded={effectiveOpen}
-                aria-controls={`navgroup-${groupId}`}
+                aria-controls={groupId}
                 onClick={() => toggleGroup(group.label)}
                 onKeyDown={(e) => onGroupKeyDown(e, group.label)}
                 data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : group.label === 'Reports' ? 'nav-reports' : undefined}
-                className="flex w-full items-center justify-between px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/40 select-none rounded-sm hover:text-white/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30 transition-colors"
+                /* #662: top-level group rows are visually a little more
+                   prominent than child links — slightly larger text, more
+                   padding, brighter idle color — but still clearly the
+                   header for a sub-list, not a full nav item. */
+                className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white/60 select-none rounded-sm hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 transition-colors"
               >
                 <span>{group.label}</span>
                 {/* Disclosure triangle: rotates 90° when open. */}
@@ -270,7 +278,7 @@ function SidebarContent({
                 </svg>
               </button>
               <div
-                id={`navgroup-${groupId}`}
+                id={groupId}
                 hidden={!effectiveOpen}
                 className="mt-0.5 space-y-0.5"
               >
