@@ -2,376 +2,157 @@
 
 **Open source enterprise architecture for state and local government.**
 
-GovEA helps government IT teams catalogue their application and service portfolio, map business capabilities to the people they serve, and make architecture decisions that trace back to real mission needs, not just technology inventory.
+GovEA helps government teams understand what they have, why it matters, and how technology connects to public outcomes. It is built around people, capabilities, applications, services, decisions, and strategy rather than compliance theater.
 
-Free. Open source. Runs on-prem or as a hosted service.
+GovEA is free and open source. It can run locally, in containers, on-prem, or as a hosted deployment.
 
----
+## What It Does
 
-## Tech Stack
+GovEA gives state and local government teams a practical EA workspace for:
 
-- **Framework:** Next.js App Router
-- **Language:** TypeScript
-- **Database:** PostgreSQL
-- **ORM:** Drizzle
-- **Authentication:** Auth.js with OpenID Connect (OIDC) SSO first, using admin-managed pre-provisioned access; Microsoft Entra ID is the current configured provider target, and Okta, Auth0, or other OIDC providers can be supported through the same architectural pattern. SAML support can be added later through BoxyHQ SAML Jackson
-- **UI:** Tailwind CSS + shadcn/ui
-- **Deployment:** Docker and web-hosted deployments, with containers available for on-prem installs
-- **Product architecture:** build toward a reusable `@govea/core` package for CMS-pattern primitives such as content types, field validation, taxonomy, RBAC, audit trail, workflow, and recipe-based seeding
-- **Search:** embedded/local search in v1 so self-hosted deployments do not require an external search service
-- **Extensibility:** TOGAF and SAFe remain optional overlays, not hard-coded assumptions in the product
+- mapping personas, services, capabilities, applications, goals, objectives, and initiatives
+- tracing mission needs to the systems that support them
+- managing architecture decisions, principles, glossary terms, and architecture debt
+- building stakeholder-friendly reports and roadmap views
+- keeping taxonomy, audit, roles, and organization boundaries clear
+- importing and exporting portfolio data as the product matures
 
----
-
-## Data Model
-
-GovEA is built around a mission-first traceability chain:
+The core traceability chain is:
 
 ```text
 Goals -> Strategic Objectives -> Initiatives -> Capabilities -> Applications
 ```
 
-- **Goals** define broad strategic intent above measurable **Strategic Objectives**.
-- **Initiatives** connect strategic objectives to the capabilities and applications changed by delivery work.
-- Every **Application** must link to at least one **Capability**.
-- Every **Capability** must link to at least one **Persona**.
-- **Services** model the government-facing delivery layer and link to personas, capabilities, and value streams. Supporting applications are surfaced through linked capabilities.
-- **Strategic Objectives** link to capabilities and value streams. Supporting applications are surfaced through linked capabilities rather than direct objective-to-application joins.
-- **Persona Type** and **Persona Tag** values are managed through **Taxonomy**, not through persona-specific admin tables.
-- **Organization** is the top-level tenant boundary.
-- **Instance Admin** is a separate instance-scoped operating role used for platform administration. It does not automatically make a user the owner or editor of every agency's EA content, and it should not absorb routine org-scoped settings like themes or module choices.
-- Additional core entities include **Goals**, **Architecture Decision Records (ADRs)**, **Strategic Objectives**, **Initiatives**, **Principles**, and the **Glossary**.
-- Single-org use is still the default operating mode, but GovEA now also ships a prototype multi-organization model with org-scoped visibility and approval-based cross-org links.
+For the full model, see [Data Model](./docs/data-model.md) and [Data and Traceability](./docs/architect/data-and-traceability.md).
 
-For the implementation-level schema reference, including field metadata, enums, and junction tables, see [`docs/data-model.md`](./docs/data-model.md).
+## Who It Is For
 
-For the application architecture overview, including runtime shape, tenancy, traceability, and deployment notes, see [`docs/architect/`](./docs/architect/).
+GovEA is designed for public-sector teams that need useful enterprise architecture without heavyweight tooling overhead:
 
----
+- enterprise architects and domain architects
+- agency EA coordinators
+- department leaders and business stakeholders
+- budget, performance, and planning analysts
+- data architects and application portfolio owners
+- instance and organization administrators
 
-## Development Approach
+Persona definitions live in [business-architecture/personas](./business-architecture/personas/). Persona journey findings live in [docs/persona-journeys](./docs/persona-journeys/).
 
-This project is developed using the [EasyEA framework](https://github.com/roballred/EasyEA), a people-centered, lightweight methodology designed for everyday work.
+## Current Shape
 
-All development standards are defined in [`Standards.md`](./Standards.md). The short version:
+The product is in active development. The shipped surface includes the core EA repository, traceability views, taxonomy, reporting, role-based access, audit, local/container development, and a growing set of import/export and admin capabilities.
 
-- **Humans lead.** AI is a capability amplifier, not the decision maker. Humans define intent, review outputs, and own merge decisions.
-- **Persona-first.** Every capability traces back to a real person's pain point or goal. If a feature can't be tied to a persona, it doesn't ship.
-- **Issue-first.** Work begins from a tracked issue with clear scope. Issues reference the relevant persona(s) and capability ID(s).
-- **Pull requests required.** All changes, human or AI-assisted, go through the same branch, review, and merge workflow.
-- **Tests are part of development.** Not an afterthought.
+For detail, use these source-of-truth documents:
 
-The `business-architecture/` folder is the authoritative source for personas and capabilities. The data model and roadmap flow from there, not from technology choices.
+| Topic | Details |
+|---|---|
+| Product capabilities and status | [capabilities.md](./capabilities.md) |
+| Current priorities | [docs/product-priorities.md](./docs/product-priorities.md) |
+| Product and delivery risks | [docs/risk-register.md](./docs/risk-register.md) |
+| Architecture overview | [docs/architect/README.md](./docs/architect/README.md) |
+| Runtime and deployment | [docs/architect/runtime-and-deployment.md](./docs/architect/runtime-and-deployment.md) |
+| Security and tenancy | [docs/architect/security-and-tenancy.md](./docs/architect/security-and-tenancy.md) |
+| Data model | [docs/data-model.md](./docs/data-model.md) |
+| Standards for AI-assisted work | [Standards.md](./Standards.md) |
 
-### CI
+## Tech Stack
 
-Every pull request runs:
-- **Type check** - `tsc --noEmit` against `apps/govea/tsconfig.json` (strict mode)
-- **Lint** - ESLint 9 flat config via `eslint-config-next`
-- **Docs lint** - `node scripts/lint-business-architecture.mjs` (validates persona + capability files against `business-architecture/STYLE.md`)
-- **Production build** - `pnpm --filter govea build`
-- **Integration tests** - vitest against a Postgres service container
-- **E2E smoke tests** - Playwright against the live Next.js server
+- **App:** Next.js App Router, React, TypeScript
+- **Database:** PostgreSQL with Drizzle ORM
+- **Auth:** Auth.js with local development auth and OIDC SSO architecture
+- **UI:** Tailwind CSS and shadcn/ui
+- **Testing:** TypeScript, ESLint, Vitest integration tests, Playwright smoke tests
+- **Deployment:** containerized app plus PostgreSQL
 
-All must pass before a human merges. Only humans merge PRs.
+For deeper technical notes, start with [docs/architect](./docs/architect/).
 
----
+## Quick Start
 
-## Quick Start: Bootstrap & Verify
+Prerequisites:
 
-From a fresh `git clone`, this is the canonical path to a working dev environment plus confidence that what's on your disk matches what CI will check.
+- Node.js 20 or newer
+- pnpm 9 or newer
+- Docker or Podman for local database/container workflows
 
-**Prerequisites:** Node >= 20, pnpm >= 9 (`corepack enable pnpm` if missing).
+Clone and verify:
 
 ```bash
 git clone https://github.com/roballred/GovEA.git
 cd GovEA
-
-# Run the canonical bootstrap-and-verify path (#35):
 pnpm verify
 ```
 
-`pnpm verify` runs `scripts/bootstrap-verify.sh`, which executes the same gates CI runs on every PR — minus the integration suite, which needs a reachable Postgres:
+`pnpm verify` installs dependencies and runs the core local checks: type check, lint, and business-architecture docs lint.
 
-1. Check Node >= 20 and pnpm >= 9 are on PATH
-2. `pnpm install --frozen-lockfile`
-3. Type check (`tsc --noEmit`)
-4. Lint
-5. Business-architecture docs lint
-
-A clean local run predicts a clean CI run. The script exits non-zero on any failure and prints a coloured summary at the end so failures are obvious.
-
-Optional flags:
-
-```bash
-SKIP_INSTALL=1 pnpm verify          # skip pnpm install (dependencies known fresh)
-WITH_INTEGRATION=1 pnpm verify      # also run the vitest integration suite
-                                    #   (requires apps/govea/.env.local DATABASE_URL
-                                    #    pointing at a reachable Postgres)
-```
-
-To run the app interactively after verification passes, see [Local Containers](#local-containers) below.
-
----
-
-## Local Containers
-
-GovEA uses a runtime-agnostic compose helper (`scripts/container-compose.sh`) so local container workflows work with either Podman or Docker. Podman is the preferred default when installed.
-
-### Auto-detection
-
-The helper detects the available runtime automatically:
-- uses **Podman** when `podman` is found in PATH
-- falls back to **Docker** if Podman is not available
-- override with `CONTAINER_RUNTIME=docker` or `CONTAINER_RUNTIME=podman`
-
-### Common workflows
-
-**Host app + containerized Postgres** (fastest hot reload):
+Start a local demo database and app:
 
 ```bash
 pnpm demo:start
 ```
 
-**Database only** (start Postgres without running migrations or the app server):
+Common local commands:
 
 ```bash
-pnpm demo:db
+pnpm demo:db          # start Postgres only
+pnpm demo:db:stop     # stop Postgres
+pnpm demo:container   # run the full container stack
+pnpm demo:stop        # stop the demo stack
 ```
 
-Use this when you want to restart the Next.js layer or run migrations manually without disturbing the database. After the database is ready, run in a separate terminal:
+For manual database work:
 
 ```bash
-pnpm --filter govea db:migrate  # run migrations
-pnpm --filter govea db:seed     # load seed data
-pnpm --filter govea dev         # start the app server
-```
-
-**Stop the database:**
-
-```bash
-pnpm demo:db:stop
-```
-
-**Full container stack** (auto-detected runtime):
-
-```bash
-pnpm demo:container
-```
-
-**Stop the container stack:**
-
-```bash
-pnpm demo:stop
-```
-
-**Explicit runtime override:**
-
-```bash
-CONTAINER_RUNTIME=docker pnpm demo:start
-CONTAINER_RUNTIME=podman pnpm demo:container
-```
-
-Or use the convenience aliases:
-
-```bash
-pnpm demo:docker   # forces Docker
-pnpm demo:podman   # forces Podman
-```
-
-### Podman setup (macOS)
-
-```bash
-brew install podman
-podman machine start
-```
-
-Ensure `podman compose` or `podman-compose` is available:
-
-```bash
-podman compose version   # bundled with Podman Desktop
-# or
-pip install podman-compose
-```
-
-### Named volumes and Podman compose providers
-
-The demo stack persists Postgres data in a named volume (`demo_postgres_data`). With rootless Podman, `podman compose` (bundled with Podman Desktop) and `podman-compose` (the pip/brew package) can manage named volumes differently. If you start the stack with one tool and later switch to the other, you may land on what appears to be an empty database with no error — the data is in a volume the other tool can't see.
-
-**Recommendation:** pick one provider and stick to it. The `container-compose.sh` helper prefers `podman compose` when both are available, so as long as you use `pnpm demo:*` commands you stay on the same provider.
-
-If you deliberately want a clean local database (to re-run seed data from scratch, for example), remove the volume explicitly:
-
-```bash
-# Stop the stack first
-pnpm demo:db:stop          # or pnpm demo:stop for the full stack
-
-# Remove the named volume
-podman volume rm demo_postgres_data   # or: docker volume rm demo_postgres_data
-
-# Start fresh — the volume is recreated automatically
-pnpm demo:db
 pnpm --filter govea db:migrate
 pnpm --filter govea db:seed
+pnpm --filter govea dev
 ```
 
-### Azure container builds
+## Development Workflow
 
-Azure deployments can build images in the cloud via `az acr build` and do not require a local Docker daemon. See `scripts/azure-dev.sh` for the helper-script interface and [`docs/release-pipeline.md`](./docs/release-pipeline.md) for the deployment privacy policy. Operator-specific Azure account configuration belongs in a private ops repository or local environment variables, not in this public repository.
+GovEA follows the project standards in [Standards.md](./Standards.md):
 
----
+- humans own direction, review, and merge decisions
+- work starts from tracked issues
+- capability and persona traceability matter
+- all changes go through pull requests
+- tests or explicit validation notes are expected for every change
 
-## Capabilities
+Pull requests normally run:
 
-GovEA's capability surface spans 12 groups, each driven by government EA practitioner personas and validated through the EasyEA workflow. The **Scope** column tells a non-technical reader which groups are in v1 (current release) vs. deferred to v2 — addressing the ARB finding (#10) that "26 sub-capabilities with no prioritization signal is not useful to a non-technical decision-maker."
+- type check
+- lint
+- business-architecture docs lint
+- production build
+- integration tests
+- Playwright smoke tests
 
-| Group | Scope | Description |
-|---|---|---|
-| Identity & Access Management | v1 | OIDC SSO, role-based access, instance administration, immutable audit trail |
-| Content Management | v1 | Authoring workflow, draft/published/archived status, visibility scopes, taxonomy |
-| Portfolio Management | v1 | Applications, ADRs, architecture debt, capability-application linkage |
-| Planning & Roadmap | v1 | Goals, strategic objectives, initiatives, executive roadmap timeline |
-| Frontend Display | v1 | Executive summary, heatmap, roadmap, impact analysis, guided answers, the Overview page |
-| Admin Configuration | v1 | Per-org themes, modules, email configuration, taxonomy admin, notices |
-| Multi-Organization Federation | v1 | Cross-org connections, federated content, cross-org capability links |
-| Repository & Modelling | v1 | Capability mapping, persona modelling, repository completeness, traceability views |
-| Data Architecture | v1 | Entities, attributes, business keys, semantic relationships, Chen-notation diagram |
-| Framework Alignment | v1 | Optional TOGAF/SAFe overlays, mappings, framework-aware reports |
-| Deployment & Operations | v1 | Containerised deployment, health/monitoring, upgrade/migration procedures |
-| Integration | v2 | ITSM, CMDB, DevOps, cloud, and business system connectors — deferred to v2 (#382) |
+## Architecture And Product Docs
 
-For the full capability inventory, including implementation status against scope, see [`capabilities.md`](./capabilities.md).
+Use the README as the starting point, not the full manual. Detailed material belongs in these docs:
 
-Capabilities are defined one at a time through the EasyEA workflow: persona validation -> capability definition -> ARB review -> implementation issues. Framework alignment is treated as an optional overlay: it may map GovEA content to TOGAF or other frameworks, but it does not replace the core GovEA model.
+- [Capabilities](./capabilities.md)
+- [Architecture Overview](./docs/architect/README.md)
+- [Application Overview](./docs/architect/application-overview.md)
+- [Data and Traceability](./docs/architect/data-and-traceability.md)
+- [Runtime and Deployment](./docs/architect/runtime-and-deployment.md)
+- [Security and Tenancy](./docs/architect/security-and-tenancy.md)
+- [Data Model](./docs/data-model.md)
+- [Product Priorities](./docs/product-priorities.md)
+- [Risk Register](./docs/risk-register.md)
+- [Business Architecture Style Guide](./business-architecture/STYLE.md)
 
----
+## Framework Alignment
 
-## Current Status
+GovEA is EasyEA-first. External frameworks such as TOGAF should support government teams without replacing the core workflow.
 
-**Implemented:**
-- Full CRUD for the core EA object model: applications, services, capabilities, personas, value streams, strategic objectives, initiatives, ADRs
-- Supporting reference content for principles and glossary terms, including taxonomy-backed principle sets
-- Mission-first traceability: Personas -> Capabilities -> Applications enforced at the application layer
-- Stakeholder-friendly traceability views: read-only objective, capability, and service traces that show how mission context connects to applications, initiatives, and related architecture records
-- Guided stakeholder answer view: `/answers?q=` turns repository search context into a briefing-style answer with capabilities, services, technology, initiatives, and objectives
-- Service catalogue: first-class service records linked to personas, capabilities, and value streams, with supporting applications derived through capabilities
-- Contributor-friendly relationship panels across detail pages, including in-context persona editing
-- Markdown-rendered long-form detail pages across the portfolio model, with shared prose styling for descriptions and other narrative fields
-- Leadership-friendly application risk portfolio view on the Applications page, highlighting retiring systems that still support active capability work
-- Application custom fields with CSV import/export so agencies can extend and load portfolio metadata without schema changes
-- Impact analysis on application and capability detail pages to surface decommission and change consequences from existing relationship data
-- Live dashboard for EA practitioners with repository activity, coverage signals, and review-health tracking
-- Repository completeness and confidence workflow: daily snapshot model, configurable staleness windows, ranked cleanup actions, domain-target RAG indicators, trend history, stakeholder-facing trust cues, and auto-suppression behavior
-- Architecture debt tracking with CRUD, linked-debt panels, dashboard priority signals, publish-time acknowledgement, and lifecycle-based system-detected debt
-- Data Architecture module with entities, attributes, categories, business keys, semantic relationships, Chen notation visualization, and dedicated navigation
-- Demo-ready planning module: goals, strategic objectives, and initiatives with roadmap grid and executive timeline views
-- Goals layer above strategic objectives, with objective rollup and traceability into initiatives and capabilities
-- Reports hub with generated Architecture Vision, Executive Summary, Heatmap Analysis, and TOGAF Application Landscape outputs from existing repository content
-- Capability relationship map with both focused SVG navigation and Mermaid diagram views
-- Repository-wide search across the core content model
-- Guided product tour with role-aware coach marks for the main application areas
-- Audit trail: immutable before/after log of all changes
-- Taxonomy management: org-scoped taxonomy with admin UI, controlled domain vocabulary, persona types, persona tags, and domain-aware filtering
-- Shared taxonomy foundation now proven across applications and capabilities, including capability-priority classification as the second pilot
-- Identity & access management: OIDC SSO with admin-managed pre-provisioned access, current Microsoft Entra ID provider wiring, local auth fallback, Admin/Contributor/Viewer roles
-- Instance admin console: platform dashboard, org inventory, org detail, cross-org user view, audit log, org suspension, instance-admin promotion/demotion, audited break-glass sessions, scoped act-as support actions, and instance-level platform configuration
-- Clear product boundary: org admins manage their own workspace settings; instance admins govern the shared platform and tenant lifecycle
-- User management and first-run setup flow
-- Live admin dashboard with coverage, recent activity, domain summaries, and operational review-health signals
-- Email configuration surface with encrypted SMTP settings, delivery log, and an admin dashboard warning when email is not configured
-- EasyEA starter content and empty-state prompts for new practices that need a credible first repository quickly
-- CSV import/export for Applications and Capabilities, with broader entity coverage planned
-- Prototype multi-org federation: connection requests, visibility levels, approval-based cross-org links, read-only remote detail pages, and write-protection enforcement
-- Demo seed data and dev login roster for Riverdale, GovEA Project dogfooding, Office of Digital Services, Hartfield TOGAF overlay, and dev-only instance-admin scenarios
-- Reusable `@govea/core` package: RBAC, audit, taxonomy, workflow, content type, and recipe primitives
-- E2E smoke test coverage across all routes x roles (Playwright)
-- Containerized local development plus Azure Container Apps dev deployment support
+Current framework-alignment detail is tracked in [capabilities.md](./capabilities.md) and [ADR-0001: TOGAF and ADM Scope Boundary](./docs/decisions/0001-togaf-adm-scope.md). The intended product direction is to move framework support toward taxonomy-backed recipes rather than hard-coded overlays.
 
-**Partially implemented / still maturing:**
-- ADRs: basic CRUD, detail pages, and linkage exist, but the authoring experience is still maturing relative to the core portfolio records
-- Planning semantics: useful for demos and early v1, with objectives using content workflow while initiatives use planning lifecycle states
-- Long-form authoring: markdown now renders on detail pages, but editing still uses plain textareas rather than a richer toolbar/preview workflow
-- Admin configuration beyond core settings, including the real SMTP send path behind the shipped Email Configuration UI
-- Repository portability beyond Application and Capability CSV round-trips
-- Risk tracking is defined as a proposed Repository & Modelling capability, but the first-class product surface has not been implemented yet
-- Data Architecture quality signals, naming-standard hints, and any later conceptual/logical expansion
+## Deployment Notes
 
-**Active work:**
-- Finishing actual SMTP email transport so configured email can support notifications and password reset
-- Continuing CSV import/export across the next high-value entity types
-- Adding Data Architecture quality cues and Data Vault naming-standard hints
-- Adding authoring guardrails for duplicate names, unsaved changes, and publish-readiness guidance
-- Building a traceable release pipeline for the Azure demo so deployments are tied to a known commit, image digest, and post-deploy smoke result
-- Keeping documentation aligned with rapid product-shape changes
+GovEA is container-friendly and designed to run against PostgreSQL. Local development can use Docker or Podman. Azure demo deployment helpers are present, but operator-specific Azure account configuration belongs in private operator environments, not this public repository.
 
-**Near-term:**
-- Ship the #528 SMTP transport follow-up, then split the #581 change-notification substrate into small slices
-- Continue #596 after Capabilities with Personas and ADRs as the next likely import/export targets
-- Ship #570 and the Layer 1 / Layer 2 portions of #573 before broadening Data Architecture scope
-- Ship #566 / #567 authoring guardrails as shared patterns across content forms
-- Ship #504 for traceable demo releases and rollback
-- Complete #512 before broader #499 onboarding, glossary, or tour copy work
-
-**Longer-term:**
-- End-to-end traceability expansion and risk-informed decision support
-- ARB review simulation using reviewer personas
-- Broader hosted SaaS deployment options
-- Progressive coverage across remaining capability groups
-
----
-
-## Cost & Why Not an Existing Tool
-
-GovEA is free and open source. There is no licensing fee. The real cost is staff time, to deploy, configure, and maintain the system. For a self-hosted deployment on existing infrastructure, plan for:
-
-- **Initial setup:** a few hours for a technically capable IT staff member
-- **Ongoing maintenance:** periodic updates, user provisioning, and backup verification; no dedicated admin role required
-- **Hosting:** runs on any server or container platform; no proprietary cloud dependency
-
-### What does it take to run this?
-
-| Concern | Today | Where it's documented |
-|---|---|---|
-| **Deployment** | Single container against a Postgres database. Three documented workflows: host app + containerized DB, DB-only, full container stack. ~1 hour from clean environment to working demo instance. | [Local Containers](#local-containers) above; capability: [`do-deployment`](business-architecture/capabilities/cms/deployment-operations/do-deployment.md) |
-| **Configuration** | Environment variables only — `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` required; SSO and SMTP optional. No source-code edit required to deploy. | [`apps/govea/.env.local`](./apps/govea/.env.local) shape; capability: [`do-deployment`](business-architecture/capabilities/cms/deployment-operations/do-deployment.md) |
-| **Health & monitoring** | Drop into a generic uptime + log-aggregation tool. Operator-relevant events go to the platform audit log (`/instance/audit`). A dedicated `/api/healthz` endpoint and a documented log shape are planned. | Capability: [`do-health-monitoring`](business-architecture/capabilities/cms/deployment-operations/do-health-monitoring.md) |
-| **Upgrades** | Pre-production: `pnpm --filter govea db:push` syncs schema. Once a real tenant exists, the workflow shifts to migration files — procedure documented in advance. | Capability: [`do-upgrade-migration`](business-architecture/capabilities/cms/deployment-operations/do-upgrade-migration.md); [#4](https://github.com/roballred/GovEA/issues/4) |
-| **Admin time/month** | Estimated 1–4 hours for an active small-to-mid-tenant install, dominated by user provisioning and content review nudges — not platform operations. | Capability group: [`cms/deployment-operations`](business-architecture/capabilities/cms/deployment-operations/deployment-operations.md) |
-
-The full operator-facing capability surface is documented under [`business-architecture/capabilities/cms/deployment-operations/`](business-architecture/capabilities/cms/deployment-operations/).
-
-
-
-## Contributing
-
-GovEA is open source and welcomes contributions. Before opening a pull request, read [`Standards.md`](./Standards.md), which defines the workflow for both human and AI-assisted contributions.
-
-### Traceability
-
-Every issue and PR that touches implementation should link back to a persona and capability. Capability IDs are the file stem of the relevant sub-capability file:
-
-```
-business-architecture/capabilities/cms/iam/iam-user-management.md  ->  iam-user-management
-```
-
-In issues:
-```
-Capability: iam-user-management
-Persona: CMS Administrator
-```
-
-In PR descriptions:
-```
-Closes #42
-Capability: iam-user-management
-```
-
-See [`Standards.md`](./Standards.md) for the full traceability convention.
-
-Issues and pull requests: [github.com/roballred/GovEA](https://github.com/roballred/GovEA)
-
----
+See [Runtime and Deployment](./docs/architect/runtime-and-deployment.md) for architecture details and [Release Pipeline Policy](./docs/release-pipeline.md) for deployment privacy guidance.
 
 ## License
 
-MIT
+GovEA is released under the [MIT License](./LICENSE).
