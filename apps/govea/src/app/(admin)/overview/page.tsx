@@ -193,38 +193,38 @@ type Priority = {
   refs: string[]
 }
 
-const PRIORITIES_LAST_GROOMED = '2026-05-26'
+const PRIORITIES_LAST_GROOMED = '2026-05-29'
 
 const PRIORITIES: Priority[] = [
   {
     rank: 1,
     title: 'Run the first persona-validation Tier-1 interview',
-    why: 'The validation plan is in place; the next move is one real conversation (recommended first: Elected Official or chief of staff). Until one Tier-1 conversation lands, several near-term differentiator items stay parked. The cheapest unblock on the board.',
-    refs: ['#384'],
+    why: 'The validation plan and feedback-log are in place; the missing step is one real conversation (recommended first: Elected Official or chief of staff, testing the staff-proxy hypothesis). Until one Tier-1 conversation lands, several near-term differentiator items stay parked. The cheapest unblock on the board.',
+    refs: ['#668'],
   },
   {
     rank: 2,
-    title: 'Close the only open High-severity ARB finding: v1/v2 scope signals',
-    why: 'Filed early April, still open. The deployment-operations group ship closed half of it; the v1/v2 scope-signal work on capability files remains. Director-persona reading of "what do I get day one vs later" is opaque without it. High-severity ARB findings should not age past two grooming cycles.',
-    refs: ['#10'],
-  },
-  {
-    rank: 3,
-    title: 'Consolidate RBAC into a single source of truth',
-    why: 'RBAC duplication between the app and the shared core package grows monotonically with every new route. Behaviour-drift risk is silent and security-adjacent. Foundation work; not gated on personas.',
-    refs: ['#34'],
-  },
-  {
-    rank: 4,
     title: 'EA Adoption & Engagement capability area',
     why: 'Pair the product feature with the matching ARB finding. EA market research calls adoption the most persistent cross-tool weakness; GovEA targets non-EA stakeholders explicitly. Capability-doc slice does not need interviews and seeds implementation issues for the next quarter.',
     refs: ['#71', '#94'],
   },
   {
-    rank: 5,
+    rank: 3,
+    title: 'Replace the TOGAF overlay with recipe-backed import',
+    why: 'Turns framework support from a hard-coded overlay into the recipe/taxonomy system and keeps EasyEA the default. Large — do the design slice (import schema + idempotency) first, and reconcile with the existing TOGAF-taxonomy design issue rather than running both in parallel. Not gated on personas.',
+    refs: ['#665', '#313'],
+  },
+  {
+    rank: 4,
     title: 'GovEA Project as continuous product documentation',
     why: 'Maintain the seeded GovEA Project organisation as a living model of the actual product. Cheap incrementally; compounds into a more credible demo and a real dogfood loop. Treat as a recurring grooming habit, not a one-shot.',
     refs: ['#518'],
+  },
+  {
+    rank: 5,
+    title: 'Inherited system glossary (now unblocked)',
+    why: 'Was gated behind the Modules-vs-Tools terminology decision; that decision is settled (Tools is canonical) so the gate is gone. Authoring inherited glossary/menu definitions now removes a long-standing UX ambiguity and supports the viewer-experience epic.',
+    refs: ['#499'],
   },
 ]
 
