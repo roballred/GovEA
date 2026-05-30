@@ -131,10 +131,42 @@ These are genuine product/architecture calls, not implementation details — the
 - [x] The hard-coded surfaces to retire are enumerated (§3)
 - [x] A slice sequence exists with #313 repositioned as the content spec for #665 Slice 2 (§4)
 - [x] The ADR-0001 boundary is called out and the ADM question separated from the domain question (§5)
-- [ ] D1–D4 answered by a human / ARB (§6) — **the gate before any implementation issue is opened**
+- [x] D1–D4 answered (§6, §9) — resolved by the lead architect 2026-05-30; see §9
 
 ## 8. Next actions
 
 1. Post this reconciliation on #665 and #313 (link the doc); re-scope #313 as "content spec for #665 Slice 2."
 2. Put D1–D4 to ARB / the maintainer.
 3. Once D1–D4 land, open the **Slice 1** implementation issue: framework-agnostic recipe-import schema + idempotency/stable-key resolver, extending `lib/backup-export.ts`'s envelope. (That issue also serves R-007 portability.)
+
+> **Update 2026-05-30:** D1–D4 are resolved (§9) and the slices are filed (§10). ADM is recorded in [ADR-0002](../decisions/0002-adm-as-classification.md). §5–§6 above are retained for history; §9 is authoritative where they differ (notably: D1 needs no `scheme` column, and ADM-as-classification is permitted, not deferred).
+
+---
+
+## 9. Decisions — resolved by lead architect (2026-05-30)
+
+The lead architect set the direction below; D1–D4 are resolved and the implementation slices (§10) are unblocked. The ADM call is recorded formally in **[ADR-0002](../decisions/0002-adm-as-classification.md)**.
+
+| # | Decision | Resolution | Why it's simpler than the doc's original framing |
+|---|---|---|---|
+| **D1** | Domain vocabulary modelling | **Parent type term is the namespace.** A taxonomy "type" is already a top-level `taxonomy_terms` row whose children are its values (how "Domain", "Application Type", etc. work today). The TOGAF domain type is just a named type with a **stable slug** (e.g. `togaf-architecture-domain`) for machine lookup. | No `scheme`/`family` column needed — the named parent term *is* the scheme. Zero schema change. |
+| **D2** | ADM stages in scope? | **Yes, as classification taxonomy** (type "ADM Phase" with Preliminary, A–H, Requirements Management). No phase gates, approvals, or transition rules. Recorded in **ADR-0002**, which narrows ADR-0001 consequence #3 to the *enforcement* case only. | Excluding one specific vocabulary would need special-case code; permitting it is the no-op path. |
+| **D3** | Existing `framework_mappings` rows | **Migrate** to `entity_taxonomy_values`, keyed `(entity_type, entity_id, concept_label)` → domain term slug. Preserves the Hartfield demo. | One idempotent migration; no stranded data. |
+| **D4** | `framework-overlay` module flag | **Remove it.** "Is TOGAF on?" becomes "are the recipe's taxonomy types present?" — settings-free. Add an **`audience: 'framework'` marker on the taxonomy type** so framework types stay hidden from viewer-role users and stakeholder reports (the principled replacement for the toggle that ADR-0001 still requires). | Presence-based; the `audience` flag is a small, *general* taxonomy feature, not TOGAF-specific. |
+
+**Additional direction (beyond D1–D4):**
+
+- **Reports — generic engine + TOGAF preset.** Build a framework-agnostic "group by any taxonomy type" report engine; ship TOGAF as a **saved preset** (Application Landscape grouped by the domain type; an ADM-coverage view grouped by the ADM-Phase type). The preset finds its type by the stable slug from D1. New classification views then cost almost nothing.
+- **Delivery — built-in curated catalog.** The TOGAF recipe is **defined in-repo as data** and run via an admin **"Install"** action from a Recipes list. **No file upload in v1** — avoids the parsing/validation/security surface. File-based recipe import (the #529-envelope-extension path) is a deliberately deferred follow-on.
+- **Recipe scope — turnkey, not just dropdowns.** The TOGAF recipe installs **taxonomy types + terms + entity bindings, _plus_ glossary terms, _plus_ a starter set of architecture principles, _plus_ report presets**. "Install TOGAF" yields a usable, explained TOGAF surface, not two empty selects.
+- **TOGAF is recipe #1, not a special case.** The engine is framework-agnostic; NIST, FEAF, a state reference model, etc. each become their own recipe later.
+
+## 10. Implementation slices (filed as issues, gated on ADR-0002)
+
+| Slice | Issue | Scope | Depends on |
+|---|---|---|---|
+| **S1** | [#671](https://github.com/roballred/GovEA/issues/671) | Generic recipe-install **engine**: idempotent upsert by `(org, slug)` for taxonomy types/terms/bindings + glossary + principles + presets; the `audience` flag; admin **Install** action; built-in catalog list. | ADR-0002 accepted |
+| **S2** | [#672](https://github.com/roballred/GovEA/issues/672) | **TOGAF recipe definition** (data): domain type + values, ADM-Phase type + values, TOGAF glossary terms, starter principles, report presets. | S1 |
+| **S3** | [#673](https://github.com/roballred/GovEA/issues/673) | Generic **group-by-taxonomy-type report engine** + TOGAF Application Landscape and ADM-coverage **presets**; repoint the existing report off `framework_mappings`. | S1, S2 |
+| **S4** | [#674](https://github.com/roballred/GovEA/issues/674) | **Migrate** `framework_mappings` → `entity_taxonomy_values`; preserve the Hartfield demo. | S2 |
+| **S5** | [#675](https://github.com/roballred/GovEA/issues/675) | **Teardown**: remove the `framework-overlay` module/toggle, `framework_mappings` table + actions + panel; update the `ea/framework-alignment` capability docs and ADR pointers. | S3, S4 |
