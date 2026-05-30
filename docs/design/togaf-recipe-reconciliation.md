@@ -131,10 +131,12 @@ These are genuine product/architecture calls, not implementation details — the
 - [x] The hard-coded surfaces to retire are enumerated (§3)
 - [x] A slice sequence exists with #313 repositioned as the content spec for #665 Slice 2 (§4)
 - [x] The ADR-0001 boundary is called out and the ADM question separated from the domain question (§5)
-- [ ] D1–D4 answered by a human / ARB (§6) — **the gate before any implementation issue is opened**
+- [x] D1–D4 answered (§6, §9) — resolved by the lead architect 2026-05-30; see §9
 
 ## 8. Next actions
 
 1. Post this reconciliation on #665 and #313 (link the doc); re-scope #313 as "content spec for #665 Slice 2."
 2. Put D1–D4 to ARB / the maintainer.
 3. Once D1–D4 land, open the **Slice 1** implementation issue: framework-agnostic recipe-import schema + idempotency/stable-key resolver, extending `lib/backup-export.ts`'s envelope. (That issue also serves R-007 portability.)
+
+> **Update 2026-05-30:** D1–D4 are resolved (§9) and the slices are filed (§10). ADM is recorded in [ADR-0002](../decisions/0002-adm-as-classification.md). §5–§6 above are retained for history; §9 is authoritative where they differ (notably: D1 needs no `scheme` column, and ADM-as-classification is permitted, not deferred).
