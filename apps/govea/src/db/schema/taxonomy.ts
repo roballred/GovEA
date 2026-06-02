@@ -1,18 +1,30 @@
 import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 import { organizations } from './organizations'
 
-export const taxonomyTerms = pgTable('taxonomy_terms', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-  parentId: uuid('parent_id'), // self-reference for hierarchy
-  name: text('name').notNull(),
-  slug: text('slug').notNull(),
-  description: text('description'),
-  domain: text('domain'), // top-level domain grouping
-  sortOrder: text('sort_order'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+export const taxonomyTerms = pgTable(
+  'taxonomy_terms',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    parentId: uuid('parent_id'), // self-reference for hierarchy
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    description: text('description'),
+    domain: text('domain'), // top-level domain grouping
+    sortOrder: text('sort_order'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('taxonomy_terms_type_slug_uniq')
+      .on(t.organizationId, t.slug)
+      .where(sql`${t.parentId} is null`),
+    uniqueIndex('taxonomy_terms_value_slug_uniq')
+      .on(t.organizationId, t.parentId, t.slug)
+      .where(sql`${t.parentId} is not null`),
+  ]
+)
 
 // Which taxonomy types are configured for which entity types (per org)
 export const entityTaxonomyDefinitions = pgTable(

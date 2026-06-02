@@ -1,4 +1,4 @@
-import { eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { GOV_TAXONOMY } from './gov-taxonomy'
 import {
   DEV_ORG, STATE_ORG, SYSTEM_ORG,
@@ -96,6 +96,49 @@ async function findOrCreateApplication(orgId: string, name: string, data: {
   return a.id
 }
 
+async function findOrCreateTaxonomyType(orgId: string, name: string, data?: {
+  description?: string
+  sortOrder?: string
+}) {
+  const slug = toSlug(name)
+  const existing = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, orgId), isNull(t.parentId), e(t.slug, slug)),
+  })
+  if (existing) return existing.id
+
+  const [term] = await db.insert(taxonomyTerms).values({
+    organizationId: orgId,
+    name,
+    slug,
+    description: data?.description,
+    sortOrder: data?.sortOrder,
+  }).returning()
+  return term.id
+}
+
+async function findOrCreateTaxonomyValue(orgId: string, parentId: string, name: string, data?: {
+  description?: string
+  sortOrder?: string
+}) {
+  const slug = toSlug(name)
+  const existing = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and }) =>
+      and(e(t.organizationId, orgId), e(t.parentId, parentId), e(t.slug, slug)),
+  })
+  if (existing) return existing.id
+
+  const [term] = await db.insert(taxonomyTerms).values({
+    organizationId: orgId,
+    parentId,
+    name,
+    slug,
+    description: data?.description,
+    sortOrder: data?.sortOrder,
+  }).returning()
+  return term.id
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function seed() {
@@ -119,66 +162,22 @@ async function seed() {
   console.log(`  ✓ ${DEV_USERS.length} users (password: dev-password)`)
 
   // Persona types — taxonomy terms under "Persona Type" type
-  let personaTypeTermId: string
-  const existingPersonaTypeType = await db.query.taxonomyTerms.findFirst({
-    where: (t, { eq: e, and }) =>
-      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'persona-type')),
+  const personaTypeTermId = await findOrCreateTaxonomyType(devOrgId, 'Persona Type', {
+    description: 'Categories used to classify personas.',
+    sortOrder: '10',
   })
-  if (existingPersonaTypeType) {
-    personaTypeTermId = existingPersonaTypeType.id
-  } else {
-    const [inserted] = await db.insert(taxonomyTerms).values({
-      organizationId: devOrgId,
-      name: 'Persona Type',
-      slug: 'persona-type',
-      description: 'Categories used to classify personas.',
-      sortOrder: '10',
-    }).returning()
-    personaTypeTermId = inserted.id
-  }
   for (const name of DEFAULT_PERSONA_TYPES) {
-    await db.insert(taxonomyTerms).values({
-      organizationId: devOrgId,
-      parentId: personaTypeTermId,
-      name,
-      slug: toSlug(name),
-    }).onConflictDoNothing()
+    await findOrCreateTaxonomyValue(devOrgId, personaTypeTermId, name)
   }
 
   // Persona tags — taxonomy terms under "Persona Tag" type; build id map for personaTags junction
-  let personaTagTypeId: string
-  const existingPersonaTagType = await db.query.taxonomyTerms.findFirst({
-    where: (t, { eq: e, and }) =>
-      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'persona-tag')),
+  const personaTagTypeId = await findOrCreateTaxonomyType(devOrgId, 'Persona Tag', {
+    description: 'Cross-cutting labels used to filter and search personas.',
+    sortOrder: '20',
   })
-  if (existingPersonaTagType) {
-    personaTagTypeId = existingPersonaTagType.id
-  } else {
-    const [inserted] = await db.insert(taxonomyTerms).values({
-      organizationId: devOrgId,
-      name: 'Persona Tag',
-      slug: 'persona-tag',
-      description: 'Cross-cutting labels used to filter and search personas.',
-      sortOrder: '20',
-    }).returning()
-    personaTagTypeId = inserted.id
-  }
   const devTagIds: Record<string, string> = {}
   for (const name of DEFAULT_PERSONA_TAGS) {
-    const [term] = await db.insert(taxonomyTerms).values({
-      organizationId: devOrgId,
-      parentId: personaTagTypeId,
-      name,
-      slug: toSlug(name),
-    }).onConflictDoNothing().returning()
-    if (term) {
-      devTagIds[name] = term.id
-    } else {
-      const existing = await db.query.taxonomyTerms.findFirst({
-        where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.parentId, personaTagTypeId), e(t.name, name)),
-      })
-      if (existing) devTagIds[name] = existing.id
-    }
+    devTagIds[name] = await findOrCreateTaxonomyValue(devOrgId, personaTagTypeId, name)
   }
   console.log(`  ✓ ${DEFAULT_PERSONA_TYPES.length} persona types, ${DEFAULT_PERSONA_TAGS.length} persona tags (taxonomy-backed)`)
 
@@ -257,39 +256,19 @@ async function seed() {
 
   // Government taxonomy — Type: "Domain" with 10 government domain values
   // Under our types/values model: "Domain" is the type, each domain name is a value within it.
-  const domainTypeSlug = 'domain'
-  let domainTypeId: string
-  const existingDomainType = await db.query.taxonomyTerms.findFirst({
-    where: (t, { eq: e, and, isNull }) =>
-      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, domainTypeSlug)),
+  const domainTypeId = await findOrCreateTaxonomyType(devOrgId, 'Domain', {
+    description: 'Business and service domains used to classify capabilities and glossary terms.',
+    sortOrder: '0',
   })
-  if (existingDomainType) {
-    domainTypeId = existingDomainType.id
-  } else {
-    const [inserted] = await db.insert(taxonomyTerms).values({
-      organizationId: devOrgId,
-      name: 'Domain',
-      slug: domainTypeSlug,
-      description: 'Business and service domains used to classify capabilities and glossary terms.',
-      sortOrder: '0',
-    }).returning()
-    domainTypeId = inserted.id
-  }
 
   let domainValueCount = 0
   for (const [idx, domainEntry] of GOV_TAXONOMY.entries()) {
-    const existing = await db.query.taxonomyTerms.findFirst({
+    const before = await db.query.taxonomyTerms.findFirst({
       where: (t, { eq: e, and }) =>
-        and(e(t.organizationId, devOrgId), e(t.parentId, domainTypeId), e(t.name, domainEntry.domain)),
+        and(e(t.organizationId, devOrgId), e(t.parentId, domainTypeId), e(t.slug, toSlug(domainEntry.domain))),
     })
-    if (!existing) {
-      await db.insert(taxonomyTerms).values({
-        organizationId: devOrgId,
-        parentId: domainTypeId,
-        name: domainEntry.domain,
-        slug: toSlug(domainEntry.domain),
-        sortOrder: String(idx * 10),
-      })
+    await findOrCreateTaxonomyValue(devOrgId, domainTypeId, domainEntry.domain, { sortOrder: String(idx * 10) })
+    if (!before) {
       domainValueCount++
     }
   }
@@ -646,31 +625,13 @@ async function seed() {
   console.log(`  ✓ ${DEV_SERVICES.length} services with capability, persona, and value stream links`)
 
   // Application Type taxonomy + entity definition (pilot for base-item taxonomy foundation)
-  let appTypeTermId: string
-  const existingAppTypeType = await db.query.taxonomyTerms.findFirst({
-    where: (t, { eq: e, and }) =>
-      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'application-type')),
+  const appTypeTermId = await findOrCreateTaxonomyType(devOrgId, 'Application Type', {
+    description: 'Classification of applications by their primary purpose or delivery model.',
+    sortOrder: '50',
   })
-  if (existingAppTypeType) {
-    appTypeTermId = existingAppTypeType.id
-  } else {
-    const [inserted] = await db.insert(taxonomyTerms).values({
-      organizationId: devOrgId,
-      name: 'Application Type',
-      slug: 'application-type',
-      description: 'Classification of applications by their primary purpose or delivery model.',
-      sortOrder: '50',
-    }).returning()
-    appTypeTermId = inserted.id
-  }
   const APP_TYPE_VALUES = ['Core Business System', 'Shared Service', 'Integration Platform', 'Reporting & Analytics', 'Public-Facing Service', 'Internal Tool']
   for (const name of APP_TYPE_VALUES) {
-    await db.insert(taxonomyTerms).values({
-      organizationId: devOrgId,
-      parentId: appTypeTermId,
-      name,
-      slug: toSlug(name),
-    }).onConflictDoNothing()
+    await findOrCreateTaxonomyValue(devOrgId, appTypeTermId, name)
   }
   await db.insert(entityTaxonomyDefinitions).values({
     organizationId: devOrgId,

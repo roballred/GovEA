@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import { taxonomyTerms, principles, entityTaxonomyDefinitions, entityTaxonomyValues } from '@/db/schema'
-import { eq, and, isNull, inArray, count } from 'drizzle-orm'
+import { eq, and, isNull, inArray, count, ne } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { assertOwnership } from '@/lib/federation'
@@ -25,6 +25,33 @@ async function requireAdmin() {
 
 function toSlug(name: string) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+async function assertTaxonomyTermNameAvailable({
+  orgId,
+  parentId,
+  slug,
+  termId,
+}: {
+  orgId: string
+  parentId: string | null
+  slug: string
+  termId?: string
+}) {
+  const duplicate = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and: a, isNull: n }) => {
+      const scope = parentId
+        ? a(e(t.organizationId, orgId), e(t.parentId, parentId), e(t.slug, slug))
+        : a(e(t.organizationId, orgId), n(t.parentId), e(t.slug, slug))
+      return termId ? a(scope, ne(t.id, termId)) : scope
+    },
+  })
+
+  if (duplicate) {
+    throw new Error(parentId
+      ? `A value named "${duplicate.name}" already exists in this taxonomy type.`
+      : `A taxonomy type named "${duplicate.name}" already exists.`)
+  }
 }
 
 // ── Reads ─────────────────────────────────────────────────────────────────────
@@ -118,11 +145,21 @@ export async function createTaxonomyTerm(formData: FormData) {
   const description = (formData.get('description') as string)?.trim() || null
   const parentId = (formData.get('parentId') as string) || null
   const sortOrder = (formData.get('sortOrder') as string)?.trim() || null
+  const slug = toSlug(name)
+
+  if (parentId) {
+    const parent = await db.query.taxonomyTerms.findFirst({
+      where: eq(taxonomyTerms.id, parentId),
+    })
+    assertOwnership(parent?.organizationId, orgId)
+  }
+
+  await assertTaxonomyTermNameAvailable({ orgId, parentId, slug })
 
   const [entry] = await db.insert(taxonomyTerms).values({
     organizationId: orgId,
     name,
-    slug: toSlug(name),
+    slug,
     description,
     parentId,
     sortOrder,
@@ -150,9 +187,17 @@ export async function editTaxonomyTerm(termId: string, formData: FormData) {
   const name = (formData.get('name') as string).trim()
   const description = (formData.get('description') as string)?.trim() || null
   const sortOrder = (formData.get('sortOrder') as string)?.trim() || null
+  const slug = toSlug(name)
+
+  await assertTaxonomyTermNameAvailable({
+    orgId,
+    parentId: existing?.parentId ?? null,
+    slug,
+    termId,
+  })
 
   await db.update(taxonomyTerms)
-    .set({ name, slug: toSlug(name), description, sortOrder, updatedAt: new Date() })
+    .set({ name, slug, description, sortOrder, updatedAt: new Date() })
     .where(and(eq(taxonomyTerms.id, termId), eq(taxonomyTerms.organizationId, orgId)))
 
   await writeAuditLog({
