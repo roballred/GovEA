@@ -27,6 +27,46 @@ function toSlug(name: string) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+/**
+ * Throws a user-friendly error if a sibling taxonomy term would collide on
+ * name or slug within the same (org, parent) scope — mirroring the two DB
+ * unique guards in `src/db/sql/taxonomy-terms-dedup.sql`
+ * (`..._org_parent_name_unique` and `..._org_parent_slug_unique`, #554/#684).
+ *
+ * Without this, a duplicate surfaces as a raw Postgres unique-violation stack
+ * trace. `excludeId` lets edits skip the row being edited.
+ *
+ * Note: name and slug are checked separately because toSlug() normalises —
+ * "Data Architecture" and "Data  Architecture" have distinct names but the
+ * same slug, so a name-only check would let a slug collision through to the
+ * DB. The slug guard is the key the recipe upsert (#671) relies on.
+ */
+async function assertTaxonomyTermAvailable(
+  orgId: string,
+  parentId: string | null,
+  name: string,
+  slug: string,
+  excludeId?: string,
+) {
+  const siblings = await db.query.taxonomyTerms.findMany({
+    where: (t, { eq: e, and: a, isNull: n }) =>
+      parentId
+        ? a(e(t.organizationId, orgId), e(t.parentId, parentId))
+        : a(e(t.organizationId, orgId), n(t.parentId)),
+    columns: { id: true, name: true, slug: true },
+  })
+  const scope = parentId ? 'this taxonomy type' : 'taxonomy types'
+  for (const s of siblings) {
+    if (excludeId && s.id === excludeId) continue
+    if (s.name.toLowerCase() === name.toLowerCase()) {
+      throw new Error(`A term named "${s.name}" already exists in ${scope}.`)
+    }
+    if (s.slug === slug) {
+      throw new Error(`A term with the same identifier ("${slug}") already exists in ${scope}.`)
+    }
+  }
+}
+
 // ── Reads ─────────────────────────────────────────────────────────────────────
 
 export async function getTaxonomyTerms() {
@@ -134,12 +174,15 @@ export async function createTaxonomyTerm(formData: FormData) {
   const description = (formData.get('description') as string)?.trim() || null
   const parentId = (formData.get('parentId') as string) || null
   const sortOrder = (formData.get('sortOrder') as string)?.trim() || null
+  const slug = toSlug(name)
+
+  await assertTaxonomyTermAvailable(orgId, parentId, name, slug)
 
   await db.transaction(async (tx) => {
     const [entry] = await tx.insert(taxonomyTerms).values({
       organizationId: orgId,
       name,
-      slug: toSlug(name),
+      slug,
       description,
       parentId,
       sortOrder,
@@ -168,10 +211,13 @@ export async function editTaxonomyTerm(termId: string, formData: FormData) {
   const name = (formData.get('name') as string).trim()
   const description = (formData.get('description') as string)?.trim() || null
   const sortOrder = (formData.get('sortOrder') as string)?.trim() || null
+  const slug = toSlug(name)
+
+  await assertTaxonomyTermAvailable(orgId, existing?.parentId ?? null, name, slug, termId)
 
   await db.transaction(async (tx) => {
     await tx.update(taxonomyTerms)
-      .set({ name, slug: toSlug(name), description, sortOrder, updatedAt: new Date() })
+      .set({ name, slug, description, sortOrder, updatedAt: new Date() })
       .where(and(eq(taxonomyTerms.id, termId), eq(taxonomyTerms.organizationId, orgId)))
 
     await writeAuditLog(tx, {

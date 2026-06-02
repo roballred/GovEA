@@ -92,3 +92,62 @@ describe('taxonomy_terms uniqueness guard (#554)', () => {
     }
   })
 })
+
+describe('taxonomy_terms slug uniqueness guard (#684)', () => {
+  // The slug guard (taxonomy_terms_org_parent_slug_unique) is the key the
+  // recipe-install upsert (#671) targets via ON CONFLICT (org, parent, slug).
+  // It catches a class the name guard misses: distinct names that normalise to
+  // the same slug.
+  let orgId: string
+
+  beforeAll(async () => {
+    const org = await createTestOrg()
+    orgId = org.id
+  })
+
+  afterAll(() => cleanupOrg(orgId))
+
+  it('rejects distinct names that collide on slug (same org, null parent)', async () => {
+    // "Data Architecture" and "Data  Architecture" (double space) have
+    // different names but both slugify to "data-architecture". The name guard
+    // lets the second through; the slug guard must catch it.
+    const slug = 'data-architecture-' + randomUUID().slice(0, 8)
+    await db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, name: 'Data Architecture A', slug,
+    })
+    await expect(db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, name: 'Data Architecture B', slug,
+    })).rejects.toThrow()
+  })
+
+  it('allows the same slug under different parents', async () => {
+    const [parentA] = await db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, name: 'slug-parent-A', slug: 'slug-parent-a',
+    }).returning()
+    const [parentB] = await db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, name: 'slug-parent-B', slug: 'slug-parent-b',
+    }).returning()
+
+    await db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, parentId: parentA.id,
+      name: 'Child One', slug: 'shared-slug',
+    })
+    await db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, parentId: parentB.id,
+      name: 'Child Two', slug: 'shared-slug',
+    })
+
+    const rows = await db.select().from(taxonomyTerms).where(eq(taxonomyTerms.organizationId, orgId))
+    expect(rows.filter(r => r.slug === 'shared-slug')).toHaveLength(2)
+  })
+
+  it('NULLS NOT DISTINCT: two NULL parents with the same slug collide', async () => {
+    const slug = 'null-parent-slug-' + randomUUID().slice(0, 8)
+    await db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, name: 'Null Parent Slug One', slug,
+    })
+    await expect(db.insert(taxonomyTerms).values({
+      id: randomUUID(), organizationId: orgId, name: 'Null Parent Slug Two', slug,
+    })).rejects.toThrow()
+  })
+})
