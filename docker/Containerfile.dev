@@ -30,6 +30,13 @@ COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
 # but kept here so the image is self-contained if run without volumes.
 COPY . .
 
+# Azure runs this image without source volumes. Pre-build the app there so the
+# remote demo uses stable production server behavior instead of Next dev mode.
+RUN cd packages/core && node ../../node_modules/typescript/bin/tsc
+RUN cd apps/govea && node node_modules/next/dist/bin/next build
+RUN mkdir -p apps/govea/.next/standalone/apps/govea/.next \
+  && cp -R apps/govea/.next/static apps/govea/.next/standalone/apps/govea/.next/static
+
 COPY docker/entrypoint.dev.sh /entrypoint.dev.sh
 COPY docker/entrypoint.azure-dev.sh /entrypoint.azure-dev.sh
 RUN chmod +x /entrypoint.dev.sh /entrypoint.azure-dev.sh

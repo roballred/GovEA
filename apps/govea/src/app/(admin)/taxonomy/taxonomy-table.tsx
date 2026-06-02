@@ -50,10 +50,14 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [wireTarget, setWireTarget] = useState<TaxonomyTerm | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
+
+  const toSlug = (name: string) =>
+    name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
   // Group definitions by taxonomyTypeId
   const defsByType = definitions.reduce<Record<string, EnrichedDefinition[]>>((acc, d) => {
@@ -71,36 +75,85 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
   }, {})
 
   async function handleCreateType(fd: FormData) {
+    const name = (fd.get('name') as string).trim()
+    const slug = toSlug(name)
+    const duplicate = types.find(t => t.slug === slug)
+    if (duplicate) {
+      setFormError(`A taxonomy type named "${duplicate.name}" already exists.`)
+      return
+    }
+
     startTransition(async () => {
-      await createTaxonomyTerm(fd)
-      setCreateTypeOpen(false)
-      refresh()
+      setFormError(null)
+      try {
+        await createTaxonomyTerm(fd)
+        setCreateTypeOpen(false)
+        refresh()
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Unable to create taxonomy type.')
+      }
     })
   }
 
   async function handleCreateValue(fd: FormData) {
+    if (!createValueTarget) return
+    const name = (fd.get('name') as string).trim()
+    const slug = toSlug(name)
+    const duplicate = (valuesByType[createValueTarget.id] ?? []).find(v => v.slug === slug)
+    if (duplicate) {
+      setFormError(`A value named "${duplicate.name}" already exists in this taxonomy type.`)
+      return
+    }
+
     startTransition(async () => {
-      await createTaxonomyTerm(fd)
-      setCreateValueTarget(null)
-      refresh()
+      setFormError(null)
+      try {
+        await createTaxonomyTerm(fd)
+        setCreateValueTarget(null)
+        refresh()
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Unable to create taxonomy value.')
+      }
     })
   }
 
   async function handleEdit(fd: FormData) {
     if (!editTarget) return
+    const name = (fd.get('name') as string).trim()
+    const slug = toSlug(name)
+    const duplicate = editTarget.kind === 'type'
+      ? types.find(t => t.id !== editTarget.term.id && t.slug === slug)
+      : (valuesByType[editTarget.term.parentId ?? ''] ?? []).find(v => v.id !== editTarget.term.id && v.slug === slug)
+    if (duplicate) {
+      setFormError(editTarget.kind === 'type'
+        ? `A taxonomy type named "${duplicate.name}" already exists.`
+        : `A value named "${duplicate.name}" already exists in this taxonomy type.`)
+      return
+    }
+
     startTransition(async () => {
-      await editTaxonomyTerm(editTarget.term.id, fd)
-      setEditTarget(null)
-      refresh()
+      setFormError(null)
+      try {
+        await editTaxonomyTerm(editTarget.term.id, fd)
+        setEditTarget(null)
+        refresh()
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Unable to update taxonomy term.')
+      }
     })
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     startTransition(async () => {
-      await deleteTaxonomyTerm(deleteTarget.term.id)
-      setDeleteTarget(null)
-      refresh()
+      setFormError(null)
+      try {
+        await deleteTaxonomyTerm(deleteTarget.term.id)
+        setDeleteTarget(null)
+        refresh()
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Unable to delete taxonomy term.')
+      }
     })
   }
 
@@ -108,9 +161,14 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
     if (!wireTarget) return
     startTransition(async () => {
       fd.set('taxonomyTypeId', wireTarget.id)
-      await addEntityTaxonomyDefinition(fd)
-      setWireTarget(null)
-      refresh()
+      setFormError(null)
+      try {
+        await addEntityTaxonomyDefinition(fd)
+        setWireTarget(null)
+        refresh()
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Unable to wire taxonomy type.')
+      }
     })
   }
 
@@ -312,7 +370,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
       </div>
 
       {/* Create Type Dialog */}
-      <Dialog open={createTypeOpen} onOpenChange={setCreateTypeOpen}>
+      <Dialog open={createTypeOpen} onOpenChange={open => { setCreateTypeOpen(open); if (!open) setFormError(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New Taxonomy Type</DialogTitle>
@@ -322,6 +380,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
           </p>
           <form action={handleCreateType} className="space-y-3">
             <TermFields />
+            {formError && <FormError message={formError} />}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateTypeOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create Type'}</Button>
@@ -331,7 +390,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
       </Dialog>
 
       {/* Create Value Dialog */}
-      <Dialog open={!!createValueTarget} onOpenChange={open => { if (!open) setCreateValueTarget(null) }}>
+      <Dialog open={!!createValueTarget} onOpenChange={open => { if (!open) { setCreateValueTarget(null); setFormError(null) } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New Value in &ldquo;{createValueTarget?.name}&rdquo;</DialogTitle>
@@ -339,6 +398,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
           <form action={handleCreateValue} className="space-y-3">
             <input type="hidden" name="parentId" value={createValueTarget?.id ?? ''} />
             <TermFields />
+            {formError && <FormError message={formError} />}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateValueTarget(null)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Creating…' : 'Create Value'}</Button>
@@ -348,7 +408,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) { setEditTarget(null); setFormError(null) } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit {editTarget?.kind === 'type' ? 'Type' : 'Value'}</DialogTitle>
@@ -359,6 +419,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
               defaultDescription={editTarget?.term.description ?? ''}
               defaultSortOrder={editTarget?.term.sortOrder ?? ''}
             />
+            {formError && <FormError message={formError} />}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
               <Button type="submit" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
@@ -368,7 +429,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
       </Dialog>
 
       {/* Wire to Entity Type Dialog */}
-      <Dialog open={!!wireTarget} onOpenChange={open => { if (!open) setWireTarget(null) }}>
+      <Dialog open={!!wireTarget} onOpenChange={open => { if (!open) { setWireTarget(null); setFormError(null) } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Wire &ldquo;{wireTarget?.name}&rdquo; to entity type</DialogTitle>
@@ -408,6 +469,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
               <input type="checkbox" id="wire-required" name="required" value="true" className="rounded" />
               <Label htmlFor="wire-required">Required</Label>
             </div>
+            {formError && <FormError message={formError} />}
             <input type="hidden" name="sortOrder" value="0" />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setWireTarget(null)}>Cancel</Button>
@@ -418,13 +480,14 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
+      <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) { setDeleteTarget(null); setFormError(null) } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete &ldquo;{deleteTarget?.term.name}&rdquo;</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>Are you sure? This cannot be undone.</p>
+            {formError && <FormError message={formError} />}
             {(deleteTarget?.valueCount ?? 0) > 0 && (
               <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                 This type has <strong>{deleteTarget?.valueCount} value{deleteTarget?.valueCount !== 1 ? 's' : ''}</strong> which will also be deleted.
@@ -454,6 +517,14 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
 }
 
 // ── Shared form fields ────────────────────────────────────────────────────────
+
+function FormError({ message }: { message: string }) {
+  return (
+    <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+      {message}
+    </p>
+  )
+}
 
 function TermFields({
   defaultName = '',

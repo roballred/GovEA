@@ -50,6 +50,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
 export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [orgFilter, setOrgFilter] = useState('all')
 
@@ -65,9 +66,10 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
   const refresh = () => router.refresh()
 
   const filtered = valueStreams.filter(vs => {
+    const matchSearch = !search || vs.name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || vs.status === statusFilter
     const matchOrg = orgFilter === 'all' || (orgFilter === 'own' ? vs.organizationId === currentOrgId : vs.organizationId === orgFilter)
-    return matchStatus && matchOrg
+    return matchSearch && matchStatus && matchOrg
   })
 
   async function handleCreate(formData: FormData) {
@@ -96,29 +98,36 @@ export function ValueStreamTable({ valueStreams, role, currentOrgId }: Props) {
     })
   }
 
+  const selectClass = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
+        <Input
+          type="search"
+          placeholder="Search value streams..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-56"
+        />
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          className={selectClass}
         >
           <option value="all">All statuses</option>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        {orgOptions.length > 1 && (
-          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All organizations</option>
-            <option value="own">My organization</option>
-            {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
-              <option key={id} value={id}>{name}</option>
-            ))}
-          </select>
-        )}
+        <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className={selectClass}>
+          <option value="all">All organizations</option>
+          <option value="own">My organization</option>
+          {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (
+            <option key={id} value={id}>{name}</option>
+          ))}
+        </select>
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
             + New Value Stream

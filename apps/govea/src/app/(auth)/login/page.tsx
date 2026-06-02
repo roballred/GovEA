@@ -23,7 +23,7 @@ export default async function LoginPage({
   if (session) redirect('/dashboard')
 
   const params = await searchParams
-  const isDev = process.env.NODE_ENV === 'development'
+  const isDev = process.env['DEV'] === 'true' || process.env['DEMO_MODE'] === 'true'
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30">

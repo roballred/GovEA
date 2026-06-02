@@ -19,8 +19,8 @@ import { redirect } from 'next/navigation'
 import { TEST_DATASETS } from '@/db/seeds/test-datasets'
 
 export async function resetToDataset(datasetKey: string) {
-  if (process.env.NODE_ENV !== 'development') {
-    throw new Error('Dataset reset is only available in development mode')
+  if (process.env['DEV'] !== 'true' && process.env['DEMO_MODE'] !== 'true') {
+    throw new Error('Dataset reset is only available in dev/demo mode')
   }
 
   const session = await auth()
