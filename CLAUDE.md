@@ -41,11 +41,11 @@ SSO users default to Viewer. Admins promote as needed.
 
 ## Database Workflow
 
-**Pre-production (current):** Use `db:push` to sync schema changes directly to the dev database. CI also uses `db:push --force` on a fresh database. No migration files needed — run `pnpm --filter govea db:push` after schema edits, then `db:apply-triggers` to install Postgres triggers, then `db:seed` to repopulate.
+**Pre-production (current):** Use `db:push` to sync schema changes directly to the dev database. CI also uses `db:push --force` on a fresh database (see `.github/workflows/ci.yml` — both DB-backed jobs run `db:push --force` then `db:apply-triggers:container`, **not** `db:migrate`). No migration files needed — run `pnpm --filter govea db:push` after schema edits, then `db:apply-triggers` to install Postgres triggers and other DB-level constraints, then `db:seed` to repopulate.
 
-**Switch to migrations when:** the first real tenant or persistent data exists that can't be thrown away. At that point: squash the schema into a single `0000_initial_schema.sql`, fold the SQL files in `apps/govea/src/db/sql/` into the migration sequence, switch CI from `db:push` to `db:migrate`, and use `db:generate` + `db:migrate` for all schema changes going forward. Update this section when the switch happens.
+**There is no committed migrations directory, and that is intentional.** `db:push` derives the schema directly from `src/db/schema/`, so `apps/govea/src/db/migrations/` is not used by CI or local dev. (A set of 29 vestigial `drizzle-kit generate` files accumulated here against this policy and was removed in #683.) The `db:generate` / `db:migrate` scripts remain in `package.json` only for the eventual switch below — do not run them or commit their output during pre-production. If you find a `migrations/` directory has reappeared, it is drift: delete it rather than wiring CI to it.
 
-Do not commit migration files generated during pre-production development.
+**Switch to migrations when:** the first real tenant or persistent data exists that can't be thrown away. At that point: generate `0000_initial_schema.sql` from the current schema, fold the SQL files in `apps/govea/src/db/sql/` into the migration sequence, switch CI from `db:push --force` to `db:migrate`, and use `db:generate` + `db:migrate` for all schema changes going forward. Update this section (and remove this paragraph) when the switch happens.
 
 ### Postgres triggers (DB-level constraints)
 
