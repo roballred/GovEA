@@ -156,6 +156,32 @@ describe('importCapabilities (#596)', () => {
     expect(result.errors.some(e => e.includes('invalid capability_type'))).toBe(true)
   })
 
+  it('accepts capitalized enum values for status / visibility / capability_type (#677)', async () => {
+    mockAuth.mockResolvedValue(makeSession(contributor))
+    // Regression for #677: status and visibility used to be case-sensitive
+    // while capability_type was lowercased, so title-cased values from Excel /
+    // natural typing were rejected inconsistently. All three are now normalized.
+    const csv = [
+      'name,description,domain,behaviors,rules,capability_type,status,visibility,personas',
+      'Cased Enums Cap,desc,IT,,,Business,Published,Org,',
+      'Mixed Enums Cap,desc,IT,,,TECHNICAL,Archived,Connections,',
+    ].join('\n')
+
+    const result = await importCapabilities(csvForm(csv), false)
+    expect(result.errors).toEqual([])
+    expect(result.created).toBe(2)
+    expect(result.skipped).toBe(0)
+
+    const a = await db.query.capabilities.findFirst({
+      where: and(eq(capabilities.organizationId, orgId), eq(capabilities.name, 'Cased Enums Cap')),
+    })
+    expect(a).toMatchObject({ capabilityType: 'business', status: 'published', visibility: 'org' })
+    const b = await db.query.capabilities.findFirst({
+      where: and(eq(capabilities.organizationId, orgId), eq(capabilities.name, 'Mixed Enums Cap')),
+    })
+    expect(b).toMatchObject({ capabilityType: 'technical', status: 'archived', visibility: 'connections' })
+  })
+
   it('dryRun does not write rows', async () => {
     mockAuth.mockResolvedValue(makeSession(admin))
     const csv = [

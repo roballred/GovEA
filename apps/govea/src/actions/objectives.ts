@@ -333,8 +333,8 @@ export async function importObjectives(formData: FormData, dryRun = false): Prom
     const name = row['name']?.trim()
     if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
 
-    const status = (row['status'] || 'draft').trim()
-    const visibility = (row['visibility'] || 'org').trim()
+    const status = (row['status'] || 'draft').trim().toLowerCase()
+    const visibility = (row['visibility'] || 'org').trim().toLowerCase()
     if (!VALID_OBJECTIVE_STATUS.has(status)) {
       errors.push(`Row ${rowNum}: invalid status "${status}"`)
       skipped++; continue

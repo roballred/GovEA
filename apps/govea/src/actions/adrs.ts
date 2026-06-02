@@ -399,8 +399,8 @@ export async function importADRs(formData: FormData, dryRun = false): Promise<AD
     if (!number) { errors.push(`Row ${rowNum}: missing required field "number"`); skipped++; continue }
     if (!title) { errors.push(`Row ${rowNum}: missing required field "title"`); skipped++; continue }
 
-    const status = (row['status'] || 'proposed').trim()
-    const visibility = (row['visibility'] || 'org').trim()
+    const status = (row['status'] || 'proposed').trim().toLowerCase()
+    const visibility = (row['visibility'] || 'org').trim().toLowerCase()
     if (!VALID_ADR_STATUS.has(status)) {
       errors.push(`Row ${rowNum}: invalid status "${status}"`)
       skipped++; continue

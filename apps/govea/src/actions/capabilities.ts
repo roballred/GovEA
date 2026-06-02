@@ -526,8 +526,8 @@ export async function importCapabilities(formData: FormData, dryRun = false): Pr
     if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
 
     const capabilityTypeRaw = (row['capability_type'] || '').trim().toLowerCase()
-    const status = (row['status'] || 'draft').trim()
-    const visibility = (row['visibility'] || 'org').trim()
+    const status = (row['status'] || 'draft').trim().toLowerCase()
+    const visibility = (row['visibility'] || 'org').trim().toLowerCase()
 
     if (!VALID_CAPABILITY_TYPE.has(capabilityTypeRaw)) {
       errors.push(`Row ${rowNum}: invalid capability_type "${capabilityTypeRaw}" (expected "business", "technical", or empty)`)
