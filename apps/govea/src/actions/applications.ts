@@ -492,9 +492,9 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
     const name = row['name']?.trim()
     if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
 
-    const lifecycleStatus = row['lifecycle_status'] || 'active'
-    const status = row['status'] || 'draft'
-    const visibility = row['visibility'] || 'org'
+    const lifecycleStatus = (row['lifecycle_status'] || 'active').trim().toLowerCase()
+    const status = (row['status'] || 'draft').trim().toLowerCase()
+    const visibility = (row['visibility'] || 'org').trim().toLowerCase()
 
     if (!VALID_LIFECYCLE.has(lifecycleStatus)) {
       errors.push(`Row ${rowNum}: invalid lifecycle_status "${lifecycleStatus}"`)

@@ -476,8 +476,8 @@ export async function importInitiatives(formData: FormData, dryRun = false): Pro
     const name = row['name']?.trim()
     if (!name) { errors.push(`Row ${rowNum}: missing required field "name"`); skipped++; continue }
 
-    const status = (row['status'] || 'proposed').trim()
-    const visibility = (row['visibility'] || 'org').trim()
+    const status = (row['status'] || 'proposed').trim().toLowerCase()
+    const visibility = (row['visibility'] || 'org').trim().toLowerCase()
     if (!VALID_INITIATIVE_STATUS.has(status)) {
       errors.push(`Row ${rowNum}: invalid status "${status}"`)
       skipped++; continue
