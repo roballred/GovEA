@@ -1,1 +1,0 @@
-ALTER TABLE "organizations" ADD COLUMN "theme" text DEFAULT 'govea' NOT NULL;
