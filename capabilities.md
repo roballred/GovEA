@@ -23,7 +23,7 @@ The **Scope** column shows whether a group is in v1 (current release) or v2 (def
 | 9 | [Data Architecture](#9-data-architecture) | v1 | Partially implemented |
 | 10 | [Framework Alignment](#10-framework-alignment) | v1 | Partially implemented |
 | 11 | [Deployment & Operations](#11-deployment--operations) | v1 | Partially implemented |
-| 12 | [Integration](business-architecture/capabilities/ea/integration/integration.md) | v2 | Not started — deferred to v2 (#10, #382) |
+| 12 | [Integration](./business-architecture/capabilities/ea/integration/integration.md) | v2 | Not started — deferred to v2 (#10, #382) |
 
 ---
 
