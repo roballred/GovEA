@@ -31,7 +31,7 @@ import {
 } from './scale-fixtures'
 import { db } from '../client'
 import {
-  users, organizations,
+  users, organizations, userOrganizationMemberships,
   personas, personaTags, capabilities, applications,
   capabilityPersonas, applicationCapabilities, capabilityRelationships,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
@@ -2172,6 +2172,25 @@ async function seed() {
     await db.insert(instanceSettings).values({ disabledModules: {} })
   }
   console.log(`  ✓ instanceSettings: all ${MODULE_DEFS.length} modules enabled`)
+
+  // ── #693 slice 1 (#703): backfill user_organization_memberships ───────────
+  // Behavior-neutral — nothing reads memberships yet (auth resolution is slice
+  // 2). A single pass over every seeded user, across all orgs, so we don't have
+  // to touch each per-org user loop. One membership per user mirroring their
+  // current org/role, flagged primary. Idempotent via the (user_id,
+  // organization_id) unique index, so re-seeding is a no-op.
+  const allUsers = await db
+    .select({ id: users.id, organizationId: users.organizationId, role: users.role })
+    .from(users)
+  for (const u of allUsers) {
+    await db.insert(userOrganizationMemberships).values({
+      userId: u.id,
+      organizationId: u.organizationId,
+      role: u.role,
+      isPrimary: true,
+    }).onConflictDoNothing()
+  }
+  console.log(`  ✓ ${allUsers.length} user-organization memberships (backfilled, primary)`)
 
   console.log('\nSeed complete.')
   process.exit(0)

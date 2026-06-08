@@ -1,4 +1,4 @@
-import { integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { organizations } from './organizations'
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'contributor', 'viewer'])
@@ -61,3 +61,27 @@ export const verificationTokens = pgTable('verification_tokens', {
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
+
+// #693 slice 1 (#703): membership model for users participating in more than
+// one organization. Behavior-neutral at introduction — nothing reads this yet;
+// auth resolution of the *active* org/role from memberships is slice 2.
+// `users.organization_id` / `users.role` remain the denormalized active/home
+// pointers (see docs/design/multi-org-membership.md). One row per (user, org),
+// one role per membership; revocation soft-deactivates (is_active=false) so the
+// historical row survives for audit.
+export const userOrganizationMemberships = pgTable('user_organization_memberships', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  role: userRoleEnum('role').notNull().default('viewer'),
+  isActive: boolean('is_active').notNull().default(true),
+  isPrimary: boolean('is_primary').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => [
+  // One membership per user per organization.
+  uniqueIndex('user_org_membership_unique').on(table.userId, table.organizationId),
+])
+
+export type UserOrganizationMembership = typeof userOrganizationMemberships.$inferSelect
+export type NewUserOrganizationMembership = typeof userOrganizationMemberships.$inferInsert
