@@ -1,0 +1,77 @@
+name: PR hygiene
+
+# Two guards that enforce GovEA's pre-production policy before human review,
+# complementing the base-branch check in pr-base-check.yml:
+#
+#   1. no-committed-migrations — the repo uses db:push + src/db/sql/*.sql
+#      (apply-triggers), NOT committed Drizzle migrations. A reappearing
+#      apps/govea/src/db/migrations/ directory is drift (see CLAUDE.md, #683,
+#      #686). This fails any PR that adds or modifies files there.
+#
+#   2. not-stale — fails a PR whose branch is egregiously behind `main`. This
+#      is the durable defense against stale, already-superseded bundles
+#      (e.g. the 169-commit external-agent PRs in #682 / #687). It does NOT
+#      fail on "1 commit behind" — that would nag every open PR whenever main
+#      moves. It fails only past STALE_THRESHOLD. GitHub branch protection's
+#      "require branches up to date before merging" remains the strict
+#      at-merge gate; this is the early, visible signal.
+#
+# Scope: CI only. See #689.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+env:
+  # Max number of commits a PR branch may be behind `main` before it fails.
+  # Tune this single value to taste.
+  STALE_THRESHOLD: 25
+
+jobs:
+  no-committed-migrations:
+    name: No committed migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail if the PR touches committed migrations
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --no-tags --prune origin +refs/heads/main:refs/remotes/origin/main
+          merge_base=$(git merge-base origin/main "$HEAD_SHA")
+          changed=$(git diff --name-only "$merge_base" "$HEAD_SHA" -- 'apps/govea/src/db/migrations/')
+          if [ -n "$changed" ]; then
+            echo "::error::This PR adds or modifies committed Drizzle migrations:"
+            while IFS= read -r f; do echo "::error:: - $f"; done <<< "$changed"
+            echo "::error::GovEA uses db:push + src/db/sql/*.sql (apply-triggers), not committed migrations (CLAUDE.md / #683 / #686)."
+            echo "::error::Remove apps/govea/src/db/migrations/ from this PR; that directory is drift."
+            exit 1
+          fi
+          echo "No committed migrations touched — ok."
+
+  not-stale:
+    name: Branch not stale
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail if the PR branch is egregiously behind main
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --no-tags --prune origin +refs/heads/main:refs/remotes/origin/main
+          merge_base=$(git merge-base origin/main "$HEAD_SHA")
+          behind=$(git rev-list --count "$merge_base"..origin/main)
+          echo "PR branch is $behind commit(s) behind 'main' (threshold: $STALE_THRESHOLD)."
+          if [ "$behind" -gt "$STALE_THRESHOLD" ]; then
+            echo "::error::This PR's branch is $behind commits behind 'main' (threshold $STALE_THRESHOLD)."
+            echo "::error::Rebase onto current main, or recreate the branch from main."
+            echo "::error::Stale bases reintroduce already-fixed work and conflict with current policy (see #682 / #687)."
+            exit 1
+          fi
+          echo "Within staleness threshold — ok."
