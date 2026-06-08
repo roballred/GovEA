@@ -417,7 +417,11 @@ const VALID_LIFECYCLE = new Set(['active', 'sunset', 'decommissioned', 'planned'
 const VALID_STATUS = new Set(['draft', 'published', 'archived'])
 const VALID_VISIBILITY = new Set(['org', 'connections', 'instance'])
 
-function parseCsvLine(line: string): string[] {
+// NOTE: applications has its own line-based parser (no multi-line-cell support),
+// a pre-existing divergence from the shared `lib/csv.ts` tracked by #696. The
+// delimiter-detection below mirrors `lib/csv.ts` so the #679 semicolon bug is
+// fixed here too; consolidation onto the shared parser stays with #696.
+function parseCsvLine(line: string, delimiter: ',' | ';' = ','): string[] {
   const result: string[] = []
   let current = ''
   let inQuotes = false
@@ -426,7 +430,7 @@ function parseCsvLine(line: string): string[] {
     if (ch === '"') {
       if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }
       else inQuotes = !inQuotes
-    } else if (ch === ',' && !inQuotes) {
+    } else if (ch === delimiter && !inQuotes) {
       result.push(current); current = ''
     } else {
       current += ch
@@ -439,11 +443,15 @@ function parseCsvLine(line: string): string[] {
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.trim().split(/\r?\n/)
   if (lines.length < 2) return []
-  const headers = parseCsvLine(lines[0]).map(h => h.trim())
+  // Sniff the delimiter from the header line (see #679 / lib/csv.ts).
+  const headerLine = lines[0]
+  const delimiter: ',' | ';' =
+    (headerLine.match(/;/g) || []).length > (headerLine.match(/,/g) || []).length ? ';' : ','
+  const headers = parseCsvLine(headerLine, delimiter).map(h => h.trim())
   return lines.slice(1)
     .filter(l => l.trim())
     .map(line => {
-      const values = parseCsvLine(line)
+      const values = parseCsvLine(line, delimiter)
       return Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? '').trim()]))
     })
 }

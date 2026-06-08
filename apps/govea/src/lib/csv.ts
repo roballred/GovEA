@@ -11,7 +11,29 @@ export function escapeCsv(val: string): string {
   return val
 }
 
-export function splitCsvRows(text: string): string[][] {
+/**
+ * Detects the field delimiter from the header line (#679). GovEA exports
+ * comma-delimited CSVs, but uses `;` *inside* multi-value fields (e.g. persona
+ * lists, via `splitSemicolonList`). Spreadsheets in many non-US locales
+ * (notably Excel across much of Europe) export `;`-delimited files instead;
+ * those previously imported as a single garbage column, failing every row with
+ * a misleading `missing required field "name"`.
+ *
+ * We sniff only the *header* line — which never contains multi-value list
+ * values — and choose whichever of `,` / `;` appears more often. This means a
+ * normal comma file with `;` inside data rows is unaffected (the header has
+ * commas, no semicolons), preserving the Export→Import round-trip, while a
+ * genuinely semicolon-delimited file is parsed correctly. Ties and the common
+ * case default to comma.
+ */
+export function detectDelimiter(text: string): ',' | ';' {
+  const header = text.split(/\r?\n/, 1)[0] ?? ''
+  const commas = (header.match(/,/g) || []).length
+  const semicolons = (header.match(/;/g) || []).length
+  return semicolons > commas ? ';' : ','
+}
+
+export function splitCsvRows(text: string, delimiter: ',' | ';' = ','): string[][] {
   const rows: string[][] = []
   let row: string[] = []
   let field = ''
@@ -21,7 +43,7 @@ export function splitCsvRows(text: string): string[][] {
     if (ch === '"') {
       if (inQuotes && text[i + 1] === '"') { field += '"'; i++ }
       else inQuotes = !inQuotes
-    } else if (ch === ',' && !inQuotes) {
+    } else if (ch === delimiter && !inQuotes) {
       row.push(field); field = ''
     } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
       if (ch === '\r' && text[i + 1] === '\n') i++
@@ -40,7 +62,7 @@ export function splitCsvRows(text: string): string[][] {
 }
 
 export function parseCsv(text: string): Record<string, string>[] {
-  const rows = splitCsvRows(text)
+  const rows = splitCsvRows(text, detectDelimiter(text))
   if (rows.length < 2) return []
   const headers = rows[0].map(h => h.trim())
   return rows.slice(1).map(values =>
