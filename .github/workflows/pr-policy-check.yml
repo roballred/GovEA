@@ -1,0 +1,71 @@
+name: PR policy check
+
+# Enforces two GovEA operating policies at PR time, complementing pr-base-check.yml
+# (which asserts the base branch is `main`). These guards exist because external
+# automation repeatedly opened PRs from a 150+-commit-stale branch that also
+# reintroduced committed Drizzle migrations — see #682 / #687 / #689, and the
+# database-workflow policy in CLAUDE.md (#683 / #686).
+#
+#   1. no-committed-migrations — the repo uses `db:push` + `src/db/sql/*.sql`
+#      (apply-triggers) in pre-production. Committed migration files under
+#      apps/govea/src/db/migrations/ are drift and must not land.
+#   2. fresh-base — fails a PR whose base is *egregiously* behind main. This is
+#      deliberately threshold-based (MAX_COMMITS_BEHIND), NOT "behind by ≥1",
+#      so a routine merge to main doesn't turn every open PR red. Strict
+#      "up to date before merge" belongs in branch protection, not here.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  no-committed-migrations:
+    name: No committed migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fail if the PR touches apps/govea/src/db/migrations/
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
+          offending=$(echo "$changed" | grep '^apps/govea/src/db/migrations/' || true)
+          if [ -n "$offending" ]; then
+            echo "::error::This PR adds or modifies committed migration files, which GovEA's pre-production workflow forbids."
+            echo "::error::Schema changes use 'db:push' + src/db/sql/*.sql (apply-triggers), not committed migrations. See CLAUDE.md / #683 / #686."
+            echo "Offending files:"
+            echo "$offending" | sed 's/^/  - /'
+            exit 1
+          fi
+          echo "No committed-migration files in this PR — ok."
+
+  fresh-base:
+    name: Base not stale
+    runs-on: ubuntu-latest
+    env:
+      # Fail only when a PR is behind main by MORE than this many commits.
+      # Tune here. Catches genuinely stale branches (e.g. the 169-commit
+      # Codex bundle in #687) without nagging normal, near-current PRs.
+      MAX_COMMITS_BEHIND: "25"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fail if the PR base is badly behind main
+        run: |
+          git fetch origin main --quiet
+          behind=$(git rev-list --count HEAD..origin/main)
+          echo "PR head is $behind commit(s) behind origin/main (threshold: $MAX_COMMITS_BEHIND)."
+          if [ "$behind" -gt "$MAX_COMMITS_BEHIND" ]; then
+            echo "::error::This PR's base is $behind commits behind main (max allowed: $MAX_COMMITS_BEHIND)."
+            echo "::error::Rebase onto current main, or recreate the branch from origin/main and re-apply the change."
+            exit 1
+          fi
+          echo "Base freshness ok."
