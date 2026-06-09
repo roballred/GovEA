@@ -7,6 +7,7 @@ import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { assertOwnership } from '@/lib/federation'
 import { writeAuditLog } from '@/lib/audit'
+import { ensureDomainValue } from '@/lib/ensure-domain-value'
 import { redirect } from 'next/navigation'
 
 async function requireContributor() {
@@ -463,53 +464,8 @@ export async function createDomainValue(name: string): Promise<string> {
   const session = await requireContributor()
   const orgId = session.user.organizationId!
 
-  const trimmed = name.trim()
-
-  // Find or create the "Domain" type, then add the value, all in one transaction
-  // so the audit row is consistent with the inserted value (#416).
-  return db.transaction(async (tx) => {
-    let domainType = await tx.query.taxonomyTerms.findFirst({
-      where: (t, { eq, isNull, and }) =>
-        and(eq(t.organizationId, orgId), isNull(t.parentId), eq(t.slug, 'domain')),
-    })
-
-    if (!domainType) {
-      const [created] = await tx.insert(taxonomyTerms).values({
-        organizationId: orgId,
-        name: 'Domain',
-        slug: 'domain',
-        parentId: null,
-      }).returning()
-      domainType = created
-    }
-
-    // Avoid duplicates (case-insensitive)
-    const existing = await tx.query.taxonomyTerms.findFirst({
-      where: (t, { eq, and, sql }) =>
-        and(
-          eq(t.organizationId, orgId),
-          eq(t.parentId, domainType!.id),
-          sql`lower(${t.name}) = lower(${trimmed})`
-        ),
-    })
-    if (existing) return existing.name
-
-    const [entry] = await tx.insert(taxonomyTerms).values({
-      organizationId: orgId,
-      name: trimmed,
-      slug: toSlug(trimmed),
-      parentId: domainType.id,
-    }).returning()
-
-    await writeAuditLog(tx, {
-      action: 'taxonomy.create',
-      entityType: 'taxonomy_term',
-      entityId: entry.id,
-      userId: session.user.id,
-      organizationId: orgId,
-      after: { name: trimmed, parentId: domainType.id },
-    })
-
-    return entry.name
-  })
+  // Find or create the "Domain" type + value in one transaction so the audit
+  // row is consistent with the inserted value (#416). Shared with the CSV
+  // import path (#717) via ensureDomainValue.
+  return db.transaction(async (tx) => ensureDomainValue(tx, orgId, name, session.user.id))
 }

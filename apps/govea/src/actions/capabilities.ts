@@ -14,6 +14,7 @@ import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { ensureDomainOwnerOverwriteAck, assertUserInOrg } from '@/lib/domain-owner-gate'
 import { ensurePublishReady } from '@/lib/publish-readiness-gate'
 import { parseCsv, splitSemicolonList } from '@/lib/csv'
+import { ensureDomainValue } from '@/lib/ensure-domain-value'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { flagLinksForVisibilityDrop, clearLinksFlag } from '@/lib/cross-org-link-helpers'
@@ -571,6 +572,21 @@ export async function importCapabilities(formData: FormData, dryRun = false): Pr
 
   if (!dryRun && (created > 0 || updated > 0)) {
     await db.transaction(async (tx) => {
+      // #717 — ensure each imported domain exists as a "Domain" taxonomy value
+      // (created if absent, deduped case-insensitively) the same way the form
+      // combobox does, and normalize each row's domain to the canonical name so
+      // the stored text matches the taxonomy value. Without this the domain
+      // showed on the capability but was orphaned (not in the dropdown/filter).
+      const canonicalDomain = new Map<string, string>()
+      for (const r of validRows) {
+        if (r.domain && !canonicalDomain.has(r.domain)) {
+          canonicalDomain.set(r.domain, await ensureDomainValue(tx, orgId, r.domain, session.user.id))
+        }
+      }
+      for (const r of validRows) {
+        if (r.domain) r.domain = canonicalDomain.get(r.domain) ?? r.domain
+      }
+
       for (const r of validRows) {
         let capId = r.existingId
         if (capId) {
