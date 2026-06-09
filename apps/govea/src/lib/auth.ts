@@ -133,7 +133,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         // Initial sign-in — always fetch role and org from the DB regardless
         // of provider. The credentials provider returns these fields directly,
@@ -149,7 +149,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // a fallback when no membership exists. For today's single-membership
         // users this resolves to exactly their backfilled primary membership,
         // so the session is unchanged. Slice 3 adds switching the active org.
-        const active = await resolveActiveMembership(user.id!)
+        // #693 slice 3a — honor the user's last-selected org (if still an active
+        // membership) before primary/oldest.
+        const active = await resolveActiveMembership(user.id!, dbUser?.lastActiveOrganizationId)
         const activeOrgId = active?.organizationId ?? dbUser?.organizationId ?? null
         const activeRole = active?.role ?? dbUser?.role ?? 'viewer'
         token.id = user.id
@@ -175,6 +177,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.passwordExpiryDays = policy.passwordExpiryDays
         }
       } else if (token.id) {
+        // #693 slice 3a — explicit active-org switch. The client calls the
+        // NextAuth session `update()` after switchActiveOrganization() has
+        // persisted the new last_active_organization_id; we re-resolve the
+        // active org/role (server-authoritative — we never trust a client-
+        // supplied org) and refresh the policy snapshot, then return early.
+        if (trigger === 'update') {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.id as string),
+          })
+          if (dbUser) {
+            const active = await resolveActiveMembership(token.id as string, dbUser.lastActiveOrganizationId)
+            const activeOrgId = active?.organizationId ?? dbUser.organizationId ?? null
+            token.role = active?.role ?? dbUser.role ?? 'viewer'
+            token.organizationId = activeOrgId
+            if (activeOrgId) {
+              const policy = await getOrgSecuritySettings(activeOrgId)
+              token.sessionTimeoutMinutes = policy.sessionTimeoutMinutes
+              token.passwordExpiryDays = policy.passwordExpiryDays
+            }
+          }
+          return token
+        }
+
         // Subsequent requests — re-validate isActive every 5 minutes so that
         // deactivating a user takes effect without waiting for the 24h JWT to
         // expire. Returning null clears the session cookie and forces re-login.
