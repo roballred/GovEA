@@ -12,6 +12,7 @@ import { authConfig } from '@/lib/auth.config'
 import { checkSsoProvisioning } from '@/lib/sso-guard'
 import { getOrgSecuritySettings } from '@/lib/security-policy'
 import { resolveActiveMembership } from '@/lib/active-membership'
+import { getRequestContext } from '@/lib/request-context'
 
 // Identity model: users.email is globally unique across all organizations (#269).
 // Auth lookups by bare email (credentials provider, jwt callback) are therefore
@@ -47,15 +48,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
         const email = credentials.email as string
+        // #720 — proxy-aware client telemetry for auth audit events.
+        const ctx = await getRequestContext()
+        const authMeta = { ip: ctx.ip, userAgent: ctx.userAgent, provider: 'local' as const }
         const user = await db.query.users.findFirst({
           where: eq(users.email, email),
         })
         if (!user || !user.passwordHash || user.isActive !== 'true') {
+          // Unknown / unusable / inactive account — recorded for investigation,
+          // but the requester gets the same generic failure (no enumeration).
           await writeAuditLog(db, {
             action: 'auth.login_failed',
             entityType: 'user',
             organizationId: user?.organizationId,
-            metadata: { email },
+            metadata: { ...authMeta, email, reason: 'invalid_credentials' },
           })
           return null
         }
@@ -72,7 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             entityType: 'user',
             entityId: user.id,
             organizationId: user.organizationId,
-            metadata: { email, lockoutUntil: user.lockoutUntil.toISOString() },
+            metadata: { ...authMeta, email, reason: 'locked_account', lockoutUntil: user.lockoutUntil.toISOString() },
           })
           return null
         }
@@ -97,7 +103,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             entityType: 'user',
             entityId: user.id,
             organizationId: user.organizationId,
-            metadata: { email, attempts: newCount, lockedUntil: lockoutUntil?.toISOString() ?? null },
+            metadata: { ...authMeta, email, reason: 'invalid_credentials', attempts: newCount, lockedUntil: lockoutUntil?.toISOString() ?? null },
           })
           return null
         }
@@ -274,23 +280,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
       }
     },
-    async signIn({ user }) {
+    async signIn({ user, account }) {
+      const ctx = await getRequestContext()
       await writeAuditLog(db, {
         action: 'auth.login',
         entityType: 'user',
         entityId: user.id,
         userId: user.id,
         organizationId: (user as unknown as AppUser).organizationId,
+        metadata: { ip: ctx.ip, userAgent: ctx.userAgent, provider: account?.provider ?? 'credentials' },
       })
     },
     async signOut(message) {
       const token = 'token' in message ? message.token : null
+      const ctx = await getRequestContext()
       await writeAuditLog(db, {
         action: 'auth.logout',
         entityType: 'user',
         entityId: token?.id as string | undefined,
         userId: token?.id as string | undefined,
         organizationId: token?.organizationId as string | undefined,
+        metadata: { ip: ctx.ip, userAgent: ctx.userAgent },
       })
     },
   },
