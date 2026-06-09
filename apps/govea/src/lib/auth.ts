@@ -11,6 +11,7 @@ import type { Role } from '@/lib/rbac'
 import { authConfig } from '@/lib/auth.config'
 import { checkSsoProvisioning } from '@/lib/sso-guard'
 import { getOrgSecuritySettings } from '@/lib/security-policy'
+import { resolveActiveMembership } from '@/lib/active-membership'
 
 // Identity model: users.email is globally unique across all organizations (#269).
 // Auth lookups by bare email (credentials provider, jwt callback) are therefore
@@ -143,9 +144,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const dbUser = await db.query.users.findFirst({
           where: eq(users.id, user.id!),
         })
+        // #693 slice 2 — the *active* org/role come from the user's membership
+        // (primary, then oldest active), with the denormalized users columns as
+        // a fallback when no membership exists. For today's single-membership
+        // users this resolves to exactly their backfilled primary membership,
+        // so the session is unchanged. Slice 3 adds switching the active org.
+        const active = await resolveActiveMembership(user.id!)
+        const activeOrgId = active?.organizationId ?? dbUser?.organizationId ?? null
+        const activeRole = active?.role ?? dbUser?.role ?? 'viewer'
         token.id = user.id
-        token.role = dbUser?.role ?? 'viewer'
-        token.organizationId = dbUser?.organizationId ?? null
+        token.role = activeRole
+        token.organizationId = activeOrgId
         token.instanceRole = (dbUser?.instanceRole as 'instance_admin' | null) ?? null
         token.checkedAt = Date.now()
         // #527 — record session-issued-at + last-password-changed-at so the
@@ -160,8 +169,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // a redirect decision. The middleware can't query the DB (edge
         // runtime / no `net`), so we mirror the policy into the token and
         // refresh it on the same 5-minute cadence as the active-user check.
-        if (dbUser?.organizationId) {
-          const policy = await getOrgSecuritySettings(dbUser.organizationId)
+        if (activeOrgId) {
+          const policy = await getOrgSecuritySettings(activeOrgId)
           token.sessionTimeoutMinutes = policy.sessionTimeoutMinutes
           token.passwordExpiryDays = policy.passwordExpiryDays
         }
