@@ -48,3 +48,17 @@ for (const route of ROUTES) {
     expect(page.url(), `${route}: should not redirect to /login`).not.toContain('/login')
   })
 }
+
+// #739 — baseline security response headers are present.
+test('security response headers are set', async ({ page }) => {
+  const response = await page.goto('/overview')
+  const headers = response?.headers() ?? {}
+  expect(headers['x-frame-options']).toBe('DENY')
+  expect(headers['x-content-type-options']).toBe('nosniff')
+  expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin')
+  expect(headers['strict-transport-security']).toContain('max-age=')
+  expect(
+    headers['content-security-policy-report-only'],
+    'CSP should ship report-only first (see next.config.ts)',
+  ).toContain("frame-ancestors 'none'")
+})
