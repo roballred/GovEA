@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createGlossaryTerm, editGlossaryTerm, deleteGlossaryTerm } from '@/actions/glossary'
+import { createGlossaryTerm, editGlossaryTerm, deleteGlossaryTerm, importGlossary, type GlossaryImportResult } from '@/actions/glossary'
 import type { GlossaryTerm, GlossaryTermSource } from '@/db/schema'
 import { DomainCombobox } from '@/components/domain-combobox'
 import { useRouter } from 'next/navigation'
@@ -64,9 +64,35 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
   const editDirty = useDirtyTracker()
   const [deleteTarget, setDeleteTarget] = useState<GlossaryRow | null>(null)
 
+  // CSV import dialog state (#721). Preview (dryRun) → confirm; same UX as the
+  // capability/application import.
+  const [importOpen, setImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPreview, setImportPreview] = useState<GlossaryImportResult | null>(null)
+  const [importResult, setImportResult] = useState<GlossaryImportResult | null>(null)
+
   const canEditRole = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
   const refresh = () => router.refresh()
+
+  function openImport() {
+    setImportOpen(true); setImportResult(null); setImportPreview(null); setImportFile(null)
+  }
+  function handleImportPreview() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData(); fd.append('csvFile', importFile)
+      setImportPreview(await importGlossary(fd, true))
+    })
+  }
+  function handleImportConfirm() {
+    if (!importFile) return
+    startTransition(async () => {
+      const fd = new FormData(); fd.append('csvFile', importFile)
+      setImportResult(await importGlossary(fd, false))
+      setImportPreview(null); setImportFile(null); refresh()
+    })
+  }
 
   const domains = Array.from(new Set(terms.map(t => t.domain).filter(Boolean))) as string[]
 
@@ -131,7 +157,12 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
           </select>
         )}
         {canEditRole && (
-          <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
+          <Button variant="outline" onClick={openImport} size="sm" className="ml-auto">
+            Import CSV
+          </Button>
+        )}
+        {canEditRole && (
+          <Button onClick={() => setCreateOpen(true)} size="sm">
             + New Glossary Term
           </Button>
         )}
@@ -285,6 +316,70 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
             <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
               {isPending ? 'Deleting…' : 'Delete'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import CSV Dialog (#721) */}
+      <Dialog open={importOpen} onOpenChange={open => { if (!open) setImportOpen(false) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Import Glossary</DialogTitle></DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">
+              Upload a CSV with columns: <code className="bg-muted px-1 rounded">term</code>, <code className="bg-muted px-1 rounded">definition</code>, <code className="bg-muted px-1 rounded">domain</code>, <code className="bg-muted px-1 rounded">notes</code>, <code className="bg-muted px-1 rounded">status</code>, <code className="bg-muted px-1 rounded">visibility</code>.
+              Existing terms are matched by <code className="bg-muted px-1 rounded">term</code> (case-insensitive) and updated. A new domain is added to the Domain taxonomy automatically.
+            </p>
+
+            {!importResult && (
+              <div className="space-y-1.5">
+                <Label>CSV file</Label>
+                <Input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={e => { setImportFile(e.target.files?.[0] ?? null); setImportPreview(null) }}
+                />
+              </div>
+            )}
+
+            {importPreview && !importResult && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+                <p className="font-medium">Preview</p>
+                <p>Will create <strong>{importPreview.created}</strong> · update <strong>{importPreview.updated}</strong> · skip <strong>{importPreview.skipped}</strong></p>
+                {importPreview.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importPreview.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {importResult && (
+              <div className="rounded-md border bg-emerald-50 border-emerald-200 p-3 space-y-1">
+                <p className="font-medium text-emerald-800">Import complete</p>
+                <p className="text-emerald-700">Created <strong>{importResult.created}</strong> · updated <strong>{importResult.updated}</strong> · skipped <strong>{importResult.skipped}</strong></p>
+                {importResult.errors.length > 0 && (
+                  <ul className="text-destructive space-y-0.5 mt-1">
+                    {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setImportOpen(false)}>
+              {importResult ? 'Close' : 'Cancel'}
+            </Button>
+            {!importResult && !importPreview && (
+              <Button onClick={handleImportPreview} disabled={!importFile || isPending}>
+                {isPending ? 'Checking…' : 'Preview'}
+              </Button>
+            )}
+            {importPreview && !importResult && (
+              <Button onClick={handleImportConfirm} disabled={isPending || importPreview.created + importPreview.updated === 0}>
+                {isPending ? 'Importing…' : `Import ${importPreview.created + importPreview.updated} terms`}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

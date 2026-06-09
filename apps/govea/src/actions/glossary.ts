@@ -10,6 +10,8 @@ import { writeAuditLog } from '@/lib/audit'
 import { ensureNoDuplicateName } from '@/lib/duplicate-name-gate'
 import { redirect } from 'next/navigation'
 import { validateWebUrl } from '@/lib/url'
+import { parseCsv } from '@/lib/csv'
+import { ensureDomainValue } from '@/lib/ensure-domain-value'
 
 async function requireContributor() {
   const session = await auth()
@@ -192,4 +194,122 @@ export async function deleteGlossaryTerm(termId: string) {
       before: { term: before?.term },
     })
   })
+}
+
+// ── CSV import (#721) ──────────────────────────────────────────────────────
+// Mirrors importCapabilities (#596): `term` is the case-insensitive upsert key;
+// all rows are pre-validated before the transaction; `dryRun` returns counts +
+// errors without writing. An imported `domain` creates the "Domain" taxonomy
+// value (shared ensureDomainValue, #717) and is normalized to the canonical
+// name — no orphaned domains.
+
+export type GlossaryImportResult = {
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}
+
+const VALID_GLOSSARY_STATUS = new Set(['draft', 'published', 'archived'])
+const VALID_GLOSSARY_VISIBILITY = new Set(['org', 'connections', 'instance'])
+
+export async function importGlossary(formData: FormData, dryRun = false): Promise<GlossaryImportResult> {
+  const session = await requireContributor()
+  const orgId = session.user.organizationId!
+
+  const file = formData.get('csvFile') as File | null
+  if (!file) return { created: 0, updated: 0, skipped: 0, errors: ['No file provided'] }
+
+  const rows = parseCsv(await file.text())
+  if (rows.length === 0) return { created: 0, updated: 0, skipped: 0, errors: ['CSV has no data rows'] }
+
+  const existing = await db.query.glossaryTerms.findMany({
+    where: eq(glossaryTerms.organizationId, orgId),
+    columns: { id: true, term: true },
+  })
+  const existingByTerm = new Map(existing.map(t => [t.term.toLowerCase(), t.id]))
+
+  type ValidRow = {
+    term: string
+    definition: string
+    domain: string | null
+    notes: string | null
+    status: 'draft' | 'published' | 'archived'
+    visibility: 'org' | 'connections' | 'instance'
+    existingId: string | undefined
+  }
+  const validRows: ValidRow[] = []
+  let created = 0, updated = 0, skipped = 0
+  const errors: string[] = []
+
+  for (const [i, row] of rows.entries()) {
+    const rowNum = i + 2 // 1-indexed + header row
+    const term = row['term']?.trim()
+    if (!term) { errors.push(`Row ${rowNum}: missing required field "term"`); skipped++; continue }
+
+    const definition = row['definition']?.trim()
+    if (!definition) { errors.push(`Row ${rowNum}: missing required field "definition"`); skipped++; continue }
+
+    const status = (row['status'] || 'draft').trim().toLowerCase()
+    const visibility = (row['visibility'] || 'org').trim().toLowerCase()
+    if (!VALID_GLOSSARY_STATUS.has(status)) {
+      errors.push(`Row ${rowNum}: invalid status "${status}"`); skipped++; continue
+    }
+    if (!VALID_GLOSSARY_VISIBILITY.has(visibility)) {
+      errors.push(`Row ${rowNum}: invalid visibility "${visibility}"`); skipped++; continue
+    }
+
+    const existingId = existingByTerm.get(term.toLowerCase())
+    if (existingId) updated++; else created++
+
+    validRows.push({
+      term,
+      definition,
+      domain: row['domain']?.trim() || null,
+      notes: row['notes']?.trim() || null,
+      status: status as 'draft' | 'published' | 'archived',
+      visibility: visibility as 'org' | 'connections' | 'instance',
+      existingId,
+    })
+  }
+
+  if (!dryRun && (created > 0 || updated > 0)) {
+    await db.transaction(async (tx) => {
+      // Ensure each imported domain is a "Domain" taxonomy value, then normalize
+      // each row's domain to the canonical name (#717).
+      const canonicalDomain = new Map<string, string>()
+      for (const r of validRows) {
+        if (r.domain && !canonicalDomain.has(r.domain)) {
+          canonicalDomain.set(r.domain, await ensureDomainValue(tx, orgId, r.domain, session.user.id))
+        }
+      }
+
+      for (const r of validRows) {
+        const domain = r.domain ? canonicalDomain.get(r.domain) ?? r.domain : null
+        if (r.existingId) {
+          await tx.update(glossaryTerms).set({
+            definition: r.definition, domain, notes: r.notes,
+            status: r.status, visibility: r.visibility,
+            updatedBy: session.user.id, updatedAt: new Date(),
+          }).where(and(eq(glossaryTerms.id, r.existingId), eq(glossaryTerms.organizationId, orgId)))
+        } else {
+          await tx.insert(glossaryTerms).values({
+            organizationId: orgId, term: r.term, definition: r.definition, domain, notes: r.notes,
+            status: r.status, visibility: r.visibility,
+            createdBy: session.user.id, updatedBy: session.user.id,
+          })
+        }
+      }
+
+      await writeAuditLog(tx, {
+        action: 'glossary.import',
+        entityType: 'glossary',
+        userId: session.user.id,
+        organizationId: orgId,
+        after: { created, updated, skipped, dryRun, errorCount: errors.length },
+      })
+    })
+  }
+
+  return { created, updated, skipped, errors }
 }
