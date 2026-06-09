@@ -12,6 +12,8 @@ import { AppShell } from '@/components/app-shell'
 import { AdminNoticeBanner } from '@/components/admin-notice-banner'
 import { getCurrentModuleSettings } from '@/lib/get-enabled-modules'
 import { getMyUnreadCount } from '@/actions/notifications'
+import { getMyActiveOrganizations } from '@/actions/active-org'
+import { OrgSwitcher } from '@/components/org-switcher'
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
   admin: 'bg-violet-100 text-violet-800 border-violet-200',
@@ -29,6 +31,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // layout level so the badge is up-to-date on every navigation; the
   // /notifications page itself revalidates this path after mark-read.
   const unreadNotificationCount = await getMyUnreadCount()
+
+  // #693 slice 3b — active-org switcher data. Component self-hides for
+  // single-membership users, so this is a no-op cost for the common case.
+  const myOrganizations = await getMyActiveOrganizations()
 
   // Load org settings (theme + enabled modules)
   let themeStyle = ''
@@ -73,6 +79,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       isInstanceAdmin={isInstanceAdmin(session.user)}
       enabledModules={enabledModules}
       unreadNotificationCount={unreadNotificationCount}
+      orgSwitcherSlot={<OrgSwitcher orgs={myOrganizations} />}
       signOutSlot={signOutSlot}
     >
       {session.user.organizationId && (

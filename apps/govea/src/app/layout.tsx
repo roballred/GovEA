@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ActAsBanner } from '@/components/act-as-banner'
+import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
   title: 'GovEA',
@@ -19,8 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <ActAsBanner />
-        {children}
+        <Providers>
+          <ActAsBanner />
+          {children}
+        </Providers>
       </body>
     </html>
   )

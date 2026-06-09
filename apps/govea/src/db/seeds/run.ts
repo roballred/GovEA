@@ -2192,6 +2192,21 @@ async function seed() {
   }
   console.log(`  ✓ ${allUsers.length} user-organization memberships (backfilled, primary)`)
 
+  // #693 slice 3b demo — make one dev user multi-org so the org switcher is
+  // exercisable in dev: Alice (City of Riverdale admin) also joins the State
+  // org as a contributor. Idempotent.
+  const [alice] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'alice@govea.dev')).limit(1)
+  const [stateOrg] = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, 'office-of-digital-services')).limit(1)
+  if (alice && stateOrg) {
+    await db.insert(userOrganizationMemberships).values({
+      userId: alice.id,
+      organizationId: stateOrg.id,
+      role: 'contributor',
+      isPrimary: false,
+    }).onConflictDoNothing()
+    console.log('  ✓ demo multi-org membership: alice@govea.dev → Office of Digital Services (contributor)')
+  }
+
   console.log('\nSeed complete.')
   process.exit(0)
 }

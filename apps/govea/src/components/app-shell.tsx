@@ -360,6 +360,8 @@ interface AppShellProps {
   enabledModules: Record<string, boolean>
   /** Caller's unread notification count — drives the nav badge (#581). */
   unreadNotificationCount?: number
+  /** Org switcher (#693 slice 3b) — self-hides for single-membership users. */
+  orgSwitcherSlot?: ReactNode
   signOutSlot: ReactNode
   children: ReactNode
 }
@@ -372,6 +374,7 @@ export function AppShell({
   isInstanceAdmin,
   enabledModules,
   unreadNotificationCount,
+  orgSwitcherSlot,
   signOutSlot,
   children,
 }: AppShellProps) {
@@ -537,6 +540,7 @@ export function AppShell({
                 Platform Admin
               </Link>
             )}
+            {orgSwitcherSlot}
             <span className="hidden sm:block text-sm text-white/70">{email}</span>
             <span
               data-tour="role-badge"
