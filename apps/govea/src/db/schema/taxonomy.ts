@@ -9,6 +9,12 @@ export const taxonomyTerms = pgTable('taxonomy_terms', {
   slug: text('slug').notNull(),
   description: text('description'),
   domain: text('domain'), // top-level domain grouping
+  // #671 — audience marker on taxonomy *types*. 'framework' types (e.g. an
+  // installed TOGAF domain scheme) are hidden from viewer-role users and
+  // stakeholder reports by default, preserving ADR-0001 jargon-hiding without a
+  // module toggle. null = general (visible to everyone). General feature, not
+  // framework-specific.
+  audience: text('audience'),
   sortOrder: text('sort_order'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
