@@ -14,8 +14,8 @@
  */
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { db } from '@/db/client'
-import { capabilities, capabilityPersonas, personas } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { capabilities, capabilityPersonas, personas, taxonomyTerms } from '@/db/schema'
+import { eq, and, isNull } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import { importCapabilities } from '@/actions/capabilities'
 import {
@@ -56,6 +56,49 @@ describe('importCapabilities (#596)', () => {
   })
 
   afterAll(() => cleanupOrg(orgId))
+
+  // #717 — importing a domain must create the "Domain" taxonomy value, the same
+  // way the form combobox does, instead of leaving an orphaned text value.
+  async function domainValues() {
+    const [type] = await db.select({ id: taxonomyTerms.id }).from(taxonomyTerms)
+      .where(and(eq(taxonomyTerms.organizationId, orgId), isNull(taxonomyTerms.parentId), eq(taxonomyTerms.slug, 'domain')))
+    if (!type) return []
+    return db.select({ name: taxonomyTerms.name }).from(taxonomyTerms)
+      .where(and(eq(taxonomyTerms.organizationId, orgId), eq(taxonomyTerms.parentId, type.id)))
+  }
+
+  it('creates the Domain taxonomy value for an imported domain (#717)', async () => {
+    mockAuth.mockResolvedValue(makeSession(contributor))
+    const csv = [
+      'name,description,domain,behaviors,rules,capability_type,status,visibility,personas',
+      'Elections Mgmt,Run elections,Elections,,,business,draft,org,',
+    ].join('\n')
+    const result = await importCapabilities(csvForm(csv), false)
+    expect(result.created).toBe(1)
+
+    // The taxonomy value now exists...
+    expect((await domainValues()).map(d => d.name)).toContain('Elections')
+    // ...and the capability's domain matches the canonical value.
+    const [cap] = await db.select({ domain: capabilities.domain }).from(capabilities)
+      .where(and(eq(capabilities.organizationId, orgId), eq(capabilities.name, 'Elections Mgmt')))
+    expect(cap.domain).toBe('Elections')
+  })
+
+  it('does not duplicate an existing domain value on case-variant import (#717)', async () => {
+    mockAuth.mockResolvedValue(makeSession(contributor))
+    const before = (await domainValues()).filter(d => d.name.toLowerCase() === 'elections').length
+    const csv = [
+      'name,description,domain,behaviors,rules,capability_type,status,visibility,personas',
+      'Voter Reg,Register voters,elections,,,business,draft,org,', // lower-case variant
+    ].join('\n')
+    await importCapabilities(csvForm(csv), false)
+    const after = (await domainValues()).filter(d => d.name.toLowerCase() === 'elections')
+    expect(after.length).toBe(before) // no new value created
+    // capability normalized to the canonical existing casing
+    const [cap] = await db.select({ domain: capabilities.domain }).from(capabilities)
+      .where(and(eq(capabilities.organizationId, orgId), eq(capabilities.name, 'Voter Reg')))
+    expect(cap.domain).toBe('Elections')
+  })
 
   it('rejects viewer role', async () => {
     mockAuth.mockResolvedValue(makeSession(viewer))
