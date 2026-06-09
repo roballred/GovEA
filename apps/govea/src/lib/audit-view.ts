@@ -229,3 +229,43 @@ export async function getFailedLoginSummary(
 
   return { since, byEmail, byIp }
 }
+
+/**
+ * Raw failed-login events with telemetry, for the instance audit CSV export
+ * (#720 slice 3). Caller gates with instance-admin. Spans all orgs.
+ */
+export interface FailedLoginEvent {
+  createdAt: Date
+  action: string
+  email: string | null
+  ip: string | null
+  userAgent: string | null
+  reason: string | null
+  organizationId: string | null
+}
+
+export async function getFailedLoginEvents(
+  opts?: { sinceDays?: number; limit?: number },
+): Promise<FailedLoginEvent[]> {
+  const sinceDays = opts?.sinceDays ?? 30
+  const limit = opts?.limit ?? 5000
+  const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000)
+
+  return db
+    .select({
+      createdAt: auditLog.createdAt,
+      action: auditLog.action,
+      email: sql<string | null>`${auditLog.metadata} ->> 'email'`,
+      ip: sql<string | null>`${auditLog.metadata} ->> 'ip'`,
+      userAgent: sql<string | null>`${auditLog.metadata} ->> 'userAgent'`,
+      reason: sql<string | null>`${auditLog.metadata} ->> 'reason'`,
+      organizationId: auditLog.organizationId,
+    })
+    .from(auditLog)
+    .where(and(
+      inArray(auditLog.action, FAILED_LOGIN_ACTIONS as unknown as string[]),
+      gte(auditLog.createdAt, since),
+    ))
+    .orderBy(desc(auditLog.createdAt))
+    .limit(limit)
+}

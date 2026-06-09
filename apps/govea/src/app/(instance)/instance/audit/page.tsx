@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { AuditFilters } from './audit-filters'
+import { getFailedLoginSummary } from '@/lib/audit-view'
 
 function cutoffForSince(since: string | undefined): Date | null {
   switch (since) {
@@ -42,6 +43,9 @@ export default async function InstanceAuditPage({
     actor ? eq(breakGlassSessions.instanceAdminId, actor) : undefined,
     cutoff ? gte(breakGlassSessions.grantedAt, cutoff) : undefined,
   )
+
+  // #720 — repeated failed-login telemetry (across all orgs), last 7 days.
+  const failedLogins = await getFailedLoginSummary({ sinceDays: 7, limit: 10 })
 
   const [instanceEvents, bgSessions, adminRows, actionRows] = await Promise.all([
     db
@@ -85,6 +89,81 @@ export default async function InstanceAuditPage({
         actions={knownActions}
         current={{ actor, action: actionFilter, since }}
       />
+
+      {/* Failed-login telemetry (#720) — repeated-failure review across orgs */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold">
+            Failed Logins <span className="text-muted-foreground text-sm font-normal">(last 7 days)</span>
+          </h2>
+          <a
+            href="/api/instance/audit/export"
+            className="text-sm text-primary underline underline-offset-2 hover:no-underline"
+          >
+            Export CSV (30d)
+          </a>
+        </div>
+        {failedLogins.byEmail.length === 0 && failedLogins.byIp.length === 0 ? (
+          <p className="text-sm text-muted-foreground rounded-lg border bg-card p-4">
+            No failed logins in the last 7 days.
+          </p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border bg-card">
+              <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">By attempted email</div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="text-right">Attempts</TableHead>
+                    <TableHead className="text-right">IPs</TableHead>
+                    <TableHead>Last</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {failedLogins.byEmail.map(r => (
+                    <TableRow key={r.email}>
+                      <TableCell className="text-sm">{r.email}</TableCell>
+                      <TableCell className="text-right font-medium">{r.attempts}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{r.distinctIps}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(r.lastAttempt).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                  {failedLogins.byEmail.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-4 text-sm">None</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="rounded-lg border bg-card">
+              <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">By source IP</div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>IP</TableHead>
+                    <TableHead className="text-right">Attempts</TableHead>
+                    <TableHead className="text-right">Emails</TableHead>
+                    <TableHead>Last</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {failedLogins.byIp.map(r => (
+                    <TableRow key={r.ip}>
+                      <TableCell className="font-mono text-xs">{r.ip}</TableCell>
+                      <TableCell className="text-right font-medium">{r.attempts}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{r.distinctEmails}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(r.lastAttempt).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                  {failedLogins.byIp.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-4 text-sm">None</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* Instance events */}
       <section>
