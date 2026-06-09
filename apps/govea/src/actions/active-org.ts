@@ -1,11 +1,52 @@
 'use server'
 
 import { db } from '@/db/client'
-import { users, userOrganizationMemberships } from '@/db/schema'
+import { users, userOrganizationMemberships, organizations } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { writeAuditLog } from '@/lib/audit'
+import type { Role } from '@/lib/rbac'
+
+export interface MyOrganization {
+  organizationId: string
+  name: string
+  role: Role
+  isCurrent: boolean
+}
+
+/**
+ * Lists the caller's active organization memberships (with org name + the role
+ * they hold there), flagging the currently-active one. Drives the org switcher
+ * (#693 slice 3b). Returns [] for an unauthenticated caller.
+ */
+export async function getMyActiveOrganizations(): Promise<MyOrganization[]> {
+  const session = await auth()
+  if (!session?.user) return []
+  const currentOrgId = session.user.organizationId
+
+  const rows = await db
+    .select({
+      organizationId: userOrganizationMemberships.organizationId,
+      role: userOrganizationMemberships.role,
+      name: organizations.name,
+    })
+    .from(userOrganizationMemberships)
+    .innerJoin(organizations, eq(organizations.id, userOrganizationMemberships.organizationId))
+    .where(and(
+      eq(userOrganizationMemberships.userId, session.user.id),
+      eq(userOrganizationMemberships.isActive, true),
+    ))
+
+  return rows
+    .map(r => ({
+      organizationId: r.organizationId,
+      name: r.name,
+      role: r.role as Role,
+      isCurrent: r.organizationId === currentOrgId,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
 
 /**
  * Switches the caller's active organization, persisting it as
