@@ -13,6 +13,10 @@ export function MermaidDiagram({ chart }: { chart: string }) {
       const mermaid = (await import('mermaid')).default
       mermaid.initialize({
         startOnLoad: false,
+        // #740 — chart text is built from user-controlled data (capability
+        // names/relationships). 'strict' makes mermaid HTML-escape labels and
+        // disables click-event/script handlers in the rendered SVG.
+        securityLevel: 'strict',
         theme: 'base',
         themeVariables: {
           fontFamily: 'system-ui, -apple-system, sans-serif',
