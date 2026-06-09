@@ -155,3 +155,77 @@ export async function getAuditActionNamespaces(orgId: string, role: AuditViewRol
     .orderBy(sql`split_part(${auditLog.action}, '.', 1)`)
   return rows.map(r => r.ns).filter(Boolean)
 }
+
+// ── Failed-login aggregation (#720 slice 2) ────────────────────────────────
+// Instance-admin security review: surface repeated failed-login patterns across
+// ALL orgs (credential stuffing, attacks on privileged accounts), grouped by
+// attempted email and by source IP. Reads the telemetry captured in slice 1
+// (metadata.email / metadata.ip). Caller gates with requireInstanceAdmin (same
+// pattern as getAuditEntries). Pure read; audit immutability untouched.
+
+export const FAILED_LOGIN_ACTIONS = [
+  'auth.login_failed',
+  'auth.login_failed_locked',
+  'auth.login_blocked_locked',
+] as const
+
+export interface FailedLoginByEmail {
+  email: string
+  attempts: number
+  lastAttempt: Date
+  distinctIps: number
+}
+export interface FailedLoginByIp {
+  ip: string
+  attempts: number
+  lastAttempt: Date
+  distinctEmails: number
+}
+export interface FailedLoginSummary {
+  since: Date
+  byEmail: FailedLoginByEmail[]
+  byIp: FailedLoginByIp[]
+}
+
+export async function getFailedLoginSummary(
+  opts?: { sinceDays?: number; limit?: number },
+): Promise<FailedLoginSummary> {
+  const sinceDays = opts?.sinceDays ?? 7
+  const limit = opts?.limit ?? 20
+  const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000)
+
+  const emailExpr = sql<string>`${auditLog.metadata} ->> 'email'`
+  const ipExpr = sql<string>`${auditLog.metadata} ->> 'ip'`
+  const inWindow = and(
+    inArray(auditLog.action, FAILED_LOGIN_ACTIONS as unknown as string[]),
+    gte(auditLog.createdAt, since),
+  )
+
+  const byEmail = await db
+    .select({
+      email: emailExpr,
+      attempts: sql<number>`count(*)::int`,
+      lastAttempt: sql<Date>`max(${auditLog.createdAt})`,
+      distinctIps: sql<number>`count(distinct ${ipExpr})::int`,
+    })
+    .from(auditLog)
+    .where(and(inWindow, sql`${emailExpr} is not null`))
+    .groupBy(emailExpr)
+    .orderBy(desc(sql`count(*)`))
+    .limit(limit)
+
+  const byIp = await db
+    .select({
+      ip: ipExpr,
+      attempts: sql<number>`count(*)::int`,
+      lastAttempt: sql<Date>`max(${auditLog.createdAt})`,
+      distinctEmails: sql<number>`count(distinct ${emailExpr})::int`,
+    })
+    .from(auditLog)
+    .where(and(inWindow, sql`${ipExpr} is not null`))
+    .groupBy(ipExpr)
+    .orderBy(desc(sql`count(*)`))
+    .limit(limit)
+
+  return { since, byEmail, byIp }
+}
