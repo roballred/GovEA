@@ -157,7 +157,12 @@ export function GlossaryTable({ terms, domainTerms, role, currentOrgId }: Props)
           </select>
         )}
         {canEditRole && (
-          <Button variant="outline" onClick={openImport} size="sm" className="ml-auto">
+          <a href="/api/glossary/export" className="ml-auto">
+            <Button variant="outline" size="sm">Export CSV</Button>
+          </a>
+        )}
+        {canEditRole && (
+          <Button variant="outline" onClick={openImport} size="sm">
             Import CSV
           </Button>
         )}
