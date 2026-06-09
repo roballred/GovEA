@@ -814,6 +814,60 @@ async function seed() {
   }).onConflictDoNothing()
   console.log('  ✓ Capability Priority taxonomy type + entity definition')
 
+  // Value Chain taxonomy + entity definition (#694). v1 of value chains is a
+  // capabilities-only, taxonomy-backed grouping — the recognized gov reference-
+  // architecture pattern (value chain → capabilities), reversible and built on
+  // the existing entity-taxonomy mechanism, not a new entity. See
+  // docs/design/value-chains.md.
+  let valueChainTermId: string
+  const existingValueChain = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and, isNull }) =>
+      and(e(t.organizationId, devOrgId), isNull(t.parentId), e(t.slug, 'value-chain')),
+  })
+  if (existingValueChain) {
+    valueChainTermId = existingValueChain.id
+  } else {
+    const [inserted] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId,
+      name: 'Value Chain',
+      slug: 'value-chain',
+      description: 'The end-to-end public-value stream a capability contributes to — the top-level grouping of the capability map.',
+      sortOrder: '70',
+    }).returning()
+    valueChainTermId = inserted.id
+  }
+  const VALUE_CHAIN_VALUES = [
+    'Public Safety & Justice',
+    'Health & Human Services',
+    'Infrastructure & Environment',
+    'Economic & Community Development',
+    'Administration & Support',
+  ]
+  for (const name of VALUE_CHAIN_VALUES) {
+    const slug = toSlug(name)
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and }) =>
+        and(e(t.organizationId, devOrgId), e(t.parentId, valueChainTermId), e(t.slug, slug)),
+    })
+    if (!existing) {
+      await db.insert(taxonomyTerms).values({
+        organizationId: devOrgId,
+        parentId: valueChainTermId,
+        name,
+        slug,
+      })
+    }
+  }
+  await db.insert(entityTaxonomyDefinitions).values({
+    organizationId: devOrgId,
+    entityType: 'capability',
+    taxonomyTypeId: valueChainTermId,
+    selectionMode: 'single',
+    required: false,
+    sortOrder: 1,
+  }).onConflictDoNothing()
+  console.log('  ✓ Value Chain taxonomy type + entity definition')
+
   // Objective Category taxonomy + entity definition
   let objCategoryTermId: string
   const existingObjCategory = await db.query.taxonomyTerms.findFirst({
