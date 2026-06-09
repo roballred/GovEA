@@ -1,6 +1,6 @@
 # Design: Value Chains in GovEA
 
-**Status:** Proposed — design decision for ARB; no implementation
+**Status:** Accepted — v1 spine shipped (capability value-chain taxonomy); read view + richer scope still gated on #668
 **Issue:** [#694](https://github.com/roballred/GovEA/issues/694)
 **Capabilities:** `po-value-streams`, `fd-traceability-views`, `rm-end-to-end-traceability`
 **Personas:** Enterprise Architect (Central IT), Agency EA Coordinator, Department Director
@@ -12,7 +12,9 @@
 
 #694 asks us to decide **whether "Value Chain" should be a distinct content type, a curated view over existing records, or a taxonomy-backed grouping** — without duplicating value-stream authoring or adding a diagramming burden. This doc makes the product distinction, evaluates the three options against GovEA's existing model and the market evidence, recommends one, and lists the inputs that gate finalizing it.
 
-> **Bottom line:** Recommend **Option C (taxonomy-backed grouping) as the spine + Option B (curated read view) as the presentation** — *not* a new staged-authoring entity. A value chain becomes a lightweight named grouping that capabilities (and optionally value streams/services) belong to, rendered as a read-oriented traceability view that composes records GovEA already links. This matches how government reference architectures actually model value chains (top-level grouping of capabilities), reuses the exact capabilities tagged on this issue, and keeps the concept people-centered. **Gate the build on #668 validation.**
+> **Bottom line:** Recommend **Option C (taxonomy-backed grouping) as the spine + Option B (curated read view) as the presentation** — *not* a new staged-authoring entity. A value chain becomes a lightweight named grouping that capabilities (and optionally value streams/services) belong to, rendered as a read-oriented traceability view that composes records GovEA already links. This matches how government reference architectures actually model value chains (top-level grouping of capabilities), reuses the exact capabilities tagged on this issue, and keeps the concept people-centered. **Gate the *richer* build on #668 validation.**
+
+> **Decision update (owner-directed):** Proceed now with the **Option C spine, capabilities-only** — a "Value Chain" taxonomy on the `capability` entity, exactly like the existing Domain / Capability Priority taxonomies. It needs no new code (the entity-taxonomy mechanism already supports it) and is trivially reversible, so it doesn't wait on #668. **Shipped:** seeded "Value Chain" taxonomy type + `entity_taxonomy_definition` for capabilities (`db/seeds/run.ts`). **Still gated on #668:** the curated read view (Option B), value-stream/service membership, and any first-class-entity upgrade (§6 deferred list).
 
 ---
 
