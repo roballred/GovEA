@@ -6,6 +6,10 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'contributor', 'viewer
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  // #693 slice 3a: the user's last-selected active org, honored first by
+  // resolveActiveMembership when it's still an active membership. Nullable
+  // (most users never switch); `set null` so deleting an org doesn't orphan.
+  lastActiveOrganizationId: uuid('last_active_organization_id').references(() => organizations.id, { onDelete: 'set null' }),
   name: text('name'),
   email: text('email').notNull(),
   emailVerified: timestamp('email_verified'),
