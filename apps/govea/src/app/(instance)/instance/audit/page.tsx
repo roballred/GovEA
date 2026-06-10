@@ -178,24 +178,32 @@ export default async function InstanceAuditPage({
                 <TableHead>Action</TableHead>
                 <TableHead>Entity</TableHead>
                 <TableHead>Actor</TableHead>
+                <TableHead>Source IP</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {instanceEvents.map(({ log, actor }) => (
-                <TableRow key={log.id}>
-                  <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
-                    {log.createdAt.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{log.action}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {log.entityType}{log.entityId ? ` · ${log.entityId.slice(0, 8)}` : ''}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{actor?.email ?? 'system'}</TableCell>
-                </TableRow>
-              ))}
+              {instanceEvents.map(({ log, actor }) => {
+                // #720 — proxy-aware client telemetry captured on the event.
+                const meta = (log.metadata ?? null) as { ip?: string | null; userAgent?: string | null } | null
+                return (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
+                      {log.createdAt.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{log.action}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {log.entityType}{log.entityId ? ` · ${log.entityId.slice(0, 8)}` : ''}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{actor?.email ?? 'system'}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground" title={meta?.userAgent ?? undefined}>
+                      {meta?.ip ?? '—'}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
               {instanceEvents.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     No platform events match these filters
                   </TableCell>
                 </TableRow>

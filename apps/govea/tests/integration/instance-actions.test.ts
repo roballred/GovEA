@@ -20,7 +20,7 @@ import {
 } from '@/actions/instance'
 import { db } from '@/db/client'
 import { breakGlassSessions, auditLog, instanceSettings, organizations, users } from '@/db/schema'
-import { eq, and, isNull, or } from 'drizzle-orm'
+import { eq, and, isNull, or, desc } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import {
   createTestOrg, createTestUser, cleanupOrg, makeSession, findOrg, findUser,
@@ -34,6 +34,14 @@ vi.mock('@/lib/auth', () => ({ auth: mockAuth }))
 
 const mockRevalidate = vi.hoisted(() => vi.fn())
 vi.mock('next/cache', () => ({ revalidatePath: mockRevalidate }))
+
+// #720 — proxy-aware request telemetry. Default to nulls (no request scope) so
+// every action runs; individual tests override to assert IP/UA capture.
+const mockRequestContext = vi.hoisted(() => vi.fn(async () => ({ ip: null as string | null, userAgent: null as string | null })))
+vi.mock('@/lib/request-context', async (orig) => ({
+  ...(await orig<typeof import('@/lib/request-context')>()),
+  getRequestContext: mockRequestContext,
+}))
 
 // ── Test state ────────────────────────────────────────────────────────────────
 
@@ -414,5 +422,66 @@ describe('reactivateUserAccount', () => {
   it('throws Forbidden for non-instance-admin', async () => {
     asRegularAdmin()
     await expect(reactivateUserAccount(regularUser.id, 'x')).rejects.toThrow('Forbidden')
+  })
+})
+
+// ── Audit telemetry: source IP + user agent on instance-admin events (#720) ───
+
+describe('instance-admin audit telemetry (#720)', () => {
+  const IP = '203.0.113.7'
+  const UA = 'Vitest/1.0 (audit-telemetry)'
+
+  beforeAll(() => {
+    mockRequestContext.mockResolvedValue({ ip: IP, userAgent: UA })
+  })
+
+  afterAll(() => {
+    mockRequestContext.mockResolvedValue({ ip: null, userAgent: null })
+  })
+
+  async function latestMeta(action: string, entityId: string) {
+    const [row] = await db.select().from(auditLog)
+      .where(and(eq(auditLog.action, action), eq(auditLog.entityId, entityId)))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(1)
+    return (row?.metadata ?? null) as { ip?: string; userAgent?: string } | null
+  }
+
+  it('captures IP + user agent on a break-glass grant', async () => {
+    asInstanceAdmin()
+    await grantBreakGlass(targetOrgId, 'Telemetry test grant')
+    const meta = await latestMeta('instance.break_glass.grant', targetOrgId)
+    expect(meta?.ip).toBe(IP)
+    expect(meta?.userAgent).toBe(UA)
+  })
+
+  it('captures IP + user agent on org suspend', async () => {
+    asInstanceAdmin()
+    await suspendOrg(targetOrgId, 'Telemetry test suspend')
+    const meta = await latestMeta('instance.org.suspend', targetOrgId)
+    expect(meta?.ip).toBe(IP)
+    expect(meta?.userAgent).toBe(UA)
+    await unsuspendOrg(targetOrgId) // restore state for any later assertions
+  })
+
+  it('captures IP + user agent on a platform-admin promotion', async () => {
+    asInstanceAdmin()
+    await promoteInstanceAdmin(regularUser.id, 'Telemetry test promote')
+    const meta = await latestMeta('instance.user.promote', regularUser.id)
+    expect(meta?.ip).toBe(IP)
+    expect(meta?.userAgent).toBe(UA)
+    await demoteInstanceAdmin(regularUser.id, 'Telemetry test cleanup')
+  })
+
+  it('records null IP/UA gracefully outside a request scope (no crash)', async () => {
+    asInstanceAdmin()
+    mockRequestContext.mockResolvedValueOnce({ ip: null, userAgent: null })
+    await grantBreakGlass(targetOrgId, 'No-context grant')
+    // The action still succeeds and writes an entry; telemetry is simply null.
+    const [row] = await db.select().from(auditLog)
+      .where(and(eq(auditLog.action, 'instance.break_glass.grant'), eq(auditLog.entityId, targetOrgId)))
+      .orderBy(desc(auditLog.createdAt)).limit(1)
+    expect(row).toBeDefined()
+    expect((row.metadata as { ip: string | null }).ip).toBeNull()
   })
 })

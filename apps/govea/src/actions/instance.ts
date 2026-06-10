@@ -5,6 +5,7 @@ import { organizations, users, breakGlassSessions, instanceSettings, platformCon
 import { eq, and, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
+import { getRequestContext } from '@/lib/request-context'
 import { revalidatePath } from 'next/cache'
 import { MODULE_DEFS, type ModuleKey, type ModuleGroup } from '@/lib/modules'
 import { validatePassword } from '@/lib/password'
@@ -16,6 +17,18 @@ import {
   isValidBreakGlassTtl,
 } from '@/lib/break-glass'
 import { notifyBreakGlassEvent } from '@/lib/notifications/break-glass'
+
+/**
+ * Proxy-aware request telemetry (source IP + user agent) for an instance-admin
+ * audit entry's `metadata` (#720). Security-relevant platform-administration
+ * events need this context for incident review. Never records raw headers —
+ * only the derived IP and user-agent string. Returns nulls outside a request
+ * scope (e.g. background jobs), so callers can use it unconditionally.
+ */
+async function auditMeta(extra?: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const ctx = await getRequestContext()
+  return { ip: ctx.ip, userAgent: ctx.userAgent, ...(extra ?? {}) }
+}
 
 export async function createOrg(formData: FormData): Promise<{ id: string }> {
   const session = await requireInstanceAdmin()
@@ -49,6 +62,7 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
 
     await writeAuditLog(tx, {
       action: 'instance.org.create',
+      metadata: await auditMeta(),
       entityType: 'organization',
       entityId: org.id,
       userId: session.user.id,
@@ -94,6 +108,7 @@ export async function grantBreakGlass(
 
     await writeAuditLog(tx, {
       action: 'instance.break_glass.grant',
+      metadata: await auditMeta(),
       entityType: 'organization',
       entityId: orgId,
       userId: session.user.id,
@@ -146,6 +161,7 @@ export async function approveBreakGlass(sessionId: string) {
 
     await writeAuditLog(tx, {
       action: 'instance.break_glass.approve',
+      metadata: await auditMeta(),
       entityType: 'break_glass_session',
       entityId: sessionId,
       userId: session.user.id,
@@ -185,6 +201,7 @@ export async function revokeBreakGlass(sessionId: string, orgId: string) {
     if (row) {
       await writeAuditLog(tx, {
         action: 'instance.break_glass.revoke',
+        metadata: await auditMeta(),
         entityType: 'break_glass_session',
         entityId: sessionId,
         userId: session.user.id,
@@ -241,6 +258,7 @@ export async function suspendOrg(orgId: string, reason: string) {
 
     await writeAuditLog(tx, {
       action: 'instance.org.suspend',
+      metadata: await auditMeta(),
       entityType: 'organization',
       entityId: orgId,
       userId: session.user.id,
@@ -264,6 +282,7 @@ export async function unsuspendOrg(orgId: string) {
 
     await writeAuditLog(tx, {
       action: 'instance.org.unsuspend',
+      metadata: await auditMeta(),
       entityType: 'organization',
       entityId: orgId,
       userId: session.user.id,
@@ -285,6 +304,7 @@ export async function promoteInstanceAdmin(userId: string, reason?: string) {
 
     await writeAuditLog(tx, {
       action: 'instance.user.promote',
+      metadata: await auditMeta(),
       entityType: 'user',
       entityId: userId,
       userId: session.user.id,
@@ -307,6 +327,7 @@ export async function demoteInstanceAdmin(userId: string, reason?: string) {
 
     await writeAuditLog(tx, {
       action: 'instance.user.demote',
+      metadata: await auditMeta(),
       entityType: 'user',
       entityId: userId,
       userId: session.user.id,
@@ -342,6 +363,7 @@ export async function suspendUserAccount(userId: string, reason: string) {
 
     await writeAuditLog(tx, {
       action: 'instance.user.suspend',
+      metadata: await auditMeta(),
       entityType: 'user',
       entityId: userId,
       userId: session.user.id,
@@ -367,6 +389,7 @@ export async function reactivateUserAccount(userId: string, reason: string) {
 
     await writeAuditLog(tx, {
       action: 'instance.user.reactivate',
+      metadata: await auditMeta(),
       entityType: 'user',
       entityId: userId,
       userId: session.user.id,
@@ -428,6 +451,7 @@ export async function updatePlatformConfig(data: {
 
     await writeAuditLog(tx, {
       action: 'instance.config.update',
+      metadata: await auditMeta(),
       entityType: 'platform_config',
       entityId: 'singleton',
       userId: session.user.id,
@@ -539,6 +563,7 @@ export async function updateOrgGovernance(
 
     await writeAuditLog(tx, {
       action: 'instance.org.governance.update',
+      metadata: await auditMeta(),
       entityType: 'organization',
       entityId: orgId,
       userId: session.user.id,
@@ -592,6 +617,7 @@ export async function setInstanceModuleAvailability(key: ModuleKey, available: b
 
     await writeAuditLog(tx, {
       action: 'instance.settings.module_availability',
+      metadata: await auditMeta(),
       entityType: 'instance_settings',
       entityId: row.id,
       userId: session.user.id,
@@ -637,6 +663,7 @@ export async function setInstanceGroupAvailability(group: ModuleGroup, available
 
     await writeAuditLog(tx, {
       action: 'instance.settings.group_availability',
+      metadata: await auditMeta(),
       entityType: 'instance_settings',
       entityId: row.id,
       userId: session.user.id,
