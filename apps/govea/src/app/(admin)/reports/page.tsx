@@ -87,6 +87,16 @@ export default async function ReportsPage() {
               </div>
               <span className="text-muted-foreground text-sm">→</span>
             </Link>
+            <Link
+              href="/reports/togaf/adm-coverage"
+              className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
+            >
+              <div>
+                <p className="text-sm font-medium group-hover:text-primary transition-colors">ADM Coverage</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Capabilities &amp; initiatives grouped by TOGAF ADM Phase (classification only)</p>
+              </div>
+              <span className="text-muted-foreground text-sm">→</span>
+            </Link>
           </div>
         </section>
       )}

@@ -3,11 +3,21 @@ import { redirect, notFound } from 'next/navigation'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { db } from '@/db/client'
-import { applications, frameworkMappings } from '@/db/schema'
-import { and, eq, inArray } from 'drizzle-orm'
+import { applications } from '@/db/schema'
+import { and, eq } from 'drizzle-orm'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { TOGAF_DOMAINS, type TogafDomain } from '@/db/schema'
+
+// #673 — domain order/labels are now read from the "TOGAF Architecture Domain"
+// taxonomy (slug togaf-architecture-domain); this local list only fixes display
+// order. The report no longer depends on framework_mappings.
+const TOGAF_DOMAIN_ORDER = [
+  'Business Architecture',
+  'Application Architecture',
+  'Technology Architecture',
+  'Data Architecture',
+] as const
+type TogafDomain = string
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +85,10 @@ export default async function ApplicationLandscapePage() {
   const enabledModules = await getEnabledModules()
   if (!isModuleEnabled(enabledModules, 'framework-overlay')) notFound()
 
+  // TOGAF Architecture Domain is a framework-audience classification
+  // (ADR-0001/0002): hidden from viewer-role / stakeholder-facing output.
+  if (session.user.role === 'viewer') notFound()
+
   const orgId = session.user.organizationId!
 
   // Fetch all published applications with their capability links
@@ -91,20 +105,32 @@ export default async function ApplicationLandscapePage() {
     orderBy: (t, { asc }) => [asc(t.name)],
   })
 
-  // Fetch all framework mappings for this org (capabilities + applications)
-  const allMappings = await db.query.frameworkMappings.findMany({
-    where: and(
-      eq(frameworkMappings.organizationId, orgId),
-      eq(frameworkMappings.framework, 'togaf'),
-    ),
-  })
-
-  // Index: entityId → concept labels
+  // Domain assignments from the "TOGAF Architecture Domain" taxonomy (#673),
+  // for capabilities + applications. Replaces the framework_mappings read.
   const mappingsByEntity = new Map<string, TogafDomain[]>()
-  for (const m of allMappings) {
-    const existing = mappingsByEntity.get(m.entityId) ?? []
-    existing.push(m.conceptLabel as TogafDomain)
-    mappingsByEntity.set(m.entityId, existing)
+  const domainType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and: a, isNull: n }) =>
+      a(e(t.organizationId, orgId), n(t.parentId), e(t.slug, 'togaf-architecture-domain')),
+  })
+  if (domainType) {
+    const terms = await db.query.taxonomyTerms.findMany({
+      where: (t, { eq: e, and: a }) => a(e(t.organizationId, orgId), e(t.parentId, domainType.id)),
+    })
+    if (terms.length > 0) {
+      const domainNameByTermId = new Map(terms.map(t => [t.id, t.name]))
+      const termIds = terms.map(t => t.id)
+      const values = await db.query.entityTaxonomyValues.findMany({
+        where: (v, { eq: e, and: a, inArray }) =>
+          a(e(v.organizationId, orgId), inArray(v.entityType, ['capability', 'application']), inArray(v.taxonomyTermId, termIds)),
+      })
+      for (const v of values) {
+        const domain = domainNameByTermId.get(v.taxonomyTermId)
+        if (!domain) continue
+        const existing = mappingsByEntity.get(v.entityId) ?? []
+        if (!existing.includes(domain)) existing.push(domain)
+        mappingsByEntity.set(v.entityId, existing)
+      }
+    }
   }
 
   // Normalise apps into a shape the report can use
@@ -147,7 +173,7 @@ export default async function ApplicationLandscapePage() {
 
   // Group direct-mapped by domain (an app can appear under multiple domains)
   const byDomain = new Map<TogafDomain, ReportApp[]>()
-  for (const domain of TOGAF_DOMAINS) {
+  for (const domain of TOGAF_DOMAIN_ORDER) {
     const appsForDomain = directMapped.filter(a => a.directDomains.includes(domain))
     if (appsForDomain.length > 0) byDomain.set(domain, appsForDomain)
   }
@@ -178,7 +204,7 @@ export default async function ApplicationLandscapePage() {
       {/* ── Direct mappings ── */}
       {byDomain.size > 0 && (
         <section className="space-y-6">
-          {TOGAF_DOMAINS.filter(d => byDomain.has(d)).map(domain => (
+          {TOGAF_DOMAIN_ORDER.filter(d => byDomain.has(d)).map(domain => (
             <div key={domain}>
               <SectionHeading domain={domain} count={byDomain.get(domain)!.length} />
               <div className="rounded-lg border border-border bg-card divide-y">
