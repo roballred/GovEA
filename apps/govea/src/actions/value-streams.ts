@@ -74,6 +74,7 @@ export async function getValueStream(id: string) {
         },
       },
       valueStreamPersonas: { with: { persona: true } },
+      valueStreamCapabilities: { with: { capability: true } },
       objectiveValueStreams: { with: { objective: true } },
     },
   })

@@ -140,7 +140,7 @@ async function collectContent(orgId: string) {
   // primary rows are restored.
   const [
     personaRows, capabilityRows, applicationRows, serviceRows,
-    valueStreamRows, valueStreamStageRows, valueStreamStageCapRows, valueStreamPersonaRows,
+    valueStreamRows, valueStreamStageRows, valueStreamStageCapRows, valueStreamPersonaRows, valueStreamCapRows,
     objectiveRows, objectiveCapRows, objectiveVsRows,
     goalRows, goalObjectiveRows,
     initiativeRows, initiativeCapRows, initiativeAppRows, initiativeObjRows,
@@ -160,6 +160,7 @@ async function collectContent(orgId: string) {
     db.query.valueStreamStages.findMany({}),
     db.query.valueStreamStageCapabilities.findMany({}),
     db.query.valueStreamPersonas.findMany({}),
+    db.query.valueStreamCapabilities.findMany({}),
     db.query.strategicObjectives.findMany({ where: eq(strategicObjectives.organizationId, orgId) }),
     db.query.objectiveCapabilities.findMany({}),
     db.query.objectiveValueStreams.findMany({}),
@@ -234,6 +235,7 @@ async function collectContent(orgId: string) {
       valueStreamStages: (valueStreamStageRows as Array<{ valueStreamId: string }>).filter(r => vsIds.has(r.valueStreamId)),
       valueStreamStageCapabilities: (valueStreamStageCapRows as Array<{ capabilityId: string }>).filter(r => capIds.has(r.capabilityId)),
       valueStreamPersonas: (valueStreamPersonaRows as Array<{ valueStreamId: string; personaId: string }>).filter(r => vsIds.has(r.valueStreamId) && personaIds.has(r.personaId)),
+      valueStreamCapabilities: (valueStreamCapRows as Array<{ valueStreamId: string; capabilityId: string }>).filter(r => vsIds.has(r.valueStreamId) && capIds.has(r.capabilityId)),
       objectiveCapabilities: (objectiveCapRows as Array<{ objectiveId: string; capabilityId: string }>).filter(r => objIds.has(r.objectiveId) && capIds.has(r.capabilityId)),
       objectiveValueStreams: (objectiveVsRows as Array<{ objectiveId: string; valueStreamId: string }>).filter(r => objIds.has(r.objectiveId) && vsIds.has(r.valueStreamId)),
       goalObjectives: (goalObjectiveRows as Array<{ goalId: string; objectiveId: string }>).filter(r => goalIds.has(r.goalId) && objIds.has(r.objectiveId)),
