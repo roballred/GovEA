@@ -44,7 +44,6 @@ import {
   taxonomyTerms, entityTaxonomyDefinitions, entityTaxonomyValues,
   services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
-  frameworkMappings,
   instanceSettings,
   dataEntities, dataAttributes, dataLinks, dataBusinessKeys,
   dataEntityOwners, dataAttributeOwners, dataLinkOwners, dataBusinessKeyOwners,
@@ -255,35 +254,6 @@ async function seed() {
     if (!exists) await db.insert(capabilityRelationships).values({ parentId, childId })
   }
   console.log(`  ✓ ${DEV_CAPABILITY_RELATIONSHIPS.length} capability parent-child relationships`)
-
-  // TOGAF Architecture Domain mappings for Riverdale capabilities (#582 — seed
-  // the Application Landscape report so it renders non-empty out of the box).
-  let togafMappingCount = 0
-  for (const [capName, domainLabel] of Object.entries(DEV_CAPABILITY_TOGAF_DOMAINS)) {
-    const capId = devCapabilityIds[capName]
-    if (!capId) continue
-    const exists = await db.query.frameworkMappings.findFirst({
-      where: (t, { eq: e, and }) =>
-        and(
-          e(t.organizationId, devOrgId),
-          e(t.entityType, 'capability'),
-          e(t.entityId, capId),
-          e(t.framework, 'togaf'),
-          e(t.conceptLabel, domainLabel),
-        ),
-    })
-    if (!exists) {
-      await db.insert(frameworkMappings).values({
-        organizationId: devOrgId,
-        entityType: 'capability',
-        entityId: capId,
-        framework: 'togaf',
-        conceptLabel: domainLabel,
-      })
-      togafMappingCount++
-    }
-  }
-  console.log(`  ✓ ${togafMappingCount} TOGAF domain mappings (capabilities)`)
 
   // #673 — TOGAF Architecture Domain as a taxonomy type + capability
   // assignments via entity_taxonomy_values, so the (repointed) Application

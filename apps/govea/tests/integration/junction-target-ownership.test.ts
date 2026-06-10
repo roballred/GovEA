@@ -14,7 +14,6 @@ import {
   linkAdrCapability, linkPrincipleCapability, linkServiceCapability,
 } from '@/actions/links'
 import { createCapability, editCapability } from '@/actions/capabilities'
-import { addFrameworkMapping } from '@/actions/framework-mappings'
 import { db } from '@/db/client'
 import { capabilityPersonas } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -159,27 +158,6 @@ describe('junction target ownership (#415)', () => {
       fd.set('visibility', 'org')
       fd.set('parentId', capB.id)
       await expect(editCapability(capA.id, fd)).rejects.toThrow(/Forbidden/)
-    })
-  })
-
-  // ── addFrameworkMapping target validation ─────────────────────────────────
-
-  describe('addFrameworkMapping rejects foreign target', () => {
-    it('contributor cannot attach a TOGAF mapping to a foreign capability', async () => {
-      const fd = new FormData()
-      fd.set('conceptLabel', 'Application Architecture')
-      fd.set('rationale', 'malicious rationale text')
-      await expect(
-        addFrameworkMapping('capability', capB.id, undefined, fd),
-      ).rejects.toThrow(/Forbidden/)
-    })
-
-    it('contributor cannot attach a TOGAF mapping with an unknown entity type', async () => {
-      const fd = new FormData()
-      fd.set('conceptLabel', 'Application Architecture')
-      await expect(
-        addFrameworkMapping('not_a_real_type', capA.id, undefined, fd),
-      ).rejects.toThrow(/Invalid entity type/)
     })
   })
 
