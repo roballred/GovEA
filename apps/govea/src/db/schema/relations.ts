@@ -12,7 +12,6 @@ import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives }
 import { principles, principleAdrs, principleCapabilities } from './principles'
 import { glossaryTerms, glossaryTermSources } from './glossary'
 import { services, serviceCapabilities, servicePersonas, serviceValueStreams } from './services'
-import { frameworkMappings } from './framework-mappings'
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
 
@@ -450,14 +449,5 @@ export const entityTaxonomyValuesRelations = relations(entityTaxonomyValues, ({ 
   term: one(taxonomyTerms, {
     fields: [entityTaxonomyValues.taxonomyTermId],
     references: [taxonomyTerms.id],
-  }),
-}))
-
-// ─── Framework Mappings ───────────────────────────────────────────────────────
-
-export const frameworkMappingsRelations = relations(frameworkMappings, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [frameworkMappings.organizationId],
-    references: [organizations.id],
   }),
 }))
