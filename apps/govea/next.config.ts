@@ -13,6 +13,40 @@ if (process.env.NEXT_PUBLIC_APP_URL) {
   }
 }
 
+// #739 — baseline security response headers.
+//
+// The enforced headers below are safe for an app of this shape. The CSP is
+// intentionally shipped in *report-only* mode first: the app injects an inline
+// `<style>` for org theming (app-shell.tsx) and mermaid renders inline SVG, so
+// an enforcing `style-src`/`script-src` needs a nonce or hash rollout. Starting
+// report-only surfaces violations (via the browser console / a report endpoint)
+// without breaking the UI; a follow-up tightens to an enforcing policy.
+//
+// `frame-ancestors 'none'` (clickjacking) is also expressed via the enforced
+// `X-Frame-Options: DENY` header, which older browsers honour.
+const cspReportOnly = [
+  "default-src 'self'",
+  // 'unsafe-inline' is what we want to *remove* via nonces in the enforcing
+  // follow-up; documented here so the report-only baseline matches today's app.
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join('; ')
+
+const securityHeaders = [
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  { key: 'Content-Security-Policy-Report-Only', value: cspReportOnly },
+]
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   // #34: the @govea/core workspace package is the canonical source for RBAC
@@ -25,6 +59,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins,
     },
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }]
   },
 }
 
