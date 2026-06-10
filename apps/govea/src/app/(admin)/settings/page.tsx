@@ -6,7 +6,6 @@ import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
 import { StarterContentSection } from '@/components/starter-content-section'
 import { ModuleToggles } from '@/components/module-toggles'
-import { FrameworkToggles } from '@/components/framework-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
 import { CompletenessSettingsForm } from '@/components/completeness-settings'
 import { SecuritySettingsForm } from '@/components/security-settings-form'
@@ -97,19 +96,6 @@ export default async function SettingsPage() {
           </p>
         </div>
         <ModuleToggles initialModules={enabledModules} lockedModules={instanceDisabledModules} />
-      </section>
-
-      <hr />
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold">Framework Overlays</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Optional framework integrations. These are opt-in and off by default — enable only what your organization actively uses.
-            Instance-wide module availability controls still override local choices here.
-          </p>
-        </div>
-        <FrameworkToggles initialModules={enabledModules} lockedModules={instanceDisabledModules} />
       </section>
 
       <hr />

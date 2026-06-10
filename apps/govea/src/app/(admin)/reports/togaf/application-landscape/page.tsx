@@ -1,12 +1,11 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getEnabledModules } from '@/lib/get-enabled-modules'
-import { isModuleEnabled } from '@/lib/modules'
 import { db } from '@/db/client'
 import { applications } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { taxonomyTypeExists } from '@/lib/reports/group-by-taxonomy'
 
 // #673 — domain order/labels are now read from the "TOGAF Architecture Domain"
 // taxonomy (slug togaf-architecture-domain); this local list only fixes display
@@ -82,14 +81,13 @@ export default async function ApplicationLandscapePage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const enabledModules = await getEnabledModules()
-  if (!isModuleEnabled(enabledModules, 'framework-overlay')) notFound()
-
   // TOGAF Architecture Domain is a framework-audience classification
   // (ADR-0001/0002): hidden from viewer-role / stakeholder-facing output.
   if (session.user.role === 'viewer') notFound()
 
   const orgId = session.user.organizationId!
+  // #675 — gate on recipe presence (the taxonomy being installed), not a module flag.
+  if (!(await taxonomyTypeExists(orgId, 'togaf-architecture-domain'))) notFound()
 
   // Fetch all published applications with their capability links
   const allApps = await db.query.applications.findMany({

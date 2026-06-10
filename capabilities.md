@@ -231,12 +231,12 @@ Optional alignment to external architecture frameworks such as TOGAF without rep
 | Capability | Status | Description |
 |---|---|---|
 | Framework Reference Management | Not implemented | Store external framework references separately from GovEA's authoritative capability definitions |
-| Framework Mapping | Partially implemented | Capability and application detail pages support TOGAF Architecture Domain mappings with optional rationale; broader framework concept mapping remains future work |
-| ADM Phase Alignment | Not implemented | Optionally tag architecture work to TOGAF ADM phases for TOGAF-aware teams |
-| TOGAF-Aligned Reporting | Partially implemented | Reports hub ships an Architecture Vision summary for all orgs and a TOGAF Application Landscape report when the overlay is enabled |
-| Framework Overlay Configuration | Partially implemented | Org admins can enable or disable the TOGAF overlay module; richer per-framework configuration remains future work |
+| Framework Mapping | Partially implemented | Capabilities and applications carry TOGAF Architecture Domain values through the generic taxonomy system (no bespoke panel); broader framework concept mapping remains future work |
+| ADM Phase Alignment | Partially implemented | ADM phases ship as an optional taxonomy classification (ADR-0002) installed by the TOGAF recipe; capabilities and initiatives can be tagged. No phase gates or workflow |
+| TOGAF-Aligned Reporting | Partially implemented | Reports hub ships an Architecture Vision summary for all orgs, plus TOGAF Application Landscape and ADM Coverage reports when the TOGAF recipe is installed |
+| Framework Overlay Configuration | Partially implemented | TOGAF is enabled by installing the taxonomy-backed recipe per organization (no module toggle); framework taxonomy types carry an audience flag that hides them from viewers and stakeholder reports |
 
-Current reality: GovEA now ships the first framework-alignment slice. Application and capability records can carry TOGAF Architecture Domain mappings, the Reports area includes a TOGAF Application Landscape report, and module settings can control whether the overlay is available and enabled. ADM phase tagging, admin-managed framework references, and broader mapping depth remain future work.
+Current reality: GovEA's framework alignment is taxonomy-and-recipe-backed (ADR-0002). The TOGAF recipe installs Architecture Domain and ADM Phase taxonomy types (marked framework-audience so they stay out of stakeholder views); capabilities, applications, and initiatives are tagged through the ordinary taxonomy UI; and the Reports area derives Application Landscape and ADM Coverage from those values. The earlier hard-coded overlay module/toggle and the framework_mappings table have been removed. Admin-managed external framework references and broader mapping depth remain future work.
 
 **Design principle:** Framework support should increase credibility without increasing friction. TOGAF-aware architects should be able to recognize familiar concepts and reporting structures, while ordinary GovEA users continue working with plain-language personas, capabilities, services, applications, objectives, initiatives, principles, and decisions.
 

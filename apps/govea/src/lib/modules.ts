@@ -24,9 +24,8 @@ export type ModuleKey =
   | 'roadmap'
   | 'debt'
   | 'data-architecture'
-  | 'framework-overlay'
 
-export type ModuleGroup = 'Business Architecture' | 'Data Architecture' | 'Portfolio' | 'Strategy' | 'Framework'
+export type ModuleGroup = 'Business Architecture' | 'Data Architecture' | 'Portfolio' | 'Strategy'
 
 export type ModuleStateMap = Record<string, boolean>
 
@@ -64,8 +63,6 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'objectives',    label: 'Objectives',          href: '/objectives',    group: 'Strategy' },
   { key: 'initiatives',   label: 'Initiatives',         href: '/initiatives',   group: 'Strategy' },
   { key: 'roadmap',       label: 'Roadmap',             href: '/roadmap',       group: 'Strategy' },
-  // Framework overlays — default ON with everything else
-  { key: 'framework-overlay', label: 'TOGAF Framework Overlay', href: null, group: 'Framework' },
 ]
 
 /**

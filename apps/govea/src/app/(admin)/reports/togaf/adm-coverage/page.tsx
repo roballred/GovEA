@@ -1,12 +1,10 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getEnabledModules } from '@/lib/get-enabled-modules'
-import { isModuleEnabled } from '@/lib/modules'
 import { db } from '@/db/client'
 import { capabilities, initiatives } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import Link from 'next/link'
-import { groupByTaxonomyType, type GroupByTaxonomyResult, type TaxonomyGroup, type EntityRef } from '@/lib/reports/group-by-taxonomy'
+import { groupByTaxonomyType, taxonomyTypeExists, type GroupByTaxonomyResult, type TaxonomyGroup, type EntityRef } from '@/lib/reports/group-by-taxonomy'
 
 function CoverageSection({ label, hrefBase, result }: { label: string; hrefBase: string; result: GroupByTaxonomyResult | null }) {
   if (!result) {
@@ -60,13 +58,12 @@ export default async function AdmCoveragePage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const enabledModules = await getEnabledModules()
-  if (!isModuleEnabled(enabledModules, 'framework-overlay')) notFound()
-
   const orgId = session.user.organizationId!
   // ADM Phase is a framework-audience classification (ADR-0001/0002): hidden
   // from viewer-role / stakeholder-facing output.
   if (session.user.role === 'viewer') notFound()
+  // #675 — gate on recipe presence (the taxonomy being installed), not a module flag.
+  if (!(await taxonomyTypeExists(orgId, 'togaf-adm-phase'))) notFound()
 
   const [caps, inits] = await Promise.all([
     db.select({ id: capabilities.id, name: capabilities.name }).from(capabilities).where(eq(capabilities.organizationId, orgId)),

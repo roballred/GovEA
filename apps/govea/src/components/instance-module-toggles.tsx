@@ -5,7 +5,7 @@ import { MODULE_DEFS, type ModuleGroup, type ModuleKey } from '@/lib/modules'
 import { setInstanceModuleAvailability, setInstanceGroupAvailability } from '@/actions/instance'
 import { cn } from '@/lib/utils'
 
-const GROUPS: ModuleGroup[] = ['Business Architecture', 'Data Architecture', 'Portfolio', 'Strategy', 'Framework']
+const GROUPS: ModuleGroup[] = ['Business Architecture', 'Data Architecture', 'Portfolio', 'Strategy']
 
 interface InstanceModuleTogglesProps {
   initialDisabledModules: Record<string, boolean>

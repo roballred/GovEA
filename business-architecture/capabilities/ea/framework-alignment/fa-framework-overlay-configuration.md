@@ -27,19 +27,20 @@ The system must allow administrators to enable, disable, and configure optional 
 
 ## Implementation Status
 
-Partially implemented.
+Partially implemented — now realized through taxonomy-backed recipes, not a module toggle (ADR-0002, #665/#675).
 
 Current shipped slice:
 
-- Org admins can enable or disable the TOGAF framework overlay from settings
-- The overlay is off by default for new organizations
-- Disabling the overlay hides framework UI without deleting saved mapping data
+- TOGAF is enabled per organization by installing the taxonomy-backed recipe, which creates the Architecture Domain and ADM Phase taxonomy types; there is no separate overlay module or on/off toggle
+- Framework taxonomy types carry an `audience: 'framework'` flag, so framework labels and framework-specific reports stay hidden from viewer-role users and stakeholder-facing views by default (preserving ADR-0001's no-jargon guarantee)
+- Framework reports appear only when the recipe's taxonomy is present
+- Removing the taxonomy hides framework affordances; tagged values live in the generic entity-taxonomy store
 
 Not yet shipped:
 
-- Per-framework options beyond the single TOGAF toggle
-- Per-entity or per-report overlay controls
-- Admin-defined framework bundles or reference sources
+- An admin-facing recipe install/uninstall surface (the engine and catalog exist; the UI is a follow-on)
+- Per-framework configuration options beyond installing a recipe
+- Frameworks other than TOGAF
 
 ## Links
 
