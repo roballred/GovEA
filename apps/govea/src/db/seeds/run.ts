@@ -41,7 +41,7 @@ import {
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleAdrs, principleCapabilities,
   glossaryTerms, glossaryTermSources,
-  taxonomyTerms, entityTaxonomyDefinitions,
+  taxonomyTerms, entityTaxonomyDefinitions, entityTaxonomyValues,
   services, serviceCapabilities, servicePersonas, serviceValueStreams,
   orgConnections, crossOrgLinks,
   frameworkMappings,
@@ -284,6 +284,116 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${togafMappingCount} TOGAF domain mappings (capabilities)`)
+
+  // #673 — TOGAF Architecture Domain as a taxonomy type + capability
+  // assignments via entity_taxonomy_values, so the (repointed) Application
+  // Landscape report reads from taxonomy. Mirrors the TOGAF recipe's domain
+  // type (slug/audience). framework_mappings above is retained until #674
+  // decommissions it. audience:'framework' hides it from viewers (ADR-0001/0002).
+  let togafDomainTypeId: string
+  const existingTogafDomainType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and: a, isNull: n }) =>
+      a(e(t.organizationId, devOrgId), n(t.parentId), e(t.slug, 'togaf-architecture-domain')),
+  })
+  if (existingTogafDomainType) {
+    togafDomainTypeId = existingTogafDomainType.id
+  } else {
+    const [ins] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId, name: 'TOGAF Architecture Domain', slug: 'togaf-architecture-domain',
+      audience: 'framework', description: 'The four TOGAF architecture domains (optional classification).', sortOrder: '80',
+    }).returning()
+    togafDomainTypeId = ins.id
+  }
+  const TOGAF_DOMAIN_TERMS: Record<string, string> = {
+    'Business Architecture': 'business-architecture',
+    'Application Architecture': 'application-architecture',
+    'Data Architecture': 'data-architecture',
+    'Technology Architecture': 'technology-architecture',
+  }
+  const togafDomainTermIdByName: Record<string, string> = {}
+  for (const [name, slug] of Object.entries(TOGAF_DOMAIN_TERMS)) {
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and: a }) => a(e(t.organizationId, devOrgId), e(t.parentId, togafDomainTypeId), e(t.slug, slug)),
+    })
+    togafDomainTermIdByName[name] = existing
+      ? existing.id
+      : (await db.insert(taxonomyTerms).values({ organizationId: devOrgId, parentId: togafDomainTypeId, name, slug }).returning())[0].id
+  }
+  for (const entityType of ['capability', 'application'] as const) {
+    await db.insert(entityTaxonomyDefinitions).values({
+      organizationId: devOrgId, entityType, taxonomyTypeId: togafDomainTypeId, selectionMode: 'multi', required: false, sortOrder: 2,
+    }).onConflictDoNothing()
+  }
+  let togafDomainValueCount = 0
+  for (const [capName, domainLabel] of Object.entries(DEV_CAPABILITY_TOGAF_DOMAINS)) {
+    const capId = devCapabilityIds[capName]
+    const termId = togafDomainTermIdByName[domainLabel]
+    if (!capId || !termId) continue
+    await db.insert(entityTaxonomyValues).values({
+      organizationId: devOrgId, entityType: 'capability', entityId: capId, taxonomyTermId: termId,
+    }).onConflictDoNothing()
+    togafDomainValueCount++
+  }
+  console.log(`  ✓ TOGAF domain taxonomy + ${togafDomainValueCount} capability assignments (entity_taxonomy_values)`)
+
+  // #673 — ADM Phase taxonomy (classification only, ADR-0002) + a few capability
+  // tags so the ADM-coverage report demos. audience:'framework'.
+  let admPhaseTypeId: string
+  const existingAdmType = await db.query.taxonomyTerms.findFirst({
+    where: (t, { eq: e, and: a, isNull: n }) =>
+      a(e(t.organizationId, devOrgId), n(t.parentId), e(t.slug, 'togaf-adm-phase')),
+  })
+  if (existingAdmType) {
+    admPhaseTypeId = existingAdmType.id
+  } else {
+    const [ins] = await db.insert(taxonomyTerms).values({
+      organizationId: devOrgId, name: 'ADM Phase', slug: 'togaf-adm-phase', audience: 'framework',
+      description: 'TOGAF ADM phases as an optional classification label (no workflow).', sortOrder: '81',
+    }).returning()
+    admPhaseTypeId = ins.id
+  }
+  const ADM_PHASES: [string, string][] = [
+    ['Preliminary', 'adm-preliminary'],
+    ['A: Architecture Vision', 'adm-a-architecture-vision'],
+    ['B: Business Architecture', 'adm-b-business-architecture'],
+    ['C: Information Systems Architectures', 'adm-c-information-systems-architectures'],
+    ['D: Technology Architecture', 'adm-d-technology-architecture'],
+    ['E: Opportunities & Solutions', 'adm-e-opportunities-and-solutions'],
+    ['F: Migration Planning', 'adm-f-migration-planning'],
+    ['G: Implementation Governance', 'adm-g-implementation-governance'],
+    ['H: Architecture Change Management', 'adm-h-architecture-change-management'],
+    ['Requirements Management', 'adm-requirements-management'],
+  ]
+  const admTermIdBySlug: Record<string, string> = {}
+  for (const [name, slug] of ADM_PHASES) {
+    const existing = await db.query.taxonomyTerms.findFirst({
+      where: (t, { eq: e, and: a }) => a(e(t.organizationId, devOrgId), e(t.parentId, admPhaseTypeId), e(t.slug, slug)),
+    })
+    admTermIdBySlug[slug] = existing
+      ? existing.id
+      : (await db.insert(taxonomyTerms).values({ organizationId: devOrgId, parentId: admPhaseTypeId, name, slug }).returning())[0].id
+  }
+  for (const entityType of ['capability', 'initiative'] as const) {
+    await db.insert(entityTaxonomyDefinitions).values({
+      organizationId: devOrgId, entityType, taxonomyTypeId: admPhaseTypeId, selectionMode: 'single', required: false, sortOrder: 3,
+    }).onConflictDoNothing()
+  }
+  const DEV_CAPABILITY_ADM: Record<string, string> = {
+    'Online Permitting': 'adm-b-business-architecture',
+    'GIS Mapping': 'adm-c-information-systems-architectures',
+    'Cross-Agency Data Sharing': 'adm-c-information-systems-architectures',
+    'Print & Mail Services': 'adm-d-technology-architecture',
+  }
+  let admTagCount = 0
+  for (const [capName, slug] of Object.entries(DEV_CAPABILITY_ADM)) {
+    const capId = devCapabilityIds[capName]; const termId = admTermIdBySlug[slug]
+    if (!capId || !termId) continue
+    await db.insert(entityTaxonomyValues).values({
+      organizationId: devOrgId, entityType: 'capability', entityId: capId, taxonomyTermId: termId,
+    }).onConflictDoNothing()
+    admTagCount++
+  }
+  console.log(`  ✓ ADM Phase taxonomy + ${admTagCount} capability tags (entity_taxonomy_values)`)
 
   // Applications + capability links
   const devApplicationIds: Record<string, string> = {}
