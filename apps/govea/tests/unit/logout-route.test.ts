@@ -47,6 +47,30 @@ describe('POST /api/auth/logout', () => {
     expect(res.headers.get('location')).toBe('https://app.example.gov/login')
   })
 
+  it('expires every session-token cookie on the response, including JWT chunks', async () => {
+    authMock.mockResolvedValue({ user: { id: 'user-1' } })
+
+    const res = await POST(
+      new Request('https://app.example.gov/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          cookie:
+            'authjs.csrf-token=abc; authjs.session-token.0=chunk0; authjs.session-token.1=chunk1; __Secure-authjs.session-token=tok',
+        },
+      }),
+    )
+
+    const setCookies = res.headers.getSetCookie()
+    const expired = (name: string) =>
+      setCookies.some(c => c.startsWith(`${name}=`) && /max-age=0/i.test(c))
+
+    expect(expired('authjs.session-token.0')).toBe(true)
+    expect(expired('authjs.session-token.1')).toBe(true)
+    expect(expired('__Secure-authjs.session-token')).toBe(true)
+    // Non-session cookies are left alone.
+    expect(setCookies.some(c => c.startsWith('authjs.csrf-token='))).toBe(false)
+  })
+
   it('always targets /login on the request origin — no caller-controlled redirect', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } })
 

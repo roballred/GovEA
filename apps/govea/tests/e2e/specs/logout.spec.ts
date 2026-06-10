@@ -30,6 +30,13 @@ async function signOutAndVerify(page: Page, startRoute: string, startPattern: Re
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
 
+  // The session cookie (including any large-JWT chunks) must be gone — on
+  // failure, the message lists exactly which cookies survived.
+  const surviving = (await page.context().cookies())
+    .filter(c => c.name.includes('session-token'))
+    .map(c => `${c.name} (path=${c.path})`)
+  expect(surviving, 'session cookie(s) should be cleared by sign-out').toEqual([])
+
   // Session must actually be invalidated, not just redirected once.
   await page.goto('/dashboard')
   await expect(page, 'protected route should bounce after sign-out').toHaveURL(/\/login/, {

@@ -25,5 +25,22 @@ export async function POST(request: Request) {
 
   // 303 turns the form POST into a GET on /login. Fixed target — no
   // callback/redirect parameter is read, so no open-redirect surface.
-  return NextResponse.redirect(new URL('/login', request.url), 303)
+  const res = NextResponse.redirect(new URL('/login', request.url), 303)
+
+  // Belt and braces: expire every session-token cookie on this response,
+  // including large-JWT chunks (authjs.session-token.0, .1, …), rather than
+  // relying solely on signOut()'s cookie-jar merge. Sign-out must never
+  // leave a live session behind.
+  for (const part of request.headers.get('cookie')?.split('; ') ?? []) {
+    const name = part.split('=')[0]
+    if (name.includes('authjs.session-token')) {
+      res.cookies.set(name, '', {
+        maxAge: 0,
+        path: '/',
+        secure: name.startsWith('__Secure-'),
+      })
+    }
+  }
+
+  return res
 }
