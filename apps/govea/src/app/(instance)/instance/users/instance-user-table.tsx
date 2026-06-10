@@ -45,16 +45,33 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
   const router = useRouter()
   const [createOpen, setCreateOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [createMessage, setCreateMessage] = useState<{ kind: 'error' | 'info'; text: string } | null>(null)
 
   function refresh() {
     router.refresh()
   }
 
+  function openCreate() {
+    setCreateMessage(null)
+    setCreateOpen(true)
+  }
+
   async function handleCreate(formData: FormData) {
+    setCreateMessage(null)
     startTransition(async () => {
-      await createInstanceUser(formData)
-      setCreateOpen(false)
-      refresh()
+      try {
+        const result = await createInstanceUser(formData)
+        if (result.status === 'already_member') {
+          // Handled, non-crashing: keep the dialog open so the operator sees why.
+          setCreateMessage({ kind: 'info', text: result.message })
+          refresh()
+          return
+        }
+        setCreateOpen(false)
+        refresh()
+      } catch (e) {
+        setCreateMessage({ kind: 'error', text: e instanceof Error ? e.message : 'Could not create the account.' })
+      }
     })
   }
 
@@ -65,7 +82,7 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
           <h1 className="text-2xl font-bold tracking-tight">Users</h1>
           <p className="text-muted-foreground mt-1">Platform admins are always visible. Tenant users are only visible for organisations you currently hold break-glass access to.</p>
         </div>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button size="sm" onClick={openCreate}>
           + Create account
         </Button>
       </div>
@@ -198,6 +215,21 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
             <DialogTitle>Create account</DialogTitle>
           </DialogHeader>
           <form action={handleCreate} className="space-y-3">
+            {createMessage && (
+              <div
+                className={cn(
+                  'rounded-md border p-2.5 text-sm',
+                  createMessage.kind === 'error'
+                    ? 'border-destructive/40 bg-destructive/5 text-destructive'
+                    : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/20 dark:text-blue-300',
+                )}
+              >
+                {createMessage.text}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              If the email already belongs to an existing account, that account is added to the selected organization instead — its password and platform role are left unchanged.
+            </p>
             <div className="space-y-1.5">
               <Label htmlFor="create-org">Organization</Label>
               <select

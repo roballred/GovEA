@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations, users, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
+import { organizations, users, userOrganizationMemberships, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
 import { eq, and, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
@@ -465,12 +465,23 @@ export async function getActiveBreakGlass(adminId: string, orgId: string) {
   })
 }
 
-export async function createInstanceUser(formData: FormData) {
+/**
+ * Outcome of {@link createInstanceUser}. The action never throws for the
+ * "email already exists" case any more (#756) — an existing identity is
+ * attached to the selected org via a membership, and the caller is told what
+ * happened so the UI can show a handled message instead of a server crash.
+ */
+export type CreateInstanceUserResult = {
+  status: 'identity_created' | 'membership_added' | 'membership_reactivated' | 'already_member'
+  message: string
+}
+
+export async function createInstanceUser(formData: FormData): Promise<CreateInstanceUserResult> {
   const session = await requireInstanceAdmin()
 
   const organizationId = formData.get('organizationId') as string
   const name = formData.get('name') as string
-  const email = formData.get('email') as string
+  const email = ((formData.get('email') as string) ?? '').trim()
   const password = formData.get('password') as string
   const role = formData.get('role') as 'admin' | 'contributor' | 'viewer'
   const grantPlatformAdmin = formData.get('instanceAdmin') === 'on'
@@ -483,8 +494,68 @@ export async function createInstanceUser(formData: FormData) {
   if (!organization) throw new Error('Organization not found')
 
   const existing = await db.query.users.findFirst({ where: eq(users.email, email) })
-  if (existing) throw new Error('A user with that email address already exists.')
 
+  // ── Existing identity → grant org access via membership (#756) ────────────
+  // The email already belongs to an identity (e.g. an instance admin). Rather
+  // than the old global-duplicate crash, attach that identity to the selected
+  // org by creating or reactivating a membership. The `users` row is left
+  // untouched: instanceRole, password, and other identity fields are preserved.
+  // (Promoting an existing identity to platform admin has its own dedicated
+  // control — `promoteInstanceAdmin` — so the create form's checkbox is not
+  // applied here.)
+  if (existing) {
+    const [membership] = await db
+      .select({
+        role: userOrganizationMemberships.role,
+        isActive: userOrganizationMemberships.isActive,
+      })
+      .from(userOrganizationMemberships)
+      .where(and(
+        eq(userOrganizationMemberships.userId, existing.id),
+        eq(userOrganizationMemberships.organizationId, organizationId),
+      ))
+      .limit(1)
+
+    if (membership?.isActive) {
+      return {
+        status: 'already_member',
+        message: `${email} is already an active ${membership.role} in ${organization.name}.`,
+      }
+    }
+
+    const reactivated = Boolean(membership)
+    await db.transaction(async (tx) => {
+      if (reactivated) {
+        await tx.update(userOrganizationMemberships)
+          .set({ role, isActive: true, updatedAt: new Date() })
+          .where(and(
+            eq(userOrganizationMemberships.userId, existing.id),
+            eq(userOrganizationMemberships.organizationId, organizationId),
+          ))
+      } else {
+        await tx.insert(userOrganizationMemberships).values({
+          userId: existing.id, organizationId, role, isActive: true,
+        })
+      }
+
+      await writeAuditLog(tx, {
+        action: reactivated ? 'instance.user.membership_reactivate' : 'instance.user.membership_add',
+        entityType: 'user_organization_membership',
+        entityId: existing.id,
+        userId: session.user.id,
+        organizationId: null,
+        before: reactivated ? { role: membership!.role, isActive: membership!.isActive } : undefined,
+        after: { email, role, organizationId, organizationName: organization.name },
+      })
+    })
+
+    revalidatePath('/instance/users')
+    return reactivated
+      ? { status: 'membership_reactivated', message: `Reactivated ${email}’s membership in ${organization.name} as ${role}.` }
+      : { status: 'membership_added', message: `Added ${email} to ${organization.name} as ${role}.` }
+  }
+
+  // ── New identity → create the user row (original path) ─────────────────────
   const pwValidation = validatePassword(password)
   if (!pwValidation.valid) throw new Error(pwValidation.message)
 
@@ -518,6 +589,7 @@ export async function createInstanceUser(formData: FormData) {
   })
 
   revalidatePath('/instance/users')
+  return { status: 'identity_created', message: `Created ${email} in ${organization.name} as ${role}.` }
 }
 
 export async function updateOrgGovernance(
