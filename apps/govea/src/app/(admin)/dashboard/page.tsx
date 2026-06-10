@@ -30,7 +30,7 @@ import { ViewerDashboard } from './viewer-dashboard'
 
 const RAG_TEXT_CLASS: Record<RagBucket, string> = {
   green:   'text-green-700 dark:text-green-400',
-  amber:   'text-amber-600 dark:text-amber-400',
+  amber:   'text-amber-700 dark:text-amber-400',
   red:     'text-red-600 dark:text-red-400',
   neutral: 'text-foreground',
 }
@@ -343,7 +343,7 @@ export default async function DashboardPage() {
                     <CardContent className="pb-4 px-4">
                       <p className="text-2xl font-bold">{s.total}</p>
                       {draftCount > 0 && (
-                        <p className="text-xs text-amber-600 mt-0.5">{draftCount} draft</p>
+                        <p className="text-xs text-amber-700 mt-0.5">{draftCount} draft</p>
                       )}
                     </CardContent>
                   </Card>
@@ -362,7 +362,7 @@ export default async function DashboardPage() {
             <CardContent className="pt-4 pb-4 space-y-3">
               {federation.inboundPending.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-amber-600">
+                  <p className="text-xs font-medium text-amber-700">
                     {federation.inboundPending.length} link request{federation.inboundPending.length !== 1 ? 's' : ''} awaiting your approval
                   </p>
                   <ul className="space-y-1">
@@ -401,7 +401,7 @@ export default async function DashboardPage() {
               )}
               {federation.flaggedCount > 0 && (
                 <div className="space-y-1 border-t pt-3">
-                  <p className="text-xs text-amber-600 font-medium">
+                  <p className="text-xs text-amber-700 font-medium">
                     {federation.flaggedCount} link{federation.flaggedCount !== 1 ? 's' : ''} flagged for review
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -436,13 +436,13 @@ export default async function DashboardPage() {
                     <div className="flex-1 flex items-center gap-6 text-sm">
                       <span className="text-muted-foreground">
                         Modified:{' '}
-                        <span className={modifiedPct !== null && modifiedPct < 50 ? 'text-amber-600 font-medium' : 'font-medium'}>
+                        <span className={modifiedPct !== null && modifiedPct < 50 ? 'text-amber-700 font-medium' : 'font-medium'}>
                           {modifiedPct !== null ? `${modifiedPct}%` : '—'}
                         </span>
                       </span>
                       <span className="text-muted-foreground">
                         Reviewed:{' '}
-                        <span className={reviewedPct !== null && reviewedPct < 50 ? 'text-amber-600 font-medium' : 'font-medium'}>
+                        <span className={reviewedPct !== null && reviewedPct < 50 ? 'text-amber-700 font-medium' : 'font-medium'}>
                           {reviewedPct !== null ? `${reviewedPct}%` : '—'}
                         </span>
                       </span>
@@ -509,13 +509,13 @@ export default async function DashboardPage() {
                   <span>
                     Stale <span className="text-xs text-muted-foreground">(past staleness window)</span>
                   </span>
-                  <span className={`font-medium ${signals.stale > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                  <span className={`font-medium ${signals.stale > 0 ? 'text-amber-700' : 'text-muted-foreground'}`}>
                     {signals.stale}
                   </span>
                 </li>
                 <li className="flex items-center justify-between text-sm">
                   <span>Unpublished <span className="text-xs text-muted-foreground">(drafts)</span></span>
-                  <span className={`font-medium ${signals.unpublished > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                  <span className={`font-medium ${signals.unpublished > 0 ? 'text-amber-700' : 'text-muted-foreground'}`}>
                     {signals.unpublished}
                   </span>
                 </li>
@@ -523,7 +523,7 @@ export default async function DashboardPage() {
                   <span>
                     Incomplete relationships <span className="text-xs text-muted-foreground">(capability ↔ application / persona)</span>
                   </span>
-                  <span className={`font-medium ${signals.incompleteRelationships > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                  <span className={`font-medium ${signals.incompleteRelationships > 0 ? 'text-amber-700' : 'text-muted-foreground'}`}>
                     {signals.incompleteRelationships}
                   </span>
                 </li>
@@ -531,7 +531,7 @@ export default async function DashboardPage() {
                   <Link href="/debt" className="hover:underline">
                     Open debt <span className="text-xs text-muted-foreground">(draft / published / in-progress)</span>
                   </Link>
-                  <span className={`font-medium ${signals.openDebt > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                  <span className={`font-medium ${signals.openDebt > 0 ? 'text-amber-700' : 'text-muted-foreground'}`}>
                     {signals.openDebt}
                   </span>
                 </li>

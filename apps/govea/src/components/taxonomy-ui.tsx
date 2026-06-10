@@ -95,6 +95,7 @@ export function TaxonomyFilters({
       {defs.map(def => def.values.length > 0 && (
         <select
           key={def.id}
+          aria-label={`Filter by ${def.typeName}`}
           value={filters[def.id] ?? 'all'}
           onChange={e => onFilterChange(def.id, e.target.value)}
           className={SELECT_CLASS}

@@ -476,7 +476,7 @@ export default async function OverviewPage() {
         </div>
         <p className="text-sm text-muted-foreground">
           The current shortlist of next product moves. Mirrors{' '}
-          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">
+          <code className="rounded bg-muted px-1 py-0.5 text-[11px] text-foreground">
             docs/product-priorities.md
           </code>
           , which is the source of truth.
@@ -542,7 +542,7 @@ export default async function OverviewPage() {
         <p className="text-xs text-muted-foreground leading-relaxed">
           This overview reflects what is in the product today. For the
           authoritative capability inventory see{' '}
-          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">
+          <code className="rounded bg-muted px-1 py-0.5 text-[11px] text-foreground">
             capabilities.md
           </code>{' '}
           in the repository.

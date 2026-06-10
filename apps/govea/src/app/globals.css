@@ -25,7 +25,9 @@
     --accent: 214 32% 95%;
     --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84% 60%;
+    /* WCAG AA (#766): 0 84% 60% was 3.8:1 as text on white — darkened so
+       text-destructive passes 4.5:1 and white-on-destructive improves too. */
+    --destructive: 0 72% 45%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214 32% 91%;

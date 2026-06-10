@@ -39,7 +39,8 @@ export const themes: ThemeDefinition[] = [
       '--muted-foreground': '215 16% 47%',
       '--accent': '214 32% 95%',
       '--accent-foreground': '222 47% 11%',
-      '--destructive': '0 84% 60%',
+      // WCAG AA (#766): keep in sync with globals.css --destructive
+      '--destructive': '0 72% 45%',
       '--destructive-foreground': '210 40% 98%',
       '--border': '214 32% 91%',
       '--input': '214 32% 91%',
@@ -75,7 +76,8 @@ export const themes: ThemeDefinition[] = [
       '--muted-foreground': '220 9% 46%',
       '--accent': '270 44% 94%',
       '--accent-foreground': '270 44% 30%',
-      '--destructive': '0 84% 60%',
+      // WCAG AA (#766): keep in sync with globals.css --destructive
+      '--destructive': '0 72% 45%',
       '--destructive-foreground': '0 0% 98%',
       '--border': '220 13% 87%',
       '--input': '220 13% 87%',

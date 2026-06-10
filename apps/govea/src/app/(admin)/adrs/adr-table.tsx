@@ -184,6 +184,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
         {!canEdit && null /* viewers see pre-filtered results — no status filter needed */}
         {canEdit && (
           <select
+            aria-label="Filter by status"
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
             className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"

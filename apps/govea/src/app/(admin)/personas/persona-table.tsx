@@ -168,6 +168,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           className="w-56"
         />
         <select
+          aria-label="Filter by type"
           value={typeFilter}
           onChange={e => setTypeFilter(e.target.value)}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -178,6 +179,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           ))}
         </select>
         <select
+          aria-label="Filter by tag"
           value={tagFilter}
           onChange={e => setTagFilter(e.target.value)}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -188,6 +190,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           ))}
         </select>
         <select
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -198,7 +201,7 @@ export function PersonaTable({ personas, personaTypes, allTags, role, currentOrg
           <option value="archived">Archived</option>
         </select>
         {orgOptions.length > 1 && (
-          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+          <select aria-label="Filter by organization" value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All organizations</option>
             <option value="own">My organization</option>
             {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (

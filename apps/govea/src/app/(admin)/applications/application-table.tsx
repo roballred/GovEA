@@ -425,6 +425,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           className="w-56"
         />
         <select
+          aria-label="Filter by lifecycle"
           value={lifecycleFilter}
           onChange={e => setLifecycleFilter(e.target.value)}
           className={selectClass}
@@ -438,6 +439,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         {/* Status filter hidden in portfolio view — less relevant for leadership */}
         {viewMode === 'table' && (
           <select
+            aria-label="Filter by status"
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
             className={selectClass}
@@ -450,6 +452,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         )}
         {domainOptions.length > 0 && (
           <select
+            aria-label="Filter by domain"
             value={domainFilter}
             onChange={e => setDomainFilter(e.target.value)}
             className={selectClass}
@@ -460,6 +463,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         )}
         {hostingOptions.length > 0 && (
           <select
+            aria-label="Filter by hosting model"
             value={hostingFilter}
             onChange={e => setHostingFilter(e.target.value)}
             className={selectClass}
@@ -476,7 +480,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           onFilterChange={(defId, value) => setTaxonomyFilters(prev => ({ ...prev, [defId]: value }))}
         />
         {orgOptions.length > 1 && (
-          <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className={selectClass}>
+          <select aria-label="Filter by organization" value={orgFilter} onChange={e => setOrgFilter(e.target.value)} className={selectClass}>
             <option value="all">All organizations</option>
             <option value="own">My organization</option>
             {orgOptions.filter(([id]) => id !== currentOrgId).map(([id, name]) => (

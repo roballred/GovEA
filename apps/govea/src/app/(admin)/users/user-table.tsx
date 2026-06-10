@@ -107,6 +107,7 @@ export function UserTable({ users, currentUserId }: Props) {
           className="w-64"
         />
         <select
+          aria-label="Filter by role"
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -117,6 +118,7 @@ export function UserTable({ users, currentUserId }: Props) {
           <option value="viewer">Viewer</option>
         </select>
         <select
+          aria-label="Filter by status"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -194,7 +196,7 @@ export function UserTable({ users, currentUserId }: Props) {
                               onClick={() => handleDeactivate(u)}
                               disabled={isPending || lastAdmin}
                               title={lastAdmin ? 'Cannot deactivate the last admin' : undefined}
-                              className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              className="h-7 px-2 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-50"
                             >
                               Deactivate
                             </Button>
