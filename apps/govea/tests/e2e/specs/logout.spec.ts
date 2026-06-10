@@ -7,6 +7,7 @@
  * /api/auth/logout route handler. These tests pin:
  *
  *   1. sign-out works from a regular admin route and from an instance route
+ *      (signed in as a real instance admin via the dev login shortcut)
  *   2. the session is actually gone afterwards (protected routes bounce)
  *   3. the rendered form posts to the fixed URL — the structural property
  *      that makes the stale-tab failure impossible (a true post-deploy stale
@@ -18,12 +19,13 @@
  * Persona: CMS Administrator, Instance Administrator
  */
 
-import { test, expect, type BrowserContext } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
-async function signOutAndVerify(ctx: BrowserContext, startRoute: string) {
-  const page = await ctx.newPage()
+async function signOutAndVerify(page: Page, startRoute: string, startPattern: RegExp) {
   await page.goto(startRoute)
-  expect(page.url(), `should be signed in when visiting ${startRoute}`).not.toContain('/login')
+  // Pin the precondition: actually ON the start route, not bounced elsewhere
+  // by middleware (e.g. non-instance-admins get bounced off /instance).
+  await expect(page, `should be on ${startRoute} before signing out`).toHaveURL(startPattern)
 
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
@@ -37,13 +39,21 @@ async function signOutAndVerify(ctx: BrowserContext, startRoute: string) {
 
 test('sign-out works from a regular admin route', async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: 'tests/e2e/.auth/admin.json' })
-  await signOutAndVerify(ctx, '/capabilities')
+  await signOutAndVerify(await ctx.newPage(), '/capabilities', /\/capabilities/)
   await ctx.close()
 })
 
 test('sign-out works from an instance route', async ({ browser }) => {
-  const ctx = await browser.newContext({ storageState: 'tests/e2e/.auth/state-admin.json' })
-  await signOutAndVerify(ctx, '/instance')
+  // The seeded instance admins are Ivan/Nora (instanceRole=instance_admin);
+  // no storage state exists for them ("State Admin" is an org admin of a
+  // state agency, not an instance admin), so sign in via the dev shortcut.
+  const ctx = await browser.newContext()
+  const page = await ctx.newPage()
+  await page.goto('/login')
+  await page.getByRole('button', { name: 'Ivan — Instance Admin (dev)' }).click()
+  await page.waitForURL(/\/instance/, { timeout: 10_000 })
+
+  await signOutAndVerify(page, '/instance', /\/instance/)
   await ctx.close()
 })
 
