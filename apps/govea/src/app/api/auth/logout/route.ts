@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth, signOut } from '@/lib/auth'
+import { signOut } from '@/lib/auth'
 
 /**
  * Deploy-stable sign-out endpoint (#759).
@@ -15,11 +15,15 @@ import { auth, signOut } from '@/lib/auth'
  * stays reachable for password-expired users and already-signed-out tabs.
  */
 export async function POST(request: Request) {
-  const session = await auth()
+  const cookieHeader = request.headers.get('cookie') ?? ''
 
-  // No session (already signed out, expired, or a logged-out stale tab):
-  // skip signOut() so events.signOut doesn't write a userless audit row.
-  if (session) {
+  // Skip signOut() for cookie-less requests (already signed out, or a
+  // logged-out stale tab) so events.signOut doesn't write a userless audit
+  // row. Deliberately a plain header check, NOT auth(): with JWT rolling
+  // sessions auth() can write a *refreshed* session cookie into the outgoing
+  // cookie jar, which then races the deletion on this same response and
+  // resurrects the session (observed in CI for #759).
+  if (cookieHeader.includes('authjs.session-token')) {
     await signOut({ redirect: false })
   }
 
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
   // including large-JWT chunks (authjs.session-token.0, .1, …), rather than
   // relying solely on signOut()'s cookie-jar merge. Sign-out must never
   // leave a live session behind.
-  for (const part of request.headers.get('cookie')?.split('; ') ?? []) {
+  for (const part of cookieHeader.split('; ')) {
     const name = part.split('=')[0]
     if (name.includes('authjs.session-token')) {
       // maxAge 0 AND an epoch expires — belt for jars that ignore one form.

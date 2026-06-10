@@ -27,16 +27,25 @@ async function signOutAndVerify(page: Page, startRoute: string, startPattern: Re
   // by middleware (e.g. non-instance-admins get bounced off /instance).
   await expect(page, `should be on ${startRoute} before signing out`).toHaveURL(startPattern)
 
-  await page.getByRole('button', { name: 'Sign out' }).click()
+  // Capture the logout response so a failure can show exactly which
+  // Set-Cookie headers the browser received.
+  const [logoutResponse] = await Promise.all([
+    page.waitForResponse(r => r.url().includes('/api/auth/logout'), { timeout: 10_000 }),
+    page.getByRole('button', { name: 'Sign out' }).click(),
+  ])
+  const setCookies = await logoutResponse.headerValues('set-cookie')
   await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
 
   // No session-token cookie with a live (non-empty) value may survive — an
   // empty-value leftover is not a session. On failure, the message names the
-  // survivors with their value lengths.
+  // survivors and the Set-Cookie headers the logout response carried.
   const surviving = (await page.context().cookies())
     .filter(c => c.name.includes('session-token') && c.value !== '')
     .map(c => `${c.name} (path=${c.path}, valueLength=${c.value.length})`)
-  expect(surviving, 'live session cookie(s) should be cleared by sign-out').toEqual([])
+  expect(
+    surviving,
+    `live session cookie(s) should be cleared by sign-out.\nLogout response Set-Cookie headers:\n${setCookies.map(c => c.slice(0, 80)).join('\n')}`,
+  ).toEqual([])
 
   // Session must actually be invalidated, not just redirected once.
   await page.goto('/dashboard')

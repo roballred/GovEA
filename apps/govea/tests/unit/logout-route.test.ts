@@ -27,19 +27,20 @@ beforeEach(() => {
 })
 
 describe('POST /api/auth/logout', () => {
-  it('signs out an authenticated session and redirects to /login', async () => {
-    authMock.mockResolvedValue({ user: { id: 'user-1' } })
-
-    const res = await POST(new Request('https://app.example.gov/api/auth/logout', { method: 'POST' }))
+  it('signs out a request carrying a session cookie and redirects to /login', async () => {
+    const res = await POST(
+      new Request('https://app.example.gov/api/auth/logout', {
+        method: 'POST',
+        headers: { cookie: 'authjs.session-token=tok' },
+      }),
+    )
 
     expect(signOutMock).toHaveBeenCalledWith({ redirect: false })
     expect(res.status).toBe(303)
     expect(res.headers.get('location')).toBe('https://app.example.gov/login')
   })
 
-  it('redirects without calling signOut when there is no session (stale logged-out tab)', async () => {
-    authMock.mockResolvedValue(null)
-
+  it('redirects without calling signOut when no session cookie is present (stale logged-out tab)', async () => {
     const res = await POST(new Request('https://app.example.gov/api/auth/logout', { method: 'POST' }))
 
     expect(signOutMock).not.toHaveBeenCalled()
@@ -47,9 +48,18 @@ describe('POST /api/auth/logout', () => {
     expect(res.headers.get('location')).toBe('https://app.example.gov/login')
   })
 
-  it('expires every session-token cookie on the response, including JWT chunks', async () => {
-    authMock.mockResolvedValue({ user: { id: 'user-1' } })
+  it('never calls auth() — a rolling-session refresh would race the cookie deletion', async () => {
+    await POST(
+      new Request('https://app.example.gov/api/auth/logout', {
+        method: 'POST',
+        headers: { cookie: 'authjs.session-token=tok' },
+      }),
+    )
 
+    expect(authMock).not.toHaveBeenCalled()
+  })
+
+  it('expires every session-token cookie on the response, including JWT chunks', async () => {
     const res = await POST(
       new Request('https://app.example.gov/api/auth/logout', {
         method: 'POST',
@@ -72,8 +82,6 @@ describe('POST /api/auth/logout', () => {
   })
 
   it('always targets /login on the request origin — no caller-controlled redirect', async () => {
-    authMock.mockResolvedValue({ user: { id: 'user-1' } })
-
     // A redirect/callback query string must not influence the destination.
     const res = await POST(
       new Request('https://app.example.gov/api/auth/logout?callbackUrl=https://evil.example.com', {
