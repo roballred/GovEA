@@ -69,7 +69,9 @@ describe('themeToStyleString', () => {
   })
 
   it('places --background in the :root:not(.dark) block only', () => {
-    const [rootBlock, darkBlock] = css.split(':root:not(.dark)')
+    // Uses servicenow: govea no longer declares content vars (#772).
+    const snCss = themeToStyleString(getTheme('servicenow'))
+    const [rootBlock, darkBlock] = snCss.split(':root:not(.dark)')
     expect(rootBlock).not.toContain('--background')
     expect(darkBlock).toContain('--background')
   })
@@ -91,6 +93,28 @@ describe('themeToStyleString', () => {
   it('every var in the theme appears somewhere in the output', () => {
     for (const key of Object.keys(govea.vars)) {
       expect(css).toContain(key)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// theme definitions
+// ---------------------------------------------------------------------------
+
+describe('theme definitions', () => {
+  it('govea (the default brand) declares only the header/brand vars (#772)', () => {
+    // Everything else must cascade from globals.css — see the vars contract
+    // in themes.ts and tests/unit/theme-globals-sync.test.ts.
+    expect(Object.keys(getTheme('govea').vars).sort()).toEqual([
+      '--header-bg',
+      '--header-border',
+      '--header-fg',
+    ])
+  })
+
+  it('no theme re-declares --destructive (cascades from globals.css)', () => {
+    for (const theme of themes) {
+      expect(theme.vars).not.toHaveProperty('--destructive')
     }
   })
 })
