@@ -3,6 +3,11 @@ import type { Recipe } from './types'
 /**
  * TOGAF recipe — the recipe engine's first real consumer (#672 / #665 S2).
  *
+ * Aligned to the **TOGAF Standard, 10th Edition (2022)** — "TOGAF 10". The ADM
+ * phases are unchanged from 9.2, so this is a framing/branding alignment rather
+ * than a structural one; the value of the 10th-edition labelling is that
+ * TOGAF-aware evaluators recognise the current standard.
+ *
  * Per ADR-0002, TOGAF concepts ship as ordinary taxonomy **classification**,
  * not workflow: an "Architecture Domain" type and an "ADM Phase" type, both
  * marked `audience: 'framework'` so they stay invisible to viewer-role users
@@ -16,10 +21,10 @@ import type { Recipe } from './types'
  */
 export const togafRecipe: Recipe = {
   slug: 'togaf',
-  name: 'TOGAF',
-  version: '1.0.0',
+  name: 'TOGAF 10',
+  version: '2.0.0',
   description:
-    'Installs TOGAF as optional taxonomy: Architecture Domains and ADM Phases (classification only, per ADR-0002), plus core TOGAF glossary and principles. Framework types are hidden from viewers and stakeholder reports.',
+    'Installs TOGAF (Standard, 10th Edition) as optional taxonomy: Architecture Domains and ADM Phases (classification only, per ADR-0002), plus core TOGAF glossary and principles. Framework types are hidden from viewers and stakeholder reports.',
 
   taxonomyTypes: [
     {
@@ -64,7 +69,7 @@ export const togafRecipe: Recipe = {
   ],
 
   glossaryTerms: [
-    { term: 'Architecture Development Method (ADM)', definition: 'TOGAF’s step-by-step approach to developing and managing an enterprise architecture, organised into phases (Preliminary, A–H, and Requirements Management).', domain: 'Framework' },
+    { term: 'Architecture Development Method (ADM)', definition: 'The core of the TOGAF Standard (10th Edition): a step-by-step approach to developing and managing an enterprise architecture, organised into phases (Preliminary, A–H, and Requirements Management).', domain: 'Framework' },
     { term: 'Architecture Domain', definition: 'One of the four TOGAF architecture areas — Business, Data, Application, and Technology — used to organise architecture work.', domain: 'Framework' },
     { term: 'Architecture Vision', definition: 'The high-level, aspirational view of the target architecture produced in ADM Phase A, used to gain stakeholder buy-in.', domain: 'Framework' },
     { term: 'Building Block', definition: 'A reusable component of business, IT, or architectural capability that can be combined with others to deliver architectures and solutions.', domain: 'Framework' },
