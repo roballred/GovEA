@@ -1,6 +1,6 @@
 import { db } from '@/db/client'
 import { auditLog, users } from '@/db/schema'
-import { and, eq, desc, gte, inArray, like, sql, type SQL } from 'drizzle-orm'
+import { and, eq, desc, gte, inArray, isNull, like, sql, type SQL } from 'drizzle-orm'
 
 /**
  * Entity types whose audit events are visible to Contributors (#597).
@@ -264,6 +264,50 @@ export async function getFailedLoginEvents(
     .from(auditLog)
     .where(and(
       inArray(auditLog.action, FAILED_LOGIN_ACTIONS as unknown as string[]),
+      gte(auditLog.createdAt, since),
+    ))
+    .orderBy(desc(auditLog.createdAt))
+    .limit(limit)
+}
+
+/**
+ * Instance-scoped (platform-administration) audit events with telemetry, for
+ * the platform-events CSV export (#720). Instance-admin only; events have
+ * `organizationId IS NULL`. Includes the source IP + user agent captured on
+ * each event plus the acting admin's email, so an incident reviewer can export
+ * the full platform-admin trail — not just failed logins.
+ */
+export interface PlatformAuditEvent {
+  createdAt: Date
+  action: string
+  entityType: string | null
+  entityId: string | null
+  actorEmail: string | null
+  ip: string | null
+  userAgent: string | null
+}
+
+export async function getPlatformAuditEvents(
+  opts?: { sinceDays?: number; limit?: number },
+): Promise<PlatformAuditEvent[]> {
+  const sinceDays = opts?.sinceDays ?? 30
+  const limit = opts?.limit ?? 5000
+  const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000)
+
+  return db
+    .select({
+      createdAt: auditLog.createdAt,
+      action: auditLog.action,
+      entityType: auditLog.entityType,
+      entityId: auditLog.entityId,
+      actorEmail: users.email,
+      ip: sql<string | null>`${auditLog.metadata} ->> 'ip'`,
+      userAgent: sql<string | null>`${auditLog.metadata} ->> 'userAgent'`,
+    })
+    .from(auditLog)
+    .leftJoin(users, eq(auditLog.userId, users.id))
+    .where(and(
+      isNull(auditLog.organizationId),
       gte(auditLog.createdAt, since),
     ))
     .orderBy(desc(auditLog.createdAt))
