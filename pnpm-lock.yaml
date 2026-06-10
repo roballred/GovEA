@@ -90,6 +90,9 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
     devDependencies:
+      '@axe-core/playwright':
+        specifier: ^4.11.3
+        version: 4.11.3(playwright-core@1.59.1)
       '@eslint/eslintrc':
         specifier: ^3.3.5
         version: 3.3.5
@@ -123,6 +126,9 @@ importers:
       eslint-config-next:
         specifier: ^16.2.4
         version: 16.2.4(@typescript-eslint/parser@8.58.1(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
+      eslint-plugin-jsx-a11y:
+        specifier: ^6.10.2
+        version: 6.10.2(eslint@9.39.4(jiti@1.21.7))
       postcss:
         specifier: ^8.5.8
         version: 8.5.8
@@ -191,6 +197,11 @@ packages:
 
   '@auth/drizzle-adapter@1.11.1':
     resolution: {integrity: sha512-cQTvDZqsyF7RPhDm/B6SvqdVP9EzQhy3oM4Muu7fjjmSYFLbSR203E6dH631ZHSKDn2b4WZkfMnjPDzRsPSAeA==}
+
+  '@axe-core/playwright@4.11.3':
+    resolution: {integrity: sha512-h/kfksv4F0cVIDlKpT4700OehdRgpvuVskuQ2nb7/JmtWUXpe9ftHAPtwyXGvVSsa6SJ64A9ER7Zrzc/sIvC4w==}
+    peerDependencies:
+      playwright-core: '>= 1.0.0'
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -2180,6 +2191,10 @@ packages:
 
   axe-core@4.11.2:
     resolution: {integrity: sha512-byD6KPdvo72y/wj2T/4zGEvvlis+PsZsn/yPS3pEO+sFpcrqRpX/TJCxvVaEsNeMrfQbCr7w163YqoD9IYwHXw==}
+    engines: {node: '>=4'}
+
+  axe-core@4.11.4:
+    resolution: {integrity: sha512-KunSNx+TVpkAw/6ULfhnx+HWRecjqZGTOyquAoWHYLRSdK1tB5Ihce1ZW+UY3fj33bYAFWPu7W/GRSmmrCGuxA==}
     engines: {node: '>=4'}
 
   axobject-query@4.1.0:
@@ -4475,6 +4490,11 @@ snapshots:
       - '@simplewebauthn/server'
       - nodemailer
 
+  '@axe-core/playwright@4.11.3(playwright-core@1.59.1)':
+    dependencies:
+      axe-core: 4.11.4
+      playwright-core: 1.59.1
+
   '@babel/code-frame@7.29.0':
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
@@ -6123,6 +6143,8 @@ snapshots:
       possible-typed-array-names: 1.1.0
 
   axe-core@4.11.2: {}
+
+  axe-core@4.11.4: {}
 
   axobject-query@4.1.0: {}
 

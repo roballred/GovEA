@@ -215,9 +215,11 @@ jobs:
       - name: Run E2E smoke tests
         # smoke.spec.ts is the route-health sweep; overview.spec.ts (#614)
         # adds role-aware /overview CTA-gating + Coming-next-tile coverage.
+        # a11y.spec.ts (#766) runs axe-core WCAG 2.1 A/AA checks over the
+        # same routes — serious/critical violations fail the build.
         # Other specs (iam.spec.ts, auth-security.spec.ts) intentionally
         # stay out of CI for now — they mutate state and are run locally.
-        run: pnpm --filter govea exec playwright test tests/e2e/specs/smoke.spec.ts tests/e2e/specs/overview.spec.ts
+        run: pnpm --filter govea exec playwright test tests/e2e/specs/smoke.spec.ts tests/e2e/specs/overview.spec.ts tests/e2e/specs/a11y.spec.ts
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

@@ -16,7 +16,10 @@ export function NotificationRowItem({ item }: { item: NotificationRow }) {
 
   // Layered click: the row is clickable to mark-read; the link inside is
   // a real navigation. The mark-read fires in parallel with the link click.
+  // The row click is a pointer-only convenience — keyboard users have full
+  // parity through the focusable "mark read" button and the link below.
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <li
       onClick={handleClick}
       className={cn(
