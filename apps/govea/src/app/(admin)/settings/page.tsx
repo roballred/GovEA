@@ -66,9 +66,10 @@ export default async function SettingsPage() {
         <div>
           <h2 className="text-base font-semibold">Starter Content</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Apply an example content pack so the catalog isn&rsquo;t empty before you&rsquo;ve built your own.
-            Each item ends with a plain-language marker so you can replace or delete it later.
-            Re-applying the same pack skips items that already exist.
+            Apply the TOGAF 10 Starter pack so the catalog isn&rsquo;t empty before you&rsquo;ve built your own.
+            It installs the TOGAF (Standard, 10th Edition) taxonomy, glossary, and principles, then a small
+            framework-aligned sample repository. Each item ends with a plain-language marker so you can replace
+            or delete it later. Re-applying the same pack skips items that already exist.
           </p>
         </div>
         <StarterContentSection />

@@ -4,14 +4,16 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { applyStarterPack, type StarterApplyResult } from '@/actions/starter-content'
-import { AVAILABLE_STARTER_PACKS } from '@/lib/starter-content/easyea-starter'
+import { AVAILABLE_STARTER_PACKS } from '@/lib/starter-content/togaf-starter'
 
 /**
- * Settings card for applying a starter content pack (#587).
+ * Settings card for applying a starter content pack (#587, #749).
  *
  * Shows each available pack with its counts, an "Apply" button, and the
  * result of the most recent apply. Idempotent on the server: re-applying
- * the same pack skips existing items rather than duplicating them.
+ * the same pack skips existing items rather than duplicating them. The TOGAF
+ * Starter also installs the TOGAF taxonomy/glossary/principles recipe first
+ * and reports those counts.
  */
 export function StarterContentSection() {
   const router = useRouter()
@@ -47,7 +49,7 @@ export function StarterContentSection() {
               <p className="text-sm font-medium">{pack.label}</p>
               <p className="text-xs text-muted-foreground">{pack.summary}</p>
               <p className="text-xs text-muted-foreground">
-                Includes: {pack.counts.personas} personas · {pack.counts.capabilities} capabilities · {pack.counts.applications} applications · {pack.counts.objectives} objective · {pack.counts.adrs} ADRs
+                Includes: {pack.counts.personas} personas · {pack.counts.capabilities} capabilities · {pack.counts.applications} applications · {pack.counts.objectives} objectives · {pack.counts.adrs} ADRs · {pack.counts.initiatives} initiatives
               </p>
             </div>
             <Button
@@ -70,7 +72,12 @@ export function StarterContentSection() {
             <li>{result.applicationsCreated} applications added · {result.applicationsSkipped} already present</li>
             <li>{result.objectivesCreated} objectives added · {result.objectivesSkipped} already present</li>
             <li>{result.adrsCreated} ADRs added · {result.adrsSkipped} already present</li>
+            <li>{result.initiativesCreated} initiatives added · {result.initiativesSkipped} already present</li>
           </ul>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+            TOGAF taxonomy installed: {result.recipe.taxonomyTypes} types · {result.recipe.taxonomyTerms} terms · {result.recipe.glossaryTerms} glossary terms · {result.recipe.principles} principles
+            {result.recipe.taxonomyTypes === 0 && result.recipe.taxonomyTerms === 0 ? ' (already present)' : ''}.
+          </p>
           <p className="text-xs text-emerald-700 dark:text-emerald-400">
             Items end with the marker &ldquo;Example starter content — replace or delete.&rdquo; in their description so you can find them later.
           </p>
