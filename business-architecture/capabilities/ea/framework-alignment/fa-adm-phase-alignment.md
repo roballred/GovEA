@@ -14,7 +14,7 @@ ADM phase alignment is a view over existing GovEA content. It is not a mandatory
 
 ## Behaviors
 
-- Tag GovEA records to one or more ADM phases when a TOGAF overlay is enabled
+- Tag GovEA records to one or more ADM phases when the TOGAF recipe's taxonomy is installed
 - View records grouped by ADM phase for architecture review or planning
 - Identify missing evidence for an ADM phase without blocking ordinary GovEA use
 - Use ADM phase tags in reports and governance summaries
@@ -28,7 +28,18 @@ ADM phase alignment is a view over existing GovEA content. It is not a mandatory
 
 ## Implementation Status
 
-Not implemented.
+Partially implemented — taxonomy-backed per ADR-0002 (#665/#671 arc).
+
+Current shipped slice:
+
+- ADM Phase ships as an optional taxonomy type installed by the TOGAF recipe; capabilities and initiatives can be tagged through the ordinary taxonomy UI
+- The ADM Coverage report groups tagged records by phase and discloses untagged gaps rather than hiding them
+- ADM Phase carries `audience: 'framework'`, so phase labels stay out of viewer-role and stakeholder-facing views by default (ADR-0001's no-jargon guarantee)
+
+Not yet shipped:
+
+- Phase gates or any workflow behavior (deliberately out of scope — ADM phases are a classification lens, not a process engine)
+- Governance summaries driven by phase tags beyond the ADM Coverage report
 
 ## Links
 
