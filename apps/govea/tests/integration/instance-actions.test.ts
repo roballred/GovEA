@@ -20,8 +20,9 @@ import {
 } from '@/actions/instance'
 import { db } from '@/db/client'
 import { breakGlassSessions, auditLog, instanceSettings, organizations, users, userOrganizationMemberships } from '@/db/schema'
-import { eq, and, isNull, or } from 'drizzle-orm'
+import { eq, and, isNull, or, desc } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { getPlatformAuditEvents } from '@/lib/audit-view'
 import {
   createTestOrg, createTestUser, cleanupOrg, makeSession, findOrg, findUser,
   type TestUser,
@@ -569,5 +570,18 @@ describe('instance-admin audit telemetry (#720)', () => {
       .orderBy(desc(auditLog.createdAt)).limit(1)
     expect(row).toBeDefined()
     expect((row.metadata as { ip: string | null }).ip).toBeNull()
+  })
+
+  it('surfaces platform events with telemetry + actor for the CSV export', async () => {
+    asInstanceAdmin()
+    await suspendOrg(targetOrgId, 'Platform-events export test')
+    await unsuspendOrg(targetOrgId)
+
+    const events = await getPlatformAuditEvents({ sinceDays: 1 })
+    const suspendEvt = events.find(e => e.action === 'instance.org.suspend' && e.entityId === targetOrgId)
+    expect(suspendEvt).toBeDefined()
+    expect(suspendEvt!.ip).toBe(IP)
+    expect(suspendEvt!.userAgent).toBe(UA)
+    expect(suspendEvt!.actorEmail).toBe(instanceAdmin.email)
   })
 })

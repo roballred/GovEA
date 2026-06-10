@@ -564,6 +564,7 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
 
       await writeAuditLog(tx, {
         action: reactivated ? 'instance.user.membership_reactivate' : 'instance.user.membership_add',
+        metadata: await auditMeta(),
         entityType: 'user_organization_membership',
         entityId: existing.id,
         userId: session.user.id,
@@ -597,6 +598,7 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
 
     await writeAuditLog(tx, {
       action: 'instance.user.create',
+      metadata: await auditMeta(),
       entityType: 'user',
       entityId: user.id,
       userId: session.user.id,

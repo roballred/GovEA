@@ -167,9 +167,17 @@ export default async function InstanceAuditPage({
 
       {/* Instance events */}
       <section>
-        <h2 className="text-base font-semibold mb-3">
-          Platform Events <span className="text-muted-foreground text-sm font-normal">({instanceEvents.length})</span>
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold">
+            Platform Events <span className="text-muted-foreground text-sm font-normal">({instanceEvents.length})</span>
+          </h2>
+          <a
+            href="/api/instance/audit/export?scope=platform"
+            className="text-sm text-primary underline underline-offset-2 hover:no-underline"
+          >
+            Export CSV (30d)
+          </a>
+        </div>
         <div className="rounded-lg border bg-card">
           <Table>
             <TableHeader>
