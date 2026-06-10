@@ -91,3 +91,17 @@ export async function groupByTaxonomyType(
     total: entities.length,
   }
 }
+
+/**
+ * Whether a taxonomy *type* (top-level term) with this slug exists for the org.
+ * Replaces the framework-overlay module gate (#675): a framework report is
+ * available iff its recipe's taxonomy is installed.
+ */
+export async function taxonomyTypeExists(orgId: string, slug: string): Promise<boolean> {
+  const [t] = await db
+    .select({ id: taxonomyTerms.id })
+    .from(taxonomyTerms)
+    .where(and(eq(taxonomyTerms.organizationId, orgId), isNull(taxonomyTerms.parentId), eq(taxonomyTerms.slug, slug)))
+    .limit(1)
+  return !!t
+}

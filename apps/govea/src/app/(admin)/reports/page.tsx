@@ -1,15 +1,20 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getEnabledModules } from '@/lib/get-enabled-modules'
-import { isModuleEnabled } from '@/lib/modules'
 import Link from 'next/link'
+import { taxonomyTypeExists } from '@/lib/reports/group-by-taxonomy'
 
 export default async function ReportsPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  const enabledModules = await getEnabledModules()
-  const frameworkOverlay = isModuleEnabled(enabledModules, 'framework-overlay')
+  const orgId = session.user.organizationId!
+  // #675 — the TOGAF reports section appears when the TOGAF recipe is installed
+  // (its taxonomy types exist), not behind a module toggle. Hidden from viewers
+  // (framework audience).
+  const togafInstalled = session.user.role !== 'viewer' && (
+    await taxonomyTypeExists(orgId, 'togaf-architecture-domain') ||
+    await taxonomyTypeExists(orgId, 'togaf-adm-phase')
+  )
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -73,7 +78,7 @@ export default async function ReportsPage() {
         </div>
       </section>
 
-      {frameworkOverlay && (
+      {togafInstalled && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">TOGAF Framework</h2>
           <div className="rounded-lg border border-border bg-card divide-y">
