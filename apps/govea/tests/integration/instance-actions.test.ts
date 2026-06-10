@@ -19,8 +19,8 @@ import {
   suspendUserAccount, reactivateUserAccount,
 } from '@/actions/instance'
 import { db } from '@/db/client'
-import { breakGlassSessions, auditLog, instanceSettings, organizations, users } from '@/db/schema'
-import { eq, and, isNull, or, desc } from 'drizzle-orm'
+import { breakGlassSessions, auditLog, instanceSettings, organizations, users, userOrganizationMemberships } from '@/db/schema'
+import { eq, and, isNull, or } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import {
   createTestOrg, createTestUser, cleanupOrg, makeSession, findOrg, findUser,
@@ -329,6 +329,92 @@ describe('createInstanceUser', () => {
     formData.set('role', 'viewer')
 
     await expect(createInstanceUser(formData)).rejects.toThrow('Forbidden')
+  })
+})
+
+describe('createInstanceUser — existing email → org membership (#756)', () => {
+  function fd(email: string, role: 'admin' | 'contributor' | 'viewer') {
+    const f = new FormData()
+    f.set('organizationId', targetOrgId)
+    f.set('name', 'Ignored For Existing Identity')
+    f.set('email', email)
+    // Password is required by the form but must be ignored for an existing
+    // identity — deliberately weak here to prove it is never validated/applied.
+    f.set('password', 'x')
+    f.set('role', role)
+    return f
+  }
+
+  async function membership(userId: string) {
+    const [m] = await db.select().from(userOrganizationMemberships).where(and(
+      eq(userOrganizationMemberships.userId, userId),
+      eq(userOrganizationMemberships.organizationId, targetOrgId),
+    ))
+    return m ?? null
+  }
+
+  it('adds an existing identity to the selected org without crashing or duplicating the user', async () => {
+    asInstanceAdmin()
+    const existing = await createTestUser(orgId, 'admin')
+    // Mark as a platform admin to prove instanceRole is preserved.
+    await db.update(users).set({ instanceRole: 'instance_admin' }).where(eq(users.id, existing.id))
+    const hashBefore = (await db.query.users.findFirst({ where: eq(users.id, existing.id) }))!.passwordHash
+
+    const result = await createInstanceUser(fd(existing.email, 'contributor'))
+    expect(result.status).toBe('membership_added')
+
+    // No duplicate users row.
+    const rows = await db.select().from(users).where(eq(users.email, existing.email))
+    expect(rows).toHaveLength(1)
+    // Identity fields preserved: instanceRole + password hash untouched.
+    expect(rows[0].instanceRole).toBe('instance_admin')
+    expect(rows[0].passwordHash).toBe(hashBefore)
+
+    // Active membership in the target org with the requested role.
+    const m = await membership(existing.id)
+    expect(m).not.toBeNull()
+    expect(m!.role).toBe('contributor')
+    expect(m!.isActive).toBe(true)
+  })
+
+  it('returns a handled already_member result for an already-active membership (no role change)', async () => {
+    asInstanceAdmin()
+    const existing = await createTestUser(orgId, 'viewer')
+    await db.insert(userOrganizationMemberships).values({
+      userId: existing.id, organizationId: targetOrgId, role: 'admin', isActive: true,
+    })
+
+    const result = await createInstanceUser(fd(existing.email, 'viewer'))
+    expect(result.status).toBe('already_member')
+    // Existing active role is not downgraded by the create attempt.
+    expect((await membership(existing.id))!.role).toBe('admin')
+  })
+
+  it('reactivates an inactive membership and updates its role', async () => {
+    asInstanceAdmin()
+    const existing = await createTestUser(orgId, 'viewer')
+    await db.insert(userOrganizationMemberships).values({
+      userId: existing.id, organizationId: targetOrgId, role: 'viewer', isActive: false,
+    })
+
+    const result = await createInstanceUser(fd(existing.email, 'admin'))
+    expect(result.status).toBe('membership_reactivated')
+    const m = await membership(existing.id)
+    expect(m!.isActive).toBe(true)
+    expect(m!.role).toBe('admin')
+  })
+
+  it('writes an instance-level audit event for the membership add', async () => {
+    asInstanceAdmin()
+    const existing = await createTestUser(orgId, 'viewer')
+    await createInstanceUser(fd(existing.email, 'viewer'))
+
+    const [evt] = await db.select().from(auditLog).where(and(
+      eq(auditLog.action, 'instance.user.membership_add'),
+      eq(auditLog.entityId, existing.id),
+    ))
+    expect(evt).toBeDefined()
+    expect(evt.organizationId).toBeNull() // instance-level
   })
 })
 

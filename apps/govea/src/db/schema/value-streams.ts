@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, integer, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
@@ -41,6 +41,18 @@ export const valueStreamStageCapabilities = pgTable('value_stream_stage_capabili
 })
 
 export type ValueStreamStageCapability = typeof valueStreamStageCapabilities.$inferSelect
+
+// Junction: value stream ↔ business capability (#734).
+// Direct, stream-level capability mapping — distinct from the stage-level
+// `value_stream_stage_capabilities` above. A capability mapped here applies to
+// the whole value stream rather than a specific stage. Both FKs cascade on
+// delete so removing either side cleans up the junction row.
+export const valueStreamCapabilities = pgTable('value_stream_capabilities', {
+  valueStreamId: uuid('value_stream_id').notNull().references(() => valueStreams.id, { onDelete: 'cascade' }),
+  capabilityId: uuid('capability_id').notNull().references(() => capabilities.id, { onDelete: 'cascade' }),
+}, (t) => [primaryKey({ columns: [t.valueStreamId, t.capabilityId] })])
+
+export type ValueStreamCapability = typeof valueStreamCapabilities.$inferSelect
 
 // Junction: value stream ↔ persona (many-to-many, replaces single stakeholderPersonaId FK)
 export const valueStreamPersonas = pgTable('value_stream_personas', {

@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkValueStreamPersona, unlinkValueStreamPersona,
+  linkValueStreamCapability, unlinkValueStreamCapability,
 } from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
@@ -54,6 +55,11 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
 
   const addPersona = linkValueStreamPersona.bind(null, id)
   const removePersona = unlinkValueStreamPersona.bind(null, id)
+  const addCapability = linkValueStreamCapability.bind(null, id)
+  const removeCapability = unlinkValueStreamCapability.bind(null, id)
+
+  // IDs already linked directly to the stream, so the picker excludes them.
+  const directCapIds = new Set(vs.valueStreamCapabilities.map(({ capability }) => capability.id))
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -164,6 +170,28 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
           />
         )}
       </div>
+
+      {isModuleEnabled(enabledModules, 'capabilities') && (
+        <div className="space-y-1.5">
+          <RelationshipPanel
+            title="Business Capabilities"
+            items={vs.valueStreamCapabilities.map(({ capability }) => ({
+              id: capability.id, name: capability.name,
+              href: `/capabilities/${capability.id}`,
+            }))}
+            canEdit={canMutate}
+            available={capabilityList
+              .filter(c => c.organizationId === orgId && !directCapIds.has(c.id))
+              .map(c => ({ id: c.id, name: c.name }))}
+            addAction={addCapability}
+            removeAction={removeCapability}
+            emptyMessage="No stream-level capabilities linked yet."
+          />
+          <p className="text-xs text-muted-foreground">
+            These capabilities apply to the whole value stream. Capabilities tied to a single step appear as tags on each stage above.
+          </p>
+        </div>
+      )}
 
       {isModuleEnabled(enabledModules, 'personas') && (
         <RelationshipPanel

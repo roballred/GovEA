@@ -38,7 +38,7 @@ import { db } from '@/db/client'
 import {
   organizations,
   personas, capabilities, applications, services,
-  valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
+  valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas, valueStreamCapabilities,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   goals, goalObjectives,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
@@ -363,6 +363,7 @@ export async function importArchive(
     await replayJunction(valueStreamStages, 'valueStreamStages', false)
     await replayJunction(valueStreamStageCapabilities, 'valueStreamStageCapabilities', false)
     await replayJunction(valueStreamPersonas, 'valueStreamPersonas', false)
+    await replayJunction(valueStreamCapabilities, 'valueStreamCapabilities', false)
     await replayJunction(objectiveCapabilities, 'objectiveCapabilities', false)
     await replayJunction(objectiveValueStreams, 'objectiveValueStreams', false)
     await replayJunction(goalObjectives, 'goalObjectives', false)

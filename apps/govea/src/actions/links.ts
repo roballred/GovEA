@@ -19,6 +19,7 @@ import {
   personas,
   valueStreams,
   valueStreamPersonas,
+  valueStreamCapabilities,
   strategicObjectives,
   objectiveCapabilities,
   objectiveValueStreams,
@@ -282,6 +283,27 @@ export async function unlinkValueStreamPersona(valueStreamId: string, personaId:
   assertOwnership(vs?.organizationId, user.organizationId!)
   await db.delete(valueStreamPersonas).where(
     and(eq(valueStreamPersonas.valueStreamId, valueStreamId), eq(valueStreamPersonas.personaId, personaId))
+  )
+  revalidatePath(`/value-streams/${valueStreamId}`)
+}
+
+// ── Value Stream ↔ Capability (direct, stream-level — #734) ──────────────────
+
+export async function linkValueStreamCapability(valueStreamId: string, capabilityId: string) {
+  const { user } = await requireContributor()
+  const vs = await db.query.valueStreams.findFirst({ where: eq(valueStreams.id, valueStreamId) })
+  assertOwnership(vs?.organizationId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
+  await db.insert(valueStreamCapabilities).values({ valueStreamId, capabilityId }).onConflictDoNothing()
+  revalidatePath(`/value-streams/${valueStreamId}`)
+}
+
+export async function unlinkValueStreamCapability(valueStreamId: string, capabilityId: string) {
+  const { user } = await requireContributor()
+  const vs = await db.query.valueStreams.findFirst({ where: eq(valueStreams.id, valueStreamId) })
+  assertOwnership(vs?.organizationId, user.organizationId!)
+  await db.delete(valueStreamCapabilities).where(
+    and(eq(valueStreamCapabilities.valueStreamId, valueStreamId), eq(valueStreamCapabilities.capabilityId, capabilityId))
   )
   revalidatePath(`/value-streams/${valueStreamId}`)
 }

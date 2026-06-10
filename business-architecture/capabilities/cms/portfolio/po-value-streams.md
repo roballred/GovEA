@@ -8,13 +8,13 @@ Value streams are authoring records, not just display artefacts. Creating and ma
 
 ## Implementation Status
 
-**Implemented.** Full CRUD for value streams and stages. Stage ordering, capability assignment per stage, persona linkage, and objective linkage are all shipped.
+**Implemented.** Full CRUD for value streams and stages. Stage ordering, stage-level capability assignment, direct (stream-level) capability mapping, persona linkage, and objective linkage are all shipped.
 
-Schema: `value_streams`, `value_stream_stages`, `value_stream_stage_capabilities`, `value_stream_personas` (`apps/govea/src/db/schema/value-streams.ts`)
+Schema: `value_streams`, `value_stream_stages`, `value_stream_stage_capabilities`, `value_stream_capabilities` (direct stream-level links, #734), `value_stream_personas` (`apps/govea/src/db/schema/value-streams.ts`)
 
-Server actions: create, edit, delete, add/edit/delete/reorder stages, add/remove capability per stage (`apps/govea/src/actions/value-streams.ts`)
+Server actions: create, edit, delete, add/edit/delete/reorder stages, add/remove capability per stage (`apps/govea/src/actions/value-streams.ts`); `linkValueStreamCapability` / `unlinkValueStreamCapability` for direct stream-level links (`apps/govea/src/actions/links.ts`)
 
-Admin UI: list view, detail view with inline stage and persona management (`apps/govea/src/app/(admin)/value-streams/`)
+Admin UI: list view, detail view with inline stage management, a stream-level Business Capabilities panel, and persona management (`apps/govea/src/app/(admin)/value-streams/`)
 
 ## Personas
 
@@ -52,11 +52,17 @@ A stage may link to zero or more capabilities. The same capability may appear in
 | Relationship | Direction | Junction Table | Notes |
 |---|---|---|---|
 | Personas | Many-to-many | `value_stream_personas` | The stakeholder personas this stream serves; shown on the detail page |
-| Capabilities (via stages) | Many-to-many | `value_stream_stage_capabilities` | Capabilities assigned at each stage; not a direct value_stream → capability link |
+| Capabilities (direct) | Many-to-many | `value_stream_capabilities` | Capabilities that apply to the **whole** value stream (#734); shown in the stream-level Business Capabilities panel |
+| Capabilities (via stages) | Many-to-many | `value_stream_stage_capabilities` | Capabilities active at a **specific stage**; shown as badges on each stage |
 | Strategic Objectives | Many-to-many | `objective_value_streams` | Objectives that this value stream supports; linked from the Objective record |
 | Services | Many-to-many | `service_value_streams` | Services that deliver through this value stream; linked from the Service record |
 
-**Important:** Capabilities are linked to stages, not directly to the value stream. To see which capabilities a value stream involves, a reader must look at the stage-level links. This reflects the fact that different capabilities are active at different points in the delivery sequence — the stage structure makes that visible.
+**Two kinds of capability link (#734).** A value stream can map to capabilities in two distinct ways, and the two are reported separately so a reader can always tell which is which:
+
+- **Direct (stream-level)** — `value_stream_capabilities`. The capability applies to the entire stream, without forcing the author to repeat it on every stage. Use this for stream-wide concerns and stream-level coverage summaries.
+- **Stage-level** — `value_stream_stage_capabilities`. The capability is active at a specific step. This remains the right model when different capabilities are active at different points in the delivery sequence.
+
+Both are first-class. Stage-level mapping is unchanged by #734; the direct link is additive. (Prior to #734 the model supported stage-level links only — this document intentionally changed that.)
 
 ## Behaviors
 
@@ -68,13 +74,15 @@ A stage may link to zero or more capabilities. The same capability may appear in
 - Delete a stage (removes all capability assignments on that stage)
 - Move a stage up or down in the ordered sequence
 - Assign a capability to a stage; remove a capability from a stage
+- Link and unlink a capability directly to the whole value stream (stream-level), shown in a Business Capabilities panel distinct from per-stage badges
 - Add and remove persona links on the value stream
 - View the full value stream with ordered stages and capability badges on the detail page
 - Viewers see only published value streams; Contributors and Admins see all statuses
 
 ## Rules
 
-- Creating, editing stages, and assigning capabilities to stages requires Contributor or Admin role
+- Creating, editing stages, and assigning capabilities (per stage or directly to the stream) requires Contributor or Admin role
+- Direct stream-level capability links are organization-scoped: the value stream and the capability must belong to the caller's organization, enforced by the local junction — a stream can never link to another org's capability (consistent with #415 junction-ownership rules)
 - Deleting a value stream requires Admin role
 - Deleting a stage does not require Admin — Contributors may delete stages they added
 - Visibility defaults to `org`; Contributors may set `connections` or `instance`
