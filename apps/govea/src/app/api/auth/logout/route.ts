@@ -34,8 +34,10 @@ export async function POST(request: Request) {
   for (const part of request.headers.get('cookie')?.split('; ') ?? []) {
     const name = part.split('=')[0]
     if (name.includes('authjs.session-token')) {
+      // maxAge 0 AND an epoch expires — belt for jars that ignore one form.
       res.cookies.set(name, '', {
         maxAge: 0,
+        expires: new Date(0),
         path: '/',
         secure: name.startsWith('__Secure-'),
       })
