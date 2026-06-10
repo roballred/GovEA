@@ -1,8 +1,11 @@
 'use server'
 
 import { db } from '@/db/client'
-import { applicationCapabilities, capabilityPersonas, initiativeCapabilities, initiativeApplications } from '@/db/schema'
+import { applications, capabilities, applicationCapabilities, capabilityPersonas, initiativeCapabilities, initiativeApplications } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { canReadFederatedEntity } from '@/lib/federation'
 
 export type RiskLevel = 'high' | 'medium' | 'none'
 
@@ -39,7 +42,31 @@ export type CapabilityImpact = {
   riskLevel: RiskLevel
 }
 
+const EMPTY_APPLICATION_IMPACT: ApplicationImpact = {
+  orphanedCapabilities: [], affectedPersonas: [], activeInitiatives: [], riskLevel: 'none',
+}
+const EMPTY_CAPABILITY_IMPACT: CapabilityImpact = {
+  dependentPersonas: [], soleCoveragePersonaIds: [], activeInitiatives: [], riskLevel: 'none',
+}
+
 export async function getApplicationImpact(applicationId: string): Promise<ApplicationImpact> {
+  // Access control (#738): these are `'use server'` endpoints addressable
+  // directly, so they must enforce auth + tenant scoping themselves — the
+  // page-level guard does not protect a direct action invocation. Mirror the
+  // pattern in impact-analysis.ts: authenticate, then confirm the caller may
+  // read this entity under federated-visibility rules before returning any
+  // dependency data. Unreadable → empty result, never another org's data.
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const application = await db.query.applications.findFirst({
+    where: eq(applications.id, applicationId),
+    columns: { organizationId: true, visibility: true },
+  })
+  if (!application) return EMPTY_APPLICATION_IMPACT
+  const visible = await canReadFederatedEntity(application.organizationId, application.visibility, session.user.organizationId!)
+  if (!visible) return EMPTY_APPLICATION_IMPACT
+
   // Capabilities this application supports
   const linkedCapRows = await db.query.applicationCapabilities.findMany({
     where: eq(applicationCapabilities.applicationId, applicationId),
@@ -111,6 +138,18 @@ export async function getApplicationImpact(applicationId: string): Promise<Appli
 }
 
 export async function getCapabilityImpact(capabilityId: string): Promise<CapabilityImpact> {
+  // Access control (#738) — see getApplicationImpact above.
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const capability = await db.query.capabilities.findFirst({
+    where: eq(capabilities.id, capabilityId),
+    columns: { organizationId: true, visibility: true },
+  })
+  if (!capability) return EMPTY_CAPABILITY_IMPACT
+  const visible = await canReadFederatedEntity(capability.organizationId, capability.visibility, session.user.organizationId!)
+  if (!visible) return EMPTY_CAPABILITY_IMPACT
+
   // Personas that rely on this capability
   const personaRows = await db.query.capabilityPersonas.findMany({
     where: eq(capabilityPersonas.capabilityId, capabilityId),
