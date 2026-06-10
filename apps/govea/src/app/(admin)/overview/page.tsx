@@ -193,38 +193,38 @@ type Priority = {
   refs: string[]
 }
 
-const PRIORITIES_LAST_GROOMED = '2026-05-29'
+const PRIORITIES_LAST_GROOMED = '2026-06-10'
 
 const PRIORITIES: Priority[] = [
   {
     rank: 1,
     title: 'Run the first persona-validation Tier-1 interview',
-    why: 'The validation plan and feedback-log are in place; the missing step is one real conversation (recommended first: Elected Official or chief of staff, testing the staff-proxy hypothesis). Until one Tier-1 conversation lands, several near-term differentiator items stay parked. The cheapest unblock on the board.',
+    why: 'Third grooming cycle at rank 1 with zero movement: the feedback log is still empty and all 16 personas remain Assumed. Concrete new candidate: the OCIO design-review contact — pair the compliance conversation with a 30-minute practice-fit interview. Until one Tier-1 conversation lands, several differentiator items stay parked.',
     refs: ['#668'],
   },
   {
     rank: 2,
-    title: 'EA Adoption & Engagement capability area',
-    why: 'Pair the product feature with the matching ARB finding. EA market research calls adoption the most persistent cross-tool weakness; GovEA targets non-EA stakeholders explicitly. Capability-doc slice does not need interviews and seeds implementation issues for the next quarter.',
-    refs: ['#71', '#94'],
+    title: 'Make sign-out reliable from every URL',
+    why: 'A live auth bug observed by a real demo user, spanning three journeys. Also the last open issue in v0.9 — Foundation Cleanup retires when it lands. Bugs real users hit outrank new design work.',
+    refs: ['#759'],
   },
   {
     rank: 3,
-    title: 'Replace the TOGAF overlay with recipe-backed import',
-    why: 'Turns framework support from a hard-coded overlay into the recipe/taxonomy system and keeps EasyEA the default. Large — do the design slice (import schema + idempotency) first, and reconcile with the existing TOGAF-taxonomy design issue rather than running both in parallel. Not gated on personas.',
-    refs: ['#665', '#313'],
+    title: 'Security/compliance wave for the OCIO review',
+    why: 'OCIO 141.10 MFA, RCW 40.14 audit retention, CSP enforcement, CSV formula injection, DB TLS, CI scanning, and a compliance documentation pack — adoption gates for government use, not polish. Cheap high-leverage items first; the doc pack and retention design feed the external OCIO design review directly.',
+    refs: ['#761–#769'],
   },
   {
     rank: 4,
-    title: 'GovEA Project as continuous product documentation',
-    why: 'Maintain the seeded GovEA Project organisation as a living model of the actual product. Cheap incrementally; compounds into a more credible demo and a real dogfood loop. Treat as a recurring grooming habit, not a one-shot.',
-    refs: ['#518'],
+    title: 'REST API foundation (design slice first)',
+    why: 'The 2026-06-10 roadmap decision made integration with external systems of record foundational and pulled the API layer into v1.0. Design the endpoint inventory and token/RBAC/audit/versioning rules first; the ServiceNow ITSM/CMDB slice (v2.0) is the known first consumer keeping the contract honest.',
+    refs: ['#775', '#382'],
   },
   {
     rank: 5,
-    title: 'Inherited system glossary (now unblocked)',
-    why: 'Was gated behind the Modules-vs-Tools terminology decision; that decision is settled (Tools is canonical) so the gate is gone. Authoring inherited glossary/menu definitions now removes a long-standing UX ambiguity and supports the viewer-experience epic.',
-    refs: ['#499'],
+    title: 'Close out the TOGAF recipe arc',
+    why: 'The implementation slices shipped; finish the remaining engine scope, then walk the epic and design issues against their acceptance criteria and close or re-scope them explicitly. A shipped epic left open is a false-open that hides real progress from every future grooming.',
+    refs: ['#671', '#665', '#313'],
   },
 ]
 
