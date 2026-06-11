@@ -9,6 +9,8 @@ import { getRequestContext } from '@/lib/request-context'
 import { revalidatePath } from 'next/cache'
 import { MODULE_DEFS, type ModuleKey, type ModuleGroup } from '@/lib/modules'
 import { validatePassword } from '@/lib/password'
+import { activeAdminCount, findMembership } from '@/lib/membership-guards'
+import type { Role } from '@/lib/rbac'
 import bcrypt from 'bcryptjs'
 import { themes } from '@/lib/themes'
 import {
@@ -334,6 +336,91 @@ export async function demoteInstanceAdmin(userId: string, reason?: string) {
       organizationId: null,
       before: { instanceRole: 'instance_admin' },
       after: { instanceRole: null, reason: reason?.trim() || null },
+    })
+  })
+
+  revalidatePath('/instance/users')
+}
+
+/**
+ * #693 slice 4 — instance-console cross-org membership management. The
+ * org-scoped equivalents in actions/memberships.ts let an org Admin manage
+ * their own org only; these let an Instance Admin change or revoke any
+ * membership in any organization. Same audit action vocabulary, same per-org
+ * last-admin guard (lib/membership-guards.ts), plus the instance console's
+ * proxy-aware audit metadata and reason convention.
+ */
+export async function setMembershipRoleAsInstanceAdmin(
+  userId: string,
+  organizationId: string,
+  role: Role,
+  reason?: string,
+) {
+  const session = await requireInstanceAdmin()
+
+  const before = await findMembership(userId, organizationId)
+  if (!before) throw new Error('No membership for that user in that organization.')
+
+  if (before.role === 'admin' && role !== 'admin' && before.isActive) {
+    if (await activeAdminCount(organizationId) <= 1) {
+      throw new Error('Cannot demote the last admin of that organization.')
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(userOrganizationMemberships)
+      .set({ role, updatedAt: new Date() })
+      .where(and(
+        eq(userOrganizationMemberships.userId, userId),
+        eq(userOrganizationMemberships.organizationId, organizationId),
+      ))
+    await writeAuditLog(tx, {
+      action: 'membership.role_changed',
+      metadata: await auditMeta(),
+      entityType: 'user_organization_membership',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId,
+      before: { role: before.role },
+      after: { role, reason: reason?.trim() || null },
+    })
+  })
+
+  revalidatePath('/instance/users')
+}
+
+export async function setMembershipActiveAsInstanceAdmin(
+  userId: string,
+  organizationId: string,
+  active: boolean,
+  reason?: string,
+) {
+  const session = await requireInstanceAdmin()
+
+  const before = await findMembership(userId, organizationId)
+  if (!before) throw new Error('No membership for that user in that organization.')
+
+  if (!active && before.isActive && before.role === 'admin') {
+    if (await activeAdminCount(organizationId) <= 1) {
+      throw new Error('Cannot remove the last admin of that organization.')
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(userOrganizationMemberships)
+      .set({ isActive: active, updatedAt: new Date() })
+      .where(and(
+        eq(userOrganizationMemberships.userId, userId),
+        eq(userOrganizationMemberships.organizationId, organizationId),
+      ))
+    await writeAuditLog(tx, {
+      action: active ? 'membership.reactivate' : 'membership.deactivate',
+      metadata: await auditMeta(),
+      entityType: 'user_organization_membership',
+      entityId: userId,
+      userId: session.user.id,
+      organizationId,
+      after: { reason: reason?.trim() || null },
     })
   })
 

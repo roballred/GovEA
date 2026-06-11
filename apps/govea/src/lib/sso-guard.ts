@@ -21,6 +21,7 @@
 import { db } from '@/db/client'
 import { users } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { resolveActiveMembership } from '@/lib/active-membership'
 
 export type SsoCheckResult =
   | { status: 'allowed'; userId: string; organizationId: string; role: string }
@@ -33,6 +34,14 @@ export type SsoCheckResult =
  *
  * Returns `allowed` only if a pre-provisioned, active user with an org binding
  * exists for the given email. All other outcomes block the sign-in.
+ *
+ * #693 — org binding resolves through memberships first (the same resolution
+ * the jwt callback applies after ANY sign-in, so SSO and local credentials see
+ * the same membership set), falling back to the denormalized
+ * `users.organization_id` home pointer for accounts predating memberships.
+ * Without this, an identity provisioned into orgs purely via memberships
+ * (e.g. by the instance console, #756) would be blocked at SSO sign-in while
+ * the same person could sign in locally.
  */
 export async function checkSsoProvisioning(email: string): Promise<SsoCheckResult> {
   const dbUser = await db.query.users.findFirst({
@@ -40,8 +49,19 @@ export async function checkSsoProvisioning(email: string): Promise<SsoCheckResul
   })
 
   if (!dbUser) return { status: 'not_provisioned' }
-  if (!dbUser.organizationId) return { status: 'no_org_binding', userId: dbUser.id }
   if (dbUser.isActive !== 'true') return { status: 'deactivated', userId: dbUser.id }
+
+  const membership = await resolveActiveMembership(dbUser.id, dbUser.lastActiveOrganizationId)
+  if (membership) {
+    return {
+      status: 'allowed',
+      userId: dbUser.id,
+      organizationId: membership.organizationId,
+      role: membership.role,
+    }
+  }
+
+  if (!dbUser.organizationId) return { status: 'no_org_binding', userId: dbUser.id }
 
   return {
     status: 'allowed',

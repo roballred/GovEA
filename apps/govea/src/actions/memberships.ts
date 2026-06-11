@@ -2,11 +2,14 @@
 
 import { db } from '@/db/client'
 import { users, userOrganizationMemberships } from '@/db/schema'
-import { and, count, eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin, type Role } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
+// Guard primitives shared with the instance-console membership actions
+// (#693 slice 4 — see lib/membership-guards.ts).
+import { activeAdminCount, findMembership } from '@/lib/membership-guards'
 
 const MEMBERSHIP_ENTITY = 'user_organization_membership'
 
@@ -15,40 +18,6 @@ async function requireAdmin() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) throw new Error('Forbidden')
   return session
-}
-
-/**
- * Number of active **admin memberships** in an org — the per-org last-admin
- * guard's basis (#693 slice 4a). This is the membership-level equivalent of the
- * users.ts guard, which counted users.role; with multi-org, org admin coverage
- * lives in memberships.
- */
-async function activeAdminCount(orgId: string): Promise<number> {
-  const [row] = await db
-    .select({ c: count() })
-    .from(userOrganizationMemberships)
-    .where(and(
-      eq(userOrganizationMemberships.organizationId, orgId),
-      eq(userOrganizationMemberships.role, 'admin'),
-      eq(userOrganizationMemberships.isActive, true),
-    ))
-  return row?.c ?? 0
-}
-
-async function findMembership(userId: string, orgId: string) {
-  const [row] = await db
-    .select({
-      userId: userOrganizationMemberships.userId,
-      role: userOrganizationMemberships.role,
-      isActive: userOrganizationMemberships.isActive,
-    })
-    .from(userOrganizationMemberships)
-    .where(and(
-      eq(userOrganizationMemberships.userId, userId),
-      eq(userOrganizationMemberships.organizationId, orgId),
-    ))
-    .limit(1)
-  return row ?? null
 }
 
 export interface OrgMembershipRow {

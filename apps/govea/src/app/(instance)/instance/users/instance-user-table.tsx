@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { Fragment, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -14,11 +14,23 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { ConfirmWithReason } from '@/components/confirm-with-reason'
-import { createInstanceUser, demoteInstanceAdmin, promoteInstanceAdmin, suspendUserAccount, reactivateUserAccount } from '@/actions/instance'
+import {
+  createInstanceUser, demoteInstanceAdmin, promoteInstanceAdmin,
+  suspendUserAccount, reactivateUserAccount,
+  setMembershipRoleAsInstanceAdmin, setMembershipActiveAsInstanceAdmin,
+} from '@/actions/instance'
 
 type OrgOption = {
   id: string
   name: string
+}
+
+export type MembershipRow = {
+  organizationId: string
+  orgName: string
+  role: 'admin' | 'contributor' | 'viewer'
+  isActive: boolean
+  isPrimary: boolean
 }
 
 type InstanceUserRow = {
@@ -29,6 +41,8 @@ type InstanceUserRow = {
   instanceRole: string | null
   isActive: string
   organizationName: string | null
+  /** #693 slice 4 — all org memberships, for cross-org management. */
+  memberships: MembershipRow[]
 }
 
 interface Props {
@@ -46,6 +60,8 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
   const [createOpen, setCreateOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [createMessage, setCreateMessage] = useState<{ kind: 'error' | 'info'; text: string } | null>(null)
+  // #693 — which user rows have their memberships section expanded.
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
 
   function refresh() {
     router.refresh()
@@ -120,8 +136,10 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
           <TableBody>
             {users.map((u) => {
               const isMe = u.id === currentUserId
+              const expanded = expandedUserId === u.id
               return (
-                <TableRow key={u.id}>
+                <Fragment key={u.id}>
+                <TableRow>
                   <TableCell className="font-medium">{u.name ?? '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{u.email}</TableCell>
                   <TableCell className="text-muted-foreground">{u.organizationName ?? '—'}</TableCell>
@@ -146,6 +164,15 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setExpandedUserId(expanded ? null : u.id)}
+                      aria-expanded={expanded}
+                    >
+                      Memberships ({u.memberships.length}) {expanded ? '▴' : '▾'}
+                    </Button>
                     {!isMe && (
                       <div className="flex items-center justify-end gap-2">
                         {u.instanceRole === 'instance_admin' ? (
@@ -194,8 +221,17 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
                         )}
                       </div>
                     )}
+                    </div>
                   </TableCell>
                 </TableRow>
+                {expanded && (
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableCell colSpan={7} className="py-3">
+                      <MembershipManager userId={u.id} userLabel={u.name ?? u.email} memberships={u.memberships} onDone={refresh} />
+                    </TableCell>
+                  </TableRow>
+                )}
+                </Fragment>
               )
             })}
             {users.length === 0 && (
@@ -274,6 +310,122 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+/**
+ * #693 slice 4 — per-user cross-org membership management for the instance
+ * console. Role changes and deactivate/reactivate route through the
+ * instance-admin actions, which enforce the per-org last-admin guard and
+ * write membership.* audit events with the operator's reason.
+ */
+function MembershipManager({
+  userId, userLabel, memberships, onDone,
+}: {
+  userId: string
+  userLabel: string
+  memberships: MembershipRow[]
+  onDone: () => void
+}) {
+  // Pending role selections per org, before the operator confirms.
+  const [pendingRoles, setPendingRoles] = useState<Record<string, MembershipRow['role']>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  if (memberships.length === 0) {
+    return <p className="text-sm text-muted-foreground">No organization memberships.</p>
+  }
+
+  return (
+    <div className="space-y-2">
+      {error && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-sm text-destructive">{error}</div>
+      )}
+      <ul className="divide-y rounded-md border bg-card">
+        {memberships.map((m) => {
+          const pending = pendingRoles[m.organizationId] ?? m.role
+          const roleChanged = pending !== m.role
+          return (
+            <li key={m.organizationId} className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
+              <span className="font-medium min-w-40">{m.orgName}</span>
+              {m.isPrimary && (
+                <span className="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">primary</span>
+              )}
+              <span className={cn(
+                'rounded-full px-2 py-0.5 text-xs font-medium',
+                m.isActive
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+              )}>
+                {m.isActive ? 'Active' : 'Revoked'}
+              </span>
+              <span className="ml-auto" />
+              <select
+                aria-label={`Role in ${m.orgName}`}
+                value={pending}
+                onChange={(e) => {
+                  setError(null)
+                  setPendingRoles(prev => ({ ...prev, [m.organizationId]: e.target.value as MembershipRow['role'] }))
+                }}
+                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+              >
+                <option value="viewer">Viewer</option>
+                <option value="contributor">Contributor</option>
+                <option value="admin">Admin</option>
+              </select>
+              <ConfirmWithReason
+                trigger={<Button variant="outline" size="sm" disabled={!roleChanged}>Change role</Button>}
+                title={`Change role in "${m.orgName}"`}
+                description={`"${userLabel}" becomes ${pending} in ${m.orgName}. Enter a reason for the audit log.`}
+                confirmLabel="Change Role"
+                onConfirm={async (reason) => {
+                  try {
+                    await setMembershipRoleAsInstanceAdmin(userId, m.organizationId, pending, reason)
+                    onDone()
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : 'Could not change the role.')
+                  }
+                }}
+              />
+              {m.isActive ? (
+                <ConfirmWithReason
+                  trigger={<Button variant="outline" size="sm" className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950">Revoke</Button>}
+                  title={`Revoke membership in "${m.orgName}"`}
+                  description={`"${userLabel}" loses access to ${m.orgName}. The membership is kept (revoked) for audit history and can be reactivated. Enter a reason for the audit log.`}
+                  confirmLabel="Revoke Membership"
+                  destructive
+                  onConfirm={async (reason) => {
+                    try {
+                      await setMembershipActiveAsInstanceAdmin(userId, m.organizationId, false, reason)
+                      onDone()
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Could not revoke the membership.')
+                    }
+                  }}
+                />
+              ) : (
+                <ConfirmWithReason
+                  trigger={<Button variant="outline" size="sm" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950">Reactivate</Button>}
+                  title={`Reactivate membership in "${m.orgName}"`}
+                  description={`"${userLabel}" regains ${m.role} access to ${m.orgName}. Enter a reason for the audit log.`}
+                  confirmLabel="Reactivate Membership"
+                  onConfirm={async (reason) => {
+                    try {
+                      await setMembershipActiveAsInstanceAdmin(userId, m.organizationId, true, reason)
+                      onDone()
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Could not reactivate the membership.')
+                    }
+                  }}
+                />
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <p className="text-xs text-muted-foreground">
+        Add a membership with “+ Create account” above — entering an existing email adds that identity to the selected organization.
+      </p>
     </div>
   )
 }
