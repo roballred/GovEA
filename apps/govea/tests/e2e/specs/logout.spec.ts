@@ -27,6 +27,13 @@ async function signOutAndVerify(page: Page, startRoute: string, startPattern: Re
   // by middleware (e.g. non-instance-admins get bounced off /instance).
   await expect(page, `should be on ${startRoute} before signing out`).toHaveURL(startPattern)
 
+  // Quiesce in-flight requests before signing out. SessionProvider's
+  // /api/auth/session refetch (and any authenticated response) carries a
+  // rolled session cookie; one landing after logout's deletion resurrects
+  // the session. That race predates #759 and is tracked as #782 — when it
+  // is fixed, remove this quiesce so these tests become its regression gate.
+  await page.waitForLoadState('networkidle')
+
   // Capture the logout response so a failure can show exactly which
   // Set-Cookie headers the browser received.
   const [logoutResponse] = await Promise.all([
