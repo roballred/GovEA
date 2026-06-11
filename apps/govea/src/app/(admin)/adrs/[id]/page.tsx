@@ -7,6 +7,7 @@ import { getInitiatives } from '@/actions/initiatives'
 import { getObjectives } from '@/actions/objectives'
 import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
+import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 import { cn } from '@/lib/utils'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import { LinkedDebt } from '@/components/linked-debt'
@@ -97,9 +98,12 @@ export default async function ADRDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/adrs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Architecture Decision Records
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/adrs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Architecture Decision Records
+        </Link>
+        <ViewTraceabilityLink from="adr" id={id} />
+      </div>
 
       {/* Header */}
       <div className="space-y-3">

@@ -17,7 +17,8 @@ const ROUTES = [
   '/applications',
   '/adrs',
   '/personas',
-  '/users',      // admin-only — confirms RBAC gate doesn't crash
+  '/users',        // admin-only — confirms RBAC gate doesn't crash
+  '/traceability', // #695 — hub view; detail pages across the app link into it
 ] as const
 
 async function expectNoServerError(page: Page, route: string) {

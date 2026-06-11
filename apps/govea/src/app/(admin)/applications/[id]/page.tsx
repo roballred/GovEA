@@ -8,6 +8,7 @@ import { getADRs } from '@/actions/adrs'
 import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import { LinkedDebt } from '@/components/linked-debt'
 import {
@@ -106,9 +107,12 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/applications" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Applications
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/applications" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Applications
+        </Link>
+        <ViewTraceabilityLink from="application" id={id} />
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
