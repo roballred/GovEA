@@ -23,12 +23,13 @@ export const LOGGED_OUT_MARKER_MAX_AGE_S = 60 * 60 * 24
 
 /**
  * Tokens issued up to this long AFTER the marker are still rejected: a
- * racing roll can be processed server-side just after the logout request
- * (in-flight at click time, lands within the round trip). Kept short so a
- * genuine re-login — which takes at least a form round trip — is never
- * caught by it.
+ * racing roll can be processed server-side well after the logout request
+ * (in-flight responses can take seconds under load or dev-mode compilation).
+ * A genuine re-login is NOT subject to this window — events.signIn (auth.ts)
+ * deletes the marker on every successful login, so the window only bites in
+ * the degraded case where that deletion failed, and it self-heals after 60s.
  */
-export const RESURRECTION_SKEW_MS = 1_000
+export const RESURRECTION_WINDOW_MS = 60_000
 
 /**
  * True when a session token presented alongside a logged-out marker must be
@@ -53,5 +54,5 @@ export function isResurrectedSession(
   // pre-logout token — reject it.
   if (issuedAtSeconds === undefined) return true
 
-  return issuedAtSeconds * 1000 < loggedOutAtMs + RESURRECTION_SKEW_MS
+  return issuedAtSeconds * 1000 < loggedOutAtMs + RESURRECTION_WINDOW_MS
 }

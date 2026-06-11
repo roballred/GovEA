@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   isResurrectedSession,
-  RESURRECTION_SKEW_MS,
+  RESURRECTION_WINDOW_MS,
   LOGGED_OUT_MARKER_MAX_AGE_S,
 } from '@/lib/logout-marker'
 
@@ -24,12 +24,15 @@ describe('isResurrectedSession', () => {
   })
 
   it('token minted within the race window after the marker → resurrected', () => {
-    const iatMs = T + RESURRECTION_SKEW_MS - 1
+    // Genuine re-logins are exempt by construction, not timing: events.signIn
+    // deletes the marker, so a marker coexisting with a recent token means a
+    // late-landing roll (or a failed marker deletion, which self-heals).
+    const iatMs = T + RESURRECTION_WINDOW_MS - 1
     expect(isResurrectedSession(String(T), iatMs / 1000)).toBe(true)
   })
 
-  it('token minted after the race window (a genuine re-login) → accepted', () => {
-    const iatMs = T + RESURRECTION_SKEW_MS + 1_000
+  it('token minted after the window (failed marker deletion, healed) → accepted', () => {
+    const iatMs = T + RESURRECTION_WINDOW_MS + 1_000
     expect(isResurrectedSession(String(T), iatMs / 1000)).toBe(false)
   })
 

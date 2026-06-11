@@ -231,11 +231,13 @@ describe('middleware — #782 post-logout resurrection guard', () => {
     expect(deletions.some(c => c.startsWith('authjs.session-token.1='))).toBe(true)
   })
 
-  it('lets a session issued after the marker (a genuine re-login) through', async () => {
+  it('lets a session minted after the guard window through', async () => {
+    // Normal re-logins delete the marker entirely (events.signIn); this case
+    // covers the self-healing fallback when that deletion failed.
     const m = await loadMiddleware()
     const req = makeRequest(
       '/dashboard',
-      { user: { role: 'admin', instanceRole: null }, issuedAt: (T + 60_000) / 1000 },
+      { user: { role: 'admin', instanceRole: null }, issuedAt: (T + 120_000) / 1000 },
       { 'govea.logged-out-at': String(T) },
     )
     const res = await m(req)
