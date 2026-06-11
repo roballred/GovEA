@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import { auth, signOut } from '@/lib/auth'
-import { Button } from '@/components/ui/button'
+import { auth } from '@/lib/auth'
+import { SignOutButton } from '@/components/sign-out-button'
 import { isInstanceAdmin } from '@/lib/rbac'
 import { InstanceShell } from '@/components/instance-shell'
 import { AdminNoticeBanner } from '@/components/admin-notice-banner'
@@ -39,16 +39,8 @@ export default async function InstanceLayout({ children }: { children: React.Rea
     db.query.platformConfig.findFirst(),
   ])
 
-  const signOutSlot = (
-    <form action={async () => {
-      'use server'
-      await signOut({ redirectTo: '/login' })
-    }}>
-      <Button variant="ghost" size="sm" type="submit" className="hover:bg-white/10 text-white">
-        Sign out
-      </Button>
-    </form>
-  )
+  // Sign-out posts to a deploy-stable route handler (#759).
+  const signOutSlot = <SignOutButton />
 
   return (
     <InstanceShell

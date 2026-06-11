@@ -52,5 +52,10 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // api/auth/* is excluded entirely, not just treated as public: those
+  // endpoints manage the session cookie themselves, and the auth() wrapper
+  // re-issues (rolls) the session cookie on every authenticated request —
+  // on the logout response that roll races the cookie deletion and can
+  // resurrect the session (#759).
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth).*)'],
 }

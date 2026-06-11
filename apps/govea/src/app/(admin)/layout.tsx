@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { signOut } from '@/lib/auth'
-import { Button } from '@/components/ui/button'
+import { SignOutButton } from '@/components/sign-out-button'
 import { db } from '@/db/client'
 import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
@@ -53,22 +52,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     }
   }
 
-  // Sign-out is a server action — defined here, passed as a slot to the client shell
-  const signOutSlot = (
-    <form action={async () => {
-      'use server'
-      await signOut({ redirectTo: '/login' })
-    }}>
-      <Button
-        variant="ghost"
-        size="sm"
-        type="submit"
-        className="hover:bg-white/10 text-white"
-      >
-        Sign out
-      </Button>
-    </form>
-  )
+  // Sign-out posts to a deploy-stable route handler (#759) — passed as a
+  // slot to the client shell.
+  const signOutSlot = <SignOutButton />
 
   return (
     <AppShell
