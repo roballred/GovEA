@@ -24,7 +24,14 @@ export async function POST(request: Request) {
   // cookie jar, which then races the deletion on this same response and
   // resurrects the session (observed in CI for #759).
   if (cookieHeader.includes('authjs.session-token')) {
-    await signOut({ redirect: false })
+    try {
+      await signOut({ redirect: false })
+    } catch (err) {
+      // signOut() fires events.signOut (the auth.logout audit write). If that
+      // throws, the user must STILL be signed out — the explicit cookie
+      // expiry below is what actually ends the session, so log and continue.
+      console.error('signOut() failed during logout; clearing cookies anyway:', err)
+    }
   }
 
   // 303 turns the form POST into a GET on /login. Fixed target — no

@@ -4,14 +4,20 @@
  * Sign-out used to be an inline Server Action form; action ids are
  * deployment-specific, so stale tabs failed with "Failed to find Server
  * Action" instead of signing out. It now posts to the deploy-stable
- * /api/auth/logout route handler. These tests pin:
+ * /api/auth/logout route handler. Two layers of coverage:
  *
- *   1. sign-out works from a regular admin route and from an instance route
- *      (signed in as a real instance admin via the dev login shortcut)
- *   2. the session is actually gone afterwards (protected routes bounce)
- *   3. the rendered form posts to the fixed URL — the structural property
- *      that makes the stale-tab failure impossible (a true post-deploy stale
- *      tab can't be simulated in a single-deploy test run)
+ *  - CONTRACT tests drive the endpoint through Playwright's request API with
+ *    no page open, so nothing can interfere: 303 → /login, session-token
+ *    cookie(s) expired on the response, no live session cookie left in the
+ *    jar, and protected routes bounce afterwards. (The raw handler behavior
+ *    is also verified curl-level in tests/unit/logout-route.test.ts.)
+ *
+ *  - CLICK tests assert the user-visible flow from both shells: the Sign out
+ *    button lands on /login. They deliberately do NOT assert jar state: a
+ *    live page's in-flight session refetch can re-set a rolled cookie after
+ *    the deletion (tracked as #782 — predates #759). When #782 is fixed,
+ *    add the jar + bounce assertions to the click tests as its regression
+ *    gate.
  *
  * Runs in the CI e2e job alongside smoke/overview/a11y.
  *
@@ -19,65 +25,91 @@
  * Persona: CMS Administrator, Instance Administrator
  */
 
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
-async function signOutAndVerify(page: Page, startRoute: string, startPattern: RegExp) {
-  await page.goto(startRoute)
-  // Pin the precondition: actually ON the start route, not bounced elsewhere
-  // by middleware (e.g. non-instance-admins get bounced off /instance).
-  await expect(page, `should be on ${startRoute} before signing out`).toHaveURL(startPattern)
-
-  // Quiesce in-flight requests before signing out. SessionProvider's
-  // /api/auth/session refetch (and any authenticated response) carries a
-  // rolled session cookie; one landing after logout's deletion resurrects
-  // the session. That race predates #759 and is tracked as #782 — when it
-  // is fixed, remove this quiesce so these tests become its regression gate.
-  await page.waitForLoadState('networkidle')
-
-  // Capture the logout response so a failure can show exactly which
-  // Set-Cookie headers the browser received.
-  const [logoutResponse] = await Promise.all([
-    page.waitForResponse(r => r.url().includes('/api/auth/logout'), { timeout: 10_000 }),
-    page.getByRole('button', { name: 'Sign out' }).click(),
-  ])
-  const setCookies = await logoutResponse.headerValues('set-cookie')
-  await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
-
-  // No session-token cookie with a live (non-empty) value may survive — an
-  // empty-value leftover is not a session. On failure, the message names the
-  // survivors and the Set-Cookie headers the logout response carried.
-  const surviving = (await page.context().cookies())
-    .filter(c => c.name.includes('session-token') && c.value !== '')
-    .map(c => `${c.name} (path=${c.path}, valueLength=${c.value.length})`)
-  expect(
-    surviving,
-    `live session cookie(s) should be cleared by sign-out.\nLogout response Set-Cookie headers:\n${setCookies.map(c => c.slice(0, 80)).join('\n')}`,
-  ).toEqual([])
-
-  // Session must actually be invalidated, not just redirected once.
-  await page.goto('/dashboard')
-  await expect(page, 'protected route should bounce after sign-out').toHaveURL(/\/login/, {
-    timeout: 10_000,
-  })
-}
-
-test('sign-out works from a regular admin route', async ({ browser }) => {
-  const ctx = await browser.newContext({ storageState: 'tests/e2e/.auth/admin.json' })
-  await signOutAndVerify(await ctx.newPage(), '/capabilities', /\/capabilities/)
-  await ctx.close()
-})
-
-test('sign-out works from an instance route', async ({ browser }) => {
-  // The seeded instance admins are Ivan/Nora (instanceRole=instance_admin);
-  // no storage state exists for them ("State Admin" is an org admin of a
-  // state agency, not an instance admin), so sign in via the dev shortcut.
-  const ctx = await browser.newContext()
-  const page = await ctx.newPage()
+/** Sign in as Ivan (seeded instance admin) via the dev login shortcut. */
+async function loginAsInstanceAdmin(page: Page) {
   await page.goto('/login')
   await page.getByRole('button', { name: 'Ivan — Instance Admin (dev)' }).click()
   await page.waitForURL(/\/instance/, { timeout: 10_000 })
+  await page.waitForLoadState('networkidle')
+}
 
-  await signOutAndVerify(page, '/instance', /\/instance/)
+/**
+ * Drive the logout endpoint via the context-level request API (shares the
+ * cookie jar, exposes raw headers, and — with every page closed — nothing
+ * can race the deletion) and pin the full #759 contract.
+ */
+async function expectLogoutContract(ctx: BrowserContext) {
+  const res = await ctx.request.post('/api/auth/logout', { maxRedirects: 0 })
+
+  expect(res.status(), 'logout should respond 303').toBe(303)
+  expect(
+    new URL(res.headers()['location']).pathname,
+    'logout should redirect to /login, never a caller-controlled target',
+  ).toBe('/login')
+
+  const deletions = res
+    .headersArray()
+    .filter(h => h.name.toLowerCase() === 'set-cookie' && h.value.includes('session-token'))
+  expect(deletions.length, 'logout response should expire session-token cookie(s)').toBeGreaterThan(0)
+  for (const d of deletions) {
+    expect(d.value, 'session-token deletion should use an epoch expiry').toContain(
+      'Expires=Thu, 01 Jan 1970',
+    )
+  }
+
+  const surviving = (await ctx.cookies())
+    .filter(c => c.name.includes('session-token') && c.value !== '')
+    .map(c => `${c.name} (path=${c.path}, valueLength=${c.value.length})`)
+  expect(surviving, 'no live session cookie may survive logout').toEqual([])
+
+  // Session must actually be dead, not just cookie-trimmed locally.
+  const page = await ctx.newPage()
+  await page.goto('/dashboard')
+  await expect(page, 'protected route should bounce after logout').toHaveURL(/\/login/, {
+    timeout: 10_000,
+  })
+  await page.close()
+}
+
+test('logout endpoint contract — admin session', async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: 'tests/e2e/.auth/admin.json' })
+  await expectLogoutContract(ctx)
+  await ctx.close()
+})
+
+test('logout endpoint contract — instance admin session', async ({ browser }) => {
+  const ctx = await browser.newContext()
+  const page = await ctx.newPage()
+  await loginAsInstanceAdmin(page)
+  // Close the page so no in-flight session refetch can race the deletion
+  // (that race is #782's scope, not this contract's).
+  await page.close()
+
+  await expectLogoutContract(ctx)
+  await ctx.close()
+})
+
+test('sign-out button works from a regular admin route', async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: 'tests/e2e/.auth/admin.json' })
+  const page = await ctx.newPage()
+  await page.goto('/capabilities')
+  await expect(page, 'should be on /capabilities before signing out').toHaveURL(/\/capabilities/)
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
+  await ctx.close()
+})
+
+test('sign-out button works from an instance route', async ({ browser }) => {
+  const ctx = await browser.newContext()
+  const page = await ctx.newPage()
+  await loginAsInstanceAdmin(page)
+  await expect(page, 'should be on /instance before signing out').toHaveURL(/\/instance/)
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
   await ctx.close()
 })
 
