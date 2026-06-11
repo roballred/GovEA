@@ -190,19 +190,9 @@ function SidebarContent({
         Overview
       </Link>
 
-      {/* Executive Summary */}
-      <Link
-        href="/executive"
-        onClick={onClose}
-        className={cn(
-          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          pathname === '/executive' || pathname.startsWith('/executive/')
-            ? 'bg-white/15 text-white'
-            : 'text-white/70 hover:bg-white/10 hover:text-white'
-        )}
-      >
-        Executive Summary
-      </Link>
+      {/* Executive Summary intentionally has no top-level slot (#731) — it
+          lives in the Reports group below, which auto-opens when the route
+          is active. Viewers still land on /executive via auth-redirect. */}
 
       {/* Notifications inbox (#581) */}
       <Link
