@@ -21,6 +21,7 @@ import { db } from '@/db/client'
 import { capabilities, crossOrgLinks, organizations } from '@/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { getConnectedOrgIds } from '@/lib/federation'
+import { tokenize, jaccard, NAME_STOPWORDS } from '@/lib/name-similarity'
 
 type LinkType = 'implements' | 'extends' | 'maps_to'
 type LinkStatus = 'pending' | 'active' | 'rejected'
@@ -154,39 +155,15 @@ export type DuplicateCandidate = {
   b: { id: string; name: string; description: string | null; orgId: string; orgName: string }
 }
 
-// Stopwords that carry no meaningful overlap signal. Tuned for government IT
-// capability names; conservative — we'd rather flag a false positive than
-// hide a real overlap. Filtered out before Jaccard.
-const NAME_STOPWORDS = new Set([
-  'a', 'an', 'and', 'the', 'of', 'for', 'to', 'in', 'on', 'with', 'by',
-  'system', 'systems', 'service', 'services', 'platform', 'platforms',
-  'management', 'application', 'applications', 'integration', 'integrations',
-  'capability', 'capabilities',
-])
+// Tokenize/Jaccard primitives moved to name-similarity.ts so the same-org
+// Repository Duplicates report (#718) shares them. Re-exported via _testing
+// below to keep the existing unit-test surface.
 
 // 0.33 catches the realistic "one of three meaningful tokens shared" case
 // (e.g. "Online Permitting" vs "Permitting & Licensing System" → {permitting}
 // shared, {online, permitting, licensing} union → 1/3). Tightening above this
 // silently hides real candidate pairs in the data the audit walked.
 const JACCARD_THRESHOLD = 0.33
-const MIN_TOKEN_LENGTH = 3
-
-function tokenize(name: string): Set<string> {
-  return new Set(
-    name
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter(t => t.length >= MIN_TOKEN_LENGTH && !NAME_STOPWORDS.has(t)),
-  )
-}
-
-function jaccard(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 || b.size === 0) return 0
-  let intersection = 0
-  for (const x of a) if (b.has(x)) intersection++
-  const union = a.size + b.size - intersection
-  return union === 0 ? 0 : intersection / union
-}
 
 /**
  * Find candidate duplicate pairs across the caller's visible capabilities.

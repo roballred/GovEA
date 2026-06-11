@@ -46,6 +46,16 @@ export default async function ReportsPage() {
             </div>
             <span className="text-muted-foreground text-sm">→</span>
           </Link>
+          <Link
+            href="/reports/duplicates"
+            className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
+          >
+            <div>
+              <p className="text-sm font-medium group-hover:text-primary transition-colors">Repository Duplicates</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Candidate duplicate records across every entity type in your repository, including taxonomy types, values, and conflicting assignments. Exact and near matches, grouped for review.</p>
+            </div>
+            <span className="text-muted-foreground text-sm">→</span>
+          </Link>
         </div>
       </section>
 
