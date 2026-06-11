@@ -21,7 +21,7 @@ The system must allow organizations to align GovEA content to external architect
 |---|---|---|---|
 | Framework Reference Management | [fa-framework-reference-management.md](./fa-framework-reference-management.md) | Not implemented | Store external framework references separately from GovEA's authoritative capability definitions |
 | Framework Mapping | [fa-framework-mapping.md](./fa-framework-mapping.md) | Partially implemented | Map capability and application records to TOGAF Architecture Domains; broader framework concept mapping remains future work |
-| ADM Phase Alignment | [fa-adm-phase-alignment.md](./fa-adm-phase-alignment.md) | Not implemented | Optionally tag architecture work to TOGAF ADM phases for TOGAF-aware teams |
+| ADM Phase Alignment | [fa-adm-phase-alignment.md](./fa-adm-phase-alignment.md) | Partially implemented | Optionally tag architecture work to TOGAF ADM phases for TOGAF-aware teams; ADM Phase taxonomy + ADM Coverage report ship via the TOGAF recipe |
 | TOGAF-Aligned Reporting | [fa-togaf-reporting.md](./fa-togaf-reporting.md) | Partially implemented | Generate TOGAF-friendly reports from existing GovEA content |
 | Framework Overlay Configuration | [fa-framework-overlay-configuration.md](./fa-framework-overlay-configuration.md) | Partially implemented | Allow admins to enable, disable, and configure optional framework overlays per organization |
 
@@ -40,8 +40,8 @@ Framework reference sources are inputs to capability design, not GovEA capabilit
 ## Success Criteria
 
 - A TOGAF-aware enterprise architect can find Architecture Domain and ADM-phase mapping affordances on capability and application detail pages without leaving the standard authoring surface
-- A non-architect Department Director can browse the same repository without encountering TOGAF jargon by default — framework overlay is invisible to them
-- Enabling or disabling the framework overlay is a per-org admin action with no downstream content destruction
+- A non-architect Department Director can browse the same repository without encountering TOGAF jargon by default — framework-audience taxonomy is invisible to them
+- Installing the framework recipe is a per-org admin action; removing its taxonomy hides framework affordances with no downstream content destruction
 - The Architecture Vision and TOGAF Application Landscape reports reflect current published content automatically; no separate data-entry surface is required
 
 ## Out of Scope
@@ -59,21 +59,21 @@ Framework support should increase credibility without increasing friction. A TOG
 
 ## Implementation Status
 
-GovEA now ships the first framework-alignment slice:
+Framework alignment is taxonomy-and-recipe-backed (ADR-0002; #665/#671 arc). The earlier hard-coded `framework-overlay` module, its settings toggle, and the `framework_mappings` table have been removed:
 
-- The `framework-overlay` module is org-scoped, opt-in, and off by default
-- Capability and application detail pages support TOGAF Architecture Domain mappings with optional rationale
-- The Reports area includes a TOGAF Application Landscape report when the overlay is enabled
-- The generic Architecture Vision report also now provides a framework-friendly summary built from existing repository content
+- TOGAF is enabled per organization by installing the taxonomy-backed recipe, which creates the Architecture Domain and ADM Phase taxonomy types (org-scoped, opt-in, idempotent re-install)
+- Capability and application records are classified against those types through the ordinary entity-taxonomy UI
+- The Reports area derives TOGAF Application Landscape and ADM Coverage from the taxonomy when the recipe is present; the generic Architecture Vision report provides a framework-friendly summary for all orgs
+- Framework taxonomy types carry `audience: 'framework'`, keeping framework jargon out of viewer-role and stakeholder views by default
 
 Still not shipped:
 
-- ADM phase tagging
 - Admin-managed framework reference records
-- Broader framework mappings beyond the current TOGAF domain slice
-- Per-framework configuration deeper than a single overlay toggle
+- Broader framework mappings beyond the current TOGAF domain/phase slice (including per-mapping rationale, dropped with the legacy table)
+- A standalone Recipes admin surface (install currently rides the TOGAF Starter pack flow; #780)
+- Frameworks other than TOGAF
 
 ## Links
 
 - Depends on: Content Management — Content Relationships, IAM — Role-Based Access Control
-- Related: Portfolio (Capabilities, Applications), Repository & Modelling (TOGAF reports), Admin Configuration (overlay toggle)
+- Related: Portfolio (Capabilities, Applications), Repository & Modelling (TOGAF reports), Admin Configuration (recipe install via starter content)

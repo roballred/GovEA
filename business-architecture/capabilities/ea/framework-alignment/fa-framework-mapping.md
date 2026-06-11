@@ -2,7 +2,7 @@
 
 ## What It Does
 
-The system must allow users to map GovEA records to concepts from an enabled framework overlay. For TOGAF, mappings may include architecture domains, content categories, architecture building block concepts, governance concerns, or other reference categories.
+The system must allow users to map GovEA records to concepts from an installed framework vocabulary. For TOGAF, mappings may include architecture domains, content categories, architecture building block concepts, governance concerns, or other reference categories.
 
 Mappings explain how existing GovEA content relates to external architecture practice without changing the GovEA content model.
 
@@ -29,16 +29,17 @@ Mappings explain how existing GovEA content relates to external architecture pra
 
 ## Implementation Status
 
-Partially implemented.
+Partially implemented — taxonomy-backed per ADR-0002 (#665/#671 arc).
 
 Current shipped slice:
 
-- Capability and application detail pages support TOGAF Architecture Domain mappings
-- Mappings can carry an optional rationale
-- Mappings are organization-scoped and only visible when the TOGAF overlay is enabled
+- TOGAF Architecture Domain ships as a taxonomy type installed by the TOGAF recipe; capability and application records are classified through the generic entity-taxonomy UI
+- Mappings are organization-scoped and the framework vocabulary only exists where the recipe has been installed (recipe presence replaced the old overlay toggle)
+- Framework taxonomy types carry `audience: 'framework'`, keeping framework labels out of stakeholder-facing views by default
 
 Not yet shipped:
 
+- Per-mapping rationale (the decommissioned `framework_mappings` table supported one; the taxonomy migration dropped it — restore as a taxonomy-value annotation if practitioners ask for it)
 - Mapping additional entity types
 - Supporting multiple frameworks or richer concept taxonomies
 - Reporting and filtering across arbitrary framework concepts beyond the current TOGAF domain slice

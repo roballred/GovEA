@@ -145,7 +145,7 @@ Use the README as the starting point, not the full manual. Detailed material bel
 
 GovEA is EasyEA-first. External frameworks such as TOGAF should support government teams without replacing the core workflow.
 
-Current framework-alignment detail is tracked in [capabilities.md](./capabilities.md) and [ADR-0001: TOGAF and ADM Scope Boundary](./docs/decisions/0001-togaf-adm-scope.md). The intended product direction is to move framework support toward taxonomy-backed recipes rather than hard-coded overlays.
+Framework support is taxonomy-and-recipe-backed ([ADR-0002: ADM as Classification](./docs/decisions/0002-adm-as-classification.md)): installing the TOGAF recipe gives an organization Architecture Domain and ADM Phase classifications, and the TOGAF reports read from that taxonomy — there is no hard-coded overlay. Current framework-alignment detail is tracked in [capabilities.md](./capabilities.md) and [ADR-0001: TOGAF and ADM Scope Boundary](./docs/decisions/0001-togaf-adm-scope.md).
 
 ## Deployment Notes
 

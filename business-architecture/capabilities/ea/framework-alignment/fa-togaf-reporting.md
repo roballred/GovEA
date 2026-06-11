@@ -27,19 +27,19 @@ The system must generate TOGAF-friendly reports from GovEA content for organizat
 
 ## Implementation Status
 
-Partially implemented.
+Partially implemented — reports read recipe-installed taxonomy (ADR-0002; #665/#671 arc).
 
 Current shipped slice:
 
-- `Architecture Vision` report generates a plain-language architecture summary from existing GovEA records
-- `Application Landscape` report is available under Reports when the TOGAF overlay is enabled
+- `Architecture Vision` report generates a plain-language architecture summary from existing GovEA records for all orgs
+- `Application Landscape` and `ADM Coverage` reports appear under Reports when the TOGAF recipe's taxonomy is present (recipe-presence detection — no toggle), built on the generic group-by-taxonomy report engine
 - Reports disclose repository gaps rather than hiding them
 - Reports link back to the underlying GovEA records
 
 Not yet shipped:
 
-- Additional TOGAF-style outputs beyond the current Architecture Vision and Application Landscape reports
-- Reporting driven by richer framework mappings or ADM phase labels
+- Additional TOGAF-style outputs beyond Architecture Vision, Application Landscape, and ADM Coverage
+- Reporting driven by richer framework mappings beyond domain and phase classifications
 - A broader configurable reporting surface for multiple frameworks
 
 ## Links
