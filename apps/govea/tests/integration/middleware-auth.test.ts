@@ -16,6 +16,8 @@
  *   3. /_next/static and /favicon.ico pass through (the static-asset escape
  *      hatch).
  *   4. /instance/* requires the `instance_admin` role even with a session.
+ *   5. #782 — a session token issued before the logged-out marker is
+ *      rejected and its cookies are deleted (post-logout resurrection guard).
  *
  * If you add a new public path, also add it to the PASSTHROUGH_PATHS list
  * here. If you intentionally make a previously-protected route public,
@@ -45,7 +47,12 @@ vi.mock('@/lib/auth.config', () => ({ authConfig: {} }))
 type MockReq = {
   nextUrl: URL
   url: string
-  auth: { user?: { role?: string; instanceRole?: string | null } } | null
+  auth: { user?: { role?: string; instanceRole?: string | null }; issuedAt?: number } | null
+  // Models the NextRequest cookie API the middleware reads (#782).
+  cookies: {
+    get: (name: string) => { name: string; value: string } | undefined
+    getAll: () => { name: string; value: string }[]
+  }
 }
 
 // next-auth's middleware type requires (req, event); we don't use event in
@@ -57,9 +64,22 @@ async function loadMiddleware(): Promise<SingleArg> {
   return mod.default as unknown as SingleArg
 }
 
-function makeRequest(pathname: string, auth: MockReq['auth'] = null): MockReq {
+function makeRequest(
+  pathname: string,
+  auth: MockReq['auth'] = null,
+  cookieMap: Record<string, string> = {},
+): MockReq {
   const url = new URL(`https://example.test${pathname}`)
-  return { nextUrl: url, url: url.toString(), auth }
+  const entries = Object.entries(cookieMap).map(([name, value]) => ({ name, value }))
+  return {
+    nextUrl: url,
+    url: url.toString(),
+    auth,
+    cookies: {
+      get: (name: string) => entries.find(e => e.name === name),
+      getAll: () => entries,
+    },
+  }
 }
 
 function asRegularUser(): MockReq['auth'] {
@@ -183,6 +203,52 @@ describe('middleware — maintenance mode redirects non-admins', () => {
     const res = await m(req)
     expect(res.status).toBe(200)
     expect(res.headers.get('x-middleware-next')).toBe('1')
+  })
+})
+
+describe('middleware — #782 post-logout resurrection guard', () => {
+  const T = 1_750_000_000_000 // logged out at this epoch ms
+
+  it('rejects a session issued before the marker and deletes its cookies (incl. chunks)', async () => {
+    const m = await loadMiddleware()
+    const req = makeRequest(
+      '/dashboard',
+      { user: { role: 'admin', instanceRole: null }, issuedAt: (T - 60_000) / 1000 },
+      {
+        'govea.logged-out-at': String(T),
+        'authjs.session-token': 'zombie',
+        'authjs.session-token.1': 'zombie-chunk',
+      },
+    )
+    const res = await m(req)
+    expect(res.status).toBe(307)
+    expect(res.headers.get('location')).toBe('https://example.test/login')
+
+    const deletions = res.headers
+      .getSetCookie()
+      .filter(c => c.includes('session-token') && c.includes('01 Jan 1970'))
+    expect(deletions.some(c => c.startsWith('authjs.session-token='))).toBe(true)
+    expect(deletions.some(c => c.startsWith('authjs.session-token.1='))).toBe(true)
+  })
+
+  it('lets a session issued after the marker (a genuine re-login) through', async () => {
+    const m = await loadMiddleware()
+    const req = makeRequest(
+      '/dashboard',
+      { user: { role: 'admin', instanceRole: null }, issuedAt: (T + 60_000) / 1000 },
+      { 'govea.logged-out-at': String(T) },
+    )
+    const res = await m(req)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('x-middleware-next')).toBe('1')
+  })
+
+  it('anonymous request with a marker still redirects normally', async () => {
+    const m = await loadMiddleware()
+    const req = makeRequest('/dashboard', null, { 'govea.logged-out-at': String(T) })
+    const res = await m(req)
+    expect(res.status).toBe(307)
+    expect(res.headers.get('location')).toBe('https://example.test/login')
   })
 })
 
