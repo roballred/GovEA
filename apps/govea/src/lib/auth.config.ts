@@ -21,6 +21,9 @@ export const authConfig: NextAuthConfig = {
       return token
     },
     session({ session, token }) {
+      // #782 — expose the token's mint time so the middleware resurrection
+      // guard can compare it against a logged-out marker.
+      session.issuedAt = token.iat as number | undefined
       session.user.id = token.id as string
       session.user.role = token.role as Role
       session.user.organizationId = token.organizationId as string | null

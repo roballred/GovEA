@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth.config'
 import { NextResponse } from 'next/server'
+import { LOGGED_OUT_MARKER_COOKIE, isResurrectedSession } from '@/lib/logout-marker'
 
 // Use the edge-safe config so middleware never touches Node.js built-ins (net, etc.)
 const { auth } = NextAuth(authConfig)
@@ -22,6 +23,27 @@ export default auth((req) => {
   const isStatic = pathname.startsWith('/_next') || pathname === '/favicon.ico'
 
   if (isPublic || isStatic) return NextResponse.next()
+
+  // #782 — post-logout resurrection guard. A session refresh in flight when
+  // the user signed out can re-set a rolled session cookie after logout's
+  // deletion. The logout endpoint drops a timestamped marker; any session
+  // token issued before that marker (plus a small race window) is rejected
+  // here and its cookies are actively deleted. Edge-safe: pure arithmetic.
+  const loggedOutMarker = req.cookies.get(LOGGED_OUT_MARKER_COOKIE)?.value
+  if (req.auth && isResurrectedSession(loggedOutMarker, req.auth.issuedAt)) {
+    const res = NextResponse.redirect(new URL('/login', req.url))
+    for (const cookie of req.cookies.getAll()) {
+      if (cookie.name.includes('authjs.session-token')) {
+        res.cookies.set(cookie.name, '', {
+          maxAge: 0,
+          expires: new Date(0),
+          path: '/',
+          secure: cookie.name.startsWith('__Secure-'),
+        })
+      }
+    }
+    return res
+  }
 
   if (!req.auth) {
     return NextResponse.redirect(new URL('/login', req.url))

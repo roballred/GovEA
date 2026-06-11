@@ -246,6 +246,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token
     },
     async session({ session, token }) {
+      // #782 — see auth.config.ts; kept in both callbacks so the session
+      // shape is identical in edge and Node contexts.
+      session.issuedAt = token.iat as number | undefined
       session.user.id = token.id as string
       session.user.role = token.role as Role
       session.user.organizationId = token.organizationId as string | null

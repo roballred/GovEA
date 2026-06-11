@@ -12,12 +12,13 @@
  *    jar, and protected routes bounce afterwards. (The raw handler behavior
  *    is also verified curl-level in tests/unit/logout-route.test.ts.)
  *
- *  - CLICK tests assert the user-visible flow from both shells: the Sign out
- *    button lands on /login. They deliberately do NOT assert jar state: a
- *    live page's in-flight session refetch can re-set a rolled cookie after
- *    the deletion (tracked as #782 — predates #759). When #782 is fixed,
- *    add the jar + bounce assertions to the click tests as its regression
- *    gate.
+ *  - CLICK tests assert the user-visible flow from both shells AND act as
+ *    the #782 regression gate: clicking Sign out on a LIVE page (in-flight
+ *    session refetches and all) must leave the session dead. A racing
+ *    refresh may re-set a rolled cookie after logout's deletion, but the
+ *    logged-out marker (#782) makes middleware reject and delete it on the
+ *    next request — so the post-logout bounce and jar assertions here hold
+ *    even when the race fires.
  *
  * Runs in the CI e2e job alongside smoke/overview/a11y.
  *
@@ -91,6 +92,24 @@ test('logout endpoint contract — instance admin session', async ({ browser }) 
   await ctx.close()
 })
 
+/**
+ * #782 regression gate: after a sign-out clicked on a LIVE page, the session
+ * must be dead even if a racing session refresh re-set a rolled cookie after
+ * logout's deletion — middleware rejects pre-logout tokens via the
+ * logged-out marker and deletes their cookies on the next request.
+ */
+async function expectSessionDeadAfterClick(page: Page) {
+  await page.goto('/dashboard')
+  await expect(page, 'protected route should bounce after sign-out (#782)').toHaveURL(/\/login/, {
+    timeout: 10_000,
+  })
+
+  const surviving = (await page.context().cookies())
+    .filter(c => c.name.includes('session-token') && c.value !== '')
+    .map(c => `${c.name} (valueLength=${c.value.length})`)
+  expect(surviving, 'no live session cookie may survive sign-out (#782)').toEqual([])
+}
+
 test('sign-out button works from a regular admin route', async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: 'tests/e2e/.auth/admin.json' })
   const page = await ctx.newPage()
@@ -99,6 +118,7 @@ test('sign-out button works from a regular admin route', async ({ browser }) => 
 
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
+  await expectSessionDeadAfterClick(page)
   await ctx.close()
 })
 
@@ -110,6 +130,7 @@ test('sign-out button works from an instance route', async ({ browser }) => {
 
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page, 'sign-out should land on /login').toHaveURL(/\/login/, { timeout: 10_000 })
+  await expectSessionDeadAfterClick(page)
   await ctx.close()
 })
 
