@@ -1,9 +1,9 @@
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { db } from '@/db/client'
-import { users, organizations } from '@/db/schema'
+import { users, organizations, userOrganizationMemberships } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getUnlockedOrgIds } from '@/lib/break-glass'
-import { InstanceUserTable } from './instance-user-table'
+import { InstanceUserTable, type MembershipRow } from './instance-user-table'
 
 /**
  * Cross-tenant user-PII gating (#436). Instance admins see:
@@ -22,7 +22,7 @@ export default async function InstanceUsersPage() {
 
   const unlocked = await getUnlockedOrgIds(session.user.id)
 
-  const [rows, orgRows] = await Promise.all([
+  const [rows, orgRows, membershipRows] = await Promise.all([
     db
       .select({ user: users, org: organizations })
       .from(users)
@@ -33,7 +33,35 @@ export default async function InstanceUsersPage() {
       columns: { id: true, name: true },
       orderBy: (org, { asc }) => [asc(org.name)],
     }),
+    // #693 slice 4 — per-user org memberships for the cross-org management UI.
+    db
+      .select({
+        userId: userOrganizationMemberships.userId,
+        organizationId: userOrganizationMemberships.organizationId,
+        role: userOrganizationMemberships.role,
+        isActive: userOrganizationMemberships.isActive,
+        isPrimary: userOrganizationMemberships.isPrimary,
+        orgName: organizations.name,
+      })
+      .from(userOrganizationMemberships)
+      .innerJoin(organizations, eq(organizations.id, userOrganizationMemberships.organizationId)),
   ])
+
+  const membershipsByUser = new Map<string, MembershipRow[]>()
+  for (const m of membershipRows) {
+    const list = membershipsByUser.get(m.userId) ?? []
+    list.push({
+      organizationId: m.organizationId,
+      orgName: m.orgName,
+      role: m.role as MembershipRow['role'],
+      isActive: m.isActive,
+      isPrimary: m.isPrimary,
+    })
+    membershipsByUser.set(m.userId, list)
+  }
+  for (const list of membershipsByUser.values()) {
+    list.sort((a, b) => a.orgName.localeCompare(b.orgName))
+  }
 
   // Split visible vs hidden. Platform admins are always visible; tenant users
   // are visible only when their org is in the unlocked set.
@@ -66,6 +94,7 @@ export default async function InstanceUsersPage() {
         instanceRole: user.instanceRole,
         isActive: user.isActive,
         organizationName: org?.name ?? null,
+        memberships: membershipsByUser.get(user.id) ?? [],
       }))}
       hiddenUserCount={hiddenUserCount}
       hiddenOrgCount={hiddenOrgIds.size}
