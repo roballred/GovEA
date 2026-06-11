@@ -25,29 +25,32 @@
  * its protection. Don't silently delete a case to make a red test pass.
  *
  * Note: this is a pure unit test of the middleware's branching logic.
- * It does not exercise next-auth's session resolution; that is mocked so we
- * can drive `req.auth` directly. End-to-end coverage of the cookie → session
- * pipeline lives in the e2e suite.
+ * It does not exercise next-auth's session resolution; getToken is mocked so
+ * we can drive the decoded token directly. End-to-end coverage of the
+ * cookie → session pipeline lives in the e2e suite.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock next-auth so `NextAuth(authConfig).auth(handler)` returns the handler
-// itself. This lets us call the middleware's inner logic directly with a
-// constructed request.
-vi.mock('next-auth', () => ({
-  default: () => ({
-    auth: (handler: (req: unknown) => unknown) => handler,
-  }),
+// The middleware reads the session via next-auth/jwt's getToken (a read-only
+// decode — deliberately NOT the auth() wrapper, which rolls the session
+// cookie on its responses; see middleware.ts and #782). Mock getToken to
+// return the token planted on the request by makeRequest.
+vi.mock('next-auth/jwt', () => ({
+  getToken: async ({ req }: { req: MockReq }) => req.token ?? null,
 }))
 
-// authConfig pulls in db/server-only modules; we don't need its real value
-// since the mock above never invokes it.
-vi.mock('@/lib/auth.config', () => ({ authConfig: {} }))
+type MockToken = {
+  role?: string
+  instanceRole?: string | null
+  iat?: number
+  passwordExpiryDays?: number
+  lastPasswordChangedAt?: number | null
+} | null
 
 type MockReq = {
   nextUrl: URL
   url: string
-  auth: { user?: { role?: string; instanceRole?: string | null }; issuedAt?: number } | null
+  token: MockToken
   // Models the NextRequest cookie API the middleware reads (#782).
   cookies: {
     get: (name: string) => { name: string; value: string } | undefined
@@ -55,8 +58,6 @@ type MockReq = {
   }
 }
 
-// next-auth's middleware type requires (req, event); we don't use event in
-// the handler under test, but we cast to satisfy the compiler.
 type SingleArg = (req: MockReq) => Promise<Response>
 
 async function loadMiddleware(): Promise<SingleArg> {
@@ -66,7 +67,7 @@ async function loadMiddleware(): Promise<SingleArg> {
 
 function makeRequest(
   pathname: string,
-  auth: MockReq['auth'] = null,
+  token: MockToken = null,
   cookieMap: Record<string, string> = {},
 ): MockReq {
   const url = new URL(`https://example.test${pathname}`)
@@ -74,7 +75,7 @@ function makeRequest(
   return {
     nextUrl: url,
     url: url.toString(),
-    auth,
+    token,
     cookies: {
       get: (name: string) => entries.find(e => e.name === name),
       getAll: () => entries,
@@ -82,12 +83,12 @@ function makeRequest(
   }
 }
 
-function asRegularUser(): MockReq['auth'] {
-  return { user: { role: 'admin', instanceRole: null } }
+function asRegularUser(): MockToken {
+  return { role: 'admin', instanceRole: null }
 }
 
-function asInstanceAdmin(): MockReq['auth'] {
-  return { user: { role: 'admin', instanceRole: 'instance_admin' } }
+function asInstanceAdmin(): MockToken {
+  return { role: 'admin', instanceRole: 'instance_admin' }
 }
 
 // Representative protected paths — at least one per route group. Adding a
@@ -189,7 +190,7 @@ describe('middleware — maintenance mode redirects non-admins', () => {
     process.env.MAINTENANCE_MODE = 'true'
     vi.resetModules()
     const m = await loadMiddleware()
-    const req = makeRequest('/dashboard', { user: { role: 'viewer', instanceRole: null } })
+    const req = makeRequest('/dashboard', { role: 'viewer', instanceRole: null })
     const res = await m(req)
     expect(res.status).toBe(307)
     expect(res.headers.get('location')).toBe(`https://example.test/maintenance`)
@@ -199,7 +200,7 @@ describe('middleware — maintenance mode redirects non-admins', () => {
     process.env.MAINTENANCE_MODE = 'true'
     vi.resetModules()
     const m = await loadMiddleware()
-    const req = makeRequest('/dashboard', { user: { role: 'admin', instanceRole: null } })
+    const req = makeRequest('/dashboard', { role: 'admin', instanceRole: null })
     const res = await m(req)
     expect(res.status).toBe(200)
     expect(res.headers.get('x-middleware-next')).toBe('1')
@@ -213,7 +214,7 @@ describe('middleware — #782 post-logout resurrection guard', () => {
     const m = await loadMiddleware()
     const req = makeRequest(
       '/dashboard',
-      { user: { role: 'admin', instanceRole: null }, issuedAt: (T - 60_000) / 1000 },
+      { role: 'admin', instanceRole: null, iat: (T - 60_000) / 1000 },
       {
         'govea.logged-out-at': String(T),
         'authjs.session-token': 'zombie',
@@ -237,7 +238,7 @@ describe('middleware — #782 post-logout resurrection guard', () => {
     const m = await loadMiddleware()
     const req = makeRequest(
       '/dashboard',
-      { user: { role: 'admin', instanceRole: null }, issuedAt: (T + 120_000) / 1000 },
+      { role: 'admin', instanceRole: null, iat: (T + 120_000) / 1000 },
       { 'govea.logged-out-at': String(T) },
     )
     const res = await m(req)
