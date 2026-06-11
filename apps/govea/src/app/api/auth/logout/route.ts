@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { signOut } from '@/lib/auth'
+import { LOGGED_OUT_MARKER_COOKIE, LOGGED_OUT_MARKER_MAX_AGE_S } from '@/lib/logout-marker'
 
 /**
  * Deploy-stable sign-out endpoint (#759).
@@ -54,6 +55,19 @@ export async function POST(request: Request) {
       })
     }
   }
+
+  // #782 — resurrection guard marker. A session refresh in flight right now
+  // can re-set a rolled cookie after this response's deletions; middleware
+  // rejects any session token issued before this timestamp and deletes its
+  // cookies. Lives as long as the max session age so no pre-logout token can
+  // outlast it.
+  res.cookies.set(LOGGED_OUT_MARKER_COOKIE, String(Date.now()), {
+    maxAge: LOGGED_OUT_MARKER_MAX_AGE_S,
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    secure: request.url.startsWith('https'),
+  })
 
   return res
 }

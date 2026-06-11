@@ -13,6 +13,7 @@ import { checkSsoProvisioning } from '@/lib/sso-guard'
 import { getOrgSecuritySettings } from '@/lib/security-policy'
 import { resolveActiveMembership } from '@/lib/active-membership'
 import { getRequestContext } from '@/lib/request-context'
+import { LOGGED_OUT_MARKER_COOKIE } from '@/lib/logout-marker'
 
 // Identity model: users.email is globally unique across all organizations (#269).
 // Auth lookups by bare email (credentials provider, jwt callback) are therefore
@@ -281,6 +282,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     },
     async signIn({ user, account }) {
+      // #782 — a successful login ends the logged-out state: delete the
+      // resurrection-guard marker so the new session is not mistaken for a
+      // post-logout zombie. Best effort: if cookie mutation is unavailable
+      // in this flow, the guard's 60s window self-heals.
+      try {
+        const { cookies } = await import('next/headers')
+        ;(await cookies()).delete(LOGGED_OUT_MARKER_COOKIE)
+      } catch {
+        // not in a mutable-cookie context — covered by the guard window
+      }
+
       const ctx = await getRequestContext()
       await writeAuditLog(db, {
         action: 'auth.login',

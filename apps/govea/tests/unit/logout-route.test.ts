@@ -40,6 +40,28 @@ describe('POST /api/auth/logout', () => {
     expect(res.headers.get('location')).toBe('https://app.example.gov/login')
   })
 
+  it('sets the logged-out marker so middleware can reject resurrected sessions (#782)', async () => {
+    const before = Date.now()
+    const res = await POST(
+      new Request('https://app.example.gov/api/auth/logout', {
+        method: 'POST',
+        headers: { cookie: 'authjs.session-token=tok' },
+      }),
+    )
+
+    const marker = res.headers
+      .getSetCookie()
+      .find(c => c.startsWith('govea.logged-out-at='))
+    expect(marker, 'logout must set the govea.logged-out-at marker').toBeDefined()
+    expect(marker).toContain('HttpOnly')
+    expect(marker).toContain('Max-Age=86400')
+    expect(marker).toContain('Secure') // https request → secure marker
+
+    const ts = Number(decodeURIComponent(marker!.split(';')[0].split('=')[1]))
+    expect(ts).toBeGreaterThanOrEqual(before)
+    expect(ts).toBeLessThanOrEqual(Date.now())
+  })
+
   it('redirects without calling signOut when no session cookie is present (stale logged-out tab)', async () => {
     const res = await POST(new Request('https://app.example.gov/api/auth/logout', { method: 'POST' }))
 
