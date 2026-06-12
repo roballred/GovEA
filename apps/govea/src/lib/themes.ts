@@ -91,8 +91,46 @@ export function getTheme(id: string): ThemeDefinition {
 // this inline style tag.
 const BRAND_VARS = ['--header-bg', '--header-fg', '--header-border']
 
+// #769 — defense in depth for the inline <style> injection in app-shell.
+// Theme vars are serialized into a style tag without HTML escaping, so every
+// declaration must match a conservative allowlist before it is emitted.
+// Today vars only come from the hard-coded list above (org admins pick a
+// theme *id*; updateOrgTheme rejects unknown ids), but custom org branding is
+// future fd-theming work — this keeps a '</style><script>' breakout
+// structurally impossible no matter where a value originates. None of the
+// accepted shapes can contain '<', ';', '{', '}', quotes, or backslashes.
+const SAFE_VAR_NAME = /^--[a-z][a-z0-9-]*$/
+
+const SAFE_VAR_VALUE_PATTERNS = [
+  // Space-separated HSL triple, the shadcn token format: "221 83% 40%"
+  /^\d{1,3}(\.\d+)? \d{1,3}(\.\d+)?% \d{1,3}(\.\d+)?%$/,
+  // Plain CSS length/percentage: "0.375rem", "2px", "50%"
+  /^-?\d+(\.\d+)?(rem|em|px|%)$/,
+  // Hex colors: #rgb, #rgba, #rrggbb, #rrggbbaa
+  /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/,
+  // Functional colors with a strict argument charset: rgb(...), hsl(...)
+  /^(rgb|rgba|hsl|hsla)\([\d.,%\s/]*\)$/,
+  // Named colors / keywords: "white", "transparent"
+  /^[a-zA-Z]{3,30}$/,
+]
+
+/** True when a CSS custom property is safe to emit into the inline style tag. */
+export function isSafeThemeVar(name: string, value: string): boolean {
+  return (
+    SAFE_VAR_NAME.test(name) &&
+    value.length <= 100 &&
+    SAFE_VAR_VALUE_PATTERNS.some(re => re.test(value))
+  )
+}
+
 export function themeToStyleString(theme: ThemeDefinition): string {
-  const entries = Object.entries(theme.vars)
+  const entries = Object.entries(theme.vars).filter(([k, v]) => {
+    if (isSafeThemeVar(k, v)) return true
+    // Shipped themes always pass (pinned by tests/unit/theme-value-safety.test.ts),
+    // so a strip here means a value arrived from an untrusted source.
+    console.warn(`themeToStyleString: dropped unsafe theme var ${JSON.stringify(k)}`)
+    return false
+  })
 
   const brandVars = entries
     .filter(([k]) => BRAND_VARS.includes(k))
