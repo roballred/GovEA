@@ -22,6 +22,7 @@ The system must allow contributors to maintain a structured inventory of the org
 | Architecture Decision Records | [po-architecture-decisions.md](./po-architecture-decisions.md) | Record, track, and supersede architecture decisions |
 | Principles | [po-principles.md](./po-principles.md) | Capture architecture principles and link them to capabilities and decisions |
 | Glossary | [po-glossary.md](./po-glossary.md) | Maintain shared terminology to support consistent EA language across the repository |
+| Services | [po-services.md](./po-services.md) | Catalog delivered services with channels and ownership, linked to capabilities, personas, and value streams |
 | Value Streams | [po-value-streams.md](./po-value-streams.md) | Define value streams with ordered stages; link stages to capabilities and link streams to personas, objectives, and services |
 
 ## Rules
@@ -36,7 +37,7 @@ The system must allow contributors to maintain a structured inventory of the org
 - The Application → Capability → Persona chain is enforced at publish time so the repository never carries orphan applications or capability rows without persona context
 - Domain Director and Content Viewer audiences can navigate the published portfolio through the frontend without admin access
 - Cross-org link semantics on capabilities and personas preserve source-org ownership while exposing inbound attribution to the target org
-- A new content type (e.g., Services) joins the portfolio by following the same authoring + relationship + workflow conventions, not by hand-built scaffolding
+- A new content type joins the portfolio by following the same authoring + relationship + workflow conventions, not by hand-built scaffolding (Services did exactly this — see po-services.md)
 
 ## Implementation Status
 Portfolio Management is one of GovEA's strongest shipped areas. Applications, capabilities, personas, services, value streams, principles, and glossary content all have meaningful day-to-day product surface today.
