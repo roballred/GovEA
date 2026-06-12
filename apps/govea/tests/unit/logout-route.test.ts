@@ -37,7 +37,7 @@ describe('POST /api/auth/logout', () => {
 
     expect(signOutMock).toHaveBeenCalledWith({ redirect: false })
     expect(res.status).toBe(303)
-    expect(res.headers.get('location')).toBe('https://app.example.gov/login')
+    expect(res.headers.get('location')).toBe('/login')
   })
 
   it('sets the logged-out marker so middleware can reject resurrected sessions (#782)', async () => {
@@ -67,7 +67,7 @@ describe('POST /api/auth/logout', () => {
 
     expect(signOutMock).not.toHaveBeenCalled()
     expect(res.status).toBe(303)
-    expect(res.headers.get('location')).toBe('https://app.example.gov/login')
+    expect(res.headers.get('location')).toBe('/login')
   })
 
   it('never calls auth() — a rolling-session refresh would race the cookie deletion', async () => {
@@ -103,7 +103,7 @@ describe('POST /api/auth/logout', () => {
     expect(setCookies.some(c => c.startsWith('authjs.csrf-token='))).toBe(false)
   })
 
-  it('always targets /login on the request origin — no caller-controlled redirect', async () => {
+  it('always targets /login — relative, never caller-controlled', async () => {
     // A redirect/callback query string must not influence the destination.
     const res = await POST(
       new Request('https://app.example.gov/api/auth/logout?callbackUrl=https://evil.example.com', {
@@ -111,6 +111,41 @@ describe('POST /api/auth/logout', () => {
       }),
     )
 
-    expect(res.headers.get('location')).toBe('https://app.example.gov/login')
+    expect(res.headers.get('location')).toBe('/login')
+  })
+
+  it('emits a host-free Location even when the server sees its bind address (#794)', async () => {
+    // Behind a TLS-terminating proxy (Azure demo), request.url carries the
+    // container bind address. An absolute Location built from it sent users
+    // to https://0.0.0.0/login. The Location must stay relative.
+    const res = await POST(
+      new Request('https://0.0.0.0/api/auth/logout', { method: 'POST' }),
+    )
+
+    expect(res.status).toBe(303)
+    expect(res.headers.get('location')).toBe('/login')
+  })
+
+  it('marks the logged-out marker Secure from x-forwarded-proto behind a proxy (#794)', async () => {
+    const res = await POST(
+      new Request('http://0.0.0.0:3000/api/auth/logout', {
+        method: 'POST',
+        headers: { 'x-forwarded-proto': 'https' },
+      }),
+    )
+
+    const marker = res.headers.getSetCookie().find(c => c.startsWith('govea.logged-out-at='))
+    expect(marker).toBeDefined()
+    expect(marker).toMatch(/;\s*secure/i)
+  })
+
+  it('omits Secure on the marker for plain-http local development', async () => {
+    const res = await POST(
+      new Request('http://localhost:3000/api/auth/logout', { method: 'POST' }),
+    )
+
+    const marker = res.headers.getSetCookie().find(c => c.startsWith('govea.logged-out-at='))
+    expect(marker).toBeDefined()
+    expect(marker).not.toMatch(/;\s*secure/i)
   })
 })

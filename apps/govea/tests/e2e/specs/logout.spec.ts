@@ -45,9 +45,12 @@ async function expectLogoutContract(ctx: BrowserContext) {
   const res = await ctx.request.post('/api/auth/logout', { maxRedirects: 0 })
 
   expect(res.status(), 'logout should respond 303').toBe(303)
+  // Relative on purpose (#794): an absolute Location built from request.url
+  // points at the container bind address (https://0.0.0.0/login) behind a
+  // TLS-terminating proxy. Relative resolves against the user's real origin.
   expect(
-    new URL(res.headers()['location']).pathname,
-    'logout should redirect to /login, never a caller-controlled target',
+    res.headers()['location'],
+    'logout should redirect to a relative /login, never a host-derived or caller-controlled target',
   ).toBe('/login')
 
   const deletions = res
