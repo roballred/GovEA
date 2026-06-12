@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { safeCallbackUrl, defaultLandingPath } from '@/lib/auth-redirect'
+import { safeCallbackUrl, defaultLandingPath, postLoginDestination } from '@/lib/auth-redirect'
 
 describe('safeCallbackUrl', () => {
   describe('valid destinations — returned as-is', () => {
@@ -102,5 +102,33 @@ describe('defaultLandingPath', () => {
   it('sends Admin and Contributor users to /dashboard', () => {
     expect(defaultLandingPath({ role: 'admin',       isInstanceAdmin: false })).toBe('/dashboard')
     expect(defaultLandingPath({ role: 'contributor', isInstanceAdmin: false })).toBe('/dashboard')
+  })
+})
+
+// #800 — multi-org users choose their workspace before landing; pinned as a
+// pure function for the same reason as defaultLandingPath above.
+describe('postLoginDestination', () => {
+  it('sends multi-org users to /select-org', () => {
+    expect(postLoginDestination({ role: 'admin', isInstanceAdmin: false, activeMembershipCount: 2 }))
+      .toBe('/select-org')
+    expect(postLoginDestination({ role: 'viewer', isInstanceAdmin: false, activeMembershipCount: 3 }))
+      .toBe('/select-org')
+  })
+
+  it('instance admins land on /instance even with multiple memberships', () => {
+    expect(postLoginDestination({ role: 'admin', isInstanceAdmin: true, activeMembershipCount: 2 }))
+      .toBe('/instance')
+  })
+
+  it('single-org users keep their role-based landing', () => {
+    expect(postLoginDestination({ role: 'viewer', isInstanceAdmin: false, activeMembershipCount: 1 }))
+      .toBe('/executive')
+    expect(postLoginDestination({ role: 'admin', isInstanceAdmin: false, activeMembershipCount: 1 }))
+      .toBe('/dashboard')
+  })
+
+  it('zero-membership (legacy home-org only) users keep their landing', () => {
+    expect(postLoginDestination({ role: 'contributor', isInstanceAdmin: false, activeMembershipCount: 0 }))
+      .toBe('/dashboard')
   })
 })

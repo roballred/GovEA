@@ -19,7 +19,9 @@ import path from 'path'
 const AUTH_DIR = path.join(__dirname, '.auth')
 
 const DEV_ROLES = [
-  { name: 'admin',       shortcutLabel: 'Riverdale Admin',       file: 'admin.json'       },
+  // alice is the seeded multi-org user (#693): she hits the /select-org step
+  // (#800), so her expected workspace is named for the click-through below.
+  { name: 'admin',       shortcutLabel: 'Riverdale Admin',       file: 'admin.json', selectOrg: 'City of Riverdale' },
   { name: 'contributor', shortcutLabel: 'Riverdale Contributor', file: 'contributor.json' },
   { name: 'viewer',      email: 'victor@govea.dev', password: 'dev-password', file: 'viewer.json' },
   { name: 'state-admin', shortcutLabel: 'State Admin',           file: 'state-admin.json' },
@@ -50,13 +52,19 @@ export default async function globalSetup() {
       await page.getByLabel('Password').fill(role.password)
       await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     }
-    // Role-aware landing per defaultLandingPath() in @/lib/auth-redirect:
+    // Role-aware landing per postLoginDestination() in @/lib/auth-redirect:
     //   instance admin → /instance
+    //   multi-org      → /select-org (#800) — click the expected workspace
     //   viewer         → /executive (#548)
     //   everyone else  → /dashboard
-    // Wait for any of the three so the seed-step works regardless of which
-    // role this iteration is signing in as.
-    await page.waitForURL(/\/(dashboard|executive|instance)(\?|$)/)
+    await page.waitForURL(/\/(dashboard|executive|instance|select-org)(\?|$)/)
+    if (page.url().includes('/select-org')) {
+      if (!('selectOrg' in role)) {
+        throw new Error(`${role.name} unexpectedly hit /select-org — add a selectOrg workspace to DEV_ROLES`)
+      }
+      await page.getByRole('button', { name: role.selectOrg }).click()
+      await page.waitForURL(/\/(dashboard|executive)(\?|$)/)
+    }
 
     await context.storageState({ path: path.join(AUTH_DIR, role.file) })
     await context.close()
