@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { users } from '@/db/schema'
+import { users, userOrganizationMemberships } from '@/db/schema'
 import { eq, and, count } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { auth } from '@/lib/auth'
@@ -9,6 +9,7 @@ import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { validatePassword } from '@/lib/password'
 import { getOrgSecuritySettings } from '@/lib/security-policy'
+import { upsertMembership, setMembershipActiveFlag } from '@/lib/membership-sync'
 import { redirect } from 'next/navigation'
 
 async function requireAdmin() {
@@ -22,17 +23,34 @@ export async function getUsers() {
   const session = await requireAdmin()
   const orgId = session.user.organizationId!
 
-  return db.query.users.findMany({
+  // #796 — memberships are the canonical org-access store. List everyone
+  // with an active membership in this org (covers users added cross-org via
+  // the instance console, #756), unioned with legacy rows whose home-org
+  // column points here but that predate the #693 backfill. The membership
+  // role wins when both exist — it is what the session actually resolves.
+  const memberRows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: userOrganizationMemberships.role,
+      isActive: users.isActive,
+    })
+    .from(userOrganizationMemberships)
+    .innerJoin(users, eq(users.id, userOrganizationMemberships.userId))
+    .where(and(
+      eq(userOrganizationMemberships.organizationId, orgId),
+      eq(userOrganizationMemberships.isActive, true),
+    ))
+
+  const legacyRows = await db.query.users.findMany({
     where: eq(users.organizationId, orgId),
-    columns: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      isActive: true,
-    },
-    orderBy: (u, { asc }) => [asc(u.name)],
+    columns: { id: true, name: true, email: true, role: true, isActive: true },
   })
+
+  const byId = new Map<string, (typeof legacyRows)[number]>(legacyRows.map(u => [u.id, u]))
+  for (const m of memberRows) byId.set(m.id, m)
+  return [...byId.values()].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
 }
 
 export async function createUser(formData: FormData) {
@@ -60,6 +78,12 @@ export async function createUser(formData: FormData) {
       isActive: 'true',
     }).returning()
 
+    // #796 — the membership row is what sessions, the org switcher, and the
+    // SSO guard actually resolve; create it with the identity.
+    await upsertMembership(tx, {
+      userId: user.id, organizationId: orgId, role, isPrimary: true,
+    })
+
     await writeAuditLog(tx, {
       action: 'user.create',
       entityType: 'user',
@@ -76,10 +100,24 @@ export async function updateUserRole(userId: string, role: 'admin' | 'contributo
   const orgId = session.user.organizationId!
 
   const before = await db.query.users.findFirst({ where: eq(users.id, userId) })
+
+  // #796 — last-admin guard (was only on editUser; a demotion through this
+  // path could previously strand the org without an active admin).
+  if (before?.role === 'admin' && role !== 'admin') {
+    const [adminCount] = await db.select({ count: count() }).from(users).where(
+      and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, 'true'))
+    )
+    if (adminCount.count <= 1) throw new Error('Cannot demote the last admin')
+  }
+
   await db.transaction(async (tx) => {
     await tx.update(users).set({ role, updatedAt: new Date() }).where(
       and(eq(users.id, userId), eq(users.organizationId, orgId))
     )
+
+    // #796 — sessions resolve role from the membership row; without this the
+    // role change never takes effect. Upsert also heals pre-#693 accounts.
+    await upsertMembership(tx, { userId, organizationId: orgId, role })
 
     await writeAuditLog(tx, {
       action: 'user.role_changed',
@@ -109,6 +147,9 @@ export async function deactivateUser(userId: string) {
     await tx.update(users).set({ isActive: 'false', updatedAt: new Date() }).where(
       and(eq(users.id, userId), eq(users.organizationId, orgId))
     )
+
+    // #796 — keep the canonical membership row in step with the account flag.
+    await setMembershipActiveFlag(tx, userId, orgId, false)
 
     await writeAuditLog(tx, {
       action: 'user.deactivate',
@@ -154,6 +195,9 @@ export async function reactivateUser(userId: string) {
     await tx.update(users).set({ isActive: 'true', updatedAt: new Date() }).where(
       and(eq(users.id, userId), eq(users.organizationId, orgId))
     )
+
+    // #796 — keep the canonical membership row in step with the account flag.
+    await setMembershipActiveFlag(tx, userId, orgId, true)
 
     await writeAuditLog(tx, {
       action: 'user.reactivate',
@@ -213,6 +257,9 @@ export async function editUser(userId: string, formData: FormData) {
     await tx.update(users).set(updates).where(
       and(eq(users.id, userId), eq(users.organizationId, orgId))
     )
+
+    // #796 — sessions resolve role from the membership row; sync it.
+    await upsertMembership(tx, { userId, organizationId: orgId, role })
 
     await writeAuditLog(tx, {
       action: 'user.edit',
