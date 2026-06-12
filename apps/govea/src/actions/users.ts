@@ -20,6 +20,29 @@ async function requireAdmin() {
 }
 
 /**
+ * #796/#799 — true when the target belongs to the actor's org via the legacy
+ * home-org column or any membership row. Org-side actions are silent no-ops
+ * for unrelated users (pinned by cross-org.test.ts); without this gate the
+ * membership upsert below would mint org access for a foreign user.
+ */
+async function belongsToOrg(
+  target: { organizationId: string | null },
+  userId: string,
+  orgId: string,
+): Promise<boolean> {
+  if (target.organizationId === orgId) return true
+  const [m] = await db
+    .select({ id: userOrganizationMemberships.id })
+    .from(userOrganizationMemberships)
+    .where(and(
+      eq(userOrganizationMemberships.userId, userId),
+      eq(userOrganizationMemberships.organizationId, orgId),
+    ))
+    .limit(1)
+  return Boolean(m)
+}
+
+/**
  * #799 — does this user have org access beyond `orgId`? An org admin's
  * authority ends at their org boundary: remove/deactivate may only touch the
  * global identity when this org is the user's sole access anchor. Anchors:
@@ -122,6 +145,7 @@ export async function updateUserRole(userId: string, role: 'admin' | 'contributo
   const orgId = session.user.organizationId!
 
   const before = await db.query.users.findFirst({ where: eq(users.id, userId) })
+  if (!before || !(await belongsToOrg(before, userId, orgId))) return
 
   // #796 — last-admin guard (was only on editUser; a demotion through this
   // path could previously strand the org without an active admin).
@@ -161,7 +185,8 @@ export async function deactivateUser(userId: string) {
     and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, 'true'))
   )
   const target = await db.query.users.findFirst({ where: eq(users.id, userId) })
-  if (target?.role === 'admin' && adminCount.count <= 1) {
+  if (!target || !(await belongsToOrg(target, userId, orgId))) return
+  if (target.role === 'admin' && adminCount.count <= 1) {
     throw new Error('Cannot deactivate the last admin')
   }
 
@@ -201,7 +226,8 @@ export async function deleteUser(userId: string) {
     and(eq(users.organizationId, orgId), eq(users.role, 'admin'))
   )
   const target = await db.query.users.findFirst({ where: eq(users.id, userId) })
-  if (target?.role === 'admin' && adminCount.count <= 1) {
+  if (!target || !(await belongsToOrg(target, userId, orgId))) return
+  if (target.role === 'admin' && adminCount.count <= 1) {
     throw new Error('Cannot delete the last admin')
   }
 
@@ -314,6 +340,7 @@ export async function editUser(userId: string, formData: FormData) {
   const newPassword = formData.get('password') as string | null
 
   const before = await db.query.users.findFirst({ where: eq(users.id, userId) })
+  if (!before || !(await belongsToOrg(before, userId, orgId))) return
 
   // Guard against duplicate email across orgs when email is being changed (#269)
   if (email !== before?.email) {

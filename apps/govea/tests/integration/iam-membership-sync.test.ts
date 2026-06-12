@@ -291,6 +291,27 @@ describe('org-side removal is membership-scoped (#799)', () => {
   })
 })
 
+describe('cross-org boundary stays silent-no-op (#796)', () => {
+  it('acting on an unrelated user neither changes them nor mints a membership', async () => {
+    const otherOrg = await createTestOrg()
+    const foreign = await createTestUser(otherOrg.id, 'admin')
+
+    await updateUserRole(foreign.id, 'viewer')
+    await deactivateUser(foreign.id)
+    await deleteUser(foreign.id)
+
+    const account = await db.query.users.findFirst({ where: eq(users.id, foreign.id) })
+    expect(account?.role, 'role unchanged').toBe('admin')
+    expect(account?.isActive, 'still active').toBe('true')
+    expect(
+      await membershipRow(foreign.id, org.id),
+      'no membership minted in the actor org',
+    ).toBeUndefined()
+
+    await cleanupOrg(otherOrg.id)
+  })
+})
+
 describe('SSO guard sees instance-created users (#796)', () => {
   it('allows SSO sign-in for an identity created via the instance console', async () => {
     mockAuth.mockResolvedValue(makeSession(actor, { instanceRole: 'instance_admin' }))
