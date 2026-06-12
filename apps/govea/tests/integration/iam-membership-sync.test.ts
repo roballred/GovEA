@@ -24,7 +24,7 @@ import {
 } from './helpers/db'
 import type { TestOrg, TestUser } from './helpers/db'
 import {
-  createUser, updateUserRole, deactivateUser, reactivateUser, getUsers,
+  createUser, updateUserRole, deactivateUser, reactivateUser, deleteUser, getUsers,
 } from '@/actions/users'
 import { createInstanceUser } from '@/actions/instance'
 import { checkSsoProvisioning } from '@/lib/sso-guard'
@@ -196,6 +196,98 @@ describe('instance console creation paths (#796)', () => {
     expect(result.message).not.toMatch(/platform admin/i)
 
     await cleanupOrg(otherOrg.id)
+  })
+})
+
+describe('org-side removal is membership-scoped (#799)', () => {
+  it('deactivating a multi-org member only deactivates the local membership', async () => {
+    const otherOrg = await createTestOrg()
+    const guest = await createTestUser(otherOrg.id, 'viewer')
+    await db.insert(userOrganizationMemberships).values([
+      { userId: guest.id, organizationId: otherOrg.id, role: 'viewer', isPrimary: true },
+      { userId: guest.id, organizationId: org.id, role: 'contributor' },
+    ])
+
+    await deactivateUser(guest.id)
+
+    expect((await membershipRow(guest.id, org.id)).isActive).toBe(false)
+    expect((await membershipRow(guest.id, otherOrg.id)).isActive, 'other org untouched').toBe(true)
+    const account = await db.query.users.findFirst({ where: eq(users.id, guest.id) })
+    expect(account?.isActive, 'identity stays active — they still belong elsewhere').toBe('true')
+
+    await cleanupOrg(otherOrg.id)
+  })
+
+  it('deactivating a platform admin does not deactivate their identity', async () => {
+    const padmin = await createTestUser(org.id, 'viewer')
+    await db.update(users).set({ instanceRole: 'instance_admin' }).where(eq(users.id, padmin.id))
+    await db.insert(userOrganizationMemberships).values({
+      userId: padmin.id, organizationId: org.id, role: 'viewer', isPrimary: true,
+    })
+
+    await deactivateUser(padmin.id)
+
+    expect((await membershipRow(padmin.id, org.id)).isActive).toBe(false)
+    const account = await db.query.users.findFirst({ where: eq(users.id, padmin.id) })
+    expect(account?.isActive, 'platform admins keep /instance access').toBe('true')
+    expect(account?.instanceRole).toBe('instance_admin')
+  })
+
+  it('deactivating a sole-anchor user still deactivates the account (unchanged)', async () => {
+    const solo = await createTestUser(org.id, 'viewer')
+    await db.insert(userOrganizationMemberships).values({
+      userId: solo.id, organizationId: org.id, role: 'viewer', isPrimary: true,
+    })
+
+    await deactivateUser(solo.id)
+
+    const account = await db.query.users.findFirst({ where: eq(users.id, solo.id) })
+    expect(account?.isActive).toBe('false')
+  })
+
+  it('deleting a multi-org member severs the membership, keeps the identity, repoints home', async () => {
+    const otherOrg = await createTestOrg()
+    // Homed in the actor's org, member of both, last-active here.
+    const dual = await createTestUser(org.id, 'viewer')
+    await db.insert(userOrganizationMemberships).values([
+      { userId: dual.id, organizationId: org.id, role: 'viewer', isPrimary: true },
+      { userId: dual.id, organizationId: otherOrg.id, role: 'contributor' },
+    ])
+    await db.update(users).set({ lastActiveOrganizationId: org.id }).where(eq(users.id, dual.id))
+
+    await deleteUser(dual.id)
+
+    const account = await db.query.users.findFirst({ where: eq(users.id, dual.id) })
+    expect(account, 'identity must survive').toBeTruthy()
+    expect(account?.organizationId, 'home repointed to surviving membership').toBe(otherOrg.id)
+    expect(account?.lastActiveOrganizationId, 'stale last-active cleared').toBeNull()
+    expect(await membershipRow(dual.id, org.id)).toBeUndefined()
+    expect((await membershipRow(dual.id, otherOrg.id)).role).toBe('contributor')
+
+    await db.delete(users).where(eq(users.id, dual.id))
+    await cleanupOrg(otherOrg.id)
+  })
+
+  it('deleting a sole-org platform admin is blocked and rolls back', async () => {
+    const padmin = await createTestUser(org.id, 'viewer')
+    await db.update(users).set({ instanceRole: 'instance_admin' }).where(eq(users.id, padmin.id))
+    await db.insert(userOrganizationMemberships).values({
+      userId: padmin.id, organizationId: org.id, role: 'viewer', isPrimary: true,
+    })
+
+    await expect(deleteUser(padmin.id)).rejects.toThrow(/platform admin/i)
+    expect(await membershipRow(padmin.id, org.id), 'rollback keeps the membership').toBeTruthy()
+    expect(await db.query.users.findFirst({ where: eq(users.id, padmin.id) })).toBeTruthy()
+  })
+
+  it('deleting a sole-anchor plain user still deletes the identity (unchanged)', async () => {
+    const solo = await createTestUser(org.id, 'viewer')
+    await db.insert(userOrganizationMemberships).values({
+      userId: solo.id, organizationId: org.id, role: 'viewer', isPrimary: true,
+    })
+
+    await deleteUser(solo.id)
+    expect(await db.query.users.findFirst({ where: eq(users.id, solo.id) })).toBeUndefined()
   })
 })
 
