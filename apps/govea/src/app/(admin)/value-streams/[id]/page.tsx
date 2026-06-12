@@ -7,6 +7,7 @@ import { canEdit } from '@/lib/rbac'
 import { StageManager } from './stage-manager'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkValueStreamPersona, unlinkValueStreamPersona,
@@ -64,9 +65,12 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
   return (
     <div className="space-y-8 max-w-3xl">
       {/* Back link */}
-      <Link href="/value-streams" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Value Streams
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/value-streams" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Value Streams
+        </Link>
+        <ViewTraceabilityLink from="value-stream" id={id} />
+      </div>
 
       {/* Header */}
       <div className="space-y-3">

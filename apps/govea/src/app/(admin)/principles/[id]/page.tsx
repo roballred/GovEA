@@ -6,6 +6,7 @@ import { getADRs } from '@/actions/adrs'
 import { canEdit } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import {
   linkPrincipleCapability, unlinkPrincipleCapability,
@@ -75,9 +76,12 @@ export default async function PrincipleDetailPage({ params }: { params: Promise<
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/principles" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Principles
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/principles" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Principles
+        </Link>
+        <ViewTraceabilityLink from="principle" id={id} />
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">

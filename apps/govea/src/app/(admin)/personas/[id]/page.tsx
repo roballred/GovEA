@@ -8,6 +8,7 @@ import { getValueStreams } from '@/actions/value-streams'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import { PersonaEditButton } from '@/components/persona-edit-button'
 import {
@@ -74,9 +75,12 @@ export default async function PersonaDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/personas" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Personas
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/personas" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Personas
+        </Link>
+        <ViewTraceabilityLink from="persona" id={id} />
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">

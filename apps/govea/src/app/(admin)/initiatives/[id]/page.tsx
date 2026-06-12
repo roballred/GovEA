@@ -6,6 +6,7 @@ import { getObjectives } from '@/actions/objectives'
 import { getApplications } from '@/actions/applications'
 import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
+import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 import { cn } from '@/lib/utils'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import type { RelationshipItem } from '@/components/relationship-panel'
@@ -103,9 +104,12 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <Link href="/initiatives" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-        ← Initiatives
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/initiatives" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Initiatives
+        </Link>
+        <ViewTraceabilityLink from="initiative" id={id} />
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">

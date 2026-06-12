@@ -2,8 +2,9 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { getGoalTrace, getObjectiveTrace, getCapabilityTrace, getServiceTrace } from '@/actions/traceability'
-import type { GoalTrace, ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp } from '@/actions/traceability'
+import { getGoalTrace, getObjectiveTrace, getCapabilityTrace, getServiceTrace, getTraceParticipation } from '@/actions/traceability'
+import type { GoalTrace, ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp, TraceParticipation } from '@/actions/traceability'
+import { isTraceParticipantKind, PARTICIPANT_ROUTES } from '@/lib/trace-participants'
 import { getGoals } from '@/actions/goals'
 import { getObjectives } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
@@ -578,6 +579,12 @@ export default async function TraceabilityPage({
     trace = await getServiceTrace(id)
     backHref = `/services/${id}`
     backLabel = '← Service'
+  } else if (isTraceParticipantKind(from)) {
+    // #695 — non-root participants get a participation panel rather than a
+    // native trace: their one-hop connections into the root trace views.
+    const participation = await getTraceParticipation(from, id)
+    if (!participation) notFound()
+    return <ParticipantView participation={participation} />
   } else {
     notFound()
   }
@@ -626,6 +633,84 @@ export default async function TraceabilityPage({
       <p className="text-xs text-muted-foreground pt-4 border-t">
         Traceability view — relationships reflect published, visible records only.
         <Link href={backHref} className="ml-2 underline underline-offset-2 hover:text-foreground">
+          Edit links on the detail page.
+        </Link>
+      </p>
+    </div>
+  )
+}
+
+// ── Participant view (#695) ───────────────────────────────────────────────────
+//
+// Rendered for entities that appear in trace chains without being trace
+// roots. Shows the record's one-hop connections to the root entities, each
+// linking into the existing root trace views — "how does this connect?" in
+// one step, without inventing a new diagram for every entity type.
+
+function ParticipantView({ participation }: { participation: TraceParticipation }) {
+  const route = PARTICIPANT_ROUTES[participation.kind]
+  const { capabilities, objectives, services } = participation.connections
+  const total = capabilities.length + objectives.length + services.length
+
+  const sections: { label: string; from: string; rows: { id: string; name: string }[] }[] = [
+    { label: 'Capabilities', from: 'capability', rows: capabilities },
+    { label: 'Strategic Objectives', from: 'objective', rows: objectives },
+    { label: 'Services', from: 'service', rows: services },
+  ]
+
+  return (
+    <div className="space-y-8">
+      <div className="space-y-1">
+        <Link
+          href={`${route.hrefBase}/${participation.id}`}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← {route.label}
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight">{participation.name}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Traceability participation — chains this {route.label.toLowerCase()} connects to
+        </p>
+      </div>
+
+      <hr />
+
+      {total === 0 ? (
+        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+          No published traceability chains connect to this record yet. Link it to a
+          capability, objective, or service on its detail page and the chains will
+          appear here.
+        </div>
+      ) : (
+        <div className="space-y-6 max-w-3xl">
+          <p className="text-sm text-muted-foreground">
+            This record is not a trace root itself — start a trace from one of its
+            connected records below.
+          </p>
+          {sections.filter(s => s.rows.length > 0).map(section => (
+            <section key={section.from}>
+              <LayerLabel>{section.label}</LayerLabel>
+              <div className="rounded-lg border bg-card divide-y">
+                {section.rows.map(row => (
+                  <div key={row.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                    <span className="font-medium">{row.name}</span>
+                    <Link
+                      href={`/traceability?from=${section.from}&id=${row.id}`}
+                      className="text-xs font-medium text-primary hover:text-primary/80 transition-colors shrink-0"
+                    >
+                      Trace →
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground pt-4 border-t">
+        Traceability view — relationships reflect published, visible records only.
+        <Link href={`${route.hrefBase}/${participation.id}`} className="ml-2 underline underline-offset-2 hover:text-foreground">
           Edit links on the detail page.
         </Link>
       </p>

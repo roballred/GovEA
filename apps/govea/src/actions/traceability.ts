@@ -5,11 +5,17 @@ import {
   strategicObjectives, capabilities, services, goals,
   goalObjectives, objectiveCapabilities, applicationCapabilities,
   initiativeObjectives, serviceCapabilities,
+  // #695 — trace-participation subjects and their one-hop root junctions
+  applications, initiatives, personas, valueStreams, adrs, principles,
+  initiativeCapabilities, capabilityPersonas, servicePersonas,
+  serviceValueStreams, valueStreamCapabilities, objectiveValueStreams,
+  adrCapabilities, adrObjectives, principleCapabilities,
 } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canReadFederatedEntity } from '@/lib/federation'
+import type { TraceParticipantKind } from '@/lib/trace-participants'
 
 // ── Shared sub-types ──────────────────────────────────────────────────────────
 
@@ -369,5 +375,142 @@ export async function getServiceTrace(id: string): Promise<ServiceTrace | null> 
     capabilities: serviceCapRows
       .map(({ capabilityId }) => capabilityTraceRows.find((c) => c.id === capabilityId))
       .filter((c): c is TraceCapability => Boolean(c)),
+  }
+}
+
+// ── Trace participation (#695) ────────────────────────────────────────────────
+//
+// Non-root entities (applications, initiatives, personas, value streams,
+// ADRs, principles) appear inside trace chains but are not trace roots. Their
+// detail pages still need a working "View traceability →" entry point, so
+// /traceability?from=<kind>&id=<id> renders a participation panel: the
+// record's one-hop connections to the native trace roots (capabilities,
+// objectives, services), each linking into the existing root trace views.
+// No new diagram — this is discoverability plumbing.
+
+export interface TraceParticipation {
+  kind: TraceParticipantKind
+  id: string
+  name: string
+  /** One-hop connections to trace roots, viewer-visibility filtered. */
+  connections: {
+    capabilities: { id: string; name: string }[]
+    objectives: { id: string; name: string }[]
+    services: { id: string; name: string }[]
+  }
+}
+
+type RootRow = { id: string; name: string; organizationId: string; visibility: string; status: string }
+
+export async function getTraceParticipation(
+  kind: TraceParticipantKind,
+  id: string,
+): Promise<TraceParticipation | null> {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const viewerOrgId = session.user.organizationId!
+  const isViewer = session.user.role === 'viewer'
+
+  // Subject record — same record-level gate the root trace loaders apply.
+  const subject =
+    kind === 'application' ? await db.query.applications.findFirst({ where: eq(applications.id, id) })
+    : kind === 'initiative' ? await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
+    : kind === 'persona' ? await db.query.personas.findFirst({ where: eq(personas.id, id) })
+    : kind === 'value-stream' ? await db.query.valueStreams.findFirst({ where: eq(valueStreams.id, id) })
+    : kind === 'adr' ? await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
+    : await db.query.principles.findFirst({ where: eq(principles.id, id) })
+
+  if (!subject) return null
+  const visible = await canReadFederatedEntity(subject.organizationId, subject.visibility, viewerOrgId)
+  if (!visible) return null
+
+  // One-hop root connections per kind.
+  const capabilityIds: string[] = []
+  const objectiveIds: string[] = []
+  const serviceIds: string[] = []
+
+  if (kind === 'application') {
+    const rows = await db.select({ id: applicationCapabilities.capabilityId })
+      .from(applicationCapabilities).where(eq(applicationCapabilities.applicationId, id))
+    capabilityIds.push(...rows.map(r => r.id))
+  } else if (kind === 'initiative') {
+    const [caps, objs] = await Promise.all([
+      db.select({ id: initiativeCapabilities.capabilityId })
+        .from(initiativeCapabilities).where(eq(initiativeCapabilities.initiativeId, id)),
+      db.select({ id: initiativeObjectives.objectiveId })
+        .from(initiativeObjectives).where(eq(initiativeObjectives.initiativeId, id)),
+    ])
+    capabilityIds.push(...caps.map(r => r.id))
+    objectiveIds.push(...objs.map(r => r.id))
+  } else if (kind === 'persona') {
+    const [caps, svcs] = await Promise.all([
+      db.select({ id: capabilityPersonas.capabilityId })
+        .from(capabilityPersonas).where(eq(capabilityPersonas.personaId, id)),
+      db.select({ id: servicePersonas.serviceId })
+        .from(servicePersonas).where(eq(servicePersonas.personaId, id)),
+    ])
+    capabilityIds.push(...caps.map(r => r.id))
+    serviceIds.push(...svcs.map(r => r.id))
+  } else if (kind === 'value-stream') {
+    const [caps, svcs, objs] = await Promise.all([
+      db.select({ id: valueStreamCapabilities.capabilityId })
+        .from(valueStreamCapabilities).where(eq(valueStreamCapabilities.valueStreamId, id)),
+      db.select({ id: serviceValueStreams.serviceId })
+        .from(serviceValueStreams).where(eq(serviceValueStreams.valueStreamId, id)),
+      db.select({ id: objectiveValueStreams.objectiveId })
+        .from(objectiveValueStreams).where(eq(objectiveValueStreams.valueStreamId, id)),
+    ])
+    capabilityIds.push(...caps.map(r => r.id))
+    serviceIds.push(...svcs.map(r => r.id))
+    objectiveIds.push(...objs.map(r => r.id))
+  } else if (kind === 'adr') {
+    const [caps, objs] = await Promise.all([
+      db.select({ id: adrCapabilities.capabilityId })
+        .from(adrCapabilities).where(eq(adrCapabilities.adrId, id)),
+      db.select({ id: adrObjectives.objectiveId })
+        .from(adrObjectives).where(eq(adrObjectives.adrId, id)),
+    ])
+    capabilityIds.push(...caps.map(r => r.id))
+    objectiveIds.push(...objs.map(r => r.id))
+  } else {
+    const rows = await db.select({ id: principleCapabilities.capabilityId })
+      .from(principleCapabilities).where(eq(principleCapabilities.principleId, id))
+    capabilityIds.push(...rows.map(r => r.id))
+  }
+
+  // Connected roots a stakeholder may follow: same-org or instance-visible,
+  // and published-only for viewers — matching the trace pages' promise that
+  // relationships reflect published, visible records only.
+  const rootVisible = (r: RootRow) =>
+    (r.organizationId === viewerOrgId || r.visibility === 'instance') &&
+    (!isViewer || r.status === 'published')
+
+  const [capRows, objRows, svcRows] = await Promise.all([
+    capabilityIds.length > 0
+      ? db.select({ id: capabilities.id, name: capabilities.name, organizationId: capabilities.organizationId, visibility: capabilities.visibility, status: capabilities.status })
+          .from(capabilities).where(inArray(capabilities.id, capabilityIds))
+      : Promise.resolve([] as RootRow[]),
+    objectiveIds.length > 0
+      ? db.select({ id: strategicObjectives.id, name: strategicObjectives.name, organizationId: strategicObjectives.organizationId, visibility: strategicObjectives.visibility, status: strategicObjectives.status })
+          .from(strategicObjectives).where(inArray(strategicObjectives.id, objectiveIds))
+      : Promise.resolve([] as RootRow[]),
+    serviceIds.length > 0
+      ? db.select({ id: services.id, name: services.name, organizationId: services.organizationId, visibility: services.visibility, status: services.status })
+          .from(services).where(inArray(services.id, serviceIds))
+      : Promise.resolve([] as RootRow[]),
+  ])
+
+  const toRef = (r: RootRow) => ({ id: r.id, name: r.name })
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)
+
+  return {
+    kind,
+    id,
+    name: kind === 'adr' ? (subject as { title: string }).title : (subject as { name: string }).name,
+    connections: {
+      capabilities: capRows.filter(rootVisible).map(toRef).sort(byName),
+      objectives: objRows.filter(rootVisible).map(toRef).sort(byName),
+      services: svcRows.filter(rootVisible).map(toRef).sort(byName),
+    },
   }
 }
