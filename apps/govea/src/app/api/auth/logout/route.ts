@@ -37,7 +37,15 @@ export async function POST(request: Request) {
 
   // 303 turns the form POST into a GET on /login. Fixed target — no
   // callback/redirect parameter is read, so no open-redirect surface.
-  const res = NextResponse.redirect(new URL('/login', request.url), 303)
+  // The Location is deliberately RELATIVE (#794): behind a TLS-terminating
+  // proxy the standalone server's request.url carries the container bind
+  // address (https://0.0.0.0/login on the demo), so an absolute URL built
+  // from it points at an unroutable origin. A relative Location resolves
+  // against whatever origin the user is actually on.
+  const res = new NextResponse(null, {
+    status: 303,
+    headers: { Location: '/login' },
+  })
 
   // Belt and braces: expire every session-token cookie on this response,
   // including large-JWT chunks (authjs.session-token.0, .1, …), rather than
@@ -61,12 +69,18 @@ export async function POST(request: Request) {
   // rejects any session token issued before this timestamp and deletes its
   // cookies. Lives as long as the max session age so no pre-logout token can
   // outlast it.
+  // x-forwarded-proto first: behind a TLS-terminating proxy request.url is
+  // the internal (http) hop even though the user is on https (#794).
+  const isHttps =
+    (request.headers.get('x-forwarded-proto') ?? '').split(',')[0].trim() === 'https' ||
+    request.url.startsWith('https')
+
   res.cookies.set(LOGGED_OUT_MARKER_COOKIE, String(Date.now()), {
     maxAge: LOGGED_OUT_MARKER_MAX_AGE_S,
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
-    secure: request.url.startsWith('https'),
+    secure: isHttps,
   })
 
   return res
