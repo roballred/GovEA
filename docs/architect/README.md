@@ -25,3 +25,5 @@ Update these docs when a change alters one of the main architectural seams:
 - cross-cutting concerns such as audit, taxonomy, module toggles, or search
 
 These docs do not replace ADRs. If a change records a decision or tradeoff that should remain reviewable over time, add or update an ADR under `docs/decisions/` and link to it from the relevant architecture document.
+
+**Last full review:** 2026-06-12 (#792) — covered the multi-org membership model, the session/middleware rewrite (ADR-0003), taxonomy recipes, audit telemetry, and the db:push runtime policy. Update this line when the next full review lands.

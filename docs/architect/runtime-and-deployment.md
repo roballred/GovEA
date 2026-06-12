@@ -56,8 +56,11 @@ Common local paths:
 | `pnpm demo:db` | Start only the database |
 | `pnpm demo:container` | Run the full container stack |
 | `pnpm --filter govea dev` | Start the Next.js app after database setup |
-| `pnpm --filter govea db:migrate` | Run local migrations |
+| `pnpm --filter govea db:push` | Sync schema directly from `src/db/schema/` (pre-production policy — there are no migration files yet; see CLAUDE.md) |
+| `pnpm --filter govea db:apply-triggers` | Re-apply Postgres triggers and DB-level constraints after a push |
 | `pnpm --filter govea db:seed` | Load demo seed data |
+
+`db:migrate` exists in `package.json` but is intentionally not the current command — pre-production uses `db:push --force` everywhere, including CI. The switch to migrations happens when the first real tenant data exists; CLAUDE.md tracks the checklist.
 
 Podman is preferred when available, but the compose helper can fall back to Docker.
 
@@ -157,7 +160,8 @@ After any deployment, verify the target-specific health signal and the generic a
 
 - active revision, pod, task, or container is healthy
 - expected image tag or digest is running
-- `/login` returns HTTP 200
+- `/login` returns HTTP 200 and carries the security response headers (X-Frame-Options, nosniff, HSTS, report-only CSP — configured in `next.config.ts`, #743)
+- sign-out works post-deploy (the deploy-stable logout endpoint exists precisely because stale tabs used to fail after rollouts, #759)
 - logs show schema/migration completion, optional seed completion, and Next server ready
 - no recurring auth, database pool, server-action, or static asset errors
 
