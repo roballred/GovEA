@@ -19,6 +19,7 @@ flowchart LR
   Services --> Personas
   Services --> Capabilities
   Services --> ValueStreams["Value Streams"]
+  ValueStreams --> Capabilities
   Goals --> Objectives["Strategic Objectives"]
   Objectives --> Capabilities
   Objectives --> ValueStreams
@@ -33,7 +34,9 @@ flowchart LR
   Principles --> ADRs
 ```
 
-Applications are intentionally surfaced for services and objectives through linked capabilities rather than through direct service-to-application or objective-to-application joins. That keeps mission traceability anchored in capabilities.
+Applications are intentionally surfaced for services and objectives through linked capabilities rather than through direct service-to-application or objective-to-application joins. That keeps mission traceability anchored in capabilities. Value streams additionally carry direct capability mappings (#757) so stream-level views do not depend on stage-by-stage links.
+
+Traceability has two kinds of entry point (#695): **roots** (goals, objectives, capabilities, services) get native `from=` drill-downs on `/traceability`, while every other participating entity (applications, initiatives, personas, value streams, ADRs, principles) gets a participation view — its one-hop connections into the native traces — so any record can answer "how does this connect?" without inventing per-entity trace engines.
 
 ## Relationship Patterns
 
@@ -77,7 +80,7 @@ The Data Architecture module adds a dedicated metamodel for data architecture wo
 
 Data Architecture is connected to the same organization, role, workflow, and visibility rules as the rest of the repository.
 
-## Taxonomy
+## Taxonomy and Recipes
 
 Taxonomy is the shared controlled-vocabulary foundation. It supports domain and classification values across several product areas instead of creating one-off vocabulary tables for each entity.
 
@@ -93,7 +96,14 @@ Current uses include:
 - decision category
 - principle scope
 
-When adding a new classification, prefer taxonomy if the value is user-manageable, org-scoped, and likely to be reused across records.
+Structural pieces an architect should know:
+
+- Types and their values are org-scoped `taxonomy_terms` rows (parent/child); `entity_taxonomy_definitions` binds a type to the entity kinds it classifies.
+- Types carry an **audience** marker — framework-flavored types (e.g. ADM Phase) are hidden from viewer-role users and stakeholder reports, preserving the plain-language promise without forbidding the vocabulary.
+- **Recipes** install curated bundles (taxonomy types and values, glossary terms, principles, report presets) idempotently via the recipe-install engine. Framework support is recipe-shaped, not code-shaped: the TOGAF 10 starter replaced the former hard-coded framework overlay, and ADM stages exist as classification only — never workflow ([ADR-0002](../decisions/0002-adm-as-classification.md)).
+- The generic group-by-taxonomy report engine renders any bound type as a report; presets (including TOGAF views) are data, not pages.
+
+When adding a new classification, prefer taxonomy if the value is user-manageable, org-scoped, and likely to be reused across records. When shipping a curated vocabulary, prefer a recipe over seed-code or bespoke tables.
 
 ## Audit and Completeness
 
@@ -103,6 +113,7 @@ The repository is designed to be self-auditing:
 - completeness signals identify missing or stale relationships
 - repository-confidence summaries convert maintenance state into stakeholder-facing trust cues
 - architecture debt records capture known concerns and system-detected lifecycle risk
+- the duplicate-candidates report (#718) scans every entity type plus taxonomy values and entity-taxonomy assignments for exact and near-duplicate names, surfacing candidate groups for human review — it never auto-merges
 
 Completeness and confidence should remain signals for better human judgment, not hidden automation that changes architecture content without review.
 
