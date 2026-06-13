@@ -609,11 +609,10 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
   // ── Existing identity → grant org access via membership (#756) ────────────
   // The email already belongs to an identity (e.g. an instance admin). Rather
   // than the old global-duplicate crash, attach that identity to the selected
-  // org by creating or reactivating a membership. The `users` row is left
-  // untouched: instanceRole, password, and other identity fields are preserved.
-  // (Promoting an existing identity to platform admin has its own dedicated
-  // control — `promoteInstanceAdmin` — so the create form's checkbox is not
-  // applied here.)
+  // org by creating or reactivating a membership. Password and other identity
+  // fields are preserved. The platform-admin checkbox IS honored (#796 — it
+  // was previously ignored silently): promotion is applied with the same
+  // audit action as the dedicated promoteInstanceAdmin control.
   if (existing) {
     const [membership] = await db
       .select({
@@ -635,6 +634,7 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
     }
 
     const reactivated = Boolean(membership)
+    const promoted = grantPlatformAdmin && existing.instanceRole !== 'instance_admin'
     await db.transaction(async (tx) => {
       if (reactivated) {
         await tx.update(userOrganizationMemberships)
@@ -659,12 +659,31 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
         before: reactivated ? { role: membership!.role, isActive: membership!.isActive } : undefined,
         after: { email, role, organizationId, organizationName: organization.name },
       })
+
+      // #796 — honor the platform-admin checkbox for existing identities,
+      // with the same audit action as the dedicated promote control.
+      if (promoted) {
+        await tx.update(users)
+          .set({ instanceRole: 'instance_admin', updatedAt: new Date() })
+          .where(eq(users.id, existing.id))
+
+        await writeAuditLog(tx, {
+          action: 'instance.user.promote',
+          metadata: await auditMeta(),
+          entityType: 'user',
+          entityId: existing.id,
+          userId: session.user.id,
+          organizationId: null,
+          after: { instanceRole: 'instance_admin', reason: 'granted via create-account form' },
+        })
+      }
     })
 
+    const promotedSuffix = promoted ? ' Also granted platform admin access.' : ''
     revalidatePath('/instance/users')
     return reactivated
-      ? { status: 'membership_reactivated', message: `Reactivated ${email}’s membership in ${organization.name} as ${role}.` }
-      : { status: 'membership_added', message: `Added ${email} to ${organization.name} as ${role}.` }
+      ? { status: 'membership_reactivated', message: `Reactivated ${email}’s membership in ${organization.name} as ${role}.${promotedSuffix}` }
+      : { status: 'membership_added', message: `Added ${email} to ${organization.name} as ${role}.${promotedSuffix}` }
   }
 
   // ── New identity → create the user row (original path) ─────────────────────
@@ -682,6 +701,14 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
       instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
       isActive: 'true',
     }).returning()
+
+    // #796 — the membership row is the canonical org binding: sessions, the
+    // org switcher, membership management, and the SSO guard all resolve from
+    // it. Without this row the account could reach /instance (via
+    // instanceRole) but never functioned as an org member.
+    await tx.insert(userOrganizationMemberships).values({
+      userId: user.id, organizationId, role, isActive: true, isPrimary: true,
+    })
 
     await writeAuditLog(tx, {
       action: 'instance.user.create',
