@@ -5,6 +5,7 @@ import { organizations } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
 import { StarterContentSection } from '@/components/starter-content-section'
+import { getStarterContentStatus } from '@/actions/starter-content'
 import { ModuleToggles } from '@/components/module-toggles'
 import { ConfidenceSettingsForm } from '@/components/confidence-settings'
 import { CompletenessSettingsForm } from '@/components/completeness-settings'
@@ -72,7 +73,7 @@ export default async function SettingsPage() {
             or delete it later. Re-applying the same pack skips items that already exist.
           </p>
         </div>
-        <StarterContentSection />
+        <StarterContentSection removableByPack={await getStarterContentStatus()} />
       </section>
 
       <hr />

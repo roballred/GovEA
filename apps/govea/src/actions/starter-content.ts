@@ -4,9 +4,9 @@ import { db } from '@/db/client'
 import {
   personas, capabilities, applications, strategicObjectives, adrs, initiatives,
   capabilityPersonas, applicationCapabilities, objectiveCapabilities, adrCapabilities, initiativeCapabilities,
-  taxonomyTerms,
+  taxonomyTerms, starterContentRecords, entityTaxonomyValues,
 } from '@/db/schema'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, inArray, sql } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { redirect } from 'next/navigation'
@@ -87,6 +87,10 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
     recipe: recipeResult,
   }
 
+  // #754 — provenance for every row this apply *creates* (not skipped), so
+  // removeStarterContent can delete exactly these and nothing the org authored.
+  const provenance: { entityType: string; entityId: string }[] = []
+
   await db.transaction(async (tx) => {
     // ── Resolve recipe taxonomy term slugs → ids (for tagging below) ─────
     // Generic: walk the recipe's own types so a term slug only resolves
@@ -126,6 +130,7 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
         createdBy: session.user.id, updatedBy: session.user.id,
       }).returning({ id: personas.id, name: personas.name })
       personaIdByName.set(row.name.toLowerCase(), row.id)
+      provenance.push({ entityType: 'persona', entityId: row.id })
       result.personasCreated++
     }
 
@@ -146,6 +151,7 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
         createdBy: session.user.id, updatedBy: session.user.id,
       }).returning({ id: capabilities.id, name: capabilities.name })
       capIdByName.set(row.name.toLowerCase(), row.id)
+      provenance.push({ entityType: 'capability', entityId: row.id })
       result.capabilitiesCreated++
 
       const personaIds = c.personas
@@ -181,6 +187,7 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
         createdBy: session.user.id, updatedBy: session.user.id,
       }).returning({ id: applications.id, name: applications.name })
       appNameSet.add(row.name.toLowerCase())
+      provenance.push({ entityType: 'application', entityId: row.id })
       result.applicationsCreated++
 
       const capIds = a.capabilities
@@ -216,6 +223,7 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
         createdBy: session.user.id, updatedBy: session.user.id,
       }).returning({ id: strategicObjectives.id, name: strategicObjectives.name })
       objNameSet.add(row.name.toLowerCase())
+      provenance.push({ entityType: 'objective', entityId: row.id })
       result.objectivesCreated++
 
       const capIds = o.capabilities
@@ -256,6 +264,7 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
       }).returning({ id: adrs.id, title: adrs.title, number: adrs.number })
       adrTitleSet.add(row.title.toLowerCase())
       adrNumberSet.add(row.number.toLowerCase())
+      provenance.push({ entityType: 'adr', entityId: row.id })
       result.adrsCreated++
 
       const capIds = adr.capabilities
@@ -285,6 +294,7 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
         createdBy: session.user.id, updatedBy: session.user.id,
       }).returning({ id: initiatives.id, name: initiatives.name })
       initNameSet.add(row.name.toLowerCase())
+      provenance.push({ entityType: 'initiative', entityId: row.id })
       result.initiativesCreated++
 
       const capIds = init.capabilities
@@ -300,6 +310,14 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
       if (termIds.length > 0) {
         await syncEntityTaxonomyValues(tx, orgId, 'initiative', row.id, termIds)
       }
+    }
+
+    // #754 — record provenance for the rows we just created, in the same
+    // transaction, so the apply and its provenance commit atomically.
+    if (provenance.length > 0) {
+      await tx.insert(starterContentRecords).values(
+        provenance.map(p => ({ organizationId: orgId, packName: pack.packName, ...p })),
+      )
     }
 
     await writeAuditLog(tx, {
@@ -321,6 +339,126 @@ export async function applyStarterPack(packName: string): Promise<StarterApplyRe
   }
 
   return result
+}
+
+export type StarterRemoveResult = {
+  packName: string
+  removed: number
+  byType: Record<string, number>
+}
+
+// entityType (provenance vocabulary) → its content table. Deleting the content
+// row cascades its junctions; the polymorphic entity_taxonomy_values rows do
+// NOT cascade (entityId has no FK) and are cleared explicitly below.
+const CONTENT_TABLES = {
+  persona: personas,
+  capability: capabilities,
+  application: applications,
+  objective: strategicObjectives,
+  adr: adrs,
+  initiative: initiatives,
+} as const
+
+/**
+ * Remove the records a starter pack created in the caller's org (#754).
+ *
+ * Scoped by recorded provenance (`starter_content_records`), never by the
+ * description marker — so it deletes exactly the rows apply created and leaves
+ * everything the org authored itself untouched, including the org's own
+ * taxonomy tags on its own records. Transactional, admin-gated, audited.
+ *
+ * Out of scope (design Q2): the recipe's taxonomy types/terms, glossary, and
+ * principles are NOT uninstalled here — the org may have tagged its own records
+ * with the TOGAF domains. Only the sample *content* is removed.
+ *
+ * Idempotent: a no-op (removed: 0) when the pack has no recorded rows.
+ */
+export async function removeStarterContent(packName: string): Promise<StarterRemoveResult> {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
+  const pack = resolvePack(packName)
+  if (!pack) throw new Error(`Unknown starter pack: ${packName}`)
+
+  const records = await db
+    .select({ entityType: starterContentRecords.entityType, entityId: starterContentRecords.entityId })
+    .from(starterContentRecords)
+    .where(and(
+      eq(starterContentRecords.organizationId, orgId),
+      eq(starterContentRecords.packName, pack.packName),
+    ))
+
+  const byType: Record<string, number> = {}
+  const idsByType = new Map<string, string[]>()
+  for (const r of records) {
+    if (!idsByType.has(r.entityType)) idsByType.set(r.entityType, [])
+    idsByType.get(r.entityType)!.push(r.entityId)
+    byType[r.entityType] = (byType[r.entityType] ?? 0) + 1
+  }
+
+  if (records.length === 0) {
+    return { packName: pack.packName, removed: 0, byType }
+  }
+
+  await db.transaction(async (tx) => {
+    for (const [entityType, ids] of idsByType) {
+      const table = CONTENT_TABLES[entityType as keyof typeof CONTENT_TABLES]
+      if (!table) continue // unknown type — leave it and its provenance row alone
+
+      // Clear polymorphic taxonomy tags first (no FK → no cascade).
+      await tx.delete(entityTaxonomyValues).where(and(
+        eq(entityTaxonomyValues.organizationId, orgId),
+        eq(entityTaxonomyValues.entityType, entityType),
+        inArray(entityTaxonomyValues.entityId, ids),
+      ))
+
+      // Delete the content rows (org-scoped defense in depth; junctions cascade).
+      await tx.delete(table).where(and(
+        eq(table.organizationId, orgId),
+        inArray(table.id, ids),
+      ))
+    }
+
+    await tx.delete(starterContentRecords).where(and(
+      eq(starterContentRecords.organizationId, orgId),
+      eq(starterContentRecords.packName, pack.packName),
+    ))
+
+    await writeAuditLog(tx, {
+      action: 'starter_content.remove',
+      entityType: 'organization',
+      entityId: orgId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { packName: pack.packName, byType },
+    })
+  })
+
+  for (const path of [
+    '/personas', '/capabilities', '/applications', '/objectives', '/adrs', '/initiatives',
+    '/glossary', '/principles', '/reports', '/dashboard', '/settings',
+  ]) {
+    revalidatePath(path)
+  }
+
+  return { packName: pack.packName, removed: records.length, byType }
+}
+
+/**
+ * Per-pack removable-record count for the settings UI (#754) — drives whether
+ * the "Remove" control is shown and the "N records" it will delete.
+ */
+export async function getStarterContentStatus(): Promise<Record<string, number>> {
+  const session = await requireAdmin()
+  const orgId = session.user.organizationId!
+
+  const rows = await db
+    .select({ packName: starterContentRecords.packName, count: sql<number>`count(*)::int` })
+    .from(starterContentRecords)
+    .where(eq(starterContentRecords.organizationId, orgId))
+    .groupBy(starterContentRecords.packName)
+
+  return Object.fromEntries(rows.map(r => [r.packName, r.count]))
 }
 
 function resolvePack(packName: string): StarterPack | null {
