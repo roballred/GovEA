@@ -5,13 +5,9 @@ import { getCustomFieldSchema } from '@/actions/custom-fields'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
 import type { CustomFieldDefinition } from '@/db/schema'
 import type { EnrichedTaxonomyDefinition } from '@/components/taxonomy-ui'
-
-function escapeCsv(val: string): string {
-  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-    return `"${val.replace(/"/g, '""')}"`
-  }
-  return val
-}
+// #763 — use the shared escaper so this export gets formula-injection
+// neutralization too; a local copy silently missed the centralized fix.
+import { escapeCsv } from '@/lib/csv'
 
 function buildCsv(
   apps: Awaited<ReturnType<typeof getApplications>>,
