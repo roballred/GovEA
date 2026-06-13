@@ -27,6 +27,26 @@ export function defaultLandingPath(opts: { role: Role; isInstanceAdmin: boolean 
 }
 
 /**
+ * Post-login destination once membership context is known (#800).
+ *
+ * Users with more than one active membership choose their workspace on
+ * /select-org before landing; everyone else goes straight to their
+ * role-based landing. Instance admins keep landing on /instance — their
+ * org choice happens via the in-shell switcher when they enter the agency
+ * portal. An explicit safe callbackUrl is handled by the caller and always
+ * wins over selection (deep links must not detour through a picker).
+ */
+export function postLoginDestination(opts: {
+  role: Role
+  isInstanceAdmin: boolean
+  activeMembershipCount: number
+}): string {
+  if (opts.isInstanceAdmin) return '/instance'
+  if (opts.activeMembershipCount > 1) return '/select-org'
+  return defaultLandingPath(opts)
+}
+
+/**
  * Returns a safe post-login destination, falling back to `fallback` if the
  * supplied URL would trap the user in an auth or error route.
  *
