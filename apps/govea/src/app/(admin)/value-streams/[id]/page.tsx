@@ -1,22 +1,15 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getValueStream } from '@/actions/value-streams'
-import { getCapabilities } from '@/actions/capabilities'
-import { getPersonas } from '@/actions/personas'
 import { canEdit } from '@/lib/rbac'
-import { StageManager } from './stage-manager'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 import { RelationshipPanel } from '@/components/relationship-panel'
-import {
-  linkValueStreamPersona, unlinkValueStreamPersona,
-  linkValueStreamCapability, unlinkValueStreamCapability,
-} from '@/actions/links'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
-import { ValueStreamEditButton } from '@/components/value-stream-edit-button'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -44,23 +37,16 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
 
-  const [vs, capabilityList, allPersonas, enabledModules] = await Promise.all([
+  const [vs, enabledModules] = await Promise.all([
     getValueStream(id),
-    getCapabilities(),
-    editor ? getPersonas() : Promise.resolve([]),
     getEnabledModules(),
   ])
 
   if (!vs) notFound()
+  // #726 — the detail page is read-oriented. Editing stages, stage
+  // capabilities, stream-level capabilities, and personas lives on the
+  // dedicated edit route; here we only show whether to offer the edit link.
   const canMutate = editor && vs.organizationId === orgId
-
-  const addPersona = linkValueStreamPersona.bind(null, id)
-  const removePersona = unlinkValueStreamPersona.bind(null, id)
-  const addCapability = linkValueStreamCapability.bind(null, id)
-  const removeCapability = unlinkValueStreamCapability.bind(null, id)
-
-  // IDs already linked directly to the stream, so the picker excludes them.
-  const directCapIds = new Set(vs.valueStreamCapabilities.map(({ capability }) => capability.id))
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -106,16 +92,11 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
       </div>
 
       {canMutate && (
-        <ValueStreamEditButton
-          valueStreamId={id}
-          initial={{
-            name: vs.name,
-            description: vs.description,
-            valueItem: vs.valueItem,
-            status: vs.status,
-            visibility: vs.visibility,
-          }}
-        />
+        <div className="flex justify-end">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/value-streams/${id}/edit`}>Edit value stream</Link>
+          </Button>
+        </div>
       )}
 
       <hr />
@@ -129,8 +110,11 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
           </span>
         </div>
 
-        {vs.stages.length === 0 && !canMutate && (
-          <p className="text-sm text-muted-foreground py-4">No stages have been defined for this value stream yet.</p>
+        {vs.stages.length === 0 && (
+          <p className="text-sm text-muted-foreground py-4">
+            No stages have been defined for this value stream yet.
+            {canMutate && <> Use <Link href={`/value-streams/${id}/edit`} className="underline hover:text-foreground">Edit value stream</Link> to add some.</>}
+          </p>
         )}
 
         {/* Existing stages (read view) */}
@@ -165,14 +149,6 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
           </div>
         )}
 
-        {/* Stage manager for editors */}
-        {canMutate && (
-          <StageManager
-            valueStreamId={vs.id}
-            stages={vs.stages}
-            capabilities={capabilityList.filter(c => c.organizationId === orgId)}
-          />
-        )}
       </div>
 
       {isModuleEnabled(enabledModules, 'capabilities') && (
@@ -183,12 +159,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
               id: capability.id, name: capability.name,
               href: `/capabilities/${capability.id}`,
             }))}
-            canEdit={canMutate}
-            available={capabilityList
-              .filter(c => c.organizationId === orgId && !directCapIds.has(c.id))
-              .map(c => ({ id: c.id, name: c.name }))}
-            addAction={addCapability}
-            removeAction={removeCapability}
+            canEdit={false}
             emptyMessage="No stream-level capabilities linked yet."
           />
           <p className="text-xs text-muted-foreground">
@@ -204,10 +175,7 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
             id: persona.id, name: persona.name,
             href: `/personas/${persona.id}`,
           }))}
-          canEdit={canMutate}
-          available={allPersonas.filter(p => p.organizationId === orgId).map(p => ({ id: p.id, name: p.name }))}
-          addAction={addPersona}
-          removeAction={removePersona}
+          canEdit={false}
         />
       )}
 

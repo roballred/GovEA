@@ -14,7 +14,7 @@ Schema: `value_streams`, `value_stream_stages`, `value_stream_stage_capabilities
 
 Server actions: create, edit, delete, add/edit/delete/reorder stages, add/remove capability per stage (`apps/govea/src/actions/value-streams.ts`); `linkValueStreamCapability` / `unlinkValueStreamCapability` for direct stream-level links (`apps/govea/src/actions/links.ts`)
 
-Admin UI: list view, detail view with inline stage management, a stream-level Business Capabilities panel, and persona management (`apps/govea/src/app/(admin)/value-streams/`)
+Admin UI: list view, a read-only detail view (ordered stages, stage capability badges, linked capabilities and personas), and a dedicated edit view (`/value-streams/[id]/edit`) where Contributors/Admins manage details, stages, stage capabilities, stream-level capabilities, and personas. Detail view authoring was moved to the edit view in #726 so the detail page stays read-oriented. (`apps/govea/src/app/(admin)/value-streams/`)
 
 ## Personas
 
