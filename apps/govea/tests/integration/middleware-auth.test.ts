@@ -18,6 +18,11 @@
  *   4. /instance/* requires the `instance_admin` role even with a session.
  *   5. #782 — a session token issued before the logged-out marker is
  *      rejected and its cookies are deleted (post-logout resurrection guard).
+ *   6. #807 — when the internal request origin is the container bind address
+ *      (`0.0.0.0:3000`, as it can be behind a TLS-terminating proxy), the
+ *      browser-visible redirect Location is rebuilt from the proxy's
+ *      `x-forwarded-host` (then `NEXT_PUBLIC_APP_URL`) and never echoes
+ *      `0.0.0.0`. Normal requests keep their absolute same-origin redirect.
  *
  * If you add a new public path, also add it to the PASSTHROUGH_PATHS list
  * here. If you intentionally make a previously-protected route public,
@@ -51,11 +56,20 @@ type MockReq = {
   nextUrl: URL
   url: string
   token: MockToken
+  // Models the NextRequest header API the middleware reads for the #807
+  // forwarded-host rebuild. Only `.get` is used.
+  headers: { get: (name: string) => string | null }
   // Models the NextRequest cookie API the middleware reads (#782).
   cookies: {
     get: (name: string) => { name: string; value: string } | undefined
     getAll: () => { name: string; value: string }[]
   }
+}
+
+/** Build a case-insensitive header bag matching NextRequest.headers.get. */
+function headerBag(h: Record<string, string> = {}): { get: (name: string) => string | null } {
+  const lower = Object.fromEntries(Object.entries(h).map(([k, v]) => [k.toLowerCase(), v]))
+  return { get: (name: string) => lower[name.toLowerCase()] ?? null }
 }
 
 type SingleArg = (req: MockReq) => Promise<Response>
@@ -76,6 +90,7 @@ function makeRequest(
     nextUrl: url,
     url: url.toString(),
     token,
+    headers: headerBag(),
     cookies: {
       get: (name: string) => entries.find(e => e.name === name),
       getAll: () => entries,
@@ -252,6 +267,95 @@ describe('middleware — #782 post-logout resurrection guard', () => {
     const res = await m(req)
     expect(res.status).toBe(307)
     expect(res.headers.get('location')).toBe('https://example.test/login')
+  })
+})
+
+describe('middleware — #807 never redirects to the container bind address', () => {
+  /**
+   * A request whose internal origin is the container bind address, as it can
+   * arrive at the standalone Next server behind a TLS-terminating proxy. The
+   * browser is really on a public origin; only `req.nextUrl` carries
+   * `0.0.0.0:3000`. The redirect must NOT echo that host back — middleware
+   * rebuilds it from `x-forwarded-host` / `NEXT_PUBLIC_APP_URL`.
+   */
+  function proxiedRequest(
+    pathname: string,
+    token: MockToken = null,
+    headers: Record<string, string> = {},
+  ): MockReq {
+    const url = new URL(`http://0.0.0.0:3000${pathname}`)
+    return {
+      nextUrl: url,
+      url: url.toString(),
+      token,
+      headers: headerBag(headers),
+      cookies: { get: () => undefined, getAll: () => [] },
+    }
+  }
+
+  const FORWARDED = {
+    'x-forwarded-host': 'govea.example.gov',
+    'x-forwarded-proto': 'https',
+  }
+
+  it('rebuilds /login from x-forwarded-host, not 0.0.0.0', async () => {
+    const m = await loadMiddleware()
+    const res = await m(proxiedRequest('/dashboard', null, FORWARDED))
+    const location = res.headers.get('location')
+    expect(res.status).toBe(307)
+    expect(location).toBe('https://govea.example.gov/login')
+    expect(location).not.toContain('0.0.0.0')
+  })
+
+  it('rebuilds the instance-admin gate redirect from x-forwarded-host', async () => {
+    const m = await loadMiddleware()
+    const res = await m(proxiedRequest('/instance/orgs', asRegularUser(), FORWARDED))
+    const location = res.headers.get('location')
+    expect(res.status).toBe(307)
+    expect(location).toBe('https://govea.example.gov/')
+    expect(location).not.toContain('0.0.0.0')
+  })
+
+  it('rebuilds the password-expiry redirect from x-forwarded-host', async () => {
+    const m = await loadMiddleware()
+    const res = await m(proxiedRequest(
+      '/dashboard',
+      { role: 'admin', instanceRole: null, passwordExpiryDays: 90, lastPasswordChangedAt: null },
+      FORWARDED,
+    ))
+    const location = res.headers.get('location')
+    expect(res.status).toBe(307)
+    expect(location).toBe('https://govea.example.gov/change-password?reason=expired')
+    expect(location).not.toContain('0.0.0.0')
+  })
+
+  it('falls back to NEXT_PUBLIC_APP_URL when no forwarded host is present', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://configured.example.gov'
+    vi.resetModules()
+    try {
+      const m = await loadMiddleware()
+      const res = await m(proxiedRequest('/dashboard'))
+      const location = res.headers.get('location')
+      expect(res.status).toBe(307)
+      expect(location).toBe('https://configured.example.gov/login')
+      expect(location).not.toContain('0.0.0.0')
+    } finally {
+      delete process.env.NEXT_PUBLIC_APP_URL
+    }
+  })
+
+  it('ignores a spoofed 0.0.0.0 forwarded host and uses the configured origin', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://configured.example.gov'
+    vi.resetModules()
+    try {
+      const m = await loadMiddleware()
+      const res = await m(proxiedRequest('/dashboard', null, { 'x-forwarded-host': '0.0.0.0:3000' }))
+      const location = res.headers.get('location')
+      expect(location).toBe('https://configured.example.gov/login')
+      expect(location).not.toContain('0.0.0.0')
+    } finally {
+      delete process.env.NEXT_PUBLIC_APP_URL
+    }
   })
 })
 
