@@ -8,7 +8,60 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { parseCsv, detectDelimiter, splitCsvRows } from '@/lib/csv'
+import { parseCsv, detectDelimiter, splitCsvRows, escapeCsv, neutralizeFormula } from '@/lib/csv'
+
+describe('CSV formula injection neutralization (#763)', () => {
+  it.each(['=SUM(A1:A9)', '+1+1', '-2+3', '@SUM(A1)'])(
+    'prefixes a guarding quote on cells starting with a formula trigger: %s',
+    val => {
+      expect(escapeCsv(val)).toBe(`'${val}`)
+    },
+  )
+
+  it('neutralizes the classic DDE payload', () => {
+    expect(escapeCsv('=cmd|\'/c calc\'!A1')).toBe("'=cmd|'/c calc'!A1")
+  })
+
+  it('neutralizes AND quotes a formula payload that contains commas/quotes', () => {
+    // Guard quote added first, then CSV-quoted because of the embedded comma.
+    expect(escapeCsv('=HYPERLINK("http://evil","x")')).toBe(
+      '"\'=HYPERLINK(""http://evil"",""x"")"',
+    )
+  })
+
+  it('leaves ordinary values untouched', () => {
+    for (const val of ['Permit Issuance', 'published', '12 Main St', 'a-b-c', 'x=y']) {
+      expect(escapeCsv(val)).toBe(val)
+    }
+  })
+
+  it('still quotes a neutralized cell that also needs quoting', () => {
+    // Leading '=' (neutralized) plus an embedded comma (must be quoted).
+    expect(escapeCsv('=A1,B2')).toBe('"\'=A1,B2"')
+  })
+
+  it('round-trips formula-leading values losslessly through export → import', () => {
+    const original = [
+      { name: 'Normal', note: '=SUM(A1)' },
+      { name: '-Dash lead', note: '@at lead' },
+      { name: 'Plain', note: 'nothing special' },
+    ]
+    const header = 'name,note'
+    const body = original.map(r => `${escapeCsv(r.name)},${escapeCsv(r.note)}`).join('\n')
+    const parsed = parseCsv(`${header}\n${body}\n`)
+    expect(parsed).toEqual(original)
+  })
+
+  it('does not strip a legitimate leading quote that is not a formula guard', () => {
+    // "'tis" — apostrophe not followed by a trigger char — must survive import.
+    const parsed = parseCsv(`name\n${escapeCsv("'tis a quote")}\n`)
+    expect(parsed[0].name).toBe("'tis a quote")
+  })
+
+  it('neutralizeFormula handles empty strings without indexing undefined', () => {
+    expect(neutralizeFormula('')).toBe('')
+  })
+})
 
 describe('detectDelimiter (#679)', () => {
   it('defaults to comma for a normal header', () => {

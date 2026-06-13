@@ -4,11 +4,35 @@
 // multi-line cells (capability `behaviors` / `rules`, ADR `context` / `decision`
 // / `consequences`, etc.) through an Export → Import round-trip.
 
+// #763 — CSV formula injection (CWE-1236). A cell whose value begins with
+// =, +, -, or @ is interpreted as a formula by Excel / Google Sheets / LibreOffice
+// when the exported file is opened, so attacker-influenced content in a
+// contributor-editable field (e.g. `=HYPERLINK(...)`, `=cmd|'/c calc'!A1`)
+// could execute on a reader's machine. The standard neutralization is to
+// prefix a single quote, which spreadsheets render as "treat the rest as
+// literal text" and do not display. `parseCsv` strips it back on import so the
+// Export→Import round-trip is lossless. Tab/CR (\t, \r) are also formula
+// triggers but cannot appear at a cell start here: \r is consumed as a row
+// terminator by the splitter, and a leading \t would be trimmed by parseCsv.
+const FORMULA_TRIGGERS = ['=', '+', '-', '@']
+
+export function neutralizeFormula(val: string): string {
+  return val.length > 0 && FORMULA_TRIGGERS.includes(val[0]) ? `'${val}` : val
+}
+
+/** Reverse of neutralizeFormula — strips the guarding quote on import. */
+export function denormalizeFormula(val: string): string {
+  return val.length > 1 && val[0] === "'" && FORMULA_TRIGGERS.includes(val[1])
+    ? val.slice(1)
+    : val
+}
+
 export function escapeCsv(val: string): string {
-  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-    return `"${val.replace(/"/g, '""')}"`
+  const safe = neutralizeFormula(val)
+  if (safe.includes(',') || safe.includes('"') || safe.includes('\n')) {
+    return `"${safe.replace(/"/g, '""')}"`
   }
-  return val
+  return safe
 }
 
 /**
@@ -66,7 +90,10 @@ export function parseCsv(text: string): Record<string, string>[] {
   if (rows.length < 2) return []
   const headers = rows[0].map(h => h.trim())
   return rows.slice(1).map(values =>
-    Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? '').trim()]))
+    // #763 — strip the formula-guarding quote escapeCsv added on export so the
+    // round-trip is lossless. Trim first: a quoted "  =x" keeps its inner
+    // spaces through the splitter, and the guard sits at the trimmed start.
+    Object.fromEntries(headers.map((h, i) => [h, denormalizeFormula((values[i] ?? '').trim())]))
   )
 }
 
