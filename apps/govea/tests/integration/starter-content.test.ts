@@ -22,10 +22,11 @@ import { db } from '@/db/client'
 import {
   personas, capabilities, applications, strategicObjectives, adrs, initiatives,
   capabilityPersonas, applicationCapabilities, objectiveCapabilities, adrCapabilities, initiativeCapabilities,
+  starterContentRecords, entityTaxonomyValues, taxonomyTerms,
 } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, isNotNull } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
-import { applyStarterPack } from '@/actions/starter-content'
+import { applyStarterPack, removeStarterContent, getStarterContentStatus } from '@/actions/starter-content'
 import { STARTER_CONTENT_MARKER, TOGAF_STARTER } from '@/lib/starter-content/togaf-starter'
 import { groupByTaxonomyType, type EntityRef } from '@/lib/reports/group-by-taxonomy'
 import {
@@ -249,5 +250,136 @@ describe('applyStarterPack — TOGAF 10 starter (#749)', () => {
     expect(adrNumbers).toEqual(['ADR-001', 'ADR-001-1', 'ADR-002'])
 
     await cleanupOrg(isolatedOrg.id)
+  })
+})
+
+describe('removeStarterContent — provenance-scoped teardown (#754)', () => {
+  async function contentCounts(orgId: string) {
+    const tables = [personas, capabilities, applications, strategicObjectives, adrs, initiatives] as const
+    const counts = await Promise.all(
+      tables.map(t => db.select().from(t).where(eq(t.organizationId, orgId)).then(r => r.length)),
+    )
+    return { personas: counts[0], capabilities: counts[1], applications: counts[2], objectives: counts[3], adrs: counts[4], initiatives: counts[5] }
+  }
+
+  it('rejects contributor and viewer (admin-only)', async () => {
+    const org = await createTestOrg()
+    const [contributor, viewer] = await Promise.all([
+      createTestUser(org.id, 'contributor'),
+      createTestUser(org.id, 'viewer'),
+    ])
+    mockAuth.mockResolvedValue(makeSession(contributor))
+    await expect(removeStarterContent('togaf-starter')).rejects.toThrow('Forbidden')
+    mockAuth.mockResolvedValue(makeSession(viewer))
+    await expect(removeStarterContent('togaf-starter')).rejects.toThrow('Forbidden')
+    await cleanupOrg(org.id)
+  })
+
+  it('is a no-op when the pack was never applied', async () => {
+    const org = await createTestOrg()
+    const admin = await createTestUser(org.id, 'admin')
+    mockAuth.mockResolvedValue(makeSession(admin))
+
+    const result = await removeStarterContent('togaf-starter')
+    expect(result.removed).toBe(0)
+    expect(result.byType).toEqual({})
+    await cleanupOrg(org.id)
+  })
+
+  it('apply → remove returns the org to its pre-apply content state', async () => {
+    const org = await createTestOrg()
+    const admin = await createTestUser(org.id, 'admin')
+    mockAuth.mockResolvedValue(makeSession(admin))
+
+    const before = await contentCounts(org.id)
+    expect(before).toEqual({ personas: 0, capabilities: 0, applications: 0, objectives: 0, adrs: 0, initiatives: 0 })
+
+    await applyStarterPack('togaf-starter')
+    expect((await db.select().from(starterContentRecords).where(eq(starterContentRecords.organizationId, org.id))).length).toBeGreaterThan(0)
+
+    const removed = await removeStarterContent('togaf-starter')
+    expect(removed.removed).toBe(
+      TOGAF_STARTER.personas.length + TOGAF_STARTER.capabilities.length + TOGAF_STARTER.applications.length +
+      TOGAF_STARTER.objectives.length + TOGAF_STARTER.adrs.length + TOGAF_STARTER.initiatives.length,
+    )
+
+    // Every sample content row is gone, and so is its provenance.
+    expect(await contentCounts(org.id)).toEqual({ personas: 0, capabilities: 0, applications: 0, objectives: 0, adrs: 0, initiatives: 0 })
+    expect(await db.select().from(starterContentRecords).where(eq(starterContentRecords.organizationId, org.id))).toHaveLength(0)
+    // No orphaned taxonomy tags on the deleted capabilities/apps/initiatives.
+    expect(await db.select().from(entityTaxonomyValues).where(eq(entityTaxonomyValues.organizationId, org.id))).toHaveLength(0)
+
+    await cleanupOrg(org.id)
+  })
+
+  it('leaves the recipe taxonomy/glossary/principles in place', async () => {
+    const org = await createTestOrg()
+    const admin = await createTestUser(org.id, 'admin')
+    mockAuth.mockResolvedValue(makeSession(admin))
+
+    await applyStarterPack('togaf-starter')
+    const termsBefore = await db.select().from(taxonomyTerms).where(eq(taxonomyTerms.organizationId, org.id))
+    expect(termsBefore.length).toBeGreaterThan(0)
+
+    await removeStarterContent('togaf-starter')
+
+    // Out of scope (design Q2): taxonomy types/terms survive — the org may have
+    // tagged its own records with them.
+    const termsAfter = await db.select().from(taxonomyTerms).where(eq(taxonomyTerms.organizationId, org.id))
+    expect(termsAfter.length).toBe(termsBefore.length)
+
+    await cleanupOrg(org.id)
+  })
+
+  it('never deletes records the org authored itself, including their own taxonomy tags', async () => {
+    const org = await createTestOrg()
+    const admin = await createTestUser(org.id, 'admin')
+    mockAuth.mockResolvedValue(makeSession(admin))
+
+    await applyStarterPack('togaf-starter')
+
+    // The org authors its own capability and tags it with a TOGAF domain term
+    // that the recipe installed — exactly the case design Q2 warns about.
+    const [domainTerm] = await db.select({ id: taxonomyTerms.id })
+      .from(taxonomyTerms)
+      .where(and(eq(taxonomyTerms.organizationId, org.id), isNotNull(taxonomyTerms.parentId)))
+      .limit(1)
+    const ownCapId = randomUUID()
+    await db.insert(capabilities).values({
+      id: ownCapId, organizationId: org.id, name: 'My Own Capability',
+      description: 'Authored by the org, not the starter pack.',
+      status: 'published', visibility: 'org',
+    })
+    await db.insert(entityTaxonomyValues).values({
+      organizationId: org.id, entityType: 'capability', entityId: ownCapId, taxonomyTermId: domainTerm.id,
+    })
+
+    await removeStarterContent('togaf-starter')
+
+    // The org's own capability and its own tag survive; starter caps are gone.
+    const survivingCap = await db.query.capabilities.findFirst({ where: eq(capabilities.id, ownCapId) })
+    expect(survivingCap?.name).toBe('My Own Capability')
+    const survivingTag = await db.select().from(entityTaxonomyValues)
+      .where(and(eq(entityTaxonomyValues.entityId, ownCapId), eq(entityTaxonomyValues.entityType, 'capability')))
+    expect(survivingTag).toHaveLength(1)
+    // Only the org's own capability remains — none of the starter ones.
+    const remainingCaps = await db.select().from(capabilities).where(eq(capabilities.organizationId, org.id))
+    expect(remainingCaps.map(c => c.name)).toEqual(['My Own Capability'])
+
+    await cleanupOrg(org.id)
+  })
+
+  it('getStarterContentStatus reflects applied then removed', async () => {
+    const org = await createTestOrg()
+    const admin = await createTestUser(org.id, 'admin')
+    mockAuth.mockResolvedValue(makeSession(admin))
+
+    expect(await getStarterContentStatus()).toEqual({})
+    await applyStarterPack('togaf-starter')
+    expect((await getStarterContentStatus())['togaf-starter']).toBeGreaterThan(0)
+    await removeStarterContent('togaf-starter')
+    expect(await getStarterContentStatus()).toEqual({})
+
+    await cleanupOrg(org.id)
   })
 })
