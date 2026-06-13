@@ -24,6 +24,39 @@ const PASSWORD_EXPIRED_ALLOWED = ['/change-password', '/api/auth/signout']
 
 const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true'
 
+/**
+ * Browser-visible redirect that never echoes the container bind address (#807).
+ *
+ * Next.js middleware requires an **absolute** Location — it does `new URL(loc)`
+ * internally and throws "Invalid URL" on a relative path (unlike a Route
+ * Handler, where the logout fix's relative Location works, #794). So we build
+ * an absolute URL, but guard the host: behind GovEA's TLS-terminating proxy the
+ * standalone server's request origin can be the bind address (`0.0.0.0:3000`),
+ * which would send users to `https://0.0.0.0:3000/login`. When the origin is
+ * that bind host we rebuild from the proxy's forwarded host, then the
+ * configured public origin — never `0.0.0.0`. Normal requests (real Host, or
+ * localhost in CI/dev) are unaffected and redirect as before.
+ */
+function redirectTo(req: NextRequest, path: string): NextResponse {
+  const target = new URL(path, req.nextUrl.origin)
+  if (target.hostname === '0.0.0.0') {
+    const fwdHost = req.headers.get('x-forwarded-host')?.split(',')[0].trim()
+    const fwdProto = req.headers.get('x-forwarded-proto')?.split(',')[0].trim()
+    const base =
+      (fwdHost && !fwdHost.startsWith('0.0.0.0') && `${fwdProto || 'https'}://${fwdHost}`) ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      null
+    if (base) {
+      try {
+        return NextResponse.redirect(new URL(path, base))
+      } catch {
+        /* malformed base — fall through to the request-origin target */
+      }
+    }
+  }
+  return NextResponse.redirect(target)
+}
+
 /** Read-only session decode — checks both secure and plain cookie names. */
 async function decodeSession(req: NextRequest): Promise<JWT | null> {
   const secret = process.env.AUTH_SECRET
@@ -51,7 +84,7 @@ export default async function middleware(req: NextRequest) {
   // because events.signIn (auth.ts) deletes the marker.
   const loggedOutMarker = req.cookies.get(LOGGED_OUT_MARKER_COOKIE)?.value
   if (token && isResurrectedSession(loggedOutMarker, token.iat)) {
-    const res = NextResponse.redirect(new URL('/login', req.url))
+    const res = redirectTo(req, '/login')
     for (const cookie of req.cookies.getAll()) {
       if (cookie.name.includes('authjs.session-token')) {
         res.cookies.set(cookie.name, '', {
@@ -66,15 +99,15 @@ export default async function middleware(req: NextRequest) {
   }
 
   if (!token) {
-    return NextResponse.redirect(new URL('/login', req.url))
+    return redirectTo(req, '/login')
   }
 
   if (MAINTENANCE_MODE && token.role !== 'admin') {
-    return NextResponse.redirect(new URL('/maintenance', req.url))
+    return redirectTo(req, '/maintenance')
   }
 
   if (pathname.startsWith('/instance') && token.instanceRole !== 'instance_admin') {
-    return NextResponse.redirect(new URL('/', req.url))
+    return redirectTo(req, '/')
   }
 
   // #527 — password-expiry redirect. The token carries a snapshot of
@@ -86,7 +119,7 @@ export default async function middleware(req: NextRequest) {
     const expired = !lastChanged
       || (Date.now() - lastChanged) > expiryDays * 24 * 60 * 60 * 1000
     if (expired) {
-      return NextResponse.redirect(new URL('/change-password?reason=expired', req.url))
+      return redirectTo(req, '/change-password?reason=expired')
     }
   }
 
