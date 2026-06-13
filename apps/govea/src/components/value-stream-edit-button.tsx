@@ -17,12 +17,19 @@ interface ValueStreamEditButtonProps {
     status: 'draft' | 'published' | 'archived'
     visibility: 'org' | 'connections' | 'instance'
   }
+  /**
+   * Render the form directly instead of behind an "Edit value stream" button.
+   * Used on the dedicated edit route (#726) where the page is already the edit
+   * surface; save keeps the form open and the page's back link handles return.
+   */
+  startOpen?: boolean
 }
 
-export function ValueStreamEditButton({ valueStreamId, initial }: ValueStreamEditButtonProps) {
-  const [editing, setEditing] = useState(false)
+export function ValueStreamEditButton({ valueStreamId, initial, startOpen = false }: ValueStreamEditButtonProps) {
+  const [editing, setEditing] = useState(startOpen)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
   const router = useRouter()
 
   if (!editing) {
@@ -38,12 +45,14 @@ export function ValueStreamEditButton({ valueStreamId, initial }: ValueStreamEdi
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setSaved(false)
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
       try {
         await editValueStream(valueStreamId, formData)
         router.refresh()
-        setEditing(false)
+        if (startOpen) setSaved(true)
+        else setEditing(false)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Save failed')
       }
@@ -53,14 +62,19 @@ export function ValueStreamEditButton({ valueStreamId, initial }: ValueStreamEdi
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-card p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Edit Value Stream</h3>
-        <button type="button" onClick={() => setEditing(false)} className="text-xs text-muted-foreground hover:text-foreground">
-          Cancel
-        </button>
+        <h3 className="text-sm font-semibold">Value stream details</h3>
+        {!startOpen && (
+          <button type="button" onClick={() => setEditing(false)} className="text-xs text-muted-foreground hover:text-foreground">
+            Cancel
+          </button>
+        )}
       </div>
 
       {error && (
         <p className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">{error}</p>
+      )}
+      {saved && (
+        <p className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-300">Details saved.</p>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -98,7 +112,9 @@ export function ValueStreamEditButton({ valueStreamId, initial }: ValueStreamEdi
       </div>
 
       <div className="flex justify-end gap-2 pt-1">
-        <Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
+        {!startOpen && (
+          <Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
+        )}
         <Button type="submit" size="sm" disabled={isPending}>{isPending ? 'Saving…' : 'Save changes'}</Button>
       </div>
     </form>

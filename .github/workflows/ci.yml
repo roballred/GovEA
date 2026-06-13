@@ -222,7 +222,7 @@ jobs:
         # is CI-safe. Other specs (iam.spec.ts, auth-security.spec.ts)
         # intentionally stay out of CI for now — they mutate app state and
         # are run locally.
-        run: pnpm --filter govea exec playwright test tests/e2e/specs/smoke.spec.ts tests/e2e/specs/overview.spec.ts tests/e2e/specs/a11y.spec.ts tests/e2e/specs/logout.spec.ts
+        run: pnpm --filter govea exec playwright test tests/e2e/specs/smoke.spec.ts tests/e2e/specs/overview.spec.ts tests/e2e/specs/a11y.spec.ts tests/e2e/specs/logout.spec.ts tests/e2e/specs/value-streams.spec.ts
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
