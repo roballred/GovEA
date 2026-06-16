@@ -2,7 +2,15 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getStrategy } from '@/actions/strategies'
 import { getGoals } from '@/actions/goals'
-import { linkStrategyGoal, unlinkStrategyGoal } from '@/actions/links'
+import { getCapabilities } from '@/actions/capabilities'
+import { getValueStreams } from '@/actions/value-streams'
+import { getInitiatives } from '@/actions/initiatives'
+import {
+  linkStrategyGoal, unlinkStrategyGoal,
+  linkStrategyCapability, unlinkStrategyCapability,
+  linkStrategyValueStream, unlinkStrategyValueStream,
+  linkStrategyInitiative, unlinkStrategyInitiative,
+} from '@/actions/links'
 import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -44,17 +52,31 @@ export default async function StrategyDetailPage({ params }: { params: Promise<{
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
   const canMutate = editor && strategy.organizationId === orgId
+
+  // Link/unlink actions bound to this strategy id (each takes the target id).
   const addGoal = linkStrategyGoal.bind(null, id)
   const removeGoal = unlinkStrategyGoal.bind(null, id)
+  const addCapability = linkStrategyCapability.bind(null, id)
+  const removeCapability = unlinkStrategyCapability.bind(null, id)
+  const addValueStream = linkStrategyValueStream.bind(null, id)
+  const removeValueStream = unlinkStrategyValueStream.bind(null, id)
+  const addInitiative = linkStrategyInitiative.bind(null, id)
+  const removeInitiative = unlinkStrategyInitiative.bind(null, id)
 
-  // Goals a Strategy can pursue: any org goal not already linked here (a goal can
-  // be pursued by several strategies, so no un-linked-only restriction).
+  // Available pickers: org entities not already linked here. Only loaded for editors.
   const linkedGoalIds = new Set(strategy.strategyGoals.map(sg => sg.goalId))
-  const availableGoals = canMutate
-    ? (await getGoals(orgId, session.user.role))
-        .filter(g => g.organizationId === orgId && !linkedGoalIds.has(g.id))
-        .map(g => ({ id: g.id, name: g.name }))
-    : []
+  const linkedCapIds = new Set(strategy.strategyCapabilities.map(sc => sc.capabilityId))
+  const linkedVsIds = new Set(strategy.strategyValueStreams.map(sv => sv.valueStreamId))
+  const linkedInitIds = new Set(strategy.strategyInitiatives.map(si => si.initiativeId))
+
+  const [availableGoals, availableCapabilities, availableValueStreams, availableInitiatives] = canMutate
+    ? await Promise.all([
+        getGoals(orgId, session.user.role).then(rows => rows.filter(g => g.organizationId === orgId && !linkedGoalIds.has(g.id)).map(g => ({ id: g.id, name: g.name }))),
+        getCapabilities().then(rows => rows.filter(c => c.organizationId === orgId && !linkedCapIds.has(c.id)).map(c => ({ id: c.id, name: c.name }))),
+        getValueStreams().then(rows => rows.filter(v => v.organizationId === orgId && !linkedVsIds.has(v.id)).map(v => ({ id: v.id, name: v.name }))),
+        getInitiatives().then(rows => rows.filter(i => i.organizationId === orgId && !linkedInitIds.has(i.id)).map(i => ({ id: i.id, name: i.name }))),
+      ])
+    : [[], [], [], []]
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -120,6 +142,50 @@ export default async function StrategyDetailPage({ params }: { params: Promise<{
         available={availableGoals}
         addAction={addGoal}
         removeAction={removeGoal}
+      />
+
+      <RelationshipPanel
+        title="Capabilities impacted"
+        items={strategy.strategyCapabilities.map(({ capability }) => ({
+          id: capability.id,
+          name: capability.name,
+          href: `/capabilities/${capability.id}`,
+          meta: capability.domain ?? undefined,
+        }))}
+        gapMessage="No capabilities linked — map the organisational abilities this approach leverages or changes."
+        canEdit={canMutate}
+        available={availableCapabilities}
+        addAction={addCapability}
+        removeAction={removeCapability}
+      />
+
+      <RelationshipPanel
+        title="Value streams impacted"
+        items={strategy.strategyValueStreams.map(({ valueStream }) => ({
+          id: valueStream.id,
+          name: valueStream.name,
+          href: `/value-streams/${valueStream.id}`,
+        }))}
+        gapMessage="No value streams linked — map the value streams this approach affects."
+        canEdit={canMutate}
+        available={availableValueStreams}
+        addAction={addValueStream}
+        removeAction={removeValueStream}
+      />
+
+      <RelationshipPanel
+        title="Delivered by initiatives"
+        items={strategy.strategyInitiatives.map(({ initiative }) => ({
+          id: initiative.id,
+          name: initiative.name,
+          href: `/initiatives/${initiative.id}`,
+          meta: initiative.status,
+        }))}
+        gapMessage="No initiatives linked — link the funded work that delivers this approach."
+        canEdit={canMutate}
+        available={availableInitiatives}
+        addAction={addInitiative}
+        removeAction={removeInitiative}
       />
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
