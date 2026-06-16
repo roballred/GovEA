@@ -60,6 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Strategy',
     items: [
+      { href: '/strategies',  label: 'Strategies',  moduleKey: 'strategies' },
       { href: '/goals',       label: 'Goals',       moduleKey: 'objectives', viewerHidden: true },
       { href: '/objectives',  label: 'Objectives',  moduleKey: 'objectives' },
       { href: '/initiatives', label: 'Initiatives', moduleKey: 'initiatives' },

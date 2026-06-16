@@ -1,0 +1,35 @@
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { getStrategies } from '@/actions/strategies'
+import { getOrgUsersForPicker } from '@/actions/org-users'
+import { StrategyTable } from './strategy-table'
+
+export default async function StrategiesPage() {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+
+  const orgId = session.user.organizationId!
+  const role = session.user.role
+
+  const [strategyList, orgUsers] = await Promise.all([
+    getStrategies(orgId, role),
+    getOrgUsersForPicker(),
+  ])
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Strategies</h1>
+        <p className="text-muted-foreground mt-1">
+          Planning-period containers that frame your goals. The single <strong>adopted</strong> strategy is your organization&apos;s current strategic direction.
+        </p>
+      </div>
+      <StrategyTable
+        strategies={strategyList}
+        orgUsers={orgUsers}
+        role={role}
+        currentOrgId={orgId}
+      />
+    </div>
+  )
+}
