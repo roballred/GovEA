@@ -12,7 +12,7 @@ import { db } from '@/db/client'
 import {
   organizations, users, capabilities, initiatives, adrs, auditLog,
   personas, applications, strategicObjectives, principles, valueStreams, services,
-  glossaryTerms, strategies, goals,
+  glossaryTerms, strategies, strategyGoals, goals,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
@@ -141,12 +141,12 @@ export async function getStrategiesForOrg(orgId: string) {
   return db.select().from(strategies).where(eq(strategies.organizationId, orgId))
 }
 
-/** Insert a strategy row directly — used to seed specific statuses for invariant tests. */
+/** Insert a strategy row directly — used to seed specific statuses for tests. */
 export async function insertStrategy(
   orgId: string,
   overrides: {
     name?: string
-    status?: 'draft' | 'adopted' | 'superseded' | 'retired'
+    status?: 'proposed' | 'active' | 'achieved' | 'abandoned'
     visibility?: 'org' | 'connections' | 'instance'
   } = {},
 ) {
@@ -156,17 +156,17 @@ export async function insertStrategy(
     .values({
       organizationId: orgId,
       name: overrides.name ?? `Test Strategy ${suffix}`,
-      status: overrides.status ?? 'draft',
+      status: overrides.status ?? 'proposed',
       visibility: overrides.visibility ?? 'org',
     })
     .returning()
   return row
 }
 
-/** Insert a goal row directly — used by strategy FK (set null) tests. */
+/** Insert a goal row directly. */
 export async function insertGoal(
   orgId: string,
-  overrides: { name?: string; strategyId?: string | null } = {},
+  overrides: { name?: string; status?: 'draft' | 'published' | 'archived' } = {},
 ) {
   const suffix = randomUUID().slice(0, 8)
   const [row] = await db
@@ -174,10 +174,15 @@ export async function insertGoal(
     .values({
       organizationId: orgId,
       name: overrides.name ?? `Test Goal ${suffix}`,
-      strategyId: overrides.strategyId ?? null,
+      status: overrides.status ?? 'draft',
     })
     .returning()
   return row
+}
+
+/** Link a strategy to a goal it pursues (strategy_goals junction). */
+export async function linkStrategyGoalRow(strategyId: string, goalId: string) {
+  await db.insert(strategyGoals).values({ strategyId, goalId }).onConflictDoNothing()
 }
 
 /** Convenience: insert a capability row directly for cross-org / setup scenarios. */

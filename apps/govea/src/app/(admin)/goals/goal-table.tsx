@@ -23,12 +23,9 @@ type GoalRow = Goal & {
   goalObjectives: { objective: StrategicObjective }[]
 }
 
-type StrategyOption = { id: string; name: string; status: string }
-
 interface Props {
   goals: GoalRow[]
   objectives: StrategicObjective[]
-  strategies: StrategyOption[]
   role: Role
   currentOrgId: string
 }
@@ -39,7 +36,7 @@ const STATUS_STYLES: Record<string, string> = {
   archived: 'bg-amber-100 text-amber-800 border-amber-200',
 }
 
-export function GoalTable({ goals, objectives, strategies, role, currentOrgId }: Props) {
+export function GoalTable({ goals, objectives, role, currentOrgId }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [statusFilter, setStatusFilter] = useState('all')
@@ -175,7 +172,6 @@ export function GoalTable({ goals, objectives, strategies, role, currentOrgId }:
             <MarkdownEditor label="Description" name="description" rows={2} placeholder="Markdown supported" />
             <FormField label="Planning horizon" name="planningHorizon" placeholder="e.g. 2026–2028, Long-term" />
             <FormField label="Owner" name="owner" placeholder="e.g. Office of the CIO" />
-            <StrategyPicker strategies={strategies} />
             {objectives.length > 0 && (
               <div className="space-y-1.5">
                 <Label>Objectives</Label>
@@ -225,7 +221,6 @@ export function GoalTable({ goals, objectives, strategies, role, currentOrgId }:
             <MarkdownEditor label="Description" name="description" rows={2} defaultValue={editTarget?.description ?? ''} placeholder="Markdown supported" />
             <FormField label="Planning horizon" name="planningHorizon" defaultValue={editTarget?.planningHorizon ?? ''} />
             <FormField label="Owner" name="owner" defaultValue={editTarget?.owner ?? ''} />
-            <StrategyPicker strategies={strategies} defaultValue={editTarget?.strategyId} />
             {objectives.length > 0 && (
               <div className="space-y-1.5">
                 <Label>Objectives</Label>
@@ -282,23 +277,6 @@ export function GoalTable({ goals, objectives, strategies, role, currentOrgId }:
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function StrategyPicker({ strategies, defaultValue }: { strategies: StrategyOption[]; defaultValue?: string | null }) {
-  if (strategies.length === 0) return null
-  return (
-    <div className="space-y-1.5">
-      <Label>Strategy</Label>
-      <select name="strategyId" defaultValue={defaultValue ?? ''}
-        className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-        <option value="">— No strategy —</option>
-        {strategies.map(s => (
-          <option key={s.id} value={s.id}>{s.name}{s.status === 'adopted' ? ' (adopted)' : ''}</option>
-        ))}
-      </select>
-      <p className="text-xs text-muted-foreground">The planning-period container this goal belongs to. A goal can belong to one strategy.</p>
     </div>
   )
 }

@@ -101,12 +101,17 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
         )}
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">
-          {goal.strategy && (
+          {goal.strategyGoals.length > 0 && (
             <div>
-              <span className="text-muted-foreground">Part of strategy: </span>
-              <Link href={`/strategies/${goal.strategy.id}`} className="font-medium text-primary hover:underline underline-offset-4">
-                {goal.strategy.name}
-              </Link>
+              <span className="text-muted-foreground">Pursued by strategy: </span>
+              {goal.strategyGoals.map(({ strategy }, i) => (
+                <span key={strategy.id}>
+                  {i > 0 && ', '}
+                  <Link href={`/strategies/${strategy.id}`} className="font-medium text-primary hover:underline underline-offset-4">
+                    {strategy.name}
+                  </Link>
+                </span>
+              ))}
             </div>
           )}
           {goal.planningHorizon && (

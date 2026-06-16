@@ -21,7 +21,7 @@ export default async function StrategiesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Strategies</h1>
         <p className="text-muted-foreground mt-1">
-          Planning-period containers that frame your goals. The single <strong>adopted</strong> strategy is your organization&apos;s current strategic direction.
+          Your chosen <strong>courses of action</strong> — the approaches you&apos;re taking to achieve your goals, and the capabilities, value streams, and initiatives each one leverages.
         </p>
       </div>
       <StrategyTable

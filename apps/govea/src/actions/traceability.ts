@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import {
-  strategicObjectives, capabilities, services, goals, strategies,
+  strategicObjectives, capabilities, services, goals, strategies, strategyGoals,
   goalObjectives, objectiveCapabilities, applicationCapabilities,
   initiativeObjectives, serviceCapabilities,
   // #695 — trace-participation subjects and their one-hop root junctions
@@ -162,11 +162,11 @@ async function getGoalsByObjective(objectiveIds: string[]): Promise<Map<string, 
 
 // ── Strategy trace ──────────────────────────────────────────────────────────
 //
-// Strategy is the planning-period root above Goals (#697 / ADR-0004). The chain
-// is Strategy → Goals → Objectives → Initiatives → Capabilities → Applications,
-// composed entirely from existing relationships. Viewer pruning (design Q5): a
-// draft Strategy is not a viewer-visible root, and member goals are pruned to
-// published for viewers.
+// Strategy is a course-of-action root that pursues Goals (#697 / ADR-0005). The
+// chain is Strategy → Goals → Objectives → Initiatives → Capabilities →
+// Applications, composed entirely from existing relationships. Viewer pruning:
+// a proposed Strategy is not a viewer-visible root, and pursued goals are pruned
+// to published for viewers.
 
 export async function getStrategyTrace(id: string): Promise<StrategyTrace | null> {
   const session = await auth()
@@ -177,17 +177,19 @@ export async function getStrategyTrace(id: string): Promise<StrategyTrace | null
   if (!row) return null
   const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
   if (!visible) return null
-  // A draft strategy is not a viewer-visible root.
-  if (isViewer && row.status === 'draft') return null
+  // A proposed strategy is not a viewer-visible root.
+  if (isViewer && row.status === 'proposed') return null
 
-  // Member goals (the one new edge); pruned to published for viewers.
-  const memberGoals = await db.query.goals.findMany({
-    where: (g, { eq: eqf, and: andf }) =>
-      isViewer
-        ? andf(eqf(g.strategyId, id), eqf(g.status, 'published'))
-        : eqf(g.strategyId, id),
-    orderBy: (g, { asc }) => [asc(g.name)],
+  // Goals this strategy pursues (via the strategy_goals junction); pruned to
+  // published for viewers.
+  const pursuedRows = await db.query.strategyGoals.findMany({
+    where: eq(strategyGoals.strategyId, id),
+    with: { goal: true },
   })
+  const memberGoals = pursuedRows
+    .map((r) => r.goal)
+    .filter((g) => !isViewer || g.status === 'published')
+    .sort((a, b) => a.name.localeCompare(b.name))
   const goalIds = memberGoals.map((g) => g.id)
 
   // Objectives per member goal, then caps + initiatives for those objectives —

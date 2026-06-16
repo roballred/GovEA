@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
-import { getStrategy, adoptStrategy } from '@/actions/strategies'
+import { getStrategy } from '@/actions/strategies'
 import { getGoals } from '@/actions/goals'
 import { linkStrategyGoal, unlinkStrategyGoal } from '@/actions/links'
 import { canEdit } from '@/lib/rbac'
@@ -8,14 +8,13 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import { MarkdownContent } from '@/components/markdown-content'
-import { Button } from '@/components/ui/button'
 import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-700 border-slate-200',
-  adopted: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  superseded: 'bg-amber-100 text-amber-800 border-amber-200',
-  retired: 'bg-zinc-100 text-zinc-600 border-zinc-200',
+  proposed: 'bg-slate-100 text-slate-700 border-slate-200',
+  active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  achieved: 'bg-blue-100 text-blue-800 border-blue-200',
+  abandoned: 'bg-zinc-100 text-zinc-600 border-zinc-200',
 }
 
 const VISIBILITY_STYLES: Record<string, string> = {
@@ -45,15 +44,15 @@ export default async function StrategyDetailPage({ params }: { params: Promise<{
   const editor = canEdit(session.user)
   const orgId = session.user.organizationId!
   const canMutate = editor && strategy.organizationId === orgId
-  const adopt = adoptStrategy.bind(null, id)
   const addGoal = linkStrategyGoal.bind(null, id)
   const removeGoal = unlinkStrategyGoal.bind(null, id)
 
-  // Offer only un-containered goals (strategy_id null) to add here; moving a goal
-  // out of another strategy is done from the goal's edit flow (slice 3).
+  // Goals a Strategy can pursue: any org goal not already linked here (a goal can
+  // be pursued by several strategies, so no un-linked-only restriction).
+  const linkedGoalIds = new Set(strategy.strategyGoals.map(sg => sg.goalId))
   const availableGoals = canMutate
     ? (await getGoals(orgId, session.user.role))
-        .filter(g => g.organizationId === orgId && g.strategyId === null)
+        .filter(g => g.organizationId === orgId && !linkedGoalIds.has(g.id))
         .map(g => ({ id: g.id, name: g.name }))
     : []
 
@@ -104,24 +103,19 @@ export default async function StrategyDetailPage({ params }: { params: Promise<{
           )}
         </div>
 
-        {canMutate && strategy.status !== 'adopted' && (
-          <form action={adopt} className="pt-1">
-            <Button type="submit" size="sm">Adopt as current strategy</Button>
-          </form>
-        )}
       </div>
 
       <hr />
 
       <RelationshipPanel
-        title="Goals"
-        items={strategy.goals.map(g => ({
-          id: g.id,
-          name: g.name,
-          href: `/goals/${g.id}`,
-          meta: g.status,
+        title="Goals pursued"
+        items={strategy.strategyGoals.map(({ goal }) => ({
+          id: goal.id,
+          name: goal.name,
+          href: `/goals/${goal.id}`,
+          meta: goal.status,
         }))}
-        gapMessage="No goals belong to this strategy yet. Add un-containered goals here, or set this strategy from a goal's edit flow."
+        gapMessage="This strategy doesn't pursue any goals yet. Link the goals this approach is meant to achieve."
         canEdit={canMutate}
         available={availableGoals}
         addAction={addGoal}

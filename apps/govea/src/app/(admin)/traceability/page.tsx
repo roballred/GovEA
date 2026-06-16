@@ -859,9 +859,9 @@ async function TraceabilityHub({ organizationId, role }: { organizationId: strin
   // Viewer-only filter: traceability already enforces visibility at the
   // entity-level actions. For the hub, we restrict to published items so
   // stakeholders aren't shown drafts they can't actually trace.
-  // Strategy has no 'published' status — a draft strategy is not a traceable
-  // root (design Q5), so non-draft strategies are the hub-eligible ones.
-  const traceableStrategies = strategies.filter(s => s.status !== 'draft')
+  // Strategy has no 'published' status — a proposed strategy is not a traceable
+  // root (ADR-0005), so non-proposed strategies are the hub-eligible ones.
+  const traceableStrategies = strategies.filter(s => s.status !== 'proposed')
   const publishedGoals = goals.filter(g => g.status === 'published')
   const publishedObjectives = objectives.filter(o => o.status === 'published')
   const publishedCapabilities = capabilities.filter(c => c.status === 'published')

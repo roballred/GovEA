@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createStrategy, editStrategy, deleteStrategy, adoptStrategy } from '@/actions/strategies'
+import { createStrategy, editStrategy, deleteStrategy } from '@/actions/strategies'
 import type { Strategy } from '@/db/schema'
 import type { OrgUserPickerRow } from '@/actions/org-users'
 import { useRouter } from 'next/navigation'
@@ -22,7 +22,7 @@ import { MarkdownEditor } from '@/components/markdown-editor'
 type StrategyRow = Strategy & {
   organization: { id: string; name: string } | null
   owner: { id: string; name: string | null } | null
-  goals: { id: string; name: string }[]
+  strategyGoals: { strategyId: string; goalId: string }[]
 }
 
 interface Props {
@@ -33,10 +33,10 @@ interface Props {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-700 border-slate-200',
-  adopted: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  superseded: 'bg-amber-100 text-amber-800 border-amber-200',
-  retired: 'bg-zinc-100 text-zinc-600 border-zinc-200',
+  proposed: 'bg-slate-100 text-slate-700 border-slate-200',
+  active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  achieved: 'bg-blue-100 text-blue-800 border-blue-200',
+  abandoned: 'bg-zinc-100 text-zinc-600 border-zinc-200',
 }
 
 function titleCase(s: string) {
@@ -50,7 +50,6 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<StrategyRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<StrategyRow | null>(null)
-  const [adoptTarget, setAdoptTarget] = useState<StrategyRow | null>(null)
 
   const canEdit = role === 'admin' || role === 'contributor'
   const canDelete = role === 'admin'
@@ -86,15 +85,6 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
     })
   }
 
-  async function handleAdopt() {
-    if (!adoptTarget) return
-    startTransition(async () => {
-      await adoptStrategy(adoptTarget.id)
-      setAdoptTarget(null)
-      refresh()
-    })
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -104,10 +94,10 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="all">All statuses</option>
-          <option value="draft">Draft</option>
-          <option value="adopted">Adopted</option>
-          <option value="superseded">Superseded</option>
-          <option value="retired">Retired</option>
+          <option value="proposed">Proposed</option>
+          <option value="active">Active</option>
+          <option value="achieved">Achieved</option>
+          <option value="abandoned">Abandoned</option>
         </select>
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)} size="sm" className="ml-auto">
@@ -150,7 +140,7 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
                   {s.owner?.name ?? '—'}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {s.goals.length > 0 ? s.goals.length : '—'}
+                  {s.strategyGoals.length > 0 ? s.strategyGoals.length : '—'}
                 </TableCell>
                 <TableCell>
                   <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[s.status])}>
@@ -164,12 +154,6 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
                         <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View</Button>
                       </Link>
                       <Button variant="ghost" size="sm" onClick={() => setEditTarget(s)} className="h-7 px-2 text-xs">Edit</Button>
-                      {s.status !== 'adopted' && (
-                        <Button variant="ghost" size="sm" onClick={() => setAdoptTarget(s)} disabled={isPending}
-                          className="h-7 px-2 text-xs text-emerald-700 hover:text-emerald-700 hover:bg-emerald-50">
-                          Adopt
-                        </Button>
-                      )}
                       {canDelete && (
                         <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(s)} disabled={isPending}
                           className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -213,31 +197,12 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
         </DialogContent>
       </Dialog>
 
-      {/* Adopt Dialog */}
-      <Dialog open={!!adoptTarget} onOpenChange={open => { if (!open) setAdoptTarget(null) }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Adopt Strategy</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Make <strong>{adoptTarget?.name}</strong> your organization&apos;s current strategy?
-            {strategies.some(s => s.status === 'adopted') && (
-              <> The currently adopted strategy will be superseded.</>
-            )}
-          </p>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setAdoptTarget(null)}>Cancel</Button>
-            <Button onClick={handleAdopt} disabled={isPending}>
-              {isPending ? 'Adopting…' : 'Adopt'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Delete Strategy</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Permanently delete <strong>{deleteTarget?.name}</strong>? Member goals are kept but un-linked from this strategy. This cannot be undone.
+            Permanently delete <strong>{deleteTarget?.name}</strong>? Linked goals, capabilities, value streams and initiatives are kept; only their links to this strategy are removed. This cannot be undone.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
@@ -251,11 +216,7 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
   )
 }
 
-/**
- * Shared create/edit form fields. Status select deliberately omits `adopted` —
- * adoption is the Adopt action (it supersedes the prior adopted strategy in one
- * tx); editing never adopts.
- */
+/** Shared create/edit form fields for a strategy (course of action). */
 function StrategyFields({ orgUsers, strategy }: { orgUsers: OrgUserPickerRow[]; strategy?: StrategyRow | null }) {
   return (
     <>
@@ -278,13 +239,13 @@ function StrategyFields({ orgUsers, strategy }: { orgUsers: OrgUserPickerRow[]; 
       </div>
       <div className="space-y-1.5">
         <Label>Status</Label>
-        <select name="status" defaultValue={strategy?.status === 'adopted' ? 'draft' : (strategy?.status ?? 'draft')}
+        <select name="status" defaultValue={strategy?.status ?? 'proposed'}
           className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-          <option value="draft">Draft</option>
-          <option value="superseded">Superseded</option>
-          <option value="retired">Retired</option>
+          <option value="proposed">Proposed</option>
+          <option value="active">Active</option>
+          <option value="achieved">Achieved</option>
+          <option value="abandoned">Abandoned</option>
         </select>
-        <p className="text-xs text-muted-foreground">Use the Adopt action to make a strategy the current one.</p>
       </div>
       <div className="space-y-1.5">
         <Label>Visibility</Label>
