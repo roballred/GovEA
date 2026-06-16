@@ -27,6 +27,9 @@ import {
 import Link from 'next/link'
 import { FirstSignInModal } from '@/components/first-sign-in-modal'
 import { ViewerDashboard } from './viewer-dashboard'
+import { getActiveStrategies } from '@/actions/strategies'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 
 const RAG_TEXT_CLASS: Record<RagBucket, string> = {
   green:   'text-green-700 dark:text-green-400',
@@ -238,6 +241,11 @@ export default async function DashboardPage() {
     hasAny: Object.values(fedByStatus).some(n => n > 0) || fedInboundLinks.length > 0 || flaggedCount > 0,
   }
 
+  const enabledModules = await getEnabledModules()
+  const activeStrategies = isModuleEnabled(enabledModules, 'strategies')
+    ? await getActiveStrategies(orgId)
+    : []
+
   return (
     <div className="space-y-6">
       {/* First-sign-in modal (#587 follow-up). Self-managed via localStorage;
@@ -250,6 +258,21 @@ export default async function DashboardPage() {
           Welcome back{session.user.name ? `, ${session.user.name}` : ''}.
         </p>
       </div>
+
+      {/* Active strategies — quick context on the live course-of-action plans (ADR-0005 R5) */}
+      {activeStrategies.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Active strategies</p>
+          <div className="flex flex-wrap gap-2">
+            {activeStrategies.map(s => (
+              <Link key={s.id} href={`/strategies/${s.id}`}
+                className="inline-flex items-center rounded-md border bg-card px-2.5 py-1 text-sm font-medium hover:text-primary transition-colors">
+                {s.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isAdminUser && !emailConfigured && (
         <div

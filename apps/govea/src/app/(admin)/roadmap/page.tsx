@@ -1,6 +1,9 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getInitiatives } from '@/actions/initiatives'
+import { getActiveStrategies } from '@/actions/strategies'
+import { getEnabledModules } from '@/lib/get-enabled-modules'
+import { isModuleEnabled } from '@/lib/modules'
 import { ConfidenceSummary } from '@/components/confidence-summary'
 import { PrintExportButton } from '@/components/print-export'
 import { PrintCoverSheet } from '@/components/print-cover-sheet'
@@ -258,9 +261,11 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
 
   const orgId = session.user.organizationId!
   const role = session.user.role
-  const [allInitiatives, org] = await Promise.all([
+  const enabledModules = await getEnabledModules()
+  const [allInitiatives, org, activeStrategies] = await Promise.all([
     getInitiatives(),
     db.query.organizations.findFirst({ where: eq(organizations.id, orgId), columns: { name: true } }),
+    isModuleEnabled(enabledModules, 'strategies') ? getActiveStrategies(orgId) : Promise.resolve([]),
   ])
   const hasInitiatives = allInitiatives.length > 0
 
@@ -322,6 +327,21 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
 
       {/* Repository confidence — shown when org has authenticated visibility on (#380 PR-4) */}
       <ConfidenceSummary orgId={orgId} />
+
+      {/* Active strategies — the course-of-action context this roadmap delivers (ADR-0005 R5) */}
+      {activeStrategies.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Active strategies</p>
+          <div className="flex flex-wrap gap-2">
+            {activeStrategies.map(s => (
+              <Link key={s.id} href={`/strategies/${s.id}`}
+                className="inline-flex items-center rounded-md border bg-card px-2.5 py-1 text-sm font-medium hover:text-primary transition-colors">
+                {s.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Empty state */}
       {!hasInitiatives && (

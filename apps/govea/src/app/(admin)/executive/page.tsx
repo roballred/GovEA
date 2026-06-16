@@ -8,6 +8,7 @@ import {
 import { and, count, desc, eq, inArray, isNull, lt } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
+import { getActiveStrategies } from '@/actions/strategies'
 import { ConfidenceSummary } from '@/components/confidence-summary'
 import { PrintExportButton } from '@/components/print-export'
 import { PrintCoverSheet } from '@/components/print-cover-sheet'
@@ -98,6 +99,11 @@ export default async function ExecutiveDashboardPage() {
   const hasCapabilities= isModuleEnabled(enabledModules, 'capabilities')
   const hasInitiatives = isModuleEnabled(enabledModules, 'initiatives')
   const hasObjectives  = isModuleEnabled(enabledModules, 'objectives')
+  const hasStrategies  = isModuleEnabled(enabledModules, 'strategies')
+
+  // Active strategies (course-of-action; multiple may be active). Read-only
+  // leadership surface (ADR-0005 R5).
+  const activeStrategies = hasStrategies ? await getActiveStrategies(orgId) : []
 
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is intentional
   const staleThreshold = new Date(Date.now() - STALE_MONTHS * 30 * 24 * 60 * 60 * 1000)
@@ -349,6 +355,50 @@ export default async function ExecutiveDashboardPage() {
           />
         )}
       </div>
+
+      {/* ── Active strategy ─────────────────────────────────────────────────── */}
+      {hasStrategies && activeStrategies.length > 0 && (
+        <div>
+          <SectionLabel>Active Strategy</SectionLabel>
+          <div className="space-y-3">
+            {activeStrategies.map(s => {
+              const goals = s.strategyGoals
+                .map(sg => sg.goal)
+                .filter(g => g.status === 'published')
+              const rollup = [
+                `pursues ${goals.length} ${goals.length === 1 ? 'goal' : 'goals'}`,
+                `impacts ${s.strategyCapabilities.length} ${s.strategyCapabilities.length === 1 ? 'capability' : 'capabilities'}`,
+                `${s.strategyValueStreams.length} ${s.strategyValueStreams.length === 1 ? 'value stream' : 'value streams'}`,
+                `delivered by ${s.strategyInitiatives.length} ${s.strategyInitiatives.length === 1 ? 'initiative' : 'initiatives'}`,
+              ].join(' · ')
+              return (
+                <div key={s.id} className="rounded-xl border bg-card p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <Link href={`/strategies/${s.id}`} className="font-semibold hover:text-primary transition-colors">
+                      {s.name}
+                    </Link>
+                    <Link href={`/traceability?from=strategy&id=${s.id}`} className="text-xs text-primary hover:underline underline-offset-4 shrink-0">
+                      View traceability →
+                    </Link>
+                  </div>
+                  {s.summary && <p className="text-sm text-muted-foreground">{s.summary}</p>}
+                  {goals.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {goals.map(g => (
+                        <Link key={g.id} href={`/goals/${g.id}`}
+                          className="inline-flex items-center rounded-md border bg-muted/40 px-2 py-0.5 text-xs hover:bg-muted transition-colors">
+                          {g.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground border-t pt-2 capitalize">{rollup}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Application portfolio ───────────────────────────────────────────── */}
       {hasApps && totalPublishedApps > 0 && (
