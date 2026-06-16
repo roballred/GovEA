@@ -19,6 +19,7 @@ export type ModuleKey =
   | 'applications'
   | 'adrs'
   | 'principles'
+  | 'strategies'
   | 'objectives'
   | 'initiatives'
   | 'roadmap'
@@ -60,6 +61,7 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'adrs',          label: 'Decisions (ADRs)',    href: '/adrs',          group: 'Portfolio' },
   { key: 'debt',          label: 'Architecture debt',   href: '/debt',          group: 'Portfolio' },
   // Strategy
+  { key: 'strategies',    label: 'Strategies',          href: '/strategies',    group: 'Strategy' },
   { key: 'objectives',    label: 'Objectives',          href: '/objectives',    group: 'Strategy' },
   { key: 'initiatives',   label: 'Initiatives',         href: '/initiatives',   group: 'Strategy' },
   { key: 'roadmap',       label: 'Roadmap',             href: '/roadmap',       group: 'Strategy' },
