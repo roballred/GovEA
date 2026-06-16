@@ -22,7 +22,9 @@ import {
   linkCapabilityObjective, unlinkCapabilityObjective,
   linkCapabilityInitiative, unlinkCapabilityInitiative,
   linkCapabilityAdr, unlinkCapabilityAdr,
+  linkCapabilityStrategy, unlinkCapabilityStrategy,
 } from '@/actions/links'
+import { getStrategies } from '@/actions/strategies'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { CrossOrgLinksPanel } from '@/components/cross-org-links-panel'
@@ -87,16 +89,17 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const canMutate = editor && capability.organizationId === orgId
   const canApproveCrossOrg = isAdmin(session.user) && capability.organizationId === orgId
 
-  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, crossOrgLinks] = editor
+  const [allPersonas, allApplications, allObjectives, allInitiatives, allAdrs, allStrategies, crossOrgLinks] = editor
     ? await Promise.all([
         getPersonas(),
         getApplications(),
         getObjectives(),
         getInitiatives(),
         getADRs(),
+        getStrategies(orgId, session.user.role),
         getCrossOrgLinkContext('capability', id),
       ])
-    : [[], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }]
+    : [[], [], [], [], [], [], { approved: [], inboundPending: [], outboundPending: [], outboundRejected: [], availableTargets: [] }]
 
   // Domain owner (#581 follow-up): fetch picker list for editors, plus the
   // owner attribution row for the detail line. Owner lookup is conditional
@@ -121,7 +124,11 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
   const removeInitiative = unlinkCapabilityInitiative.bind(null, id)
   const addAdr = linkCapabilityAdr.bind(null, id)
   const removeAdr = unlinkCapabilityAdr.bind(null, id)
+  const addStrategy = linkCapabilityStrategy.bind(null, id)
+  const removeStrategy = unlinkCapabilityStrategy.bind(null, id)
   const requestFederatedLink = requestCrossOrgLink.bind(null, 'capability', id)
+
+  const linkedStrategyIds = new Set(capability.strategyCapabilities.map(sc => sc.strategyId))
 
   const parents = capability.parentRelationships.map(r => r.parent)
   const children = capability.childRelationships.map(r => r.child)
@@ -273,6 +280,21 @@ export default async function CapabilityDetailPage({ params }: { params: Promise
           available={allPersonas.filter(p => p.organizationId === orgId).map(p => ({ id: p.id, name: p.name }))}
           addAction={addPersona}
           removeAction={removePersona}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'strategies') && (
+        <RelationshipPanel
+          title="Strategies impacting this"
+          items={capability.strategyCapabilities.map(({ strategy }) => ({
+            id: strategy.id, name: strategy.name,
+            href: `/strategies/${strategy.id}`, meta: strategy.status,
+          }))}
+          gapMessage="No strategies reference this capability yet."
+          canEdit={canMutate}
+          available={allStrategies.filter(s => s.organizationId === orgId && !linkedStrategyIds.has(s.id)).map(s => ({ id: s.id, name: s.name }))}
+          addAction={addStrategy}
+          removeAction={removeStrategy}
         />
       )}
 

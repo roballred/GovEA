@@ -421,6 +421,47 @@ export async function unlinkStrategyInitiative(strategyId: string, initiativeId:
   revalidatePath(`/strategies/${strategyId}`)
 }
 
+// ── Reverse Strategy affordances (#829) ──────────────────────────────────────
+//
+// Same junctions, driven from the *other* entity's detail page. Each delegates
+// to the strategy-first action (which org-checks both ends) and revalidates the
+// source page. The argument order is (sourceId, strategyId) so a page can bind
+// its own id: `linkCapabilityStrategy.bind(null, capabilityId)`.
+
+export async function linkGoalStrategy(goalId: string, strategyId: string) {
+  await linkStrategyGoal(strategyId, goalId) // revalidates both /goals and /strategies
+}
+export async function unlinkGoalStrategy(goalId: string, strategyId: string) {
+  await unlinkStrategyGoal(strategyId, goalId)
+}
+
+export async function linkCapabilityStrategy(capabilityId: string, strategyId: string) {
+  await linkStrategyCapability(strategyId, capabilityId)
+  revalidatePath(`/capabilities/${capabilityId}`)
+}
+export async function unlinkCapabilityStrategy(capabilityId: string, strategyId: string) {
+  await unlinkStrategyCapability(strategyId, capabilityId)
+  revalidatePath(`/capabilities/${capabilityId}`)
+}
+
+export async function linkValueStreamStrategy(valueStreamId: string, strategyId: string) {
+  await linkStrategyValueStream(strategyId, valueStreamId)
+  revalidatePath(`/value-streams/${valueStreamId}`)
+}
+export async function unlinkValueStreamStrategy(valueStreamId: string, strategyId: string) {
+  await unlinkStrategyValueStream(strategyId, valueStreamId)
+  revalidatePath(`/value-streams/${valueStreamId}`)
+}
+
+export async function linkInitiativeStrategy(initiativeId: string, strategyId: string) {
+  await linkStrategyInitiative(strategyId, initiativeId)
+  revalidatePath(`/initiatives/${initiativeId}`)
+}
+export async function unlinkInitiativeStrategy(initiativeId: string, strategyId: string) {
+  await unlinkStrategyInitiative(strategyId, initiativeId)
+  revalidatePath(`/initiatives/${initiativeId}`)
+}
+
 // ── Objective ↔ Capability ──────────────────────────────────────────────────
 
 export async function linkObjectiveCapability(objectiveId: string, capabilityId: string) {
