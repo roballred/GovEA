@@ -7,6 +7,8 @@ import { organizations } from './organizations'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas, valueStreamCapabilities } from './value-streams'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from './objectives'
 import { goals, goalObjectives } from './goals'
+import { strategies } from './strategies'
+import { users } from './users'
 import { initiatives, initiativeCapabilities, initiativeObjectives, initiativeApplications } from './initiatives'
 import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives } from './adrs'
 import { principles, principleAdrs, principleCapabilities } from './principles'
@@ -142,7 +144,25 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
     fields: [goals.organizationId],
     references: [organizations.id],
   }),
+  strategy: one(strategies, {
+    fields: [goals.strategyId],
+    references: [strategies.id],
+  }),
   goalObjectives: many(goalObjectives),
+}))
+
+// ─── Strategies ──────────────────────────────────────────────────────────────
+
+export const strategiesRelations = relations(strategies, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [strategies.organizationId],
+    references: [organizations.id],
+  }),
+  owner: one(users, {
+    fields: [strategies.ownerUserId],
+    references: [users.id],
+  }),
+  goals: many(goals),
 }))
 
 export const goalObjectivesRelations = relations(goalObjectives, ({ one }) => ({

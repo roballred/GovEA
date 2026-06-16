@@ -12,7 +12,7 @@ import { db } from '@/db/client'
 import {
   organizations, users, capabilities, initiatives, adrs, auditLog,
   personas, applications, strategicObjectives, principles, valueStreams, services,
-  glossaryTerms,
+  glossaryTerms, strategies, goals,
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
@@ -135,6 +135,49 @@ export async function getAuditLogsForEntity(entityId: string) {
 
 export async function getInitiativesForOrg(orgId: string) {
   return db.select().from(initiatives).where(eq(initiatives.organizationId, orgId))
+}
+
+export async function getStrategiesForOrg(orgId: string) {
+  return db.select().from(strategies).where(eq(strategies.organizationId, orgId))
+}
+
+/** Insert a strategy row directly — used to seed specific statuses for invariant tests. */
+export async function insertStrategy(
+  orgId: string,
+  overrides: {
+    name?: string
+    status?: 'draft' | 'adopted' | 'superseded' | 'retired'
+    visibility?: 'org' | 'connections' | 'instance'
+  } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(strategies)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Strategy ${suffix}`,
+      status: overrides.status ?? 'draft',
+      visibility: overrides.visibility ?? 'org',
+    })
+    .returning()
+  return row
+}
+
+/** Insert a goal row directly — used by strategy FK (set null) tests. */
+export async function insertGoal(
+  orgId: string,
+  overrides: { name?: string; strategyId?: string | null } = {},
+) {
+  const suffix = randomUUID().slice(0, 8)
+  const [row] = await db
+    .insert(goals)
+    .values({
+      organizationId: orgId,
+      name: overrides.name ?? `Test Goal ${suffix}`,
+      strategyId: overrides.strategyId ?? null,
+    })
+    .returning()
+  return row
 }
 
 /** Convenience: insert a capability row directly for cross-org / setup scenarios. */
