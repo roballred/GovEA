@@ -1,6 +1,6 @@
 # ADR-0005: Reconcile the Strategy entity with BIZBOK alignment
 
-**Status:** Proposed — decision pending (revisits [ADR-0004](./0004-strategy-as-planning-container.md))
+**Status:** Accepted — **Option 3 (BIZBOK course-of-action Strategy)**. Supersedes [ADR-0004](./0004-strategy-as-planning-container.md).
 **Date:** 2026-06-16
 **Issues:** [#822](https://github.com/roballred/GovEA/issues/822), tracker [#805](https://github.com/roballred/GovEA/issues/805)
 **Design:** [`docs/design/strategy-entity.md`](../design/strategy-entity.md)
@@ -133,15 +133,85 @@ is speculative.
 Option 1 is not recommended: the naming tension is real and only gets more
 expensive to fix as more surfaces (slices 5–6) adopt the term.
 
+## Decision (2026-06-16)
+
+**Option 3 is chosen.** Strategy becomes a BIZBOK course-of-action — a *means*
+that pursues Goals and maps onto the operating model — superseding the ADR-0004
+container. The maintainer accepted the rework cost over the cheaper rename to get
+the BIZBOK-faithful model for the Enterprise Architect persona.
+
+> The recommendation above was Option 2; the decision overrides it. As with the
+> #812 schema-ahead-of-gate call, this is taken **without the Gate A (#668)
+> interview** — recorded here so the override is auditable. The #668 interview
+> should still test whether a separate "strategic plan container" is also wanted
+> (if so, that is a *new, additional* entity later — not a reason to keep the
+> ADR-0004 shape).
+
+### Resolved model (the redesign these specifics seed)
+
+The three "ends/means" concepts are kept distinct so we don't create three
+overlapping records:
+
+| Concept | BMM role | Question it answers | GovEA status |
+|---|---|---|---|
+| **Goal** | End | What broad outcome? | exists |
+| **Strategic Objective** | End (measurable) | How do we measure progress toward the goal? | exists |
+| **Strategy** | **Means — Course of Action** | What is our broad chosen *approach* to achieve the goal? | **new shape** |
+| **Initiative** | Means — funded work (≈ Tactic) | What funded effort *delivers* the approach? | exists |
+
+Load-bearing choices (these supersede ADR-0004 decisions 1–5):
+
+1. **Strategy pursues Goals — many-to-many.** Junction `strategy_goals` (a
+   strategy can serve several goals; a goal can be pursued by several
+   strategies). The ADR-0004 `goals.strategy_id` column is **dropped**.
+2. **Strategy maps onto the operating model.** Junctions `strategy_capabilities`
+   and `strategy_value_streams` (with an optional `impact` label —
+   `leverage`/`build`/`improve`/`retire` — mirroring `initiative_capabilities`),
+   capturing what the approach leverages and changes. Value streams and
+   capabilities stay cross-mapped peers; Strategy references both directly.
+3. **Strategy is delivered by Initiatives.** Junction `strategy_initiatives`
+   (the funded work that implements the approach). Objectives remain attached to
+   Goals as today; Strategy does not own Objectives.
+4. **Course-of-action lifecycle:** `proposed` → `active` → `achieved` →
+   `abandoned` (mirrors the Initiative precedent; *not* a content publish). The
+   ADR-0004 single-`adopted`-per-org invariant and partial unique index are
+   **dropped** — multiple strategies can be active at once. ("Current strategy"
+   surfaces become "active strategies.")
+5. **No top-level nav change:** the `strategies` module stays under the Strategy
+   group; the schema/relationships change beneath it.
+
+### Boundary statements (Gate B — #694, #791)
+
+- **Strategy vs. value-chain grouping (#694):** a value chain groups *value
+  streams* (operating-model structure); a Strategy is a *chosen approach* that
+  *references* value streams it affects. Different questions; Strategy links to
+  value streams, it does not group them.
+- **Strategy vs. service-product container (#791):** a service-product is a
+  *delivery container* for what the org offers; a Strategy is the *approach* to
+  achieve goals. A strategy may change the capabilities behind a product, but it
+  does not contain products.
+
 ## Consequences
 
-- **Slice 5 (#805) is paused** until this is decided — it would otherwise spread
-  the "Strategy" term across Dashboard/Roadmap/Executive surfaces we may rename.
-- If **Option 2** is accepted: this ADR supersedes ADR-0004's naming; a rename PR
-  updates slices 1–4 and `strategy-entity.md`; slices 5–6 proceed as "Strategic
-  Plan." The single-`adopted` "current plan" invariant is retained.
-- If **Option 3** is accepted: this ADR supersedes ADR-0004 outright; a redesign
-  issue replaces the remaining slice list, and the Gate B boundary statements
-  (#694, #791) are folded in.
-- Either way, the #668 interview should explicitly test the container-vs-approach
-  question so the next planning entity is validated, not assumed.
+- This ADR **supersedes ADR-0004 outright.** ADR-0004 is marked Superseded.
+- `docs/design/strategy-entity.md` is rewritten to the course-of-action model
+  (the Resolved-model section above seeds it).
+- The remaining slice list on tracker **#805 is replaced** with the rework slices
+  below; merged slices 1–4 (container schema, views, `goals.strategy_id` linking,
+  container traceability) are reworked, not extended:
+  - **R1 — schema:** drop `goals.strategy_id` + single-adopted index; new
+    course-of-action `strategy_status`; add `strategy_goals`,
+    `strategy_capabilities`, `strategy_value_streams`, `strategy_initiatives`
+    junctions; replace `adoptStrategy` with ordinary status edits; update
+    relations/actions/tests.
+  - **R2 — views:** strategy list/detail/edit for the new shape (no adopt);
+    surface the goal/capability/value-stream/initiative links.
+  - **R3 — linking:** Strategy↔Goal (both sides), Strategy↔Capability,
+    Strategy↔Value Stream, Strategy↔Initiative.
+  - **R4 — traceability:** `from=strategy` chain = Strategy → Goals (+ Objectives)
+    and Strategy → {Value Streams ⇄ Capabilities} → Applications; affordances.
+  - **5–6** (executive surfaces; import/export/backup + seed) proceed on the new
+    shape; "current strategy" badge becomes "active strategies."
+- **Slice 5 stays paused** until R1–R4 land.
+- The #668 interview should still test whether a separate *strategic-plan
+  container* is also wanted — a possible future entity, not a reason to revert.
