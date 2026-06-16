@@ -190,6 +190,17 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
         />
       )}
 
+      {isModuleEnabled(enabledModules, 'strategies') && vs.strategyValueStreams.length > 0 && (
+        <RelationshipPanel
+          title="Strategies impacting this"
+          items={vs.strategyValueStreams.map(({ strategy }) => ({
+            id: strategy.id, name: strategy.name,
+            href: `/strategies/${strategy.id}`, meta: strategy.status,
+          }))}
+          canEdit={false}
+        />
+      )}
+
       <div className="text-xs text-muted-foreground pt-4 border-t">
         Created {new Date(vs.createdAt).toLocaleDateString()} · Updated {new Date(vs.updatedAt).toLocaleDateString()}
       </div>

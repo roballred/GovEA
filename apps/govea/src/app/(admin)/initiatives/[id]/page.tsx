@@ -15,7 +15,9 @@ import {
   linkInitiativeCapability, unlinkInitiativeCapability,
   linkInitiativeObjective, unlinkInitiativeObjective,
   linkInitiativeApplication, unlinkInitiativeApplication,
+  linkInitiativeStrategy, unlinkInitiativeStrategy,
 } from '@/actions/links'
+import { getStrategies } from '@/actions/strategies'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { isModuleEnabled } from '@/lib/modules'
 import { MarkdownContent } from '@/components/markdown-content'
@@ -67,13 +69,14 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
   const orgId = session.user.organizationId!
   const canMutate = editor && initiative.organizationId === orgId
 
-  const [allCapabilities, allObjectives, allApplications] = editor
+  const [allCapabilities, allObjectives, allApplications, allStrategies] = editor
     ? await Promise.all([
         getCapabilities(),
         getObjectives(),
         getApplications(),
+        getStrategies(orgId, session.user.role),
       ])
-    : [[], [], []]
+    : [[], [], [], []]
 
   const addCapability = linkInitiativeCapability.bind(null, id)
   const removeCapability = unlinkInitiativeCapability.bind(null, id)
@@ -81,6 +84,9 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
   const removeObjective = unlinkInitiativeObjective.bind(null, id)
   const addApplication = linkInitiativeApplication.bind(null, id)
   const removeApplication = unlinkInitiativeApplication.bind(null, id)
+  const addStrategy = linkInitiativeStrategy.bind(null, id)
+  const removeStrategy = unlinkInitiativeStrategy.bind(null, id)
+  const linkedStrategyIds = new Set(initiative.strategyInitiatives.map(si => si.strategyId))
 
   const capabilityItems: RelationshipItem[] = initiative.initiativeCapabilities.map(({ capability, impact }) => ({
     id: capability.id, name: capability.name,
@@ -152,6 +158,21 @@ export default async function InitiativeDetailPage({ params }: { params: Promise
           available={allCapabilities.filter(c => c.organizationId === orgId).map(c => ({ id: c.id, name: c.name }))}
           addAction={addCapability}
           removeAction={removeCapability}
+        />
+      )}
+
+      {isModuleEnabled(enabledModules, 'strategies') && (
+        <RelationshipPanel
+          title="Strategies delivered by this"
+          items={initiative.strategyInitiatives.map(({ strategy }) => ({
+            id: strategy.id, name: strategy.name,
+            href: `/strategies/${strategy.id}`, meta: strategy.status,
+          }))}
+          gapMessage="No strategies are delivered by this initiative yet."
+          canEdit={canMutate}
+          available={allStrategies.filter(s => s.organizationId === orgId && !linkedStrategyIds.has(s.id)).map(s => ({ id: s.id, name: s.name }))}
+          addAction={addStrategy}
+          removeAction={removeStrategy}
         />
       )}
 

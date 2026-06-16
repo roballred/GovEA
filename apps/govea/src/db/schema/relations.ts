@@ -27,6 +27,7 @@ export const capabilitiesRelations = relations(capabilities, ({ one, many }) => 
   valueStreamCapabilities: many(valueStreamCapabilities),
   objectiveCapabilities: many(objectiveCapabilities),
   initiativeCapabilities: many(initiativeCapabilities),
+  strategyCapabilities: many(strategyCapabilities),
   applicationCapabilities: many(applicationCapabilities),
   adrCapabilities: many(adrCapabilities),
   principleCapabilities: many(principleCapabilities),
@@ -94,6 +95,7 @@ export const valueStreamsRelations = relations(valueStreams, ({ one, many }) => 
   valueStreamPersonas: many(valueStreamPersonas),
   valueStreamCapabilities: many(valueStreamCapabilities),
   objectiveValueStreams: many(objectiveValueStreams),
+  strategyValueStreams: many(strategyValueStreams),
 }))
 
 export const valueStreamCapabilitiesRelations = relations(valueStreamCapabilities, ({ one }) => ({
@@ -242,6 +244,7 @@ export const initiativesRelations = relations(initiatives, ({ one, many }) => ({
   initiativeCapabilities: many(initiativeCapabilities),
   initiativeObjectives: many(initiativeObjectives),
   initiativeApplications: many(initiativeApplications),
+  strategyInitiatives: many(strategyInitiatives),
   adrInitiatives: many(adrInitiatives),
 }))
 

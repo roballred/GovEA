@@ -6,7 +6,8 @@ import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { RelationshipPanel } from '@/components/relationship-panel'
-import { linkGoalObjective, unlinkGoalObjective } from '@/actions/links'
+import { linkGoalObjective, unlinkGoalObjective, linkGoalStrategy, unlinkGoalStrategy } from '@/actions/links'
+import { getStrategies } from '@/actions/strategies'
 import { MarkdownContent } from '@/components/markdown-content'
 import { dedupeById } from '@/lib/dedup'
 
@@ -40,10 +41,15 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
   const orgId = session.user.organizationId!
   const canMutate = editor && goal.organizationId === orgId
 
-  const allObjectives = editor ? await getObjectives() : []
+  const [allObjectives, allStrategies] = editor
+    ? await Promise.all([getObjectives(), getStrategies(orgId, session.user.role)])
+    : [[], []]
 
   const addObjective = linkGoalObjective.bind(null, id)
   const removeObjective = unlinkGoalObjective.bind(null, id)
+  const addStrategy = linkGoalStrategy.bind(null, id)
+  const removeStrategy = unlinkGoalStrategy.bind(null, id)
+  const linkedStrategyIds = new Set(goal.strategyGoals.map(sg => sg.strategyId))
 
   // Aggregate rollup through linked objectives
   const initiatives = dedupeById(
@@ -101,19 +107,6 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
         )}
 
         <div className="flex flex-wrap gap-6 text-sm pt-1">
-          {goal.strategyGoals.length > 0 && (
-            <div>
-              <span className="text-muted-foreground">Pursued by strategy: </span>
-              {goal.strategyGoals.map(({ strategy }, i) => (
-                <span key={strategy.id}>
-                  {i > 0 && ', '}
-                  <Link href={`/strategies/${strategy.id}`} className="font-medium text-primary hover:underline underline-offset-4">
-                    {strategy.name}
-                  </Link>
-                </span>
-              ))}
-            </div>
-          )}
           {goal.planningHorizon && (
             <div>
               <span className="text-muted-foreground">Planning horizon: </span>
@@ -130,6 +123,21 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
       </div>
 
       <hr />
+
+      <RelationshipPanel
+        title="Strategies pursuing this goal"
+        items={goal.strategyGoals.map(({ strategy }) => ({
+          id: strategy.id,
+          name: strategy.name,
+          href: `/strategies/${strategy.id}`,
+          meta: strategy.status,
+        }))}
+        gapMessage="No strategies pursue this goal yet."
+        canEdit={canMutate}
+        available={allStrategies.filter(s => s.organizationId === orgId && !linkedStrategyIds.has(s.id)).map(s => ({ id: s.id, name: s.name }))}
+        addAction={addStrategy}
+        removeAction={removeStrategy}
+      />
 
       <RelationshipPanel
         title="Objectives"
