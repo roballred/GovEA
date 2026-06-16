@@ -533,6 +533,47 @@ export const DEV_GOALS = [
   },
 ]
 
+// ─── Strategies (City of Riverdale) — course-of-action plans (ADR-0005) ──────
+// Coverage: status = active ✓, proposed ✓, achieved ✓ (multiple may be active).
+// Each is a chosen approach that pursues goals and maps onto the operating model
+// (capabilities + value streams) and the initiatives that deliver it.
+
+export const DEV_STRATEGIES = [
+  {
+    name: 'Digital-First Resident Experience',
+    summary: 'Make digital the default channel for the highest-volume resident interactions, redesigning the permit and service-request journeys end to end and standing up shared identity so residents sign in once.',
+    planningHorizon: '2025–2027',
+    status: 'active' as const,
+    visibility: 'org' as const,
+    goals: ['Modernise Resident-Facing Services'],
+    capabilities: ['Online Permitting', 'Digital Identity & Authentication'],
+    valueStreams: ['Permit to Certificate', 'Service Request to Resolution'],
+    initiatives: ['Accela Implementation', 'Resident Portal Redesign'],
+  },
+  {
+    name: 'Cloud & Infrastructure Modernisation',
+    summary: 'Retire ageing on-premise systems in favour of a cloud-first platform, prioritising the capabilities that the resident-facing roadmap depends on.',
+    planningHorizon: '2025–2028',
+    status: 'proposed' as const,
+    visibility: 'org' as const,
+    goals: ['Strengthen Technical Infrastructure'],
+    capabilities: ['GIS Mapping'],
+    valueStreams: [],
+    initiatives: ['CityWorks Replacement'],
+  },
+  {
+    name: 'Cross-Agency Data Foundation',
+    summary: 'Established the data-sharing agreements and exchange pilot that let City departments and state agencies act on a shared view of the resident.',
+    planningHorizon: '2024–2025',
+    status: 'achieved' as const,
+    visibility: 'connections' as const,
+    goals: ['Enable Joined-Up Government'],
+    capabilities: ['Cross-Agency Data Sharing'],
+    valueStreams: [],
+    initiatives: ['Cross-Agency Data Exchange Pilot'],
+  },
+]
+
 // ─── Value Streams (City of Riverdale) ───────────────────────────────────────
 // Coverage: status = published ✓, draft ✓
 //           visibility = org ✓, connections ✓

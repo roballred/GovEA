@@ -20,6 +20,7 @@ import { eq, and } from 'drizzle-orm'
 import { db } from '@/db/client'
 import {
   organizations, personas, capabilities,
+  strategies, strategyGoals, strategyCapabilities,
   crossOrgLinks, auditLog,
 } from '@/db/schema'
 import { buildArchiveExport } from '@/lib/backup-export'
@@ -31,6 +32,8 @@ import {
   insertCapability,
   insertPersona,
   insertApplication,
+  insertStrategy,
+  insertGoal,
   type TestOrg,
   type TestUser,
 } from './helpers/db'
@@ -122,6 +125,24 @@ describe('round-trip: export → wipe → import', () => {
     expect(restored.length).toBe(before.length)
     const restoredIds = new Set(restored.map(c => c.id))
     for (const id of beforeIds) expect(restoredIds.has(id)).toBe(true)
+  })
+
+  it('round-trips strategies and their goal/capability links (ADR-0005 R6)', async () => {
+    const strat = await insertStrategy(orgA.id, { name: `Strat-A-${Date.now()}`, status: 'active' })
+    const goal = await insertGoal(orgA.id, { name: `StratGoal-A-${Date.now()}`, status: 'published' })
+    const cap = await insertCapability(orgA.id, { name: `StratCap-A-${Date.now()}`, status: 'published' })
+    await db.insert(strategyGoals).values({ strategyId: strat.id, goalId: goal.id })
+    await db.insert(strategyCapabilities).values({ strategyId: strat.id, capabilityId: cap.id })
+
+    const archive = await buildArchiveExport(orgA.id)
+    await importArchive(orgA.id, adminA.id, archive.body)
+
+    const restoredStrat = await db.query.strategies.findFirst({ where: eq(strategies.id, strat.id) })
+    expect(restoredStrat?.status).toBe('active')
+    expect((await db.select().from(strategyGoals)
+      .where(and(eq(strategyGoals.strategyId, strat.id), eq(strategyGoals.goalId, goal.id)))).length).toBe(1)
+    expect((await db.select().from(strategyCapabilities)
+      .where(and(eq(strategyCapabilities.strategyId, strat.id), eq(strategyCapabilities.capabilityId, cap.id)))).length).toBe(1)
   })
 
   it('normalizes createdBy to the importing admin on restored rows', async () => {

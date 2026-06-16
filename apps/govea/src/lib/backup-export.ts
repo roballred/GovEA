@@ -42,6 +42,7 @@ import {
   valueStreams,
   strategicObjectives,
   goals,
+  strategies,
   initiatives,
   adrs,
   principles,
@@ -143,6 +144,7 @@ async function collectContent(orgId: string) {
     valueStreamRows, valueStreamStageRows, valueStreamStageCapRows, valueStreamPersonaRows, valueStreamCapRows,
     objectiveRows, objectiveCapRows, objectiveVsRows,
     goalRows, goalObjectiveRows,
+    strategyRows, strategyGoalRows, strategyCapRows, strategyVsRows, strategyIniRows,
     initiativeRows, initiativeCapRows, initiativeAppRows, initiativeObjRows,
     adrRows, adrCapRows, adrAppRows, adrIniRows, adrObjRows,
     principleRows, principleCapRows, principleAdrRows,
@@ -166,6 +168,11 @@ async function collectContent(orgId: string) {
     db.query.objectiveValueStreams.findMany({}),
     db.query.goals.findMany({ where: eq(goals.organizationId, orgId) }),
     db.query.goalObjectives.findMany({}),
+    db.query.strategies.findMany({ where: eq(strategies.organizationId, orgId) }),
+    db.query.strategyGoals.findMany({}),
+    db.query.strategyCapabilities.findMany({}),
+    db.query.strategyValueStreams.findMany({}),
+    db.query.strategyInitiatives.findMany({}),
     db.query.initiatives.findMany({ where: eq(initiatives.organizationId, orgId) }),
     db.query.initiativeCapabilities.findMany({}),
     db.query.initiativeApplications.findMany({}),
@@ -209,6 +216,7 @@ async function collectContent(orgId: string) {
   const vsIds = new Set((valueStreamRows as Array<{ id: string }>).map(r => r.id))
   const objIds = new Set((objectiveRows as Array<{ id: string }>).map(r => r.id))
   const goalIds = new Set((goalRows as Array<{ id: string }>).map(r => r.id))
+  const stratIds = new Set((strategyRows as Array<{ id: string }>).map(r => r.id))
   const iniIds = new Set((initiativeRows as Array<{ id: string }>).map(r => r.id))
   const adrIds = new Set((adrRows as Array<{ id: string }>).map(r => r.id))
   const principleIds = new Set((principleRows as Array<{ id: string }>).map(r => r.id))
@@ -223,6 +231,7 @@ async function collectContent(orgId: string) {
     valueStreams: valueStreamRows,
     objectives: objectiveRows,
     goals: goalRows,
+    strategies: strategyRows,
     initiatives: initiativeRows,
     adrs: adrRows,
     principles: principleRows,
@@ -239,6 +248,10 @@ async function collectContent(orgId: string) {
       objectiveCapabilities: (objectiveCapRows as Array<{ objectiveId: string; capabilityId: string }>).filter(r => objIds.has(r.objectiveId) && capIds.has(r.capabilityId)),
       objectiveValueStreams: (objectiveVsRows as Array<{ objectiveId: string; valueStreamId: string }>).filter(r => objIds.has(r.objectiveId) && vsIds.has(r.valueStreamId)),
       goalObjectives: (goalObjectiveRows as Array<{ goalId: string; objectiveId: string }>).filter(r => goalIds.has(r.goalId) && objIds.has(r.objectiveId)),
+      strategyGoals: (strategyGoalRows as Array<{ strategyId: string; goalId: string }>).filter(r => stratIds.has(r.strategyId) && goalIds.has(r.goalId)),
+      strategyCapabilities: (strategyCapRows as Array<{ strategyId: string; capabilityId: string }>).filter(r => stratIds.has(r.strategyId) && capIds.has(r.capabilityId)),
+      strategyValueStreams: (strategyVsRows as Array<{ strategyId: string; valueStreamId: string }>).filter(r => stratIds.has(r.strategyId) && vsIds.has(r.valueStreamId)),
+      strategyInitiatives: (strategyIniRows as Array<{ strategyId: string; initiativeId: string }>).filter(r => stratIds.has(r.strategyId) && iniIds.has(r.initiativeId)),
       initiativeCapabilities: (initiativeCapRows as Array<{ initiativeId: string; capabilityId: string }>).filter(r => iniIds.has(r.initiativeId) && capIds.has(r.capabilityId)),
       initiativeApplications: (initiativeAppRows as Array<{ initiativeId: string; applicationId: string }>).filter(r => iniIds.has(r.initiativeId) && appIds.has(r.applicationId)),
       initiativeObjectives: (initiativeObjRows as Array<{ initiativeId: string; objectiveId: string }>).filter(r => iniIds.has(r.initiativeId) && objIds.has(r.objectiveId)),
