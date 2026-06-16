@@ -3,6 +3,7 @@
 import { db } from '@/db/client'
 import {
   strategicObjectives, capabilities, services, goals, strategies, strategyGoals,
+  strategyCapabilities, strategyValueStreams, strategyInitiatives,
   goalObjectives, objectiveCapabilities, applicationCapabilities,
   initiativeObjectives, serviceCapabilities,
   // #695 — trace-participation subjects and their one-hop root junctions
@@ -101,6 +102,12 @@ export interface StrategyTrace {
       initiatives: TraceInitiative[]
     }>
   }>
+  // Direct course-of-action links (ADR-0005): the operating model the strategy
+  // leverages/changes and the funded work that delivers it. Distinct from the
+  // capabilities/initiatives reached through goals → objectives.
+  valueStreams: { id: string; name: string }[]
+  directCapabilities: TraceCapability[]
+  directInitiatives: TraceInitiative[]
 }
 
 export type TraceData = StrategyTrace | GoalTrace | ObjectiveTrace | CapabilityTrace | ServiceTrace
@@ -241,6 +248,23 @@ export async function getStrategyTrace(id: string): Promise<StrategyTrace | null
     objectivesByGoal.set(goalId, list)
   }
 
+  // Direct course-of-action links (ADR-0005): operating model + delivery. These
+  // junctions are same-org by construction (the link actions enforce it).
+  const [stratCapRows, stratVsRows, stratInitRows] = await Promise.all([
+    db.query.strategyCapabilities.findMany({ where: eq(strategyCapabilities.strategyId, id) }),
+    db.query.strategyValueStreams.findMany({ where: eq(strategyValueStreams.strategyId, id), with: { valueStream: true } }),
+    db.query.strategyInitiatives.findMany({ where: eq(strategyInitiatives.strategyId, id), with: { initiative: true } }),
+  ])
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)
+  const directCapabilities = (await getCapabilitiesWithApps([...new Set(stratCapRows.map((r) => r.capabilityId))]))
+    .sort(byName)
+  const valueStreams = stratVsRows
+    .map((r) => ({ id: r.valueStream.id, name: r.valueStream.name }))
+    .sort(byName)
+  const directInitiatives = stratInitRows
+    .map((r) => ({ id: r.initiative.id, name: r.initiative.name, status: r.initiative.status }))
+    .sort(byName)
+
   return {
     kind: 'strategy',
     id: row.id,
@@ -261,6 +285,9 @@ export async function getStrategyTrace(id: string): Promise<StrategyTrace | null
         initiatives: initiativesByObjective.get(o.id) ?? [],
       })),
     })),
+    valueStreams,
+    directCapabilities,
+    directInitiatives,
   }
 }
 
