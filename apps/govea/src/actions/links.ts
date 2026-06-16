@@ -26,6 +26,7 @@ import {
   goals,
   goalObjectives,
   strategies,
+  strategyGoals,
   initiatives,
   initiativeCapabilities,
   initiativeObjectives,
@@ -47,7 +48,6 @@ import { eq, and } from 'drizzle-orm'
 import { assertOwnership, assertEntityInOrg } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit } from '@/lib/rbac'
-import { writeAuditLog } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -333,65 +333,29 @@ export async function unlinkGoalObjective(goalId: string, objectiveId: string) {
   revalidatePath(`/objectives/${objectiveId}`)
 }
 
-// ── Strategy ↔ Goal (single FK on goals.strategy_id, not a junction) ─────────
+// ── Strategy ↔ Goal (strategy_goals junction — a Strategy pursues Goals) ──────
 
 /**
- * Add a goal to a strategy by setting goals.strategy_id. A goal belongs to at
- * most one strategy (ADR-0004 Q3), so if it was already in another strategy this
- * moves it — the FK can hold only one value. Both ends are org-checked.
+ * Link a Strategy to a Goal it pursues (ADR-0005). Many-to-many: a goal can be
+ * pursued by several strategies. Both ends are org-checked.
  */
 export async function linkStrategyGoal(strategyId: string, goalId: string) {
   const { user } = await requireContributor()
   const strategy = await db.query.strategies.findFirst({ where: eq(strategies.id, strategyId) })
   assertOwnership(strategy?.organizationId, user.organizationId!)
   await assertEntityInOrg('goal', goalId, user.organizationId!)
-
-  const goal = await db.query.goals.findFirst({ where: eq(goals.id, goalId), columns: { strategyId: true } })
-  const previousStrategyId = goal?.strategyId ?? null
-
-  await db.transaction(async (tx) => {
-    await tx.update(goals)
-      .set({ strategyId, updatedBy: user.id, updatedAt: new Date() })
-      .where(and(eq(goals.id, goalId), eq(goals.organizationId, user.organizationId!)))
-    await writeAuditLog(tx, {
-      action: 'strategy.link_goal', entityType: 'goal', entityId: goalId,
-      userId: user.id, organizationId: user.organizationId!,
-      before: { strategyId: previousStrategyId }, after: { strategyId },
-    })
-  })
-
+  await db.insert(strategyGoals).values({ strategyId, goalId }).onConflictDoNothing()
   revalidatePath(`/strategies/${strategyId}`)
-  if (previousStrategyId && previousStrategyId !== strategyId) revalidatePath(`/strategies/${previousStrategyId}`)
   revalidatePath(`/goals/${goalId}`)
 }
 
-/**
- * Remove a goal from a strategy (clear goals.strategy_id). No-op unless the goal
- * is currently in this strategy, so a stale request can't detach it from another.
- */
 export async function unlinkStrategyGoal(strategyId: string, goalId: string) {
   const { user } = await requireContributor()
   const strategy = await db.query.strategies.findFirst({ where: eq(strategies.id, strategyId) })
   assertOwnership(strategy?.organizationId, user.organizationId!)
-
-  await db.transaction(async (tx) => {
-    const cleared = await tx.update(goals)
-      .set({ strategyId: null, updatedBy: user.id, updatedAt: new Date() })
-      .where(and(
-        eq(goals.id, goalId),
-        eq(goals.organizationId, user.organizationId!),
-        eq(goals.strategyId, strategyId),
-      ))
-      .returning({ id: goals.id })
-    if (cleared.length > 0) {
-      await writeAuditLog(tx, {
-        action: 'strategy.unlink_goal', entityType: 'goal', entityId: goalId,
-        userId: user.id, organizationId: user.organizationId!,
-        before: { strategyId }, after: { strategyId: null },
-      })
-    }
-  })
-
+  await db.delete(strategyGoals).where(
+    and(eq(strategyGoals.strategyId, strategyId), eq(strategyGoals.goalId, goalId)),
+  )
   revalidatePath(`/strategies/${strategyId}`)
   revalidatePath(`/goals/${goalId}`)
 }

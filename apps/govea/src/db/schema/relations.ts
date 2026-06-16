@@ -7,7 +7,7 @@ import { organizations } from './organizations'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas, valueStreamCapabilities } from './value-streams'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from './objectives'
 import { goals, goalObjectives } from './goals'
-import { strategies } from './strategies'
+import { strategies, strategyGoals, strategyCapabilities, strategyValueStreams, strategyInitiatives } from './strategies'
 import { users } from './users'
 import { initiatives, initiativeCapabilities, initiativeObjectives, initiativeApplications } from './initiatives'
 import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives } from './adrs'
@@ -144,10 +144,7 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
     fields: [goals.organizationId],
     references: [organizations.id],
   }),
-  strategy: one(strategies, {
-    fields: [goals.strategyId],
-    references: [strategies.id],
-  }),
+  strategyGoals: many(strategyGoals),
   goalObjectives: many(goalObjectives),
 }))
 
@@ -162,7 +159,30 @@ export const strategiesRelations = relations(strategies, ({ one, many }) => ({
     fields: [strategies.ownerUserId],
     references: [users.id],
   }),
-  goals: many(goals),
+  strategyGoals: many(strategyGoals),
+  strategyCapabilities: many(strategyCapabilities),
+  strategyValueStreams: many(strategyValueStreams),
+  strategyInitiatives: many(strategyInitiatives),
+}))
+
+export const strategyGoalsRelations = relations(strategyGoals, ({ one }) => ({
+  strategy: one(strategies, { fields: [strategyGoals.strategyId], references: [strategies.id] }),
+  goal: one(goals, { fields: [strategyGoals.goalId], references: [goals.id] }),
+}))
+
+export const strategyCapabilitiesRelations = relations(strategyCapabilities, ({ one }) => ({
+  strategy: one(strategies, { fields: [strategyCapabilities.strategyId], references: [strategies.id] }),
+  capability: one(capabilities, { fields: [strategyCapabilities.capabilityId], references: [capabilities.id] }),
+}))
+
+export const strategyValueStreamsRelations = relations(strategyValueStreams, ({ one }) => ({
+  strategy: one(strategies, { fields: [strategyValueStreams.strategyId], references: [strategies.id] }),
+  valueStream: one(valueStreams, { fields: [strategyValueStreams.valueStreamId], references: [valueStreams.id] }),
+}))
+
+export const strategyInitiativesRelations = relations(strategyInitiatives, ({ one }) => ({
+  strategy: one(strategies, { fields: [strategyInitiatives.strategyId], references: [strategies.id] }),
+  initiative: one(initiatives, { fields: [strategyInitiatives.initiativeId], references: [initiatives.id] }),
 }))
 
 export const goalObjectivesRelations = relations(goalObjectives, ({ one }) => ({

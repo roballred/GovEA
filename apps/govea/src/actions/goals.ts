@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { goals, goalObjectives, strategicObjectives, objectiveCapabilities, initiativeObjectives } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, assertEntityInOrg, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -53,7 +53,7 @@ export async function getGoal(id: string) {
   const goal = await db.query.goals.findFirst({
     where: (g, { eq }) => eq(g.id, id),
     with: {
-      strategy: true,
+      strategyGoals: { with: { strategy: true } },
       goalObjectives: {
         with: {
           objective: {
@@ -85,12 +85,10 @@ export async function createGoal(formData: FormData) {
   const status = (formData.get('status') as 'draft' | 'published' | 'archived') ?? 'draft'
   const visibility = (formData.get('visibility') as 'org' | 'connections' | 'instance') ?? 'org'
   const objectiveIds = formData.getAll('objectiveIds') as string[]
-  const strategyId = (formData.get('strategyId') as string) || null
-  if (strategyId) await assertEntityInOrg('strategy', strategyId, orgId)
 
   await db.transaction(async (tx) => {
     const [goal] = await tx.insert(goals).values({
-      name, description, planningHorizon, owner, status, visibility, strategyId,
+      name, description, planningHorizon, owner, status, visibility,
       organizationId: orgId,
       createdBy: session.user.id,
       updatedBy: session.user.id,
@@ -122,15 +120,13 @@ export async function editGoal(goalId: string, formData: FormData) {
   const status = formData.get('status') as 'draft' | 'published' | 'archived'
   const visibility = formData.get('visibility') as 'org' | 'connections' | 'instance'
   const objectiveIds = formData.getAll('objectiveIds') as string[]
-  const strategyId = (formData.get('strategyId') as string) || null
-  if (strategyId) await assertEntityInOrg('strategy', strategyId, orgId)
 
   const before = await db.query.goals.findFirst({ where: eq(goals.id, goalId) })
   assertOwnership(before?.organizationId, orgId)
 
   await db.transaction(async (tx) => {
     await tx.update(goals).set({
-      name, description, planningHorizon, owner, status, visibility, strategyId,
+      name, description, planningHorizon, owner, status, visibility,
       updatedBy: session.user.id, updatedAt: new Date(),
     }).where(and(eq(goals.id, goalId), eq(goals.organizationId, orgId)))
 

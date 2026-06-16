@@ -12,7 +12,7 @@ import { getStrategyTrace } from '@/actions/traceability'
 import { db } from '@/db/client'
 import {
   strategies, goals, strategicObjectives, capabilities, initiatives,
-  goalObjectives, objectiveCapabilities, initiativeObjectives,
+  goalObjectives, objectiveCapabilities, initiativeObjectives, strategyGoals,
 } from '@/db/schema'
 import { randomUUID } from 'node:crypto'
 import {
@@ -45,19 +45,23 @@ describe('getStrategyTrace', () => {
     ])
 
     const [s] = await db.insert(strategies).values({
-      organizationId: orgId, name: 'FY26 Strategy', status: 'adopted', visibility: 'org',
+      organizationId: orgId, name: 'FY26 Strategy', status: 'active', visibility: 'org',
     }).returning()
     strategyId = s.id
 
-    // Two member goals: one published (viewer-visible), one draft (pruned for viewers).
+    // Two pursued goals: one published (viewer-visible), one draft (pruned for viewers).
     const [pg] = await db.insert(goals).values({
-      organizationId: orgId, name: 'Published Member Goal', status: 'published', visibility: 'org', strategyId,
+      organizationId: orgId, name: 'Published Member Goal', status: 'published', visibility: 'org',
     }).returning()
     publishedGoalId = pg.id
     const [dg] = await db.insert(goals).values({
-      organizationId: orgId, name: 'Draft Member Goal', status: 'draft', visibility: 'org', strategyId,
+      organizationId: orgId, name: 'Draft Member Goal', status: 'draft', visibility: 'org',
     }).returning()
     draftGoalId = dg.id
+    await db.insert(strategyGoals).values([
+      { strategyId, goalId: publishedGoalId },
+      { strategyId, goalId: draftGoalId },
+    ])
 
     const [o] = await db.insert(strategicObjectives).values({
       organizationId: orgId, name: 'Measurable Objective', status: 'published', visibility: 'org',
@@ -108,17 +112,17 @@ describe('getStrategyTrace', () => {
     expect(ids).not.toContain(draftGoalId)
   })
 
-  it('a draft strategy is not a viewer-visible root → null', async () => {
-    const [draftStrategy] = await db.insert(strategies).values({
-      organizationId: orgId, name: 'Draft Strategy', status: 'draft', visibility: 'org',
+  it('a proposed strategy is not a viewer-visible root → null', async () => {
+    const [proposedStrategy] = await db.insert(strategies).values({
+      organizationId: orgId, name: 'Proposed Strategy', status: 'proposed', visibility: 'org',
     }).returning()
 
     mockAuth.mockResolvedValue(makeSession(viewer))
-    expect(await getStrategyTrace(draftStrategy.id)).toBeNull()
+    expect(await getStrategyTrace(proposedStrategy.id)).toBeNull()
 
     // …but a non-viewer can trace it.
     mockAuth.mockResolvedValue(makeSession(contributor))
-    expect(await getStrategyTrace(draftStrategy.id)).not.toBeNull()
+    expect(await getStrategyTrace(proposedStrategy.id)).not.toBeNull()
   })
 
   it('returns null for an unknown id', async () => {
@@ -129,7 +133,7 @@ describe('getStrategyTrace', () => {
   it('returns null for a strategy in another org', async () => {
     const otherOrg = await createTestOrg()
     const [foreign] = await db.insert(strategies).values({
-      organizationId: otherOrg.id, name: 'Foreign Strategy', status: 'adopted', visibility: 'org',
+      organizationId: otherOrg.id, name: 'Foreign Strategy', status: 'active', visibility: 'org',
     }).returning()
 
     mockAuth.mockResolvedValue(makeSession(contributor))
