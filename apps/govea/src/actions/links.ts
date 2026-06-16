@@ -27,6 +27,9 @@ import {
   goalObjectives,
   strategies,
   strategyGoals,
+  strategyCapabilities,
+  strategyValueStreams,
+  strategyInitiatives,
   initiatives,
   initiativeCapabilities,
   initiativeObjectives,
@@ -358,6 +361,64 @@ export async function unlinkStrategyGoal(strategyId: string, goalId: string) {
   )
   revalidatePath(`/strategies/${strategyId}`)
   revalidatePath(`/goals/${goalId}`)
+}
+
+// ── Strategy ↔ Capability / Value Stream / Initiative (operating-model + delivery)
+
+async function strategyOwnedBy(strategyId: string, orgId: string) {
+  const strategy = await db.query.strategies.findFirst({ where: eq(strategies.id, strategyId) })
+  assertOwnership(strategy?.organizationId, orgId)
+}
+
+export async function linkStrategyCapability(strategyId: string, capabilityId: string) {
+  const { user } = await requireContributor()
+  await strategyOwnedBy(strategyId, user.organizationId!)
+  await assertEntityInOrg('capability', capabilityId, user.organizationId!)
+  await db.insert(strategyCapabilities).values({ strategyId, capabilityId }).onConflictDoNothing()
+  revalidatePath(`/strategies/${strategyId}`)
+}
+
+export async function unlinkStrategyCapability(strategyId: string, capabilityId: string) {
+  const { user } = await requireContributor()
+  await strategyOwnedBy(strategyId, user.organizationId!)
+  await db.delete(strategyCapabilities).where(
+    and(eq(strategyCapabilities.strategyId, strategyId), eq(strategyCapabilities.capabilityId, capabilityId)),
+  )
+  revalidatePath(`/strategies/${strategyId}`)
+}
+
+export async function linkStrategyValueStream(strategyId: string, valueStreamId: string) {
+  const { user } = await requireContributor()
+  await strategyOwnedBy(strategyId, user.organizationId!)
+  await assertEntityInOrg('value_stream', valueStreamId, user.organizationId!)
+  await db.insert(strategyValueStreams).values({ strategyId, valueStreamId }).onConflictDoNothing()
+  revalidatePath(`/strategies/${strategyId}`)
+}
+
+export async function unlinkStrategyValueStream(strategyId: string, valueStreamId: string) {
+  const { user } = await requireContributor()
+  await strategyOwnedBy(strategyId, user.organizationId!)
+  await db.delete(strategyValueStreams).where(
+    and(eq(strategyValueStreams.strategyId, strategyId), eq(strategyValueStreams.valueStreamId, valueStreamId)),
+  )
+  revalidatePath(`/strategies/${strategyId}`)
+}
+
+export async function linkStrategyInitiative(strategyId: string, initiativeId: string) {
+  const { user } = await requireContributor()
+  await strategyOwnedBy(strategyId, user.organizationId!)
+  await assertEntityInOrg('initiative', initiativeId, user.organizationId!)
+  await db.insert(strategyInitiatives).values({ strategyId, initiativeId }).onConflictDoNothing()
+  revalidatePath(`/strategies/${strategyId}`)
+}
+
+export async function unlinkStrategyInitiative(strategyId: string, initiativeId: string) {
+  const { user } = await requireContributor()
+  await strategyOwnedBy(strategyId, user.organizationId!)
+  await db.delete(strategyInitiatives).where(
+    and(eq(strategyInitiatives.strategyId, strategyId), eq(strategyInitiatives.initiativeId, initiativeId)),
+  )
+  revalidatePath(`/strategies/${strategyId}`)
 }
 
 // ── Objective ↔ Capability ──────────────────────────────────────────────────

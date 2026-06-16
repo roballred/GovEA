@@ -60,6 +60,9 @@ export async function getStrategy(id: string) {
     with: {
       owner: true,
       strategyGoals: { with: { goal: true } },
+      strategyCapabilities: { with: { capability: true } },
+      strategyValueStreams: { with: { valueStream: true } },
+      strategyInitiatives: { with: { initiative: true } },
     },
   })
 
