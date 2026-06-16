@@ -1,4 +1,4 @@
-import { date, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { date, index, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { goals } from './goals'
@@ -66,7 +66,7 @@ export type NewStrategy = typeof strategies.$inferInsert
 export const strategyGoals = pgTable('strategy_goals', {
   strategyId: uuid('strategy_id').notNull().references(() => strategies.id, { onDelete: 'cascade' }),
   goalId: uuid('goal_id').notNull().references(() => goals.id, { onDelete: 'cascade' }),
-})
+}, (t) => [primaryKey({ columns: [t.strategyId, t.goalId] })])
 export type StrategyGoal = typeof strategyGoals.$inferSelect
 
 /** Strategy impacts Capability (leverage/build/improve/retire). */
@@ -74,7 +74,7 @@ export const strategyCapabilities = pgTable('strategy_capabilities', {
   strategyId: uuid('strategy_id').notNull().references(() => strategies.id, { onDelete: 'cascade' }),
   capabilityId: uuid('capability_id').notNull().references(() => capabilities.id, { onDelete: 'cascade' }),
   impact: text('impact'), // 'leverage' | 'build' | 'improve' | 'retire' | null
-})
+}, (t) => [primaryKey({ columns: [t.strategyId, t.capabilityId] })])
 export type StrategyCapability = typeof strategyCapabilities.$inferSelect
 
 /** Strategy impacts Value Stream. */
@@ -82,12 +82,12 @@ export const strategyValueStreams = pgTable('strategy_value_streams', {
   strategyId: uuid('strategy_id').notNull().references(() => strategies.id, { onDelete: 'cascade' }),
   valueStreamId: uuid('value_stream_id').notNull().references(() => valueStreams.id, { onDelete: 'cascade' }),
   impact: text('impact'), // 'leverage' | 'build' | 'improve' | 'retire' | null
-})
+}, (t) => [primaryKey({ columns: [t.strategyId, t.valueStreamId] })])
 export type StrategyValueStream = typeof strategyValueStreams.$inferSelect
 
 /** Strategy is delivered by Initiative. */
 export const strategyInitiatives = pgTable('strategy_initiatives', {
   strategyId: uuid('strategy_id').notNull().references(() => strategies.id, { onDelete: 'cascade' }),
   initiativeId: uuid('initiative_id').notNull().references(() => initiatives.id, { onDelete: 'cascade' }),
-})
+}, (t) => [primaryKey({ columns: [t.strategyId, t.initiativeId] })])
 export type StrategyInitiative = typeof strategyInitiatives.$inferSelect
