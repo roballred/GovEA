@@ -142,13 +142,18 @@ function StrategyTraceView({ trace }: { trace: StrategyTrace }) {
   const allObjectives = dedupeById(
     trace.goals.flatMap(g => g.objectives.map(o => ({ id: o.id, name: o.name, timeHorizon: o.timeHorizon })))
   )
-  const allCapabilities = dedupeById(
-    trace.goals.flatMap(g => g.objectives.flatMap(o => o.capabilities))
-  )
+  // Capabilities/initiatives are the union of the strategy's *direct* links
+  // (course-of-action impacts/delivery) and those reached through goals →
+  // objectives. Apps roll up from the full capability set.
+  const allCapabilities = dedupeById([
+    ...trace.directCapabilities,
+    ...trace.goals.flatMap(g => g.objectives.flatMap(o => o.capabilities)),
+  ])
   const allApps = dedupeById(allCapabilities.flatMap(c => c.applications))
-  const allInitiatives = dedupeById(
-    trace.goals.flatMap(g => g.objectives.flatMap(o => o.initiatives))
-  )
+  const allInitiatives = dedupeById([
+    ...trace.directInitiatives,
+    ...trace.goals.flatMap(g => g.objectives.flatMap(o => o.initiatives)),
+  ])
 
   return (
     <div className="space-y-1 max-w-2xl">
@@ -218,6 +223,19 @@ function StrategyTraceView({ trace }: { trace: StrategyTrace }) {
               badge={i.status}
               badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
             />
+          ))}
+        </TraceCard>
+      )}
+
+      {/* Value streams (direct course-of-action impact) */}
+      <Connector label="impacts" />
+      <LayerLabel>Value Streams</LayerLabel>
+      {trace.valueStreams.length === 0 ? (
+        <Gap message="No value streams linked — the operating-model value streams this approach affects aren't mapped yet." />
+      ) : (
+        <TraceCard>
+          {trace.valueStreams.map(v => (
+            <TraceRow key={v.id} href={`/value-streams/${v.id}`} name={v.name} />
           ))}
         </TraceCard>
       )}

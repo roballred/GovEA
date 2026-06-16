@@ -11,8 +11,9 @@ import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { getStrategyTrace } from '@/actions/traceability'
 import { db } from '@/db/client'
 import {
-  strategies, goals, strategicObjectives, capabilities, initiatives,
+  strategies, goals, strategicObjectives, capabilities, initiatives, valueStreams,
   goalObjectives, objectiveCapabilities, initiativeObjectives, strategyGoals,
+  strategyCapabilities, strategyValueStreams, strategyInitiatives,
 } from '@/db/schema'
 import { randomUUID } from 'node:crypto'
 import {
@@ -35,6 +36,10 @@ describe('getStrategyTrace', () => {
   let objectiveId: string
   let capabilityId: string
   let initiativeId: string
+  // direct course-of-action links
+  let directCapId: string
+  let directVsId: string
+  let directInitId: string
 
   beforeAll(async () => {
     const org = await createTestOrg()
@@ -80,6 +85,24 @@ describe('getStrategyTrace', () => {
     await db.insert(goalObjectives).values({ goalId: publishedGoalId, objectiveId })
     await db.insert(objectiveCapabilities).values({ objectiveId, capabilityId })
     await db.insert(initiativeObjectives).values({ initiativeId, objectiveId })
+
+    // Direct course-of-action links (ADR-0005 R4): strategy → capability /
+    // value stream / initiative, independent of the goal chain.
+    const [dc] = await db.insert(capabilities).values({
+      organizationId: orgId, name: 'Directly Impacted Capability', status: 'published', visibility: 'org',
+    }).returning()
+    directCapId = dc.id
+    const [dv] = await db.insert(valueStreams).values({
+      organizationId: orgId, name: 'Impacted Value Stream', status: 'published', visibility: 'org',
+    }).returning()
+    directVsId = dv.id
+    const [di] = await db.insert(initiatives).values({
+      organizationId: orgId, name: 'Directly Delivering Initiative', status: 'active', visibility: 'org',
+    }).returning()
+    directInitId = di.id
+    await db.insert(strategyCapabilities).values({ strategyId, capabilityId: directCapId })
+    await db.insert(strategyValueStreams).values({ strategyId, valueStreamId: directVsId })
+    await db.insert(strategyInitiatives).values({ strategyId, initiativeId: directInitId })
   })
 
   afterAll(() => cleanupOrg(orgId))
@@ -100,6 +123,18 @@ describe('getStrategyTrace', () => {
     const obj = published.objectives.find(o => o.id === objectiveId)!
     expect(obj.capabilities.map(c => c.id)).toContain(capabilityId)
     expect(obj.initiatives.map(i => i.id)).toContain(initiativeId)
+  })
+
+  it('includes the direct course-of-action impact links (R4)', async () => {
+    mockAuth.mockResolvedValue(makeSession(contributor))
+    const trace = await getStrategyTrace(strategyId)
+
+    expect(trace!.valueStreams.map(v => v.id)).toContain(directVsId)
+    expect(trace!.directCapabilities.map(c => c.id)).toContain(directCapId)
+    expect(trace!.directInitiatives.map(i => i.id)).toContain(directInitId)
+
+    // Direct capability is distinct from the goal-chain capability.
+    expect(trace!.directCapabilities.map(c => c.id)).not.toContain(capabilityId)
   })
 
   it('prunes draft member goals for viewers', async () => {
