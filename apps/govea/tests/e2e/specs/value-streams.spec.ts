@@ -25,9 +25,15 @@ test('detail view is read-only; authoring lives on the edit view', async ({ page
   // nav "/value-streams" link has no trailing id and is excluded).
   const firstStream = page.locator('a[href^="/value-streams/"]').first()
   await expect(firstStream, 'seed should provide at least one value stream').toBeVisible()
-  await firstStream.click()
 
-  await expect(page, 'should be on a value stream detail page').toHaveURL(/\/value-streams\/[0-9a-f-]+$/)
+  // Retry the click+navigation as a unit: a Next.js <Link> click landing in the
+  // hydration window can be swallowed (handler attached before the client router
+  // is ready), leaving the URL on the list page (#818). toPass re-clicks until
+  // the navigation actually happens.
+  await expect(async () => {
+    await firstStream.click()
+    await expect(page, 'should be on a value stream detail page').toHaveURL(/\/value-streams\/[0-9a-f-]+$/, { timeout: 2000 })
+  }).toPass()
 
   // Read-only: no stage/persona/capability mutation controls on the detail page.
   await expect(page.getByRole('button', { name: '+ Add stage' })).toHaveCount(0)
@@ -37,10 +43,12 @@ test('detail view is read-only; authoring lives on the edit view', async ({ page
   // Single edit affordance present (admin can mutate the org's own stream).
   const editLink = page.getByRole('link', { name: 'Edit value stream' })
   await expect(editLink).toBeVisible()
-  await editLink.click()
 
-  // Edit view: URL is the dedicated route and the authoring controls appear.
-  await expect(page).toHaveURL(/\/value-streams\/[0-9a-f-]+\/edit$/)
+  // Same hydration-race guard as above (#818).
+  await expect(async () => {
+    await editLink.click()
+    await expect(page).toHaveURL(/\/value-streams\/[0-9a-f-]+\/edit$/, { timeout: 2000 })
+  }).toPass()
   await expect(page.getByRole('button', { name: '+ Add stage' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Edit value stream' })).toBeVisible()
 })
