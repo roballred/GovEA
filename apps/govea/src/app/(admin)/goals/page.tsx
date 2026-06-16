@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getGoals } from '@/actions/goals'
 import { getObjectives } from '@/actions/objectives'
+import { getStrategies } from '@/actions/strategies'
 import { GoalTable } from './goal-table'
 
 export default async function GoalsPage() {
@@ -11,9 +12,10 @@ export default async function GoalsPage() {
   const orgId = session.user.organizationId!
   const role = session.user.role
 
-  const [goalList, objectiveList] = await Promise.all([
+  const [goalList, objectiveList, strategyList] = await Promise.all([
     getGoals(orgId, role),
     getObjectives(),
+    getStrategies(orgId, role),
   ])
 
   return (
@@ -27,6 +29,7 @@ export default async function GoalsPage() {
       <GoalTable
         goals={goalList}
         objectives={objectiveList}
+        strategies={strategyList.map(s => ({ id: s.id, name: s.name, status: s.status }))}
         role={role}
         currentOrgId={orgId}
       />

@@ -1,6 +1,8 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { getStrategy, adoptStrategy } from '@/actions/strategies'
+import { getGoals } from '@/actions/goals'
+import { linkStrategyGoal, unlinkStrategyGoal } from '@/actions/links'
 import { canEdit } from '@/lib/rbac'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -43,6 +45,16 @@ export default async function StrategyDetailPage({ params }: { params: Promise<{
   const orgId = session.user.organizationId!
   const canMutate = editor && strategy.organizationId === orgId
   const adopt = adoptStrategy.bind(null, id)
+  const addGoal = linkStrategyGoal.bind(null, id)
+  const removeGoal = unlinkStrategyGoal.bind(null, id)
+
+  // Offer only un-containered goals (strategy_id null) to add here; moving a goal
+  // out of another strategy is done from the goal's edit flow (slice 3).
+  const availableGoals = canMutate
+    ? (await getGoals(orgId, session.user.role))
+        .filter(g => g.organizationId === orgId && g.strategyId === null)
+        .map(g => ({ id: g.id, name: g.name }))
+    : []
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -107,8 +119,11 @@ export default async function StrategyDetailPage({ params }: { params: Promise<{
           href: `/goals/${g.id}`,
           meta: g.status,
         }))}
-        gapMessage="No goals belong to this strategy yet. Link goals from a goal's edit flow."
-        canEdit={false}
+        gapMessage="No goals belong to this strategy yet. Add un-containered goals here, or set this strategy from a goal's edit flow."
+        canEdit={canMutate}
+        available={availableGoals}
+        addAction={addGoal}
+        removeAction={removeGoal}
       />
 
       <div className="text-xs text-muted-foreground pt-4 border-t">
