@@ -73,6 +73,25 @@ export async function getStrategy(id: string) {
   return strategy
 }
 
+/**
+ * Active (status='active') strategies for an org, with the goals they pursue and
+ * their impact/delivery links. Backs the executive / roadmap / dashboard
+ * "active strategies" surfaces (ADR-0005 R5). Org-scoped; multiple strategies can
+ * be active at once (the course-of-action model has no single "current" one).
+ */
+export async function getActiveStrategies(organizationId: string) {
+  return db.query.strategies.findMany({
+    where: (s, { eq, and }) => and(eq(s.organizationId, organizationId), eq(s.status, 'active')),
+    orderBy: (s, { asc }) => [asc(s.name)],
+    with: {
+      strategyGoals: { with: { goal: true } },
+      strategyCapabilities: true,
+      strategyValueStreams: true,
+      strategyInitiatives: true,
+    },
+  })
+}
+
 function parseDate(value: FormDataEntryValue | null): string | null {
   const v = (value as string)?.trim()
   return v ? v : null
