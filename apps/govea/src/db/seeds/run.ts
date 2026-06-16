@@ -6,7 +6,7 @@ import {
   DEFAULT_PERSONA_TYPES, DEFAULT_PERSONA_TAGS,
   DEV_PERSONA_TAG_ASSIGNMENTS,
   DEV_PERSONAS, DEV_CAPABILITIES, DEV_CAPABILITY_RELATIONSHIPS, DEV_CAPABILITY_TOGAF_DOMAINS, DEV_APPLICATIONS,
-  DEV_OBJECTIVES, DEV_GOALS, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
+  DEV_OBJECTIVES, DEV_GOALS, DEV_STRATEGIES, DEV_VALUE_STREAMS, DEV_INITIATIVES, DEV_ADRS,
   DEV_PRINCIPLES, DEV_GLOSSARY, DEV_SERVICES,
   DEV_DATA_ENTITIES, DEV_DATA_ATTRIBUTES, DEV_DATA_LINKS, DEV_DATA_BUSINESS_KEYS,
   DEV_DATA_ENTITY_RELATIONS, DEV_DATA_ATTRIBUTE_SHARES,
@@ -36,6 +36,7 @@ import {
   capabilityPersonas, applicationCapabilities, capabilityRelationships,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   goals, goalObjectives,
+  strategies, strategyGoals, strategyCapabilities, strategyValueStreams, strategyInitiatives,
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
@@ -532,6 +533,7 @@ async function seed() {
   console.log(`  ✓ ${DEV_OBJECTIVES.length} strategic objectives`)
 
   // Goals + goalObjectives junction
+  const devGoalIds: Record<string, string> = {}
   for (const g of DEV_GOALS) {
     const existing = await db.query.goals.findFirst({
       where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, g.name)),
@@ -567,6 +569,7 @@ async function seed() {
       })
       if (!exists) await db.insert(goalObjectives).values({ goalId, objectiveId: objId })
     }
+    devGoalIds[g.name] = goalId
   }
   console.log(`  ✓ ${DEV_GOALS.length} goals with objective links`)
 
@@ -623,6 +626,46 @@ async function seed() {
     }
   }
   console.log(`  ✓ ${DEV_INITIATIVES.length} initiatives`)
+
+  // Strategies (ADR-0005) + their goal / capability / value-stream / initiative
+  // links. Runs after goals, capabilities, value streams and initiatives so the
+  // junction ids resolve. Idempotent: upsert by (org, name), link if absent.
+  for (const s of DEV_STRATEGIES) {
+    const existing = await db.query.strategies.findFirst({
+      where: (t, { eq: e, and }) => and(e(t.organizationId, devOrgId), e(t.name, s.name)),
+    })
+    let strategyId: string
+    if (existing) {
+      await db.update(strategies).set({
+        summary: s.summary,
+        planningHorizon: s.planningHorizon,
+        status: s.status,
+        visibility: s.visibility,
+      }).where(eq(strategies.id, existing.id))
+      strategyId = existing.id
+    } else {
+      const [inserted] = await db.insert(strategies).values({
+        organizationId: devOrgId,
+        name: s.name,
+        summary: s.summary,
+        planningHorizon: s.planningHorizon,
+        status: s.status,
+        visibility: s.visibility,
+      }).returning()
+      strategyId = inserted.id
+    }
+
+    // Composite PKs make these idempotent — re-seeding is a no-op.
+    const goalIds = s.goals.map(n => devGoalIds[n]).filter(Boolean)
+    if (goalIds.length) await db.insert(strategyGoals).values(goalIds.map(goalId => ({ strategyId, goalId }))).onConflictDoNothing()
+    const capIds = s.capabilities.map(n => devCapabilityIds[n]).filter(Boolean)
+    if (capIds.length) await db.insert(strategyCapabilities).values(capIds.map(capabilityId => ({ strategyId, capabilityId }))).onConflictDoNothing()
+    const vsIds = s.valueStreams.map(n => devValueStreamIds[n]).filter(Boolean)
+    if (vsIds.length) await db.insert(strategyValueStreams).values(vsIds.map(valueStreamId => ({ strategyId, valueStreamId }))).onConflictDoNothing()
+    const iniIds = s.initiatives.map(n => devInitiativeIds[n]).filter(Boolean)
+    if (iniIds.length) await db.insert(strategyInitiatives).values(iniIds.map(initiativeId => ({ strategyId, initiativeId }))).onConflictDoNothing()
+  }
+  console.log(`  ✓ ${DEV_STRATEGIES.length} strategies with goal/capability/value-stream/initiative links`)
 
   // ADRs — insert all records first (without supersededBy), then resolve self-references
   const devAdrIds: Record<string, string> = {}

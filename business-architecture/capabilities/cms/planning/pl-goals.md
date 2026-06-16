@@ -25,6 +25,7 @@ The system must allow organizations to define broad strategic goals above strate
 
 ## Implementation Status
 - **v1:** Implemented. Goals ship as a first-class planning entity with list/detail pages, CRUD, objective linking, rolled-up traceability context, and viewer filtering.
+- **Strategy (ADR-0005):** Implemented. Strategy ships as a first-class **course-of-action** entity that pursues Goals and maps onto the operating model (capabilities, value streams) and the initiatives that deliver it. Includes CRUD + lifecycle (`proposed`/`active`/`achieved`/`abandoned`), Strategy↔Goal/Capability/Value-Stream/Initiative linking from both sides, a `from=strategy` traceability root, active-strategy surfaces on Executive/Roadmap/Dashboard, and backup/export + seed parity. (Supersedes the ADR-0004 planning-container design.)
 
 ## Links
 - Depends on: Strategic Objectives, Content Workflow, Content Relationships

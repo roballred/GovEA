@@ -41,6 +41,7 @@ import {
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas, valueStreamCapabilities,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
   goals, goalObjectives,
+  strategies, strategyGoals, strategyCapabilities, strategyValueStreams, strategyInitiatives,
   initiatives, initiativeCapabilities, initiativeApplications, initiativeObjectives,
   adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives,
   principles, principleCapabilities, principleAdrs,
@@ -93,6 +94,7 @@ interface ArchiveBundle {
     valueStreams: unknown[]
     objectives: unknown[]
     goals: unknown[]
+    strategies: unknown[]
     initiatives: unknown[]
     adrs: unknown[]
     principles: unknown[]
@@ -207,6 +209,9 @@ export async function importArchive(
     await tx.delete(principles).where(eq(principles.organizationId, destOrgId))
     await tx.delete(adrs).where(eq(adrs.organizationId, destOrgId))
     await tx.delete(initiatives).where(eq(initiatives.organizationId, destOrgId))
+    // Strategies before goals: strategy_goals cascades from either side, but
+    // deleting strategies first keeps the wipe order parent-before-children.
+    await tx.delete(strategies).where(eq(strategies.organizationId, destOrgId))
     await tx.delete(goals).where(eq(goals.organizationId, destOrgId))
     await tx.delete(strategicObjectives).where(eq(strategicObjectives.organizationId, destOrgId))
     await tx.delete(valueStreams).where(eq(valueStreams.organizationId, destOrgId))
@@ -298,6 +303,12 @@ export async function importArchive(
       )
       inserted.goals = content.goals.length
     }
+    if (content.strategies.length) {
+      await tx.insert(strategies).values(
+        (content.strategies as Record<string, unknown>[]).map(r => normalize(r, ctx)) as never,
+      )
+      inserted.strategies = content.strategies.length
+    }
     if (content.initiatives.length) {
       await tx.insert(initiatives).values(
         (content.initiatives as Record<string, unknown>[]).map(r => normalize(r, ctx)) as never,
@@ -367,6 +378,10 @@ export async function importArchive(
     await replayJunction(objectiveCapabilities, 'objectiveCapabilities', false)
     await replayJunction(objectiveValueStreams, 'objectiveValueStreams', false)
     await replayJunction(goalObjectives, 'goalObjectives', false)
+    await replayJunction(strategyGoals, 'strategyGoals', false)
+    await replayJunction(strategyCapabilities, 'strategyCapabilities', false)
+    await replayJunction(strategyValueStreams, 'strategyValueStreams', false)
+    await replayJunction(strategyInitiatives, 'strategyInitiatives', false)
     await replayJunction(initiativeCapabilities, 'initiativeCapabilities', false)
     await replayJunction(initiativeApplications, 'initiativeApplications', false)
     await replayJunction(initiativeObjectives, 'initiativeObjectives', false)
