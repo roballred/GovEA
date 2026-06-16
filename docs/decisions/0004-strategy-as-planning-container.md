@@ -1,6 +1,6 @@
 # ADR-0004: Strategy as a planning container above Goals
 
-**Status:** Accepted (design) — implementation gated, see consequences
+**Status:** Superseded by [ADR-0005](./0005-reconcile-strategy-with-bizbok.md) (2026-06-16). The container-above-Goals shape inverted the BMM/BIZBOK ends-means relationship; Strategy is being reworked into a course-of-action *means*. Retained for history.
 **Date:** 2026-06-13
 **Issues:** [#697](https://github.com/roballred/GovEA/issues/697)
 **Design:** [`docs/design/strategy-entity.md`](../design/strategy-entity.md)
