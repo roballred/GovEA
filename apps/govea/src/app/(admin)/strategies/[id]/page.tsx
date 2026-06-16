@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { RelationshipPanel } from '@/components/relationship-panel'
 import { MarkdownContent } from '@/components/markdown-content'
 import { Button } from '@/components/ui/button'
+import { ViewTraceabilityLink } from '@/components/view-traceability-link'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -62,6 +63,7 @@ export default async function StrategyDetailPage({ params }: { params: Promise<{
         <Link href="/strategies" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           ← Strategies
         </Link>
+        <ViewTraceabilityLink from="strategy" id={id} />
       </div>
 
       <div className="space-y-3">

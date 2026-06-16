@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client'
 import {
-  strategicObjectives, capabilities, services, goals,
+  strategicObjectives, capabilities, services, goals, strategies,
   goalObjectives, objectiveCapabilities, applicationCapabilities,
   initiativeObjectives, serviceCapabilities,
   // #695 — trace-participation subjects and their one-hop root junctions
@@ -89,7 +89,21 @@ export interface GoalTrace {
   }>
 }
 
-export type TraceData = GoalTrace | ObjectiveTrace | CapabilityTrace | ServiceTrace
+export interface StrategyTrace {
+  kind: 'strategy'
+  id: string; name: string; summary: string | null
+  planningHorizon: string | null; status: string
+  goals: Array<{
+    id: string; name: string; planningHorizon: string | null; status: string
+    objectives: Array<{
+      id: string; name: string; timeHorizon: string | null
+      capabilities: TraceCapability[]
+      initiatives: TraceInitiative[]
+    }>
+  }>
+}
+
+export type TraceData = StrategyTrace | GoalTrace | ObjectiveTrace | CapabilityTrace | ServiceTrace
 
 function dedupeTraceRows<T extends { id: string }>(rows: T[]): T[] {
   return Array.from(new Map(rows.map((row) => [row.id, row])).values())
@@ -144,6 +158,108 @@ async function getGoalsByObjective(objectiveIds: string[]): Promise<Map<string, 
   }
 
   return goalsByObjective
+}
+
+// ── Strategy trace ──────────────────────────────────────────────────────────
+//
+// Strategy is the planning-period root above Goals (#697 / ADR-0004). The chain
+// is Strategy → Goals → Objectives → Initiatives → Capabilities → Applications,
+// composed entirely from existing relationships. Viewer pruning (design Q5): a
+// draft Strategy is not a viewer-visible root, and member goals are pruned to
+// published for viewers.
+
+export async function getStrategyTrace(id: string): Promise<StrategyTrace | null> {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const isViewer = session.user.role === 'viewer'
+
+  const row = await db.query.strategies.findFirst({ where: eq(strategies.id, id) })
+  if (!row) return null
+  const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
+  if (!visible) return null
+  // A draft strategy is not a viewer-visible root.
+  if (isViewer && row.status === 'draft') return null
+
+  // Member goals (the one new edge); pruned to published for viewers.
+  const memberGoals = await db.query.goals.findMany({
+    where: (g, { eq: eqf, and: andf }) =>
+      isViewer
+        ? andf(eqf(g.strategyId, id), eqf(g.status, 'published'))
+        : eqf(g.strategyId, id),
+    orderBy: (g, { asc }) => [asc(g.name)],
+  })
+  const goalIds = memberGoals.map((g) => g.id)
+
+  // Objectives per member goal, then caps + initiatives for those objectives —
+  // same downstream traversal getGoalTrace uses, fanned across all member goals.
+  const goalObjectiveRows = goalIds.length > 0
+    ? await db.query.goalObjectives.findMany({
+        where: inArray(goalObjectives.goalId, goalIds),
+        with: { objective: true },
+      })
+    : []
+  const objectiveIds = [...new Set(goalObjectiveRows.map(({ objectiveId }) => objectiveId))]
+
+  const [objectiveCapRows, initiativeRows] = objectiveIds.length > 0
+    ? await Promise.all([
+        db.query.objectiveCapabilities.findMany({
+          where: inArray(objectiveCapabilities.objectiveId, objectiveIds),
+        }),
+        db.query.initiativeObjectives.findMany({
+          where: inArray(initiativeObjectives.objectiveId, objectiveIds),
+          with: { initiative: true },
+        }),
+      ])
+    : [[], []] as const
+
+  const capabilityIds = [...new Set(objectiveCapRows.map(({ capabilityId }) => capabilityId))]
+  const capabilityTraceRows = await getCapabilitiesWithApps(capabilityIds)
+  const capabilitiesById = new Map(capabilityTraceRows.map((c) => [c.id, c]))
+
+  const capabilitiesByObjective = new Map<string, TraceCapability[]>()
+  for (const { objectiveId, capabilityId } of objectiveCapRows) {
+    const capability = capabilitiesById.get(capabilityId)
+    if (!capability) continue
+    const list = capabilitiesByObjective.get(objectiveId) ?? []
+    list.push(capability)
+    capabilitiesByObjective.set(objectiveId, list)
+  }
+
+  const initiativesByObjective = new Map<string, TraceInitiative[]>()
+  for (const { objectiveId, initiative } of initiativeRows) {
+    const list = initiativesByObjective.get(objectiveId) ?? []
+    list.push({ id: initiative.id, name: initiative.name, status: initiative.status })
+    initiativesByObjective.set(objectiveId, list)
+  }
+
+  const objectivesByGoal = new Map<string, Array<{ id: string; name: string; timeHorizon: string | null }>>()
+  for (const { goalId, objective } of goalObjectiveRows) {
+    const list = objectivesByGoal.get(goalId) ?? []
+    list.push({ id: objective.id, name: objective.name, timeHorizon: objective.timeHorizon })
+    objectivesByGoal.set(goalId, list)
+  }
+
+  return {
+    kind: 'strategy',
+    id: row.id,
+    name: row.name,
+    summary: row.summary,
+    planningHorizon: row.planningHorizon,
+    status: row.status,
+    goals: memberGoals.map((g) => ({
+      id: g.id,
+      name: g.name,
+      planningHorizon: g.planningHorizon,
+      status: g.status,
+      objectives: (objectivesByGoal.get(g.id) ?? []).map((o) => ({
+        id: o.id,
+        name: o.name,
+        timeHorizon: o.timeHorizon,
+        capabilities: capabilitiesByObjective.get(o.id) ?? [],
+        initiatives: initiativesByObjective.get(o.id) ?? [],
+      })),
+    })),
+  }
 }
 
 // ── Goal trace ────────────────────────────────────────────────────────────────
