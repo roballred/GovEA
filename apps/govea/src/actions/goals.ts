@@ -53,6 +53,7 @@ export async function getGoal(id: string) {
   const goal = await db.query.goals.findFirst({
     where: (g, { eq }) => eq(g.id, id),
     with: {
+      strategy: true,
       goalObjectives: {
         with: {
           objective: {
