@@ -1,6 +1,14 @@
 # Design: First-class Strategy entity
 
-**Status:** Proposed — design slice for #697; implementation gated on the tracker issue and #668 validation
+> ⚠️ **Superseded shape (2026-06-16).** [ADR-0005](../decisions/0005-reconcile-strategy-with-bizbok.md)
+> reworks Strategy from the planning-period *container above Goals* described
+> below into a BIZBOK **course-of-action** (a *means* that pursues Goals and maps
+> onto capabilities/value streams). The data model in §3 and the lifecycle in §2
+> (Q1/Q2) no longer hold; see ADR-0005's "Resolved model" for the new shape. This
+> doc is rewritten with rework-slice R1. Sections on the product distinction (§1)
+> and traceability intent (§4) remain broadly valid.
+
+**Status:** Superseded shape — see ADR-0005; rewritten with R1
 **Issue:** [#697](https://github.com/roballred/GovEA/issues/697)
 **Capabilities:** `pl-goals`, `pl-strategic-objectives`, `pl-initiatives`, `fd-traceability-views`, `rm-end-to-end-traceability` (capability group `cms/planning`)
 **Personas:** Enterprise Architect, Agency EA Coordinator, Department Director, Budget & Performance Analyst
