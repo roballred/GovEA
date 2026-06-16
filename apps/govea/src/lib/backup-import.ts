@@ -294,7 +294,14 @@ export async function importArchive(
     }
     if (content.goals.length) {
       await tx.insert(goals).values(
-        (content.goals as Record<string, unknown>[]).map(r => normalize(r, ctx)) as never,
+        (content.goals as Record<string, unknown>[]).map(r => {
+          // Strategy backup parity lands in slice 6 (#805). Until strategies are
+          // exported and their ids remapped, a carried-over strategy_id would
+          // dangle (FK to a strategy not in this backup) or mislink across
+          // tenants — so drop it on import. Goals restore un-containered.
+          const { strategyId: _strategyId, ...rest } = r
+          return normalize(rest, ctx)
+        }) as never,
       )
       inserted.goals = content.goals.length
     }

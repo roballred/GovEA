@@ -3,6 +3,7 @@ import { organizations, visibilityEnum } from './organizations'
 import { users } from './users'
 import { workflowStatusEnum } from './personas'
 import { strategicObjectives } from './objectives'
+import { strategies } from './strategies'
 
 export const goals = pgTable('goals', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -10,6 +11,10 @@ export const goals = pgTable('goals', {
   name: text('name').notNull(),
   description: text('description'),
   planningHorizon: text('planning_horizon'),
+  // Optional parent Strategy container (#697/#805). null = un-containered goal
+  // (valid, back-compat). At most one strategy per goal — many-to-one, no join
+  // table (ADR-0004 Q3). set null so deleting a strategy orphans, not deletes.
+  strategyId: uuid('strategy_id').references(() => strategies.id, { onDelete: 'set null' }),
   owner: text('owner'),
   status: workflowStatusEnum('status').notNull().default('draft'),
   visibility: visibilityEnum('visibility').notNull().default('org'),
