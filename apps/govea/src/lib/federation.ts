@@ -1,7 +1,7 @@
 import { db } from '@/db/client'
 import {
   capabilities, personas, applications, services, valueStreams,
-  strategicObjectives, goals, initiatives, adrs, principles,
+  strategicObjectives, goals, strategies, initiatives, adrs, principles,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
@@ -35,6 +35,7 @@ export type EntityKind =
   | 'value_stream'
   | 'objective'
   | 'goal'
+  | 'strategy'
   | 'initiative'
   | 'adr'
   | 'principle'
@@ -85,6 +86,11 @@ export async function assertEntityInOrg(
     }
     case 'goal': {
       const r = await db.query.goals.findFirst({ where: eq(goals.id, id), columns: { organizationId: true } })
+      entityOrgId = r?.organizationId
+      break
+    }
+    case 'strategy': {
+      const r = await db.query.strategies.findFirst({ where: eq(strategies.id, id), columns: { organizationId: true } })
       entityOrgId = r?.organizationId
       break
     }
