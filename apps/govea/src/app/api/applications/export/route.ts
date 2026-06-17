@@ -23,12 +23,21 @@ function buildCsv(
     }
   }
 
-  const fixedHeaders = ['name', 'description', 'vendor', 'version', 'hosting_model', 'lifecycle_status', 'status', 'visibility']
+  // `capabilities` is a semicolon-joined name list — the same human-readable,
+  // environment-independent convention Capabilities use for `personas` (#696).
+  // The CSV round-trips: Export → unchanged → Import produces no new rows and
+  // no data drift.
+  const fixedHeaders = ['name', 'description', 'vendor', 'version', 'hosting_model', 'lifecycle_status', 'status', 'visibility', 'capabilities']
   const taxHeaders = taxDefs.map(d => d.typeName)
   const customHeaders = fieldDefs.map(f => f.name)
   const headers = [...fixedHeaders, ...taxHeaders, ...customHeaders]
 
   const rows = apps.map(app => {
+    const capabilityNames = app.applicationCapabilities
+      .map(ac => ac.capability?.name)
+      .filter((n): n is string => Boolean(n))
+      .join('; ')
+
     const fixed = [
       app.name,
       app.description ?? '',
@@ -38,6 +47,7 @@ function buildCsv(
       app.lifecycleStatus,
       app.status,
       app.visibility,
+      capabilityNames,
     ]
 
     const termIds = (taxValueMap[app.id] ?? []).map(v => v.taxonomyTermId)
@@ -64,12 +74,18 @@ export async function GET() {
 
   const orgId = session.user.organizationId!
 
-  const [apps, fieldDefs, taxDefs] = await Promise.all([
+  const [allApps, fieldDefs, taxDefs] = await Promise.all([
     getApplications(),
     getCustomFieldSchema(orgId, 'application'),
     getEntityTaxonomyDefinitions(orgId, 'application'),
   ])
 
+  // Export is org-scoped. getApplications() returns federated (instance-visible
+  // + connected-org) rows too, but those are read-only views; including them
+  // would make a re-import either duplicate external records in the caller's
+  // org or require per-row collision handling — both break round-trip safety.
+  // Mirrors the Capability export (#696).
+  const apps = allApps.filter(a => a.organizationId === orgId)
   const appIds = apps.map(a => a.id)
   const taxValueMap = await getEntityTaxonomyValuesForMany(orgId, 'application', appIds)
 

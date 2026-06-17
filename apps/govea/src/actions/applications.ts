@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { applications, applicationCapabilities, objectiveCapabilities, entityTaxonomyValues } from '@/db/schema'
+import { applications, applicationCapabilities, objectiveCapabilities, entityTaxonomyValues, capabilities } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
@@ -17,6 +17,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { syncEntityTaxonomyValues, getEntityTaxonomyValues, getEntityTaxonomyDefinitions } from '@/lib/entity-taxonomy-helpers'
 import { getCustomFieldSchema } from './custom-fields'
+import { parseCsv, splitSemicolonList } from '@/lib/csv'
 
 async function requireContributor() {
   const session = await auth()
@@ -408,49 +409,14 @@ export type ImportResult = {
   errors: string[]
 }
 
-const FIXED_COLUMNS = new Set(['name', 'description', 'vendor', 'version', 'hosting_model', 'lifecycle_status', 'status', 'visibility'])
+// `capabilities` is a relationship column (semicolon-joined capability names),
+// not a custom field — exclude it from custom-field detection. #696 also
+// consolidated this action onto the shared `@/lib/csv` parser (multi-line-cell
+// support + delimiter sniffing), replacing the old line-based local parser.
+const FIXED_COLUMNS = new Set(['name', 'description', 'vendor', 'version', 'hosting_model', 'lifecycle_status', 'status', 'visibility', 'capabilities'])
 const VALID_LIFECYCLE = new Set(['active', 'sunset', 'decommissioned', 'planned'])
 const VALID_STATUS = new Set(['draft', 'published', 'archived'])
 const VALID_VISIBILITY = new Set(['org', 'connections', 'instance'])
-
-// NOTE: applications has its own line-based parser (no multi-line-cell support),
-// a pre-existing divergence from the shared `lib/csv.ts` tracked by #696. The
-// delimiter-detection below mirrors `lib/csv.ts` so the #679 semicolon bug is
-// fixed here too; consolidation onto the shared parser stays with #696.
-function parseCsvLine(line: string, delimiter: ',' | ';' = ','): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }
-      else inQuotes = !inQuotes
-    } else if (ch === delimiter && !inQuotes) {
-      result.push(current); current = ''
-    } else {
-      current += ch
-    }
-  }
-  result.push(current)
-  return result
-}
-
-function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.trim().split(/\r?\n/)
-  if (lines.length < 2) return []
-  // Sniff the delimiter from the header line (see #679 / lib/csv.ts).
-  const headerLine = lines[0]
-  const delimiter: ',' | ';' =
-    (headerLine.match(/;/g) || []).length > (headerLine.match(/,/g) || []).length ? ';' : ','
-  const headers = parseCsvLine(headerLine, delimiter).map(h => h.trim())
-  return lines.slice(1)
-    .filter(l => l.trim())
-    .map(line => {
-      const values = parseCsvLine(line, delimiter)
-      return Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? '').trim()]))
-    })
-}
 
 export async function importApplications(formData: FormData, dryRun = false): Promise<ImportResult> {
   const session = await requireContributor()
@@ -466,12 +432,22 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
   const fieldDefs = await getCustomFieldSchema(orgId, 'application')
   const customFieldNames = new Set(fieldDefs.map(f => f.name))
 
-  // Pre-fetch existing applications by name for conflict resolution
-  const existing = await db.query.applications.findMany({
-    where: eq(applications.organizationId, orgId),
-    columns: { id: true, name: true },
-  })
+  // Pre-fetch existing applications by name (upsert key) and the org's
+  // capabilities for name → id relationship resolution. Both scoped to the
+  // caller's org — cross-org capability references are not resolved, same rule
+  // as the Capability import's persona handling (#696).
+  const [existing, orgCapabilities] = await Promise.all([
+    db.query.applications.findMany({
+      where: eq(applications.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+    db.query.capabilities.findMany({
+      where: eq(capabilities.organizationId, orgId),
+      columns: { id: true, name: true },
+    }),
+  ])
   const existingByName = new Map(existing.map(a => [a.name.toLowerCase(), a.id]))
+  const capabilityIdByName = new Map(orgCapabilities.map(c => [c.name.toLowerCase(), c.id]))
 
   let created = 0, updated = 0, skipped = 0
   const errors: string[] = []
@@ -487,6 +463,7 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
     status: 'draft' | 'published' | 'archived'
     visibility: 'org' | 'connections' | 'instance'
     customData: Record<string, string>
+    capabilityIds: string[]
     existingId: string | undefined
   }
   const validRows: ValidRow[] = []
@@ -520,6 +497,15 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
       }
     }
 
+    // Resolve capability links by name — unknown names report as warnings, not
+    // row failures. The application still imports; just without the bad links.
+    const capabilityIds: string[] = []
+    for (const capName of splitSemicolonList(row['capabilities'])) {
+      const capId = capabilityIdByName.get(capName.toLowerCase())
+      if (capId) capabilityIds.push(capId)
+      else errors.push(`Row ${rowNum}: capability "${capName}" not found in this org — skipped`)
+    }
+
     const existingId = existingByName.get(name.toLowerCase())
     if (existingId) updated++; else created++
     validRows.push({
@@ -532,6 +518,7 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
       status: status as 'draft' | 'published' | 'archived',
       visibility: visibility as 'org' | 'connections' | 'instance',
       customData,
+      capabilityIds: [...new Set(capabilityIds)],
       existingId,
     })
   }
@@ -539,7 +526,8 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
   if (!dryRun && (created > 0 || updated > 0)) {
     await db.transaction(async (tx) => {
       for (const r of validRows) {
-        if (r.existingId) {
+        let appId = r.existingId
+        if (appId) {
           await tx.update(applications).set({
             description: r.description,
             vendor: r.vendor,
@@ -551,9 +539,11 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
             customData: r.customData,
             updatedBy: session.user.id,
             updatedAt: new Date(),
-          }).where(and(eq(applications.id, r.existingId), eq(applications.organizationId, orgId)))
+          }).where(and(eq(applications.id, appId), eq(applications.organizationId, orgId)))
+          // Replace capability links wholesale — same semantics as editApplication.
+          await tx.delete(applicationCapabilities).where(eq(applicationCapabilities.applicationId, appId))
         } else {
-          await tx.insert(applications).values({
+          const [inserted] = await tx.insert(applications).values({
             name: r.name,
             description: r.description,
             vendor: r.vendor,
@@ -566,7 +556,13 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
             organizationId: orgId,
             createdBy: session.user.id,
             updatedBy: session.user.id,
-          })
+          }).returning({ id: applications.id })
+          appId = inserted.id
+        }
+        if (r.capabilityIds.length > 0) {
+          await tx.insert(applicationCapabilities).values(
+            r.capabilityIds.map(capabilityId => ({ applicationId: appId!, capabilityId }))
+          )
         }
       }
 
@@ -576,7 +572,7 @@ export async function importApplications(formData: FormData, dryRun = false): Pr
         entityId: orgId,
         userId: session.user.id,
         organizationId: orgId,
-        after: { created, updated, skipped, dryRun },
+        after: { created, updated, skipped, dryRun, errorCount: errors.length },
       })
     })
   }
