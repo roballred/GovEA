@@ -28,7 +28,9 @@ function form(fields: Record<string, string>): FormData {
 
 const SOURCES = [
   { name: 'TOGAF 10', url: 'https://www.opengroup.org/togaf', definition: 'A business or technical capability.' },
-  { name: 'NIST SP 800-145', url: 'https://nist.gov', definition: 'On-demand network access to shared resources.' },
+  // Path-bearing URL: validateWebUrl normalizes a bare host to a trailing slash,
+  // so use a stable path so the round-trip equals the input exactly.
+  { name: 'NIST SP 800-145', url: 'https://csrc.nist.gov/pubs/sp/800/145/final', definition: 'On-demand network access to shared resources.' },
 ]
 
 describe('glossary active-source selection (#837)', () => {
@@ -81,8 +83,8 @@ describe('glossary active-source selection (#837)', () => {
     }))
 
     const updated = await termRow('Capability')
-    expect(updated.definitionSource).toBe('NIST SP 800-145')
-    expect(updated.definitionSourceUrl).toBe('https://nist.gov')
+    expect(updated.definitionSource).toBe(SOURCES[1].name)
+    expect(updated.definitionSourceUrl).toBe(SOURCES[1].url)
     expect(await sourceCount(updated.id)).toBe(2)
   })
 
