@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { glossaryTerms, glossaryTermSources } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -27,23 +27,19 @@ async function requireAdmin() {
   return session
 }
 
-export async function getGlossaryTerms() {
+export async function getGlossaryTerms(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(orgId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(orgId) : []
 
   return db.query.glossaryTerms.findMany({
-    where: (g, { eq, or, and, inArray }) => {
-      const base = eq(g.organizationId, orgId)
-      const instanceWide = eq(g.visibility, 'instance')
-      const statusFilter = isViewer ? eq(g.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(g.organizationId, connectedOrgIds), inArray(g.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(glossaryTerms, { orgId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(glossaryTerms.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,

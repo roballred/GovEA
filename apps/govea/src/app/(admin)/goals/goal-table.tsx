@@ -123,7 +123,14 @@ export function GoalTable({ goals, objectives, role, currentOrgId }: Props) {
             {filtered.map(g => (
               <TableRow key={g.id}>
                 <TableCell className="font-medium">
-                  <Link href={`/goals/${g.id}`} className="hover:underline">{g.name}</Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/goals/${g.id}`} className="hover:underline">{g.name}</Link>
+                    {g.organizationId !== currentOrgId && g.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {g.organization.name}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {g.planningHorizon ?? '—'}

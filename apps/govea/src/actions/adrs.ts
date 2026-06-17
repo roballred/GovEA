@@ -7,7 +7,7 @@ import {
 } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -35,23 +35,19 @@ async function requireAdmin() {
 // Viewer-visible ADR status — Option B decision from #202
 const VIEWER_ADR_STATUS = 'accepted' as const
 
-export async function getADRs() {
+export async function getADRs(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(orgId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(orgId) : []
 
   return db.query.adrs.findMany({
-    where: (a, { eq, or, and, inArray }) => {
-      const base = eq(a.organizationId, orgId)
-      const instanceWide = eq(a.visibility, 'instance')
-      const statusFilter = isViewer ? eq(a.status, VIEWER_ADR_STATUS) : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(a.organizationId, connectedOrgIds), inArray(a.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(adrs, { orgId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(adrs.status, VIEWER_ADR_STATUS) : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,

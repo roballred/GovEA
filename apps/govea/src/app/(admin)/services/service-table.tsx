@@ -31,6 +31,7 @@ interface Props {
   services: ServiceRow[]
   personas: Pick<Persona, 'id' | 'name'>[]
   role: Role
+  currentOrgId: string
   taxonomyDefinitions: EnrichedTaxonomyDefinition[]
   taxonomyValueMap: Record<string, EntityTaxonomyValue[]>
 }
@@ -67,7 +68,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   instance: 'Instance-wide',
 }
 
-export function ServiceTable({ services, personas, role, taxonomyDefinitions, taxonomyValueMap }: Props) {
+export function ServiceTable({ services, personas, role, currentOrgId, taxonomyDefinitions, taxonomyValueMap }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -212,9 +213,16 @@ export function ServiceTable({ services, personas, role, taxonomyDefinitions, ta
             {filtered.map(s => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">
-                  <Link href={`/services/${s.id}`} className="hover:underline">
-                    {s.name}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/services/${s.id}`} className="hover:underline">
+                      {s.name}
+                    </Link>
+                    {s.organizationId !== currentOrgId && s.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {s.organization.name}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {s.serviceOwner ?? <span className="text-muted-foreground">—</span>}

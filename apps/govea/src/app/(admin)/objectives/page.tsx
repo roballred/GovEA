@@ -4,16 +4,19 @@ import { getObjectives } from '@/actions/objectives'
 import { getCapabilities } from '@/actions/capabilities'
 import { getValueStreams } from '@/actions/value-streams'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
+import { parseListScope } from '@/lib/federation'
+import { ListScopeToggle } from '@/components/list-scope-toggle'
 import { ObjectiveTable } from './objective-table'
-export default async function ObjectivesPage() {
+export default async function ObjectivesPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
   const orgId = session.user.organizationId!
   const role = session.user.role
+  const scope = parseListScope((await searchParams).scope)
 
   const [objectiveList, capabilityList, valueStreamList, taxonomyDefinitions] = await Promise.all([
-    getObjectives(),
+    getObjectives(scope),
     getCapabilities(),
     getValueStreams(),
     getEntityTaxonomyDefinitions(orgId, 'objective'),
@@ -26,11 +29,14 @@ export default async function ObjectivesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Strategic Objectives</h1>
-        <p className="text-muted-foreground mt-1">
-          Measurable goals that justify capability investment and drive portfolio decisions.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Strategic Objectives</h1>
+          <p className="text-muted-foreground mt-1">
+            Measurable goals that justify capability investment and drive portfolio decisions.
+          </p>
+        </div>
+        <ListScopeToggle scope={scope} />
       </div>
       <ObjectiveTable
         objectives={objectiveList}

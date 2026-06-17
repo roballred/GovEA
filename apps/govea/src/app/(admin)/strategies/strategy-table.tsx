@@ -131,7 +131,14 @@ export function StrategyTable({ strategies, orgUsers, role, currentOrgId }: Prop
             {filtered.map(s => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">
-                  <Link href={`/strategies/${s.id}`} className="hover:underline">{s.name}</Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/strategies/${s.id}`} className="hover:underline">{s.name}</Link>
+                    {s.organizationId !== currentOrgId && s.organization && (
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 border-orange-200">
+                        {s.organization.name}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {s.planningHorizon ?? '—'}

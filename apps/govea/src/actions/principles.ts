@@ -4,7 +4,7 @@ import { db } from '@/db/client'
 import { principles, principleAdrs, principleCapabilities, entityTaxonomyValues } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -33,23 +33,19 @@ async function insertJunctions(tx: DBOrTx, principleId: string, adrIds: string[]
     await tx.insert(principleCapabilities).values(capabilityIds.map(capabilityId => ({ principleId, capabilityId }))).onConflictDoNothing()
 }
 
-export async function getPrinciples() {
+export async function getPrinciples(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(orgId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(orgId) : []
 
   return db.query.principles.findMany({
-    where: (p, { eq, or, and, inArray }) => {
-      const base = eq(p.organizationId, orgId)
-      const instanceWide = eq(p.visibility, 'instance')
-      const statusFilter = isViewer ? eq(p.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(p.organizationId, connectedOrgIds), inArray(p.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(principles, { orgId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(principles.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,
