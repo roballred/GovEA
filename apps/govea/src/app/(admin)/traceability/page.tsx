@@ -423,6 +423,9 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
         </TraceCard>
       )}
 
+      {/* Value Streams (between initiatives and capabilities) */}
+      <ValueStreamLayer valueStreams={trace.valueStreams} />
+
       {/* Capabilities */}
       <Connector label="requires" />
       <LayerLabel>Capabilities</LayerLabel>
@@ -445,8 +448,6 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
       <Connector label="supported by" />
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={allApps} />
-
-      <RelatedValueStreams valueStreams={trace.valueStreams} />
     </div>
   )
 }
@@ -532,6 +533,9 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
           ))}
         </TraceCard>
       )}
+
+      {/* Value Streams (between initiatives and the capability) */}
+      <ValueStreamLayer valueStreams={trace.valueStreams} />
 
       {/* Anchor: Capability */}
       <Connector label="requires" />
@@ -623,8 +627,6 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
           </TraceCard>
         </>
       )}
-
-      <RelatedValueStreams valueStreams={trace.valueStreams} />
     </div>
   )
 }
@@ -674,6 +676,9 @@ function ServiceTraceView({ trace }: { trace: ServiceTrace }) {
         </div>
       </TraceCard>
 
+      {/* Value Streams (delivery layer above capabilities) */}
+      <ValueStreamLayer valueStreams={trace.valueStreams} />
+
       {/* Capabilities */}
       <Connector label="requires" />
       <LayerLabel>Capabilities</LayerLabel>
@@ -696,34 +701,38 @@ function ServiceTraceView({ trace }: { trace: ServiceTrace }) {
       <Connector label="runs on" />
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={allApps} />
-
-      <RelatedValueStreams valueStreams={trace.valueStreams} />
     </div>
   )
 }
 
-// ── Related value streams (#809) ────────────────────────────────────────────────
+// ── Value stream layer (#809 / #848) ───────────────────────────────────────────
 //
-// Lateral delivery context surfaced on objective/capability/service traces.
-// Rendered only when links exist; each row deep-links to the value stream's own
-// trace where its stages and stage capabilities are shown.
+// The delivery/value layer sits between Strategic Initiatives and Capabilities in
+// the traceability metamodel: Initiatives → Value Streams → Capabilities. Always
+// rendered as its own layer (with an empty-state gap when nothing is linked) so
+// the chain order is consistent and the value-stream layer is never skipped. Each
+// row deep-links to the value stream's own trace, where its stages and stage
+// capabilities are shown.
 
-function RelatedValueStreams({ valueStreams }: { valueStreams: TraceValueStream[] }) {
-  if (valueStreams.length === 0) return null
+function ValueStreamLayer({ valueStreams }: { valueStreams: TraceValueStream[] }) {
   return (
     <>
       <Connector label="delivered through" />
       <LayerLabel>Value Streams</LayerLabel>
-      <TraceCard>
-        {valueStreams.map(v => (
-          <TraceRow
-            key={v.id}
-            href={`/traceability?from=value-stream&id=${v.id}`}
-            name={v.name}
-            meta={v.valueItem ?? undefined}
-          />
-        ))}
-      </TraceCard>
+      {valueStreams.length === 0 ? (
+        <Gap message="No value streams linked — the delivery layer between strategic initiatives and capabilities isn't mapped yet." />
+      ) : (
+        <TraceCard>
+          {valueStreams.map(v => (
+            <TraceRow
+              key={v.id}
+              href={`/traceability?from=value-stream&id=${v.id}`}
+              name={v.name}
+              meta={v.valueItem ?? undefined}
+            />
+          ))}
+        </TraceCard>
+      )}
     </>
   )
 }
@@ -900,11 +909,11 @@ export default async function TraceabilityPage({
     trace.name
 
   const subtitle =
-    trace.kind === 'strategy'  ? 'Strategy → Goals → Objectives → Initiatives → Capabilities → Technology Trace' :
+    trace.kind === 'strategy'  ? 'Strategy → Goals → Objectives → Initiatives → Value Streams → Capabilities → Technology Trace' :
     trace.kind === 'goal'      ? 'Goal → Objectives → Initiatives → Capabilities → Technology Trace' :
-    trace.kind === 'objective' ? 'Goal → Objective → Initiatives → Technology Trace' :
-    trace.kind === 'capability' ? 'Strategy → Goal → Objective → Initiatives → Capability → Delivery Trace' :
-    'Persona → Service → Technology Trace'
+    trace.kind === 'objective' ? 'Goal → Objective → Initiatives → Value Streams → Capabilities → Technology Trace' :
+    trace.kind === 'capability' ? 'Strategy → Goal → Objective → Initiatives → Value Streams → Capability → Delivery Trace' :
+    'Persona → Service → Value Streams → Capabilities → Technology Trace'
 
   return (
     <div className="space-y-8">
