@@ -118,7 +118,7 @@ export async function createGlossaryTerm(formData: FormData) {
       entityId: entry.id,
       userId: session.user.id,
       organizationId: orgId,
-      after: { term, status, visibility },
+      after: { term, status, visibility, definitionSource },
     })
   })
 }
@@ -167,8 +167,8 @@ export async function editGlossaryTerm(termId: string, formData: FormData) {
       entityId: termId,
       userId: session.user.id,
       organizationId: orgId,
-      before: { term: before?.term, status: before?.status },
-      after: { term, status, visibility },
+      before: { term: before?.term, status: before?.status, definitionSource: before?.definitionSource },
+      after: { term, status, visibility, definitionSource },
     })
   })
 }

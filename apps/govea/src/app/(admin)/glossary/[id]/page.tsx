@@ -66,6 +66,7 @@ export default async function GlossaryTermDetailPage({ params }: { params: Promi
       {canMutate && (
         <GlossaryEditButton
           termId={id}
+          sources={term.sources.map(s => ({ name: s.name, url: s.url }))}
           initial={{
             term: term.term,
             definition: term.definition,
