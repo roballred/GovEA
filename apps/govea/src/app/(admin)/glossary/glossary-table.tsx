@@ -16,12 +16,12 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { isSafeUrl } from '@/lib/url'
 import type { Role } from '@/lib/rbac'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { GlossarySourceSelect } from '@/components/glossary-source-select'
 
 type GlossaryRow = GlossaryTerm & {
   organization: { id: string; name: string } | null
@@ -411,8 +411,6 @@ function TermForm({
   pendingLabel: string
 }) {
   const [definition, setDefinition] = useState(term?.definition ?? '')
-  const [defSource, setDefSource] = useState(term?.definitionSource ?? '')
-  const [defSourceUrl, setDefSourceUrl] = useState(term?.definitionSourceUrl ?? '')
   const [sources, setSources] = useState<SourceRow[]>(
     term?.sources?.map(s => ({ name: s.name, url: s.url ?? '', definition: s.definition })) ?? []
   )
@@ -429,23 +427,18 @@ function TermForm({
     setSources(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
   }
 
-  function applySource(s: SourceRow) {
+  // Copy a source's verbatim text into the term definition. Active-source
+  // attribution is chosen separately via GlossarySourceSelect (#837).
+  function applyAsDefinition(s: SourceRow) {
     setDefinition(s.definition)
-    setDefSource(s.name)
-    setDefSourceUrl(s.url)
-  }
-
-  function clearSource() {
-    setDefSource('')
-    setDefSourceUrl('')
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
     fd.set('definition', definition)
-    fd.set('definitionSource', defSource)
-    fd.set('definitionSourceUrl', defSourceUrl)
+    // definitionSource / definitionSourceUrl are carried by the hidden inputs
+    // GlossarySourceSelect renders inside this form.
     fd.set('sources', JSON.stringify(sources.filter(s => s.name && s.definition)))
     onSubmit(fd)
   }
@@ -454,21 +447,8 @@ function TermForm({
     <form onSubmit={handleSubmit} onChange={onDirty} className="space-y-4">
       <FormField label="Term" name="term" required defaultValue={term?.term} placeholder="e.g. Capability" />
 
-      {/* Definition with attribution */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="glossary-definition">Definition <span className="text-destructive">*</span></Label>
-          {defSource && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span>Source:</span>
-              {isSafeUrl(defSourceUrl)
-                ? <a href={defSourceUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">{defSource}</a>
-                : <span className="font-medium">{defSource}</span>
-              }
-              <button type="button" onClick={clearSource} className="ml-1 text-muted-foreground hover:text-foreground">×</button>
-            </div>
-          )}
-        </div>
+        <Label htmlFor="glossary-definition">Definition <span className="text-destructive">*</span></Label>
         <MarkdownEditor
           name="definition"
           id="glossary-definition"
@@ -537,15 +517,23 @@ function TermForm({
             {s.name && s.definition && (
               <button
                 type="button"
-                onClick={() => applySource(s)}
+                onClick={() => applyAsDefinition(s)}
                 className="text-xs text-blue-600 hover:underline"
               >
-                Use this definition
+                Use as the term definition
               </button>
             )}
           </div>
         ))}
       </div>
+
+      {/* Active reference source — which saved source attributes the definition (#837). */}
+      <GlossarySourceSelect
+        sources={sources}
+        defaultSource={term?.definitionSource}
+        defaultSourceUrl={term?.definitionSourceUrl}
+        onChange={onDirty}
+      />
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
