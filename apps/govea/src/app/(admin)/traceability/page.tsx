@@ -2,8 +2,8 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { getStrategyTrace, getGoalTrace, getObjectiveTrace, getCapabilityTrace, getServiceTrace, getTraceParticipation } from '@/actions/traceability'
-import type { StrategyTrace, GoalTrace, ObjectiveTrace, CapabilityTrace, ServiceTrace, TraceApp, TraceParticipation } from '@/actions/traceability'
+import { getStrategyTrace, getGoalTrace, getObjectiveTrace, getCapabilityTrace, getServiceTrace, getValueStreamTrace, getTraceParticipation } from '@/actions/traceability'
+import type { StrategyTrace, GoalTrace, ObjectiveTrace, CapabilityTrace, ServiceTrace, ValueStreamTrace, TraceValueStream, TraceApp, TraceParticipation } from '@/actions/traceability'
 import { isTraceParticipantKind, PARTICIPANT_ROUTES } from '@/lib/trace-participants'
 import { getStrategies } from '@/actions/strategies'
 import { getGoals } from '@/actions/goals'
@@ -438,6 +438,8 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
       <Connector label="supported by" />
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={allApps} />
+
+      <RelatedValueStreams valueStreams={trace.valueStreams} />
     </div>
   )
 }
@@ -594,6 +596,8 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
           </TraceCard>
         </>
       )}
+
+      <RelatedValueStreams valueStreams={trace.valueStreams} />
     </div>
   )
 }
@@ -665,6 +669,139 @@ function ServiceTraceView({ trace }: { trace: ServiceTrace }) {
       <Connector label="runs on" />
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={allApps} />
+
+      <RelatedValueStreams valueStreams={trace.valueStreams} />
+    </div>
+  )
+}
+
+// ── Related value streams (#809) ────────────────────────────────────────────────
+//
+// Lateral delivery context surfaced on objective/capability/service traces.
+// Rendered only when links exist; each row deep-links to the value stream's own
+// trace where its stages and stage capabilities are shown.
+
+function RelatedValueStreams({ valueStreams }: { valueStreams: TraceValueStream[] }) {
+  if (valueStreams.length === 0) return null
+  return (
+    <>
+      <Connector label="delivered through" />
+      <LayerLabel>Value Streams</LayerLabel>
+      <TraceCard>
+        {valueStreams.map(v => (
+          <TraceRow
+            key={v.id}
+            href={`/traceability?from=value-stream&id=${v.id}`}
+            name={v.name}
+            meta={v.valueItem ?? undefined}
+          />
+        ))}
+      </TraceCard>
+    </>
+  )
+}
+
+// ── Value stream trace view (#809) ──────────────────────────────────────────────
+
+function ValueStreamTraceView({ trace }: { trace: ValueStreamTrace }) {
+  return (
+    <div className="space-y-1 max-w-2xl">
+      {/* Upstream context: objectives & services */}
+      <LayerLabel>Strategic Objectives</LayerLabel>
+      {trace.objectives.length === 0 ? (
+        <Gap message="No strategic objectives linked — the mission intent this value stream serves isn't mapped yet." />
+      ) : (
+        <TraceCard>
+          {trace.objectives.map(o => (
+            <TraceRow key={o.id} href={`/objectives/${o.id}`} name={o.name} meta={o.timeHorizon ?? undefined} />
+          ))}
+        </TraceCard>
+      )}
+
+      <Connector label="delivered by" />
+      <LayerLabel>Services</LayerLabel>
+      {trace.services.length === 0 ? (
+        <Gap message="No services linked — the stakeholder-facing services this value stream delivers aren't mapped yet." />
+      ) : (
+        <TraceCard>
+          {trace.services.map(s => (
+            <TraceRow key={s.id} href={`/services/${s.id}`} name={s.name} />
+          ))}
+        </TraceCard>
+      )}
+
+      {/* Anchor: Value Stream */}
+      <Connector label="realised by" />
+      <LayerLabel>Value Stream</LayerLabel>
+      <TraceCard>
+        <div className="px-4 py-4">
+          <div className="font-semibold text-base">{trace.name}</div>
+          {trace.description && (
+            <p className="text-sm text-muted-foreground mt-1">{trace.description}</p>
+          )}
+          <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
+            {trace.valueItem && <span>Delivers: {trace.valueItem}</span>}
+            <span>Status: {trace.status}</span>
+          </div>
+        </div>
+      </TraceCard>
+
+      {/* Stakeholders */}
+      <Connector label="serves" />
+      <LayerLabel>Stakeholders</LayerLabel>
+      {trace.personas.length === 0 ? (
+        <Gap message="No personas linked — the stakeholders this value stream serves aren't identified yet." />
+      ) : (
+        <TraceCard>
+          {trace.personas.map(p => (
+            <TraceRow key={p.id} href={`/personas/${p.id}`} name={p.name} meta={p.type ?? undefined} />
+          ))}
+        </TraceCard>
+      )}
+
+      {/* Ordered stages, each with its stage-level capabilities */}
+      <Connector label="flows through" />
+      <LayerLabel>Stages</LayerLabel>
+      {trace.stages.length === 0 ? (
+        <Gap message="No stages defined — add ordered stages to map how this value stream delivers value." />
+      ) : (
+        <div className="space-y-3">
+          {trace.stages.map((stage, idx) => (
+            <TraceCard key={stage.id}>
+              <div className="px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">{idx + 1}</span>
+                  <span className="font-medium text-sm">{stage.name}</span>
+                </div>
+                {stage.description && (
+                  <p className="text-xs text-muted-foreground">{stage.description}</p>
+                )}
+                {stage.capabilities.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No capabilities assigned to this stage yet.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {stage.capabilities.map(c => (
+                      <Link
+                        key={c.id}
+                        href={`/traceability?from=capability&id=${c.id}`}
+                        className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-1.5 text-sm hover:bg-muted/60 transition-colors"
+                      >
+                        <span className="font-medium">{c.name}</span>
+                        {c.domain && <span className="text-xs text-muted-foreground">{c.domain}</span>}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TraceCard>
+          ))}
+        </div>
+      )}
+
+      {/* Applications reached through stage capabilities */}
+      <Connector label="supported by" />
+      <LayerLabel>Applications</LayerLabel>
+      <AppLayer apps={trace.applications} />
     </div>
   )
 }
@@ -714,6 +851,10 @@ export default async function TraceabilityPage({
     trace = await getServiceTrace(id)
     backHref = `/services/${id}`
     backLabel = '← Service'
+  } else if (from === 'value-stream') {
+    trace = await getValueStreamTrace(id)
+    backHref = `/value-streams/${id}`
+    backLabel = '← Value Stream'
   } else if (isTraceParticipantKind(from)) {
     // #695 — non-root participants get a participation panel rather than a
     // native trace: their one-hop connections into the root trace views.
@@ -736,6 +877,7 @@ export default async function TraceabilityPage({
     trace.kind === 'goal'      ? 'Goal → Objectives → Initiatives → Capabilities → Technology Trace' :
     trace.kind === 'objective' ? 'Goal → Objective → Initiatives → Technology Trace' :
     trace.kind === 'capability' ? 'Goal → Objective → Initiatives → Capability → Delivery Trace' :
+    trace.kind === 'value-stream' ? 'Objectives/Services → Value Stream → Stages → Capabilities → Technology Trace' :
     'Persona → Service → Technology Trace'
 
   return (
@@ -766,6 +908,7 @@ export default async function TraceabilityPage({
       {trace.kind === 'objective' && <ObjectiveTraceView trace={trace} />}
       {trace.kind === 'capability' && <CapabilityTraceView trace={trace} />}
       {trace.kind === 'service' && <ServiceTraceView trace={trace} />}
+      {trace.kind === 'value-stream' && <ValueStreamTraceView trace={trace} />}
 
       <p className="text-xs text-muted-foreground pt-4 border-t">
         Traceability view — relationships reflect published, visible records only.

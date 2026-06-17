@@ -10,6 +10,7 @@ import {
   applications, initiatives, personas, valueStreams, adrs, principles,
   initiativeCapabilities, capabilityPersonas, servicePersonas,
   serviceValueStreams, valueStreamCapabilities, objectiveValueStreams,
+  valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas,
   adrCapabilities, adrObjectives, principleCapabilities,
 } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
@@ -47,6 +48,9 @@ export interface TraceAdr {
 export interface TracePrinciple {
   id: string; name: string
 }
+export interface TraceValueStream {
+  id: string; name: string; valueItem: string | null; status: string
+}
 
 // ── Typed results ─────────────────────────────────────────────────────────────
 
@@ -57,6 +61,7 @@ export interface ObjectiveTrace {
   goals: TraceGoal[]
   capabilities: TraceCapability[]
   initiatives: TraceInitiative[]
+  valueStreams: TraceValueStream[]
 }
 
 export interface CapabilityTrace {
@@ -70,6 +75,7 @@ export interface CapabilityTrace {
   personas: TracePersona[]
   adrs: TraceAdr[]
   principles: TracePrinciple[]
+  valueStreams: TraceValueStream[]
 }
 
 export interface ServiceTrace {
@@ -77,6 +83,20 @@ export interface ServiceTrace {
   id: string; name: string; description: string | null; channels: string[]; status: string
   personas: TracePersona[]
   capabilities: TraceCapability[]
+  valueStreams: TraceValueStream[]
+}
+
+export interface ValueStreamTrace {
+  kind: 'value-stream'
+  id: string; name: string; valueItem: string | null; description: string | null; status: string
+  personas: TracePersona[]
+  objectives: Array<{ id: string; name: string; timeHorizon: string | null }>
+  services: Array<{ id: string; name: string }>
+  stages: Array<{
+    id: string; name: string; description: string | null; order: number
+    capabilities: TraceCapability[]
+  }>
+  applications: TraceApp[]
 }
 
 export interface GoalTrace {
@@ -110,7 +130,7 @@ export interface StrategyTrace {
   directInitiatives: TraceInitiative[]
 }
 
-export type TraceData = StrategyTrace | GoalTrace | ObjectiveTrace | CapabilityTrace | ServiceTrace
+export type TraceData = StrategyTrace | GoalTrace | ObjectiveTrace | CapabilityTrace | ServiceTrace | ValueStreamTrace
 
 function dedupeTraceRows<T extends { id: string }>(rows: T[]): T[] {
   return Array.from(new Map(rows.map((row) => [row.id, row])).values())
@@ -165,6 +185,21 @@ async function getGoalsByObjective(objectiveIds: string[]): Promise<Map<string, 
   }
 
   return goalsByObjective
+}
+
+// Summaries for value streams surfaced as related context on other trace views
+// (#809). Same-org by junction construction; pruned to published for viewers.
+async function getValueStreamSummaries(valueStreamIds: string[], isViewer: boolean): Promise<TraceValueStream[]> {
+  const ids = [...new Set(valueStreamIds)]
+  if (ids.length === 0) return []
+  const rows = await db.query.valueStreams.findMany({
+    where: inArray(valueStreams.id, ids),
+    columns: { id: true, name: true, valueItem: true, status: true },
+  })
+  return rows
+    .filter((v) => !isViewer || v.status === 'published')
+    .map((v) => ({ id: v.id, name: v.name, valueItem: v.valueItem, status: v.status }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 // ── Strategy trace ──────────────────────────────────────────────────────────
@@ -366,6 +401,7 @@ export async function getGoalTrace(id: string): Promise<GoalTrace | null> {
 export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | null> {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  const isViewer = session.user.role === 'viewer'
 
   const row = await db.query.strategicObjectives.findFirst({
     where: eq(strategicObjectives.id, id),
@@ -375,7 +411,7 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
   const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
   if (!visible) return null
 
-  const [objectiveCapRows, initiativeRows] = await Promise.all([
+  const [objectiveCapRows, initiativeRows, objectiveVsRows] = await Promise.all([
     db.query.objectiveCapabilities.findMany({
       where: eq(objectiveCapabilities.objectiveId, id),
     }),
@@ -383,11 +419,15 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
       where: eq(initiativeObjectives.objectiveId, id),
       with: { initiative: true },
     }),
+    db.query.objectiveValueStreams.findMany({
+      where: eq(objectiveValueStreams.objectiveId, id),
+    }),
   ])
   const capabilityIds = objectiveCapRows.map(({ capabilityId }) => capabilityId)
-  const [capabilityTraceRows, goalsByObjective] = await Promise.all([
+  const [capabilityTraceRows, goalsByObjective, valueStreamSummaries] = await Promise.all([
     getCapabilitiesWithApps(capabilityIds),
     getGoalsByObjective([id]),
+    getValueStreamSummaries(objectiveVsRows.map(({ valueStreamId }) => valueStreamId), isViewer),
   ])
 
   return {
@@ -405,6 +445,7 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
     initiatives: initiativeRows.map(({ initiative: i }) => ({
       id: i.id, name: i.name, status: i.status,
     })),
+    valueStreams: valueStreamSummaries,
   }
 }
 
@@ -413,6 +454,7 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
 export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | null> {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  const isViewer = session.user.role === 'viewer'
 
   const row = await db.query.capabilities.findFirst({
     where: eq(capabilities.id, id),
@@ -453,6 +495,25 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     objectiveIds.flatMap((objectiveId) => initiativesByObjective.get(objectiveId) ?? [])
   )
 
+  // Value streams this capability participates in — directly (stream-level) or
+  // through one of their stages (#809). Apps are still reached through the
+  // capability, not a value-stream shortcut.
+  const [vsDirectRows, vsStageCapRows] = await Promise.all([
+    db.query.valueStreamCapabilities.findMany({ where: eq(valueStreamCapabilities.capabilityId, id) }),
+    db.query.valueStreamStageCapabilities.findMany({ where: eq(valueStreamStageCapabilities.capabilityId, id) }),
+  ])
+  const stageIds = vsStageCapRows.map(({ stageId }) => stageId)
+  const stageRows = stageIds.length > 0
+    ? await db.query.valueStreamStages.findMany({
+        where: inArray(valueStreamStages.id, stageIds),
+        columns: { valueStreamId: true },
+      })
+    : []
+  const valueStreamSummaries = await getValueStreamSummaries(
+    [...vsDirectRows.map(({ valueStreamId }) => valueStreamId), ...stageRows.map(({ valueStreamId }) => valueStreamId)],
+    isViewer,
+  )
+
   return {
     kind: 'capability',
     id: row.id,
@@ -482,6 +543,7 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     principles: row.principleCapabilities.map(({ principle: p }) => ({
       id: p.id, name: p.name,
     })),
+    valueStreams: valueStreamSummaries,
   }
 }
 
@@ -490,6 +552,7 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
 export async function getServiceTrace(id: string): Promise<ServiceTrace | null> {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  const isViewer = session.user.role === 'viewer'
 
   const row = await db.query.services.findFirst({
     where: eq(services.id, id),
@@ -502,10 +565,14 @@ export async function getServiceTrace(id: string): Promise<ServiceTrace | null> 
   const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
   if (!visible) return null
 
-  const serviceCapRows = await db.query.serviceCapabilities.findMany({
-    where: eq(serviceCapabilities.serviceId, id),
-  })
-  const capabilityTraceRows = await getCapabilitiesWithApps(serviceCapRows.map(({ capabilityId }) => capabilityId))
+  const [serviceCapRows, serviceVsRows] = await Promise.all([
+    db.query.serviceCapabilities.findMany({ where: eq(serviceCapabilities.serviceId, id) }),
+    db.query.serviceValueStreams.findMany({ where: eq(serviceValueStreams.serviceId, id) }),
+  ])
+  const [capabilityTraceRows, valueStreamSummaries] = await Promise.all([
+    getCapabilitiesWithApps(serviceCapRows.map(({ capabilityId }) => capabilityId)),
+    getValueStreamSummaries(serviceVsRows.map(({ valueStreamId }) => valueStreamId), isViewer),
+  ])
 
   return {
     kind: 'service',
@@ -520,6 +587,96 @@ export async function getServiceTrace(id: string): Promise<ServiceTrace | null> 
     capabilities: serviceCapRows
       .map(({ capabilityId }) => capabilityTraceRows.find((c) => c.id === capabilityId))
       .filter((c): c is TraceCapability => Boolean(c)),
+    valueStreams: valueStreamSummaries,
+  }
+}
+
+// ── Value stream trace (#809) ───────────────────────────────────────────────────
+//
+// Value streams are a first-class trace root: stakeholders/personas and upstream
+// objectives/services on the way in, ordered stages with their stage-level
+// capabilities, and the applications reached *through* those capabilities (no
+// value-stream-to-application shortcut). Stage context is preserved — stages are
+// not flattened into a single capability list.
+
+export async function getValueStreamTrace(id: string): Promise<ValueStreamTrace | null> {
+  const session = await auth()
+  if (!session?.user) redirect('/login')
+  const isViewer = session.user.role === 'viewer'
+
+  const row = await db.query.valueStreams.findFirst({
+    where: eq(valueStreams.id, id),
+    with: {
+      stages: {
+        orderBy: (s, { asc }) => [asc(s.order)],
+        with: { stageCapabilities: { with: { capability: true } } },
+      },
+      valueStreamPersonas: { with: { persona: true } },
+      valueStreamCapabilities: { with: { capability: true } },
+      objectiveValueStreams: { with: { objective: true } },
+    },
+  })
+
+  if (!row) return null
+  const visible = await canReadFederatedEntity(row.organizationId, row.visibility, session.user.organizationId!)
+  if (!visible) return null
+  // A non-published value stream is not viewer-visible (matches getValueStream).
+  if (isViewer && row.status !== 'published') return null
+
+  // Services that deliver this value stream — no relation on valueStreams, so
+  // resolved from the serviceValueStreams junction directly.
+  const serviceVsRows = await db.query.serviceValueStreams.findMany({
+    where: eq(serviceValueStreams.valueStreamId, id),
+    with: { service: true },
+  })
+
+  // Viewers only traverse published capabilities; status lives on the joined
+  // capability row.
+  const capAllowed = (status: string) => !isViewer || status === 'published'
+  const stageCapIds = row.stages.flatMap((s) =>
+    s.stageCapabilities.filter((sc) => capAllowed(sc.capability.status)).map((sc) => sc.capabilityId),
+  )
+  const directCapIds = row.valueStreamCapabilities
+    .filter((vc) => capAllowed(vc.capability.status))
+    .map((vc) => vc.capabilityId)
+  const capWithApps = await getCapabilitiesWithApps([...new Set([...stageCapIds, ...directCapIds])])
+  const capById = new Map(capWithApps.map((c) => [c.id, c]))
+
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)
+
+  return {
+    kind: 'value-stream',
+    id: row.id,
+    name: row.name,
+    valueItem: row.valueItem,
+    description: row.description,
+    status: row.status,
+    personas: row.valueStreamPersonas
+      .map(({ persona: p }) => p)
+      .filter((p) => !isViewer || p.status === 'published')
+      .map((p) => ({ id: p.id, name: p.name, type: p.type }))
+      .sort(byName),
+    objectives: row.objectiveValueStreams
+      .map(({ objective: o }) => o)
+      .filter((o) => !isViewer || o.status === 'published')
+      .map((o) => ({ id: o.id, name: o.name, timeHorizon: o.timeHorizon }))
+      .sort(byName),
+    services: serviceVsRows
+      .map(({ service: s }) => s)
+      .filter((s) => !isViewer || s.status === 'published')
+      .map((s) => ({ id: s.id, name: s.name }))
+      .sort(byName),
+    stages: row.stages.map((s) => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      order: s.order,
+      capabilities: s.stageCapabilities
+        .filter((sc) => capAllowed(sc.capability.status))
+        .map((sc) => capById.get(sc.capabilityId))
+        .filter((c): c is TraceCapability => Boolean(c)),
+    })),
+    applications: dedupeTraceRows(capWithApps.flatMap((c) => c.applications)),
   }
 }
 
@@ -561,7 +718,6 @@ export async function getTraceParticipation(
     kind === 'application' ? await db.query.applications.findFirst({ where: eq(applications.id, id) })
     : kind === 'initiative' ? await db.query.initiatives.findFirst({ where: eq(initiatives.id, id) })
     : kind === 'persona' ? await db.query.personas.findFirst({ where: eq(personas.id, id) })
-    : kind === 'value-stream' ? await db.query.valueStreams.findFirst({ where: eq(valueStreams.id, id) })
     : kind === 'adr' ? await db.query.adrs.findFirst({ where: eq(adrs.id, id) })
     : await db.query.principles.findFirst({ where: eq(principles.id, id) })
 
@@ -596,18 +752,6 @@ export async function getTraceParticipation(
     ])
     capabilityIds.push(...caps.map(r => r.id))
     serviceIds.push(...svcs.map(r => r.id))
-  } else if (kind === 'value-stream') {
-    const [caps, svcs, objs] = await Promise.all([
-      db.select({ id: valueStreamCapabilities.capabilityId })
-        .from(valueStreamCapabilities).where(eq(valueStreamCapabilities.valueStreamId, id)),
-      db.select({ id: serviceValueStreams.serviceId })
-        .from(serviceValueStreams).where(eq(serviceValueStreams.valueStreamId, id)),
-      db.select({ id: objectiveValueStreams.objectiveId })
-        .from(objectiveValueStreams).where(eq(objectiveValueStreams.valueStreamId, id)),
-    ])
-    capabilityIds.push(...caps.map(r => r.id))
-    serviceIds.push(...svcs.map(r => r.id))
-    objectiveIds.push(...objs.map(r => r.id))
   } else if (kind === 'adr') {
     const [caps, objs] = await Promise.all([
       db.select({ id: adrCapabilities.capabilityId })
