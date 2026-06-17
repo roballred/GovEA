@@ -47,7 +47,7 @@ describe('traceability metamodel order (#848)', () => {
   it('Strategy trace renders Value Streams between initiatives and capabilities', () => {
     const body = viewBody('StrategyTraceView')
     const inits = labelIndex(body, 'Strategic Initiatives')
-    const vs = labelIndex(body, 'Value Streams')
+    const vs = valueStreamIndex(body)
     const caps = labelIndex(body, 'Capabilities')
     expect(inits).toBeGreaterThan(-1)
     expect(vs).toBeGreaterThan(inits)
@@ -57,7 +57,7 @@ describe('traceability metamodel order (#848)', () => {
   it('Objective trace renders Value Streams between initiatives and capabilities', () => {
     const body = viewBody('ObjectiveTraceView')
     const inits = labelIndex(body, 'Strategic Initiatives')
-    const vs = labelIndex(body, 'Value Streams')
+    const vs = valueStreamIndex(body)
     const caps = labelIndex(body, 'Capabilities')
     expect(inits).toBeGreaterThan(-1)
     expect(vs).toBeGreaterThan(inits)
@@ -67,7 +67,7 @@ describe('traceability metamodel order (#848)', () => {
   it('Capability trace renders Value Streams between initiatives and the capability anchor', () => {
     const body = viewBody('CapabilityTraceView')
     const inits = labelIndex(body, 'Strategic Initiatives')
-    const vs = labelIndex(body, 'Value Streams')
+    const vs = valueStreamIndex(body)
     const anchor = labelIndex(body, 'Capability') // anchor layer label
     expect(inits).toBeGreaterThan(-1)
     expect(vs).toBeGreaterThan(inits)
@@ -76,7 +76,7 @@ describe('traceability metamodel order (#848)', () => {
 
   it('Service trace renders Value Streams above Capabilities (not stranded after Applications)', () => {
     const body = viewBody('ServiceTraceView')
-    const vs = labelIndex(body, 'Value Streams')
+    const vs = valueStreamIndex(body)
     const caps = labelIndex(body, 'Capabilities')
     const apps = labelIndex(body, 'Applications')
     expect(vs).toBeGreaterThan(-1)
