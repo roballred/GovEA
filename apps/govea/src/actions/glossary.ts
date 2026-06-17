@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { glossaryTerms, glossaryTermSources } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -27,17 +27,21 @@ async function requireAdmin() {
   return session
 }
 
-export async function getGlossaryTerms(scope: ListScope = 'org') {
+export async function getGlossaryTerms() {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(orgId) : []
+  // Glossary is shared vocabulary, not a traceability entity — it stays
+  // federated by default. The #811 active-org default applies only to traceable
+  // list views (capabilities, applications, services, etc.), not reference
+  // content meant to be discovered across connected and instance scopes.
+  const connectedOrgIds = await getConnectedOrgIds(orgId)
 
   return db.query.glossaryTerms.findMany({
     where: () => {
-      const vis = listScopeFilter(glossaryTerms, { orgId, scope, connectedOrgIds })
+      const vis = listScopeFilter(glossaryTerms, { orgId, scope: 'federated', connectedOrgIds })
       const statusFilter = isViewer ? eq(glossaryTerms.status, 'published') : undefined
       return statusFilter ? and(vis, statusFilter)! : vis
     },

@@ -17,8 +17,9 @@ import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { db } from '@/db/client'
 import { orgConnections } from '@/db/schema'
 import { getCapabilities } from '@/actions/capabilities'
+import { getGlossaryTerms } from '@/actions/glossary'
 import {
-  createTestOrg, createTestUser, cleanupOrg, insertCapability, type TestUser,
+  createTestOrg, createTestUser, cleanupOrg, insertCapability, insertGlossaryTerm, type TestUser,
 } from './helpers/db'
 
 const mockAuth = vi.hoisted(() => vi.fn())
@@ -40,6 +41,7 @@ describe('list scope defaults to the active organization (#811)', () => {
   let bConnections: string
   let bInstance: string
   let bOrgOnly: string
+  let bGlossaryInstance: string
 
   beforeAll(async () => {
     const [a, b] = await Promise.all([createTestOrg(), createTestOrg()])
@@ -57,6 +59,9 @@ describe('list scope defaults to the active organization (#811)', () => {
       insertCapability(orgB, { name: 'B-Instance', status: 'published', visibility: 'instance' }).then(c => c.id),
       insertCapability(orgB, { name: 'B-OrgOnly', status: 'published', visibility: 'org' }).then(c => c.id),
     ])
+    // Glossary is NOT a traceability entity, so it is excluded from the
+    // active-org default — it stays federated.
+    bGlossaryInstance = (await insertGlossaryTerm(orgB, { status: 'published', visibility: 'instance' })).id
   })
 
   afterAll(async () => {
@@ -80,6 +85,15 @@ describe('list scope defaults to the active organization (#811)', () => {
     expect(ids).toContain(bConnections) // hidden by default, visible when broadened
     expect(ids).toContain(bInstance)    // hidden by default, visible when broadened
     expect(ids).not.toContain(bOrgOnly) // org-private to B — never exposed
+  })
+
+  it('non-traceable lists (glossary) are excluded — they stay federated by default', async () => {
+    // Active in org A, no broader scope requested: the capabilities default is
+    // org-only (asserted above), but glossary still surfaces org B's
+    // instance-wide term because shared vocabulary is not a traceability entity.
+    mockAuth.mockResolvedValue(sessionAs(user, orgA))
+    const termIds = (await getGlossaryTerms()).map(t => t.id)
+    expect(termIds).toContain(bGlossaryInstance)
   })
 
   it('switching the active organization changes the default list scope', async () => {
