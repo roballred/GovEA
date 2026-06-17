@@ -2,8 +2,8 @@
 
 import { db } from '@/db/client'
 import { strategies } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { eq, and, ne } from 'drizzle-orm'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -27,20 +27,16 @@ async function requireAdmin() {
   return session
 }
 
-export async function getStrategies(organizationId: string, role?: string) {
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+export async function getStrategies(organizationId: string, role?: string, scope: ListScope = 'org') {
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
   const isViewer = role === 'viewer'
 
   return db.query.strategies.findMany({
-    where: (s, { eq, or, and, inArray, ne }) => {
-      const base = eq(s.organizationId, organizationId)
-      const instanceWide = eq(s.visibility, 'instance')
+    where: () => {
+      const vis = listScopeFilter(strategies, { orgId: organizationId, scope, connectedOrgIds })
       // A proposed strategy is not a viewer-visible root (design §4 / ADR-0005).
-      const statusFilter = isViewer ? ne(s.status, 'proposed') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(s.organizationId, connectedOrgIds), inArray(s.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+      const statusFilter = isViewer ? ne(strategies.status, 'proposed') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     orderBy: (s, { asc }) => [asc(s.name)],
     with: {

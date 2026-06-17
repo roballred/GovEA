@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { personas, personaTags } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -52,23 +52,19 @@ export async function getPersona(id: string) {
   return persona
 }
 
-export async function getPersonas() {
+export async function getPersonas(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const organizationId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
 
   return db.query.personas.findMany({
-    where: (p, { eq, or, and, inArray }) => {
-      const base = eq(p.organizationId, organizationId)
-      const instanceWide = eq(p.visibility, 'instance')
-      const statusFilter = isViewer ? eq(p.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(p.organizationId, connectedOrgIds), inArray(p.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(personas, { orgId: organizationId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(personas.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     orderBy: (p, { asc }) => [asc(p.name)],
     with: {

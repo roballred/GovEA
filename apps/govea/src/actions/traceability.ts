@@ -48,8 +48,8 @@ export interface TraceAdr {
 export interface TracePrinciple {
   id: string; name: string
 }
-export interface TraceValueStream {
-  id: string; name: string; valueItem: string | null; status: string
+export interface TraceStrategy {
+  id: string; name: string; status: string; planningHorizon: string | null
 }
 
 // ── Typed results ─────────────────────────────────────────────────────────────
@@ -67,6 +67,7 @@ export interface ObjectiveTrace {
 export interface CapabilityTrace {
   kind: 'capability'
   id: string; name: string; domain: string | null; description: string | null; status: string
+  strategies: TraceStrategy[]
   goals: TraceGoal[]
   objectives: TraceObjective[]
   strategicInitiatives: TraceInitiative[]
@@ -495,24 +496,18 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     objectiveIds.flatMap((objectiveId) => initiativesByObjective.get(objectiveId) ?? [])
   )
 
-  // Value streams this capability participates in — directly (stream-level) or
-  // through one of their stages (#809). Apps are still reached through the
-  // capability, not a value-stream shortcut.
-  const [vsDirectRows, vsStageCapRows] = await Promise.all([
-    db.query.valueStreamCapabilities.findMany({ where: eq(valueStreamCapabilities.capabilityId, id) }),
-    db.query.valueStreamStageCapabilities.findMany({ where: eq(valueStreamStageCapabilities.capabilityId, id) }),
-  ])
-  const stageIds = vsStageCapRows.map(({ stageId }) => stageId)
-  const stageRows = stageIds.length > 0
-    ? await db.query.valueStreamStages.findMany({
-        where: inArray(valueStreamStages.id, stageIds),
-        columns: { valueStreamId: true },
-      })
-    : []
-  const valueStreamSummaries = await getValueStreamSummaries(
-    [...vsDirectRows.map(({ valueStreamId }) => valueStreamId), ...stageRows.map(({ valueStreamId }) => valueStreamId)],
-    isViewer,
-  )
+  // Upstream Strategies that directly impact this capability via the
+  // course-of-action link (ADR-0005 / #831). Same-org by junction construction.
+  // A proposed strategy is not a viewer-visible root, matching getStrategyTrace.
+  const strategyCapRows = await db.query.strategyCapabilities.findMany({
+    where: eq(strategyCapabilities.capabilityId, id),
+    with: { strategy: true },
+  })
+  const upstreamStrategies = strategyCapRows
+    .map(({ strategy }) => strategy)
+    .filter((s) => !isViewer || s.status !== 'proposed')
+    .map((s) => ({ id: s.id, name: s.name, status: s.status, planningHorizon: s.planningHorizon }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   return {
     kind: 'capability',
@@ -521,6 +516,7 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     domain: row.domain,
     description: row.description,
     status: row.status,
+    strategies: upstreamStrategies,
     goals: goalTraceRows,
     objectives: row.objectiveCapabilities.map(({ objective: o }) => ({
       id: o.id, name: o.name, timeHorizon: o.timeHorizon,

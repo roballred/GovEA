@@ -9,7 +9,7 @@ import { eq, and, inArray, ne } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { parseCsv, splitSemicolonList } from '@/lib/csv'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { canEdit, isAdmin } from '@/lib/rbac'
@@ -33,23 +33,19 @@ async function requireAdmin() {
 // Viewer-visible initiative statuses — Option B decision from #202
 const VIEWER_INITIATIVE_STATUSES: Array<'active' | 'proposed' | 'on-hold' | 'complete' | 'cancelled'> = ['active', 'complete']
 
-export async function getInitiatives() {
+export async function getInitiatives(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const orgId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(orgId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(orgId) : []
 
   return db.query.initiatives.findMany({
-    where: (i, { eq, or, and, inArray }) => {
-      const base = eq(i.organizationId, orgId)
-      const instanceWide = eq(i.visibility, 'instance')
-      const statusFilter = isViewer ? inArray(i.status, VIEWER_INITIATIVE_STATUSES) : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(i.organizationId, connectedOrgIds), inArray(i.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(initiatives, { orgId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? inArray(initiatives.status, VIEWER_INITIATIVE_STATUSES) : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,

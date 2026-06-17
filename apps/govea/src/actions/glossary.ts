@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { glossaryTerms, glossaryTermSources } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -33,17 +33,17 @@ export async function getGlossaryTerms() {
   const orgId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
+  // Glossary is shared vocabulary, not a traceability entity — it stays
+  // federated by default. The #811 active-org default applies only to traceable
+  // list views (capabilities, applications, services, etc.), not reference
+  // content meant to be discovered across connected and instance scopes.
   const connectedOrgIds = await getConnectedOrgIds(orgId)
 
   return db.query.glossaryTerms.findMany({
-    where: (g, { eq, or, and, inArray }) => {
-      const base = eq(g.organizationId, orgId)
-      const instanceWide = eq(g.visibility, 'instance')
-      const statusFilter = isViewer ? eq(g.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(g.organizationId, connectedOrgIds), inArray(g.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(glossaryTerms, { orgId, scope: 'federated', connectedOrgIds })
+      const statusFilter = isViewer ? eq(glossaryTerms.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,
@@ -118,7 +118,7 @@ export async function createGlossaryTerm(formData: FormData) {
       entityId: entry.id,
       userId: session.user.id,
       organizationId: orgId,
-      after: { term, status, visibility },
+      after: { term, status, visibility, definitionSource },
     })
   })
 }
@@ -167,8 +167,8 @@ export async function editGlossaryTerm(termId: string, formData: FormData) {
       entityId: termId,
       userId: session.user.id,
       organizationId: orgId,
-      before: { term: before?.term, status: before?.status },
-      after: { term, status, visibility },
+      before: { term: before?.term, status: before?.status, definitionSource: before?.definitionSource },
+      after: { term, status, visibility, definitionSource },
     })
   })
 }

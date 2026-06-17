@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarkdownEditor } from '@/components/markdown-editor'
+import { GlossarySourceSelect, type GlossarySourceOption } from '@/components/glossary-source-select'
 
 interface GlossaryEditButtonProps {
   termId: string
+  sources: GlossarySourceOption[]
   initial: {
     term: string
     definition: string
@@ -22,7 +24,7 @@ interface GlossaryEditButtonProps {
   }
 }
 
-export function GlossaryEditButton({ termId, initial }: GlossaryEditButtonProps) {
+export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditButtonProps) {
   const [editing, setEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -81,14 +83,12 @@ export function GlossaryEditButton({ termId, initial }: GlossaryEditButtonProps)
           <Input name="domain" defaultValue={initial.domain ?? ''} placeholder="e.g. Finance, HR, IT" />
         </div>
 
-        <div className="space-y-1">
-          <Label>Definition source</Label>
-          <Input name="definitionSource" defaultValue={initial.definitionSource ?? ''} placeholder="Organization or document name" />
-        </div>
-
-        <div className="space-y-1 sm:col-span-2">
-          <Label>Source URL</Label>
-          <Input name="definitionSourceUrl" type="url" defaultValue={initial.definitionSourceUrl ?? ''} placeholder="https://…" />
+        <div className="sm:col-span-2">
+          <GlossarySourceSelect
+            sources={sources}
+            defaultSource={initial.definitionSource}
+            defaultSourceUrl={initial.definitionSourceUrl}
+          />
         </div>
 
         <div className="space-y-1 sm:col-span-2">

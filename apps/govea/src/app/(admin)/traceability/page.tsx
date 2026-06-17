@@ -31,6 +31,13 @@ const INITIATIVE_STYLES: Record<string, string> = {
   cancelled:'bg-red-50 text-red-700 border-red-200',
 }
 
+const STRATEGY_STYLES: Record<string, string> = {
+  proposed:  'bg-slate-100 text-slate-700 border-slate-200',
+  active:    'bg-emerald-50 text-emerald-700 border-emerald-200',
+  achieved:  'bg-blue-50 text-blue-700 border-blue-200',
+  abandoned: 'bg-zinc-100 text-zinc-600 border-zinc-200',
+}
+
 const ADR_STYLES: Record<string, string> = {
   accepted:   'bg-emerald-50 text-emerald-700 border-emerald-200',
   proposed:   'bg-slate-100 text-slate-700 border-slate-200',
@@ -452,7 +459,27 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
 
   return (
     <div className="space-y-1 max-w-2xl">
+      {/* Upstream: Strategies (direct course-of-action links, #842) */}
+      <LayerLabel>Strategies</LayerLabel>
+      {trace.strategies.length === 0 ? (
+        <Gap message="No strategy links upstream — no course of action currently drives this capability." />
+      ) : (
+        <TraceCard>
+          {trace.strategies.map(s => (
+            <TraceRow
+              key={s.id}
+              href={`/traceability?from=strategy&id=${s.id}`}
+              name={s.name}
+              meta={s.planningHorizon ?? undefined}
+              badge={s.status}
+              badgeClass={STRATEGY_STYLES[s.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
+            />
+          ))}
+        </TraceCard>
+      )}
+
       {/* Upstream: Goals */}
+      <Connector label="pursued through" />
       <LayerLabel>Goals</LayerLabel>
       {trace.goals.length === 0 ? (
         <Gap message="No goals linked upstream — the strategic outcome for this capability is not yet documented." />
@@ -876,8 +903,7 @@ export default async function TraceabilityPage({
     trace.kind === 'strategy'  ? 'Strategy → Goals → Objectives → Initiatives → Capabilities → Technology Trace' :
     trace.kind === 'goal'      ? 'Goal → Objectives → Initiatives → Capabilities → Technology Trace' :
     trace.kind === 'objective' ? 'Goal → Objective → Initiatives → Technology Trace' :
-    trace.kind === 'capability' ? 'Goal → Objective → Initiatives → Capability → Delivery Trace' :
-    trace.kind === 'value-stream' ? 'Objectives/Services → Value Stream → Stages → Capabilities → Technology Trace' :
+    trace.kind === 'capability' ? 'Strategy → Goal → Objective → Initiatives → Capability → Delivery Trace' :
     'Persona → Service → Technology Trace'
 
   return (

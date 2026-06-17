@@ -6,7 +6,7 @@ import {
   serviceValueStreams, entityTaxonomyValues, applicationCapabilities,
 } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -68,23 +68,19 @@ export async function getService(id: string) {
   return { ...service, capabilityApps, taxonomyValues, taxonomyDefinitions }
 }
 
-export async function getServices() {
+export async function getServices(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const organizationId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
 
   return db.query.services.findMany({
-    where: (s, { eq, or, and, inArray }) => {
-      const base = eq(s.organizationId, organizationId)
-      const instanceWide = eq(s.visibility, 'instance')
-      const statusFilter = isViewer ? eq(s.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(s.organizationId, connectedOrgIds), inArray(s.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(services, { orgId: organizationId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(services.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,

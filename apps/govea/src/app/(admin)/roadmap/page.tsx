@@ -263,7 +263,9 @@ export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
   const role = session.user.role
   const enabledModules = await getEnabledModules()
   const [allInitiatives, org, activeStrategies] = await Promise.all([
-    getInitiatives(),
+    // Roadmap is a cross-org planning surface, not a per-org list view (#811) —
+    // keep its existing federated scope rather than defaulting to org-only.
+    getInitiatives('federated'),
     db.query.organizations.findFirst({ where: eq(organizations.id, orgId), columns: { name: true } }),
     isModuleEnabled(enabledModules, 'strategies') ? getActiveStrategies(orgId) : Promise.resolve([]),
   ])

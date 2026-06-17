@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { applications, applicationCapabilities, objectiveCapabilities, entityTaxonomyValues } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -87,23 +87,19 @@ export async function getApplication(id: string) {
   return { ...application, capabilityObjectives, taxonomyValues, taxonomyDefinitions, customFieldDefs }
 }
 
-export async function getApplications() {
+export async function getApplications(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const organizationId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
 
   return db.query.applications.findMany({
-    where: (a, { eq, or, and, inArray }) => {
-      const base = eq(a.organizationId, organizationId)
-      const instanceWide = eq(a.visibility, 'instance')
-      const statusFilter = isViewer ? eq(a.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(a.organizationId, connectedOrgIds), inArray(a.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(applications, { orgId: organizationId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(applications.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,

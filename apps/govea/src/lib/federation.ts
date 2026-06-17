@@ -3,9 +3,54 @@ import {
   capabilities, personas, applications, services, valueStreams,
   strategicObjectives, goals, strategies, initiatives, adrs, principles,
 } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 
 export type FederationVisibility = 'org' | 'connections' | 'instance'
+
+/**
+ * List-view scope (#811).
+ *
+ * `org` (the default) restricts a list to records owned by the caller's active
+ * organization. `federated` broadens the result to also include connected-org
+ * and instance-wide records the caller is permitted to see. Day-to-day list
+ * views default to `org`; broadening is an explicit, user-requested choice so
+ * server queries never silently fan out across every visible org.
+ */
+export type ListScope = 'org' | 'federated'
+
+/** Coerce a raw query-string value into a ListScope, defaulting to `org`. */
+export function parseListScope(value: string | string[] | undefined): ListScope {
+  return value === 'federated' ? 'federated' : 'org'
+}
+
+/**
+ * Builds the visibility WHERE condition for an org-scoped list query.
+ *
+ * - `org` scope → only rows owned by `orgId`.
+ * - `federated` scope → owned rows, plus any instance-wide row, plus
+ *   connections/instance rows owned by a connected org.
+ *
+ * Pass `connectedOrgIds` empty when scope is `org` (callers should skip the
+ * connected-org lookup entirely in that case). Compose the result with any
+ * status filter at the call site via `and(...)`.
+ */
+export function listScopeFilter(
+  cols: { organizationId: AnyPgColumn; visibility: AnyPgColumn },
+  opts: { orgId: string; scope: ListScope; connectedOrgIds?: string[] },
+): SQL {
+  const base = eq(cols.organizationId, opts.orgId)
+  if (opts.scope === 'org') return base
+
+  const instanceWide = eq(cols.visibility, 'instance')
+  const connectedOrgIds = opts.connectedOrgIds ?? []
+  if (connectedOrgIds.length === 0) return or(base, instanceWide)!
+  return or(
+    base,
+    instanceWide,
+    and(inArray(cols.organizationId, connectedOrgIds), inArray(cols.visibility, ['connections', 'instance'])),
+  )!
+}
 
 /**
  * Throws if the entity's org doesn't match the caller's org.

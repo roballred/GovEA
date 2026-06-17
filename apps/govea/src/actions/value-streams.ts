@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -25,23 +25,19 @@ async function requireAdmin() {
 
 // ── Value Streams ─────────────────────────────────────────────────────────────
 
-export async function getValueStreams() {
+export async function getValueStreams(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const organizationId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
 
   return db.query.valueStreams.findMany({
-    where: (vs, { eq, or, and, inArray }) => {
-      const base = eq(vs.organizationId, organizationId)
-      const instanceWide = eq(vs.visibility, 'instance')
-      const statusFilter = isViewer ? eq(vs.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(vs.organizationId, connectedOrgIds), inArray(vs.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(valueStreams, { orgId: organizationId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(valueStreams.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     orderBy: (vs, { asc }) => [asc(vs.name)],
     with: {

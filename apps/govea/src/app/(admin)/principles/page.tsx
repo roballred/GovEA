@@ -5,17 +5,20 @@ import { getADRs } from '@/actions/adrs'
 import { getCapabilities } from '@/actions/capabilities'
 import { getPrincipleTypes } from '@/actions/taxonomy'
 import { getEntityTaxonomyDefinitions, getEntityTaxonomyValuesForMany } from '@/lib/entity-taxonomy-helpers'
+import { parseListScope } from '@/lib/federation'
+import { ListScopeToggle } from '@/components/list-scope-toggle'
 import { PrincipleTable } from './principle-table'
 
-export default async function PrinciplesPage() {
+export default async function PrinciplesPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
   const session = await auth()
   if (!session?.user) redirect('/login')
 
   const orgId = session.user.organizationId!
   const role = session.user.role
+  const scope = parseListScope((await searchParams).scope)
 
   const [principleList, adrList, capabilityList, principleTypes, taxonomyDefinitions] = await Promise.all([
-    getPrinciples(),
+    getPrinciples(scope),
     getADRs(),
     getCapabilities(),
     getPrincipleTypes(),
@@ -29,11 +32,14 @@ export default async function PrinciplesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Principles</h1>
-        <p className="text-muted-foreground mt-1">
-          Guiding statements that shape how the organization approaches architecture and technology decisions.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Principles</h1>
+          <p className="text-muted-foreground mt-1">
+            Guiding statements that shape how the organization approaches architecture and technology decisions.
+          </p>
+        </div>
+        <ListScopeToggle scope={scope} />
       </div>
       <PrincipleTable
         principles={principleList}
