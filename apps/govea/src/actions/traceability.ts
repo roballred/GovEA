@@ -47,6 +47,9 @@ export interface TraceAdr {
 export interface TracePrinciple {
   id: string; name: string
 }
+export interface TraceStrategy {
+  id: string; name: string; status: string; planningHorizon: string | null
+}
 
 // ── Typed results ─────────────────────────────────────────────────────────────
 
@@ -62,6 +65,7 @@ export interface ObjectiveTrace {
 export interface CapabilityTrace {
   kind: 'capability'
   id: string; name: string; domain: string | null; description: string | null; status: string
+  strategies: TraceStrategy[]
   goals: TraceGoal[]
   objectives: TraceObjective[]
   strategicInitiatives: TraceInitiative[]
@@ -413,6 +417,7 @@ export async function getObjectiveTrace(id: string): Promise<ObjectiveTrace | nu
 export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | null> {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  const isViewer = session.user.role === 'viewer'
 
   const row = await db.query.capabilities.findFirst({
     where: eq(capabilities.id, id),
@@ -453,6 +458,19 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     objectiveIds.flatMap((objectiveId) => initiativesByObjective.get(objectiveId) ?? [])
   )
 
+  // Upstream Strategies that directly impact this capability via the
+  // course-of-action link (ADR-0005 / #831). Same-org by junction construction.
+  // A proposed strategy is not a viewer-visible root, matching getStrategyTrace.
+  const strategyCapRows = await db.query.strategyCapabilities.findMany({
+    where: eq(strategyCapabilities.capabilityId, id),
+    with: { strategy: true },
+  })
+  const upstreamStrategies = strategyCapRows
+    .map(({ strategy }) => strategy)
+    .filter((s) => !isViewer || s.status !== 'proposed')
+    .map((s) => ({ id: s.id, name: s.name, status: s.status, planningHorizon: s.planningHorizon }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
   return {
     kind: 'capability',
     id: row.id,
@@ -460,6 +478,7 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     domain: row.domain,
     description: row.description,
     status: row.status,
+    strategies: upstreamStrategies,
     goals: goalTraceRows,
     objectives: row.objectiveCapabilities.map(({ objective: o }) => ({
       id: o.id, name: o.name, timeHorizon: o.timeHorizon,
