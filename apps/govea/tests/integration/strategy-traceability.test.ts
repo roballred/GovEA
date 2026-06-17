@@ -8,7 +8,7 @@
  *  - unknown / cross-org id → null
  */
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { getStrategyTrace } from '@/actions/traceability'
+import { getStrategyTrace, getGoalTrace } from '@/actions/traceability'
 import { db } from '@/db/client'
 import {
   strategies, goals, strategicObjectives, capabilities, initiatives, valueStreams,
@@ -174,5 +174,75 @@ describe('getStrategyTrace', () => {
     mockAuth.mockResolvedValue(makeSession(contributor))
     expect(await getStrategyTrace(foreign.id)).toBeNull()
     await cleanupOrg(otherOrg.id)
+  })
+})
+
+// ── Empty traceability roots (#838) ─────────────────────────────────────────────
+//
+// A traceability root with no downstream relationships must still resolve to a
+// renderable trace (the page shows the anchor plus empty-state sections),
+// consistent across metamodel entities. Regression guard for the empty-Strategy
+// case plus an empty Goal as a second metamodel example.
+
+describe('empty traceability roots (#838)', () => {
+  let orgId: string
+  let admin: TestUser
+  let viewer: TestUser
+  let emptyStrategyId: string
+  let emptyGoalId: string
+
+  beforeAll(async () => {
+    const org = await createTestOrg()
+    orgId = org.id
+    ;[admin, viewer] = await Promise.all([
+      createTestUser(orgId, 'admin'),
+      createTestUser(orgId, 'viewer'),
+    ])
+
+    // Active (viewer-visible) strategy with zero links of any kind.
+    const [s] = await db.insert(strategies).values({
+      organizationId: orgId, name: 'Unlinked Strategy', status: 'active', visibility: 'org',
+    }).returning()
+    emptyStrategyId = s.id
+
+    // Published goal with no objectives.
+    const [g] = await db.insert(goals).values({
+      organizationId: orgId, name: 'Unlinked Goal', status: 'published', visibility: 'org',
+    }).returning()
+    emptyGoalId = g.id
+  })
+
+  afterAll(() => cleanupOrg(orgId))
+
+  it('an empty Strategy still resolves as a trace root with empty sections', async () => {
+    mockAuth.mockResolvedValue(makeSession(admin))
+    const trace = await getStrategyTrace(emptyStrategyId)
+
+    expect(trace).not.toBeNull()
+    expect(trace!.kind).toBe('strategy')
+    expect(trace!.name).toBe('Unlinked Strategy')
+    // Every downstream relationship area is empty — but present, so the view
+    // renders the anchor plus empty-state sections rather than disappearing.
+    expect(trace!.goals).toEqual([])
+    expect(trace!.valueStreams).toEqual([])
+    expect(trace!.directCapabilities).toEqual([])
+    expect(trace!.directInitiatives).toEqual([])
+  })
+
+  it('an empty Strategy is visible to a viewer when active (not proposed)', async () => {
+    mockAuth.mockResolvedValue(makeSession(viewer))
+    const trace = await getStrategyTrace(emptyStrategyId)
+    expect(trace).not.toBeNull()
+    expect(trace!.goals).toEqual([])
+  })
+
+  it('an empty Goal resolves as a trace root with empty sections (other metamodel case)', async () => {
+    mockAuth.mockResolvedValue(makeSession(admin))
+    const trace = await getGoalTrace(emptyGoalId)
+
+    expect(trace).not.toBeNull()
+    expect(trace!.kind).toBe('goal')
+    expect(trace!.name).toBe('Unlinked Goal')
+    expect(trace!.objectives).toEqual([])
   })
 })
