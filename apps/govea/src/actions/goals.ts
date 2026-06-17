@@ -3,7 +3,7 @@
 import { db } from '@/db/client'
 import { goals, goalObjectives, strategicObjectives, objectiveCapabilities, initiativeObjectives } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -24,19 +24,15 @@ async function requireAdmin() {
   return session
 }
 
-export async function getGoals(organizationId: string, role?: string) {
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+export async function getGoals(organizationId: string, role?: string, scope: ListScope = 'org') {
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
   const isViewer = role === 'viewer'
 
   return db.query.goals.findMany({
-    where: (g, { eq, or, and, inArray }) => {
-      const base = eq(g.organizationId, organizationId)
-      const instanceWide = eq(g.visibility, 'instance')
-      const statusFilter = isViewer ? eq(g.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(g.organizationId, connectedOrgIds), inArray(g.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(goals, { orgId: organizationId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(goals.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     orderBy: (g, { asc }) => [asc(g.name)],
     with: {

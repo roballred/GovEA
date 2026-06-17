@@ -4,7 +4,7 @@ import { db } from '@/db/client'
 import { capabilities, capabilityPersonas, capabilityRelationships, entityTaxonomyValues, personas, applicationCapabilities, objectiveCapabilities } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
-import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertEntityInOrg, assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -90,23 +90,19 @@ export async function getCapability(id: string) {
   }
 }
 
-export async function getCapabilities() {
+export async function getCapabilities(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const organizationId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
 
   const rows = await db.query.capabilities.findMany({
-    where: (c, { eq, or, and, inArray }) => {
-      const base = eq(c.organizationId, organizationId)
-      const instanceWide = eq(c.visibility, 'instance')
-      const statusFilter = isViewer ? eq(c.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(c.organizationId, connectedOrgIds), inArray(c.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(capabilities, { orgId: organizationId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(capabilities.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     with: {
       organization: true,

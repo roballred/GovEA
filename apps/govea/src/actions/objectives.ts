@@ -9,7 +9,7 @@ import { eq, and } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { parseCsv, splitSemicolonList } from '@/lib/csv'
 import { syncEntityTaxonomyValues, getEntityTaxonomyDefinitions, getEntityTaxonomyValues } from '@/lib/entity-taxonomy-helpers'
-import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds } from '@/lib/federation'
+import { assertOwnership, canReadFederatedEntity, getConnectedOrgIds, listScopeFilter, type ListScope } from '@/lib/federation'
 import { auth } from '@/lib/auth'
 import { canEdit, isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
@@ -31,23 +31,19 @@ async function requireAdmin() {
   return session
 }
 
-export async function getObjectives() {
+export async function getObjectives(scope: ListScope = 'org') {
   const session = await auth()
   if (!session?.user) redirect('/login')
   const organizationId = session.user.organizationId!
   const isViewer = session.user.role === 'viewer'
 
-  const connectedOrgIds = await getConnectedOrgIds(organizationId)
+  const connectedOrgIds = scope === 'federated' ? await getConnectedOrgIds(organizationId) : []
 
   return db.query.strategicObjectives.findMany({
-    where: (o, { eq, or, and, inArray }) => {
-      const base = eq(o.organizationId, organizationId)
-      const instanceWide = eq(o.visibility, 'instance')
-      const statusFilter = isViewer ? eq(o.status, 'published') : undefined
-      const orgFilter = connectedOrgIds.length === 0
-        ? or(base, instanceWide)
-        : or(base, instanceWide, and(inArray(o.organizationId, connectedOrgIds), inArray(o.visibility, ['connections', 'instance'])))
-      return statusFilter ? and(orgFilter, statusFilter) : orgFilter
+    where: () => {
+      const vis = listScopeFilter(strategicObjectives, { orgId: organizationId, scope, connectedOrgIds })
+      const statusFilter = isViewer ? eq(strategicObjectives.status, 'published') : undefined
+      return statusFilter ? and(vis, statusFilter)! : vis
     },
     orderBy: (o, { asc }) => [asc(o.name)],
     with: {
