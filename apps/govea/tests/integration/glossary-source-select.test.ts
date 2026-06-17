@@ -142,4 +142,25 @@ describe('glossary active-source selection (#837)', () => {
       definitionSource: 'TOGAF 10',
     }))).rejects.toThrow('Forbidden')
   })
+
+  // #849 — using a saved source as the term definition persists the source's
+  // definition text AND its attribution together (the UI couples these via the
+  // "Use this source's definition" action on GlossarySourceSelect).
+  it('persists a saved source as the term definition together with its attribution', async () => {
+    mockAuth.mockResolvedValue(makeSession(contributor))
+    const term = await termRow('Capability')
+
+    await editGlossaryTerm(term.id, form({
+      term: 'Capability',
+      definition: SOURCES[0].definition,        // source text used as the definition
+      status: 'published', visibility: 'org',
+      definitionSource: SOURCES[0].name,         // matching attribution
+      definitionSourceUrl: SOURCES[0].url,
+    }))
+
+    const updated = await termRow('Capability')
+    expect(updated.definition).toBe(SOURCES[0].definition)
+    expect(updated.definitionSource).toBe(SOURCES[0].name)
+    expect(updated.definitionSourceUrl).toBe(SOURCES[0].url)
+  })
 })

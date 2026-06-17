@@ -28,6 +28,7 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
   const [editing, setEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [definition, setDefinition] = useState(initial.definition)
   const router = useRouter()
 
   if (!editing) {
@@ -44,6 +45,7 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
     e.preventDefault()
     setError(null)
     const formData = new FormData(e.currentTarget)
+    formData.set('definition', definition)
     startTransition(async () => {
       try {
         await editGlossaryTerm(termId, formData)
@@ -75,7 +77,7 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
         </div>
 
         <div className="space-y-1 sm:col-span-2">
-          <MarkdownEditor label="Definition" name="definition" defaultValue={initial.definition} rows={4} placeholder="Markdown supported" />
+          <MarkdownEditor label="Definition" name="definition" value={definition} onChange={setDefinition} rows={4} placeholder="Markdown supported" />
         </div>
 
         <div className="space-y-1">
@@ -88,6 +90,7 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
             sources={sources}
             defaultSource={initial.definitionSource}
             defaultSourceUrl={initial.definitionSourceUrl}
+            onUseDefinition={setDefinition}
           />
         </div>
 
