@@ -427,11 +427,6 @@ function TermForm({
     setSources(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
   }
 
-  // Copy a source's verbatim text into the term definition. Active-source
-  // attribution is chosen separately via GlossarySourceSelect (#837).
-  function applyAsDefinition(s: SourceRow) {
-    setDefinition(s.definition)
-  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -514,25 +509,18 @@ function TermForm({
               rows={2}
               className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             />
-            {s.name && s.definition && (
-              <button
-                type="button"
-                onClick={() => applyAsDefinition(s)}
-                className="text-xs text-blue-600 hover:underline"
-              >
-                Use as the term definition
-              </button>
-            )}
           </div>
         ))}
       </div>
 
-      {/* Active reference source — which saved source attributes the definition (#837). */}
+      {/* Active reference source — choose which saved source attributes the
+          definition, and optionally use its text as the definition (#837/#849). */}
       <GlossarySourceSelect
         sources={sources}
         defaultSource={term?.definitionSource}
         defaultSourceUrl={term?.definitionSourceUrl}
         onChange={onDirty}
+        onUseDefinition={text => { setDefinition(text); onDirty?.() }}
       />
 
       <DialogFooter>

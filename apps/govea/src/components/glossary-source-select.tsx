@@ -7,6 +7,7 @@ import { isSafeUrl } from '@/lib/url'
 export interface GlossarySourceOption {
   name: string
   url?: string | null
+  definition?: string | null
 }
 
 const CUSTOM = '__custom__'
@@ -26,17 +27,26 @@ const NONE = ''
  * value is preserved under the "Custom source" option rather than silently
  * dropped. If a previously-selected saved source is renamed or removed while
  * editing, the prior attribution falls back to Custom so nothing is lost.
+ *
+ * When `onUseDefinition` is provided and the active selection is a saved source
+ * that carries a definition, the control also offers a one-click action to use
+ * that source's verbatim definition as the term definition (#849) — coupling
+ * the definition text and its attribution in a single place. Selecting "None"
+ * or a custom source leaves the existing definition untouched, so original /
+ * custom definitions remain fully supported.
  */
 export function GlossarySourceSelect({
   sources,
   defaultSource = null,
   defaultSourceUrl = null,
   onChange,
+  onUseDefinition,
 }: {
   sources: GlossarySourceOption[]
   defaultSource?: string | null
   defaultSourceUrl?: string | null
   onChange?: () => void
+  onUseDefinition?: (definition: string) => void
 }) {
   const names = sources.map(s => s.name).filter(Boolean)
   const matchesSaved = !!defaultSource && names.includes(defaultSource)
@@ -105,6 +115,18 @@ export function GlossarySourceSelect({
             ? <a href={effectiveUrl!} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">{effectiveName}</a>
             : <span className="font-medium">{effectiveName}</span>}.
         </p>
+      )}
+
+      {/* Use the selected source's verbatim text as the term definition (#849).
+          Sets the definition and keeps this source as the attribution together. */}
+      {onUseDefinition && active?.definition && (
+        <button
+          type="button"
+          onClick={() => onUseDefinition(active.definition!)}
+          className="text-xs font-medium text-blue-600 hover:underline"
+        >
+          Use this source&apos;s definition as the term definition
+        </button>
       )}
 
       {selection !== NONE && names.length === 0 && (
