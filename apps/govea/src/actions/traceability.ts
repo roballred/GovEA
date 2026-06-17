@@ -51,6 +51,9 @@ export interface TracePrinciple {
 export interface TraceStrategy {
   id: string; name: string; status: string; planningHorizon: string | null
 }
+export interface TraceValueStream {
+  id: string; name: string; valueItem: string | null; status: string
+}
 
 // ── Typed results ─────────────────────────────────────────────────────────────
 
@@ -508,6 +511,25 @@ export async function getCapabilityTrace(id: string): Promise<CapabilityTrace | 
     .filter((s) => !isViewer || s.status !== 'proposed')
     .map((s) => ({ id: s.id, name: s.name, status: s.status, planningHorizon: s.planningHorizon }))
     .sort((a, b) => a.name.localeCompare(b.name))
+
+  // Value streams this capability participates in — directly (stream-level) or
+  // through one of their stages (#809). Apps are still reached through the
+  // capability, not a value-stream shortcut.
+  const [vsDirectRows, vsStageCapRows] = await Promise.all([
+    db.query.valueStreamCapabilities.findMany({ where: eq(valueStreamCapabilities.capabilityId, id) }),
+    db.query.valueStreamStageCapabilities.findMany({ where: eq(valueStreamStageCapabilities.capabilityId, id) }),
+  ])
+  const stageIds = vsStageCapRows.map(({ stageId }) => stageId)
+  const stageRows = stageIds.length > 0
+    ? await db.query.valueStreamStages.findMany({
+        where: inArray(valueStreamStages.id, stageIds),
+        columns: { valueStreamId: true },
+      })
+    : []
+  const valueStreamSummaries = await getValueStreamSummaries(
+    [...vsDirectRows.map(({ valueStreamId }) => valueStreamId), ...stageRows.map(({ valueStreamId }) => valueStreamId)],
+    isViewer,
+  )
 
   return {
     kind: 'capability',
