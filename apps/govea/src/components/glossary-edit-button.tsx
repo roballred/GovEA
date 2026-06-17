@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarkdownEditor } from '@/components/markdown-editor'
-import { GlossarySourceSelect, type GlossarySourceOption } from '@/components/glossary-source-select'
+import { GlossarySourceSelect, initialSourceSelection, type GlossarySourceOption } from '@/components/glossary-source-select'
 
 interface GlossaryEditButtonProps {
   termId: string
@@ -29,7 +29,17 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [definition, setDefinition] = useState(initial.definition)
+  const [activeSource, setActiveSource] = useState<string>(() =>
+    initialSourceSelection(initial.definitionSource, sources.map(s => s.name).filter(Boolean))
+  )
   const router = useRouter()
+
+  // Adopt a saved source as the term definition: copy its text and make it the
+  // active attribution together (#849).
+  function adoptSourceAsDefinition(s: GlossarySourceOption) {
+    setDefinition(s.definition ?? '')
+    if (s.name) setActiveSource(s.name)
+  }
 
   if (!editing) {
     return (
@@ -85,12 +95,38 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
           <Input name="domain" defaultValue={initial.domain ?? ''} placeholder="e.g. Finance, HR, IT" />
         </div>
 
+        {sources.length > 0 && (
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Reference sources</Label>
+            <div className="space-y-2">
+              {sources.map(s => (
+                <div key={s.name} className="rounded-md border bg-muted/30 p-2.5 space-y-1">
+                  <div className="text-sm font-medium">{s.name}</div>
+                  {s.definition && <p className="text-xs text-muted-foreground whitespace-pre-wrap">{s.definition}</p>}
+                  {s.definition && (
+                    <button
+                      type="button"
+                      onClick={() => adoptSourceAsDefinition(s)}
+                      className="text-xs font-medium text-blue-600 hover:underline"
+                    >
+                      {activeSource === s.name && definition === s.definition
+                        ? '✓ Used as the term definition'
+                        : 'Use as the term definition'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="sm:col-span-2">
           <GlossarySourceSelect
             sources={sources}
             defaultSource={initial.definitionSource}
             defaultSourceUrl={initial.definitionSourceUrl}
-            onUseDefinition={setDefinition}
+            selectedSource={activeSource}
+            onSelectedSourceChange={setActiveSource}
           />
         </div>
 
