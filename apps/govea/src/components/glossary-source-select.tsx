@@ -14,46 +14,62 @@ const CUSTOM = '__custom__'
 const NONE = ''
 
 /**
- * Active-reference-source selector (#837).
+ * Derive the initial selection value for a term's current attribution:
+ * a saved source name when it matches one, CUSTOM for free-text attribution
+ * that predates / doesn't match a saved source, or NONE when unattributed.
+ * Exported so parent forms can own the selection (controlled) and drive it from
+ * a "use this source" action while staying consistent with the dropdown.
+ */
+export function initialSourceSelection(defaultSource: string | null | undefined, names: string[]): string {
+  if (defaultSource && names.includes(defaultSource)) return defaultSource
+  return defaultSource ? CUSTOM : NONE
+}
+
+/**
+ * Active-reference-source selector (#837 / #849).
  *
- * Lets an editor pick which of a term's saved reference sources is the active
- * source — the one that populates `definitionSource` / `definitionSourceUrl` on
- * the term. Emits those two values as hidden inputs so the surrounding <form>
- * carries them through native FormData (works for both the controlled TermForm
- * dialog and the uncontrolled detail-view edit form).
+ * Picks which saved source attributes the term definition, emitting
+ * `definitionSource` / `definitionSourceUrl` as hidden inputs so the surrounding
+ * <form> carries them through native FormData.
  *
- * Backward compatibility: a term may carry a free-text `definitionSource` that
- * predates the sources table or does not match any saved source name. That
- * value is preserved under the "Custom source" option rather than silently
- * dropped. If a previously-selected saved source is renamed or removed while
- * editing, the prior attribution falls back to Custom so nothing is lost.
+ * The selection is conditionally controlled: when `selectedSource` /
+ * `onSelectedSourceChange` are provided, the parent owns it — so a per-source
+ * "Use as the term definition" action can set the definition text and select
+ * that source as the active attribution together (#849). Otherwise the
+ * component manages selection internally.
  *
- * When `onUseDefinition` is provided and the active selection is a saved source
- * that carries a definition, the control also offers a one-click action to use
- * that source's verbatim definition as the term definition (#849) — coupling
- * the definition text and its attribution in a single place. Selecting "None"
- * or a custom source leaves the existing definition untouched, so original /
- * custom definitions remain fully supported.
+ * Backward compatibility: a free-text `definitionSource` that doesn't match a
+ * saved source is preserved under "Custom source". If a previously-selected
+ * saved source is renamed or removed mid-edit, the prior attribution falls back
+ * to Custom so nothing is lost.
  */
 export function GlossarySourceSelect({
   sources,
   defaultSource = null,
   defaultSourceUrl = null,
   onChange,
-  onUseDefinition,
+  selectedSource,
+  onSelectedSourceChange,
 }: {
   sources: GlossarySourceOption[]
   defaultSource?: string | null
   defaultSourceUrl?: string | null
   onChange?: () => void
-  onUseDefinition?: (definition: string) => void
+  selectedSource?: string
+  onSelectedSourceChange?: (selection: string) => void
 }) {
   const names = sources.map(s => s.name).filter(Boolean)
   const matchesSaved = !!defaultSource && names.includes(defaultSource)
 
-  const [selection, setSelection] = useState<string>(
-    matchesSaved ? defaultSource! : defaultSource ? CUSTOM : NONE,
-  )
+  const controlled = selectedSource !== undefined
+  const [internalSelection, setInternalSelection] = useState<string>(() => initialSourceSelection(defaultSource, names))
+  const selection = controlled ? selectedSource! : internalSelection
+
+  function setSelection(value: string) {
+    if (!controlled) setInternalSelection(value)
+    onSelectedSourceChange?.(value)
+  }
+
   const [customName, setCustomName] = useState(matchesSaved ? '' : defaultSource ?? '')
   const [customUrl, setCustomUrl] = useState(matchesSaved ? '' : defaultSourceUrl ?? '')
 
@@ -65,6 +81,7 @@ export function GlossarySourceSelect({
       setCustomUrl('')
       setSelection(CUSTOM)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [names, selection])
 
   const active = sources.find(s => s.name === selection)
@@ -115,18 +132,6 @@ export function GlossarySourceSelect({
             ? <a href={effectiveUrl!} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">{effectiveName}</a>
             : <span className="font-medium">{effectiveName}</span>}.
         </p>
-      )}
-
-      {/* Use the selected source's verbatim text as the term definition (#849).
-          Sets the definition and keeps this source as the attribution together. */}
-      {onUseDefinition && active?.definition && (
-        <button
-          type="button"
-          onClick={() => onUseDefinition(active.definition!)}
-          className="text-xs font-medium text-blue-600 hover:underline"
-        >
-          Use this source&apos;s definition as the term definition
-        </button>
       )}
 
       {selection !== NONE && names.length === 0 && (

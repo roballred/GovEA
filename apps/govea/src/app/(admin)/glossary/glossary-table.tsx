@@ -21,7 +21,7 @@ import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { MarkdownEditor } from '@/components/markdown-editor'
-import { GlossarySourceSelect } from '@/components/glossary-source-select'
+import { GlossarySourceSelect, initialSourceSelection } from '@/components/glossary-source-select'
 
 type GlossaryRow = GlossaryTerm & {
   organization: { id: string; name: string } | null
@@ -414,6 +414,11 @@ function TermForm({
   const [sources, setSources] = useState<SourceRow[]>(
     term?.sources?.map(s => ({ name: s.name, url: s.url ?? '', definition: s.definition })) ?? []
   )
+  // Active reference source is owned here so the per-source "Use as the term
+  // definition" action can set the definition text and the attribution together.
+  const [activeSource, setActiveSource] = useState<string>(() =>
+    initialSourceSelection(term?.definitionSource ?? null, (term?.sources ?? []).map(s => s.name).filter(Boolean))
+  )
 
   function addSource() {
     setSources(prev => [...prev, { name: '', url: '', definition: '' }])
@@ -425,6 +430,14 @@ function TermForm({
 
   function updateSource(i: number, field: keyof SourceRow, value: string) {
     setSources(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
+  }
+
+  // Adopt a saved source as the term definition: copy its text into the
+  // definition and make it the active attribution (#849).
+  function adoptSourceAsDefinition(s: SourceRow) {
+    setDefinition(s.definition)
+    if (s.name) setActiveSource(s.name)
+    onDirty?.()
   }
 
 
@@ -509,18 +522,31 @@ function TermForm({
               rows={2}
               className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             />
+            {s.name && s.definition && (
+              <button
+                type="button"
+                onClick={() => adoptSourceAsDefinition(s)}
+                className="text-xs font-medium text-blue-600 hover:underline"
+              >
+                {activeSource === s.name && definition === s.definition
+                  ? '✓ Used as the term definition'
+                  : 'Use as the term definition'}
+              </button>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Active reference source — choose which saved source attributes the
-          definition, and optionally use its text as the definition (#837/#849). */}
+      {/* Active reference source — which saved source attributes the definition.
+          Driven by the per-source "Use as the term definition" action above so
+          definition text and attribution stay in sync (#837/#849). */}
       <GlossarySourceSelect
         sources={sources}
         defaultSource={term?.definitionSource}
         defaultSourceUrl={term?.definitionSourceUrl}
         onChange={onDirty}
-        onUseDefinition={text => { setDefinition(text); onDirty?.() }}
+        selectedSource={activeSource}
+        onSelectedSourceChange={v => { setActiveSource(v); onDirty?.() }}
       />
 
       <DialogFooter>
