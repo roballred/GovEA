@@ -921,7 +921,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           <DialogHeader><DialogTitle>Import Applications</DialogTitle></DialogHeader>
           <div className="space-y-4 text-sm">
             <p className="text-muted-foreground">
-              Upload a CSV with columns: <code className="bg-muted px-1 rounded">name</code>, <code className="bg-muted px-1 rounded">description</code>, <code className="bg-muted px-1 rounded">vendor</code>, <code className="bg-muted px-1 rounded">version</code>, <code className="bg-muted px-1 rounded">hosting_model</code>, <code className="bg-muted px-1 rounded">lifecycle_status</code>, <code className="bg-muted px-1 rounded">status</code>, <code className="bg-muted px-1 rounded">visibility</code>
+              Upload a CSV with columns: <code className="bg-muted px-1 rounded">name</code>, <code className="bg-muted px-1 rounded">description</code>, <code className="bg-muted px-1 rounded">vendor</code>, <code className="bg-muted px-1 rounded">version</code>, <code className="bg-muted px-1 rounded">hosting_model</code>, <code className="bg-muted px-1 rounded">lifecycle_status</code>, <code className="bg-muted px-1 rounded">status</code>, <code className="bg-muted px-1 rounded">visibility</code>, <code className="bg-muted px-1 rounded">capabilities</code> (semicolon-separated names)
               {customFieldDefs.length > 0 && <>, plus custom fields: {customFieldDefs.map(f => <code key={f.name} className="bg-muted px-1 rounded ml-1">{f.name}</code>)}</>}.
               Existing applications are matched by name and updated.
             </p>
