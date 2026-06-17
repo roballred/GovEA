@@ -9,10 +9,10 @@
  */
 
 export type TraceParticipantKind =
-  | 'application' | 'initiative' | 'persona' | 'value-stream' | 'adr' | 'principle'
+  | 'application' | 'initiative' | 'persona' | 'adr' | 'principle'
 
 export const TRACE_PARTICIPANT_KINDS: readonly TraceParticipantKind[] =
-  ['application', 'initiative', 'persona', 'value-stream', 'adr', 'principle'] as const
+  ['application', 'initiative', 'persona', 'adr', 'principle'] as const
 
 export function isTraceParticipantKind(value: string): value is TraceParticipantKind {
   return (TRACE_PARTICIPANT_KINDS as readonly string[]).includes(value)
@@ -23,7 +23,6 @@ export const PARTICIPANT_ROUTES: Record<TraceParticipantKind, { hrefBase: string
   application: { hrefBase: '/applications', label: 'Application' },
   initiative: { hrefBase: '/initiatives', label: 'Initiative' },
   persona: { hrefBase: '/personas', label: 'Persona' },
-  'value-stream': { hrefBase: '/value-streams', label: 'Value Stream' },
   adr: { hrefBase: '/adrs', label: 'Decision' },
   principle: { hrefBase: '/principles', label: 'Principle' },
 }
