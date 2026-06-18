@@ -4,8 +4,8 @@
  * Covers:
  *  - Not-provisioned identity is blocked (no DB record for the email)
  *  - Deactivated user is blocked
- *  - User with no org binding is blocked (defense-in-depth; schema makes this
- *    impossible in normal operation but guard must handle it explicitly)
+ *  - User with no org binding is blocked (defense-in-depth)
+ *  - Platform-only instance_admin (no org) is allowed (#797)
  *  - Fully provisioned, active user with org binding is allowed
  *  - Duplicate email across orgs is rejected at the DB level (#269)
  *  - #693: org binding resolves through memberships first (same resolution
@@ -73,16 +73,47 @@ describe('checkSsoProvisioning', () => {
     }
   })
 
-  // NOTE: The `no_org_binding` branch in checkSsoProvisioning exists as
-  // defense-in-depth for a scenario the current schema makes impossible:
-  // `users.organization_id` is NOT NULL (enforced since migration 0009), so
-  // there is no way to insert or update a row to organizationId = null via
-  // Drizzle or PostgreSQL. The guard is kept in production code for forward
-  // compatibility (e.g. if the constraint is ever relaxed or a raw SQL import
-  // creates a null row), but the test case cannot be exercised against the
-  // current schema without violating the NOT NULL constraint.
-  //
-  // If the schema ever allows null org bindings again, re-enable this test.
+})
+
+// ── #797 — org-less identity paths ───────────────────────────────────────────
+// `users.organization_id` is now nullable. These tests exercise the two
+// cases that were previously dead code.
+describe('checkSsoProvisioning — org-less identities (#797)', () => {
+  afterAll(async () => {
+    // Clean up org-less users inserted in this suite by email suffix.
+    await db.delete(users).where(eq(users.email, 'orgless-regular@test.example'))
+    await db.delete(users).where(eq(users.email, 'orgless-instance-admin@test.example'))
+  })
+
+  it('returns no_org_binding for an active user with no org and no instance role', async () => {
+    await db.insert(users).values({
+      id: randomUUID(),
+      organizationId: null,
+      email: 'orgless-regular@test.example',
+      name: 'Org-less Regular',
+      role: 'viewer',
+      isActive: 'true',
+    })
+    const result = await checkSsoProvisioning('orgless-regular@test.example')
+    expect(result.status).toBe('no_org_binding')
+  })
+
+  it('returns allowed for a platform-only instance_admin with no org binding', async () => {
+    await db.insert(users).values({
+      id: randomUUID(),
+      organizationId: null,
+      email: 'orgless-instance-admin@test.example',
+      name: 'Platform Operator',
+      role: 'viewer',
+      instanceRole: 'instance_admin',
+      isActive: 'true',
+    })
+    const result = await checkSsoProvisioning('orgless-instance-admin@test.example')
+    expect(result.status).toBe('allowed')
+    if (result.status === 'allowed') {
+      expect(result.organizationId).toBeNull()
+    }
+  })
 })
 
 describe('global email uniqueness (#269)', () => {

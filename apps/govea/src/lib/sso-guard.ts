@@ -24,7 +24,7 @@ import { eq } from 'drizzle-orm'
 import { resolveActiveMembership } from '@/lib/active-membership'
 
 export type SsoCheckResult =
-  | { status: 'allowed'; userId: string; organizationId: string; role: string }
+  | { status: 'allowed'; userId: string; organizationId: string | null; role: string }
   | { status: 'not_provisioned' }
   | { status: 'no_org_binding'; userId: string }
   | { status: 'deactivated'; userId: string }
@@ -61,7 +61,20 @@ export async function checkSsoProvisioning(email: string): Promise<SsoCheckResul
     }
   }
 
-  if (!dbUser.organizationId) return { status: 'no_org_binding', userId: dbUser.id }
+  if (!dbUser.organizationId) {
+    // #797 — platform-only instance admins have no tenant org; allow them
+    // through so they can reach /instance. Non-instance users with no org
+    // binding are still blocked (defense-in-depth).
+    if (dbUser.instanceRole !== 'instance_admin') {
+      return { status: 'no_org_binding', userId: dbUser.id }
+    }
+    return {
+      status: 'allowed',
+      userId: dbUser.id,
+      organizationId: null,
+      role: dbUser.role,
+    }
+  }
 
   return {
     status: 'allowed',

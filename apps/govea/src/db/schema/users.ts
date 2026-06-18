@@ -5,7 +5,10 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'contributor', 'viewer
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  // #797 — nullable: platform-only instance admins have no tenant home org.
+  // Org deletion uses `set null` + deactivation instead of cascading identity
+  // deletion — see docs/decisions/0006-identity-lifecycle-on-org-deletion.md.
+  organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'set null' }),
   // #693 slice 3a: the user's last-selected active org, honored first by
   // resolveActiveMembership when it's still an active membership. Nullable
   // (most users never switch); `set null` so deleting an org doesn't orphan.

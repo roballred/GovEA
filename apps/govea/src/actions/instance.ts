@@ -437,7 +437,8 @@ export async function suspendUserAccount(userId: string, reason: string) {
   })
   if (!target) throw new Error('User not found')
 
-  if (target.role === 'admin') {
+  // Platform-only operators have no org; skip the last-admin guard for them.
+  if (target.role === 'admin' && target.organizationId) {
     const [{ adminCount }] = await db
       .select({ adminCount: count() })
       .from(users)

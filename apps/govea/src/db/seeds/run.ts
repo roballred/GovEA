@@ -2359,15 +2359,19 @@ async function seed() {
   const allUsers = await db
     .select({ id: users.id, organizationId: users.organizationId, role: users.role })
     .from(users)
+  let backfilled = 0
   for (const u of allUsers) {
+    // Platform-only operators have no org; skip — they have no membership to backfill.
+    if (!u.organizationId) continue
     await db.insert(userOrganizationMemberships).values({
       userId: u.id,
       organizationId: u.organizationId,
       role: u.role,
       isPrimary: true,
     }).onConflictDoNothing()
+    backfilled++
   }
-  console.log(`  ✓ ${allUsers.length} user-organization memberships (backfilled, primary)`)
+  console.log(`  ✓ ${backfilled} user-organization memberships (backfilled, primary)`)
 
   // #693 slice 3b demo — make one dev user multi-org so the org switcher is
   // exercisable in dev: Alice (City of Riverdale admin) also joins the State
