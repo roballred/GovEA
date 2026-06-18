@@ -26,6 +26,28 @@ export function initialSourceSelection(defaultSource: string | null | undefined,
 }
 
 /**
+ * Resolve the term definition when an active reference source is selected (#849).
+ *
+ * Selecting a saved source that carries definition text adopts that text as the
+ * term definition — this is the behavior users repeatedly expected (the active
+ * source selection IS "use this source's definition"). "None", "Custom source",
+ * and a saved source without definition text all leave the current definition
+ * untouched, so original/custom definitions are never clobbered.
+ *
+ * Pure and exported so both edit surfaces (list/dialog TermForm and the
+ * detail-page GlossaryEditButton) share one definition and it can be unit-tested
+ * in the node-only test env.
+ */
+export function definitionForSourceSelection(
+  selection: string,
+  sources: GlossarySourceOption[],
+  currentDefinition: string,
+): string {
+  const picked = sources.find(s => s.name === selection)
+  return picked?.definition ? picked.definition : currentDefinition
+}
+
+/**
  * Active-reference-source selector (#837 / #849).
  *
  * Picks which saved source attributes the term definition, emitting
@@ -131,6 +153,7 @@ export function GlossarySourceSelect({
           {isSafeUrl(effectiveUrl)
             ? <a href={effectiveUrl!} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">{effectiveName}</a>
             : <span className="font-medium">{effectiveName}</span>}.
+          {active?.definition && ' Its definition text has been used as the term definition above.'}
         </p>
       )}
 
