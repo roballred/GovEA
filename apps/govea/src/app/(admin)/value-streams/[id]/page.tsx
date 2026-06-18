@@ -131,6 +131,22 @@ export default async function ValueStreamDetailPage({ params }: { params: Promis
                 {stage.description && (
                   <p className="text-sm text-muted-foreground pl-9">{stage.description}</p>
                 )}
+                {(stage.entryCriteria || stage.exitCriteria) && (
+                  <dl className="pl-9 space-y-1.5 text-sm">
+                    {stage.entryCriteria && (
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entry criteria</dt>
+                        <dd className="whitespace-pre-line text-foreground">{stage.entryCriteria}</dd>
+                      </div>
+                    )}
+                    {stage.exitCriteria && (
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Exit criteria</dt>
+                        <dd className="whitespace-pre-line text-foreground">{stage.exitCriteria}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
                 {isModuleEnabled(enabledModules, 'capabilities') && stage.stageCapabilities.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pl-9">
                     {stage.stageCapabilities.map(({ capability }) => (
