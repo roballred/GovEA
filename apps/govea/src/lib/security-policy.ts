@@ -16,7 +16,8 @@ import { organizations, DEFAULT_SECURITY_SETTINGS } from '@/db/schema'
 import type { SecuritySettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
-export async function getOrgSecuritySettings(orgId: string): Promise<SecuritySettings> {
+export async function getOrgSecuritySettings(orgId: string | null): Promise<SecuritySettings> {
+  if (!orgId) return mergeWithDefaults(undefined)
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
     columns: { securitySettings: true },

@@ -14,7 +14,7 @@ import {
   personas, applications, strategicObjectives, principles, valueStreams, services,
   glossaryTerms, strategies, strategyGoals, goals,
 } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 
@@ -77,7 +77,21 @@ export async function createTestUser(
 
 /** Deletes the test org and all its data (cascade). */
 export async function cleanupOrg(orgId: string): Promise<void> {
+  // #797 — users.organization_id is now ON DELETE SET NULL (was CASCADE), so
+  // deleting the org no longer removes its users; they would leak with a null
+  // home org and collide on the next run (hardcoded-email tests). Capture the
+  // org's user ids first, delete the org (cascades all content — including the
+  // created_by rows that reference these users — and sets the users' org null),
+  // then delete the captured users by id. User deletion cascades to their
+  // memberships, sessions, and accounts.
+  const orgUsers = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.organizationId, orgId))
   await db.delete(organizations).where(eq(organizations.id, orgId))
+  if (orgUsers.length > 0) {
+    await db.delete(users).where(inArray(users.id, orgUsers.map(u => u.id)))
+  }
 }
 
 // ── Session builder ───────────────────────────────────────────────────────────

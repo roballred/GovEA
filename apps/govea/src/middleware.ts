@@ -110,6 +110,12 @@ export default async function middleware(req: NextRequest) {
     return redirectTo(req, '/')
   }
 
+  // #797 — platform-only operator: instance_admin with no tenant org has no
+  // business being in the org-scoped app; redirect to /instance instead.
+  if (!token.organizationId && token.instanceRole === 'instance_admin' && !pathname.startsWith('/instance')) {
+    return redirectTo(req, '/instance')
+  }
+
   // #527 — password-expiry redirect. The token carries a snapshot of
   // `passwordExpiryDays` and `lastPasswordChangedAt`, refreshed on the
   // 5-minute active-user check. Edge-safe: pure arithmetic, no DB.

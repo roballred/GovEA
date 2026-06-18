@@ -269,7 +269,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const dbUser = await db.query.users.findFirst({
         where: eq(users.id, user.id!),
       })
-      if (dbUser && !dbUser.organizationId) {
+      // #797 — platform-only instance admins intentionally have no org; exempt
+      // them from the deactivation net. All other org-less users are anomalous.
+      if (dbUser && !dbUser.organizationId && dbUser.instanceRole !== 'instance_admin') {
         await db.transaction(async (tx) => {
           await tx.update(users).set({ isActive: 'false' }).where(eq(users.id, user.id!))
           await writeAuditLog(tx, {
