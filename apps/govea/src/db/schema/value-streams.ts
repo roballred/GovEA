@@ -29,6 +29,12 @@ export const valueStreamStages = pgTable('value_stream_stages', {
   valueStreamId: uuid('value_stream_id').notNull().references(() => valueStreams.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description'),
+  // #810 — optional plain-language gates for the stage. Entry criteria: what
+  // must be true before the stage begins. Exit criteria: what must be true
+  // before the stream can advance past it. Both nullable; existing stages and
+  // stages without criteria render cleanly.
+  entryCriteria: text('entry_criteria'),
+  exitCriteria: text('exit_criteria'),
   order: integer('order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })

@@ -179,7 +179,13 @@ export async function deleteValueStream(valueStreamId: string) {
 
 // ── Stages ────────────────────────────────────────────────────────────────────
 
-export async function addStage(valueStreamId: string, name: string, description: string) {
+export async function addStage(
+  valueStreamId: string,
+  name: string,
+  description: string,
+  entryCriteria = '',
+  exitCriteria = '',
+) {
   const session = await requireContributor()
   const orgId = session.user.organizationId!
 
@@ -195,11 +201,28 @@ export async function addStage(valueStreamId: string, name: string, description:
   })
   const nextOrder = existing.length > 0 ? Math.max(...existing.map(s => s.order)) + 1 : 0
 
-  await db.insert(valueStreamStages).values({
-    valueStreamId,
-    name: name.trim(),
-    description: description.trim() || null,
-    order: nextOrder,
+  const trimmedName = name.trim()
+  const entry = entryCriteria.trim() || null
+  const exit = exitCriteria.trim() || null
+
+  await db.transaction(async (tx) => {
+    const [stage] = await tx.insert(valueStreamStages).values({
+      valueStreamId,
+      name: trimmedName,
+      description: description.trim() || null,
+      entryCriteria: entry,
+      exitCriteria: exit,
+      order: nextOrder,
+    }).returning()
+
+    await writeAuditLog(tx, {
+      action: 'value_stream.stage.create',
+      entityType: 'value_stream_stage',
+      entityId: stage.id,
+      userId: session.user.id,
+      organizationId: orgId,
+      after: { valueStreamId, name: trimmedName, entryCriteria: entry, exitCriteria: exit },
+    })
   })
 }
 
@@ -213,14 +236,39 @@ async function requireStageOwnership(stageId: string, orgId: string) {
   return stage
 }
 
-export async function editStage(stageId: string, name: string, description: string) {
+export async function editStage(
+  stageId: string,
+  name: string,
+  description: string,
+  entryCriteria = '',
+  exitCriteria = '',
+) {
   const session = await requireContributor()
-  await requireStageOwnership(stageId, session.user.organizationId!)
+  const orgId = session.user.organizationId!
+  const before = await requireStageOwnership(stageId, orgId)
 
-  await db.update(valueStreamStages).set({
-    name: name.trim(),
-    description: description.trim() || null,
-  }).where(eq(valueStreamStages.id, stageId))
+  const trimmedName = name.trim()
+  const entry = entryCriteria.trim() || null
+  const exit = exitCriteria.trim() || null
+
+  await db.transaction(async (tx) => {
+    await tx.update(valueStreamStages).set({
+      name: trimmedName,
+      description: description.trim() || null,
+      entryCriteria: entry,
+      exitCriteria: exit,
+    }).where(eq(valueStreamStages.id, stageId))
+
+    await writeAuditLog(tx, {
+      action: 'value_stream.stage.edit',
+      entityType: 'value_stream_stage',
+      entityId: stageId,
+      userId: session.user.id,
+      organizationId: orgId,
+      before: { name: before.name, entryCriteria: before.entryCriteria, exitCriteria: before.exitCriteria },
+      after: { name: trimmedName, entryCriteria: entry, exitCriteria: exit },
+    })
+  })
 }
 
 export async function deleteStage(stageId: string) {

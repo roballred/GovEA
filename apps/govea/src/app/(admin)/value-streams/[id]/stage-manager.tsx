@@ -32,15 +32,23 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<StageWithCapabilities | null>(null)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [newEntry, setNewEntry] = useState('')
+  const [newExit, setNewExit] = useState('')
 
   const refresh = () => router.refresh()
+
+  function resetFields() {
+    setNewName('')
+    setNewDesc('')
+    setNewEntry('')
+    setNewExit('')
+  }
 
   function handleAdd() {
     if (!newName.trim()) return
     startTransition(async () => {
-      await addStage(valueStreamId, newName, newDesc)
-      setNewName('')
-      setNewDesc('')
+      await addStage(valueStreamId, newName, newDesc, newEntry, newExit)
+      resetFields()
       setAddOpen(false)
       refresh()
     })
@@ -49,7 +57,7 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
   function handleEdit() {
     if (!editTarget || !newName.trim()) return
     startTransition(async () => {
-      await editStage(editTarget.id, newName, newDesc)
+      await editStage(editTarget.id, newName, newDesc, newEntry, newExit)
       setEditTarget(null)
       refresh()
     })
@@ -114,7 +122,13 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
                   onClick={() => handleMove(stage.id, 'down')}
                   className="h-6 w-6 p-0 text-xs">↓</Button>
                 <Button variant="ghost" size="sm" disabled={isPending}
-                  onClick={() => { setEditTarget(stage); setNewName(stage.name); setNewDesc(stage.description ?? '') }}
+                  onClick={() => {
+                    setEditTarget(stage)
+                    setNewName(stage.name)
+                    setNewDesc(stage.description ?? '')
+                    setNewEntry(stage.entryCriteria ?? '')
+                    setNewExit(stage.exitCriteria ?? '')
+                  }}
                   className="h-6 px-2 text-xs">Edit</Button>
                 <Button variant="ghost" size="sm" disabled={isPending}
                   onClick={() => setDeleteTarget(stage)}
@@ -165,7 +179,7 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
       </div>
 
       {/* Add Stage Dialog */}
-      <Dialog open={addOpen} onOpenChange={open => { if (!open) { setAddOpen(false); setNewName(''); setNewDesc('') } }}>
+      <Dialog open={addOpen} onOpenChange={open => { if (!open) { setAddOpen(false); resetFields() } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add stage</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -178,9 +192,19 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
               <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={2} placeholder="Optional"
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
+            <div className="space-y-1.5">
+              <Label>Entry criteria</Label>
+              <textarea value={newEntry} onChange={e => setNewEntry(e.target.value)} rows={2} placeholder="Optional — what must be true before this stage begins"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Exit criteria</Label>
+              <textarea value={newExit} onChange={e => setNewExit(e.target.value)} rows={2} placeholder="Optional — what must be true before moving to the next stage"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddOpen(false); setNewName(''); setNewDesc('') }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setAddOpen(false); resetFields() }}>Cancel</Button>
             <Button onClick={handleAdd} disabled={isPending || !newName.trim()}>
               {isPending ? 'Adding…' : 'Add stage'}
             </Button>
@@ -189,7 +213,7 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
       </Dialog>
 
       {/* Edit Stage Dialog */}
-      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) { setEditTarget(null); resetFields() } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit stage</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -202,9 +226,19 @@ export function StageManager({ valueStreamId, stages, capabilities }: Props) {
               <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={2}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
             </div>
+            <div className="space-y-1.5">
+              <Label>Entry criteria</Label>
+              <textarea value={newEntry} onChange={e => setNewEntry(e.target.value)} rows={2} placeholder="Optional — what must be true before this stage begins"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Exit criteria</Label>
+              <textarea value={newExit} onChange={e => setNewExit(e.target.value)} rows={2} placeholder="Optional — what must be true before moving to the next stage"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setEditTarget(null); resetFields() }}>Cancel</Button>
             <Button onClick={handleEdit} disabled={isPending || !newName.trim()}>
               {isPending ? 'Saving…' : 'Save'}
             </Button>
