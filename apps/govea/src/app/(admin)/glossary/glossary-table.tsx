@@ -21,7 +21,7 @@ import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { EmptyStateCTA } from '@/components/empty-state-cta'
 import { MarkdownEditor } from '@/components/markdown-editor'
-import { GlossarySourceSelect, initialSourceSelection } from '@/components/glossary-source-select'
+import { GlossarySourceSelect, initialSourceSelection, definitionForSourceSelection } from '@/components/glossary-source-select'
 
 type GlossaryRow = GlossaryTerm & {
   organization: { id: string; name: string } | null
@@ -440,6 +440,15 @@ function TermForm({
     onDirty?.()
   }
 
+  // Selecting an active source in the dropdown also adopts its definition text
+  // when it has one (#849) — selecting the source IS using its definition.
+  // None / Custom / a source without text leave the current definition intact.
+  function handleSelectSource(value: string) {
+    setActiveSource(value)
+    setDefinition(prev => definitionForSourceSelection(value, sources, prev))
+    onDirty?.()
+  }
+
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -546,7 +555,7 @@ function TermForm({
         defaultSourceUrl={term?.definitionSourceUrl}
         onChange={onDirty}
         selectedSource={activeSource}
-        onSelectedSourceChange={v => { setActiveSource(v); onDirty?.() }}
+        onSelectedSourceChange={handleSelectSource}
       />
 
       <DialogFooter>

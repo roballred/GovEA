@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarkdownEditor } from '@/components/markdown-editor'
-import { GlossarySourceSelect, initialSourceSelection, type GlossarySourceOption } from '@/components/glossary-source-select'
+import { GlossarySourceSelect, initialSourceSelection, definitionForSourceSelection, type GlossarySourceOption } from '@/components/glossary-source-select'
 
 interface GlossaryEditButtonProps {
   termId: string
@@ -39,6 +39,14 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
   function adoptSourceAsDefinition(s: GlossarySourceOption) {
     setDefinition(s.definition ?? '')
     if (s.name) setActiveSource(s.name)
+  }
+
+  // Selecting an active source in the dropdown also adopts its definition text
+  // when it has one (#849). None / Custom / a source without text leave the
+  // current definition intact.
+  function handleSelectSource(value: string) {
+    setActiveSource(value)
+    setDefinition(prev => definitionForSourceSelection(value, sources, prev))
   }
 
   if (!editing) {
@@ -126,7 +134,7 @@ export function GlossaryEditButton({ termId, sources, initial }: GlossaryEditBut
             defaultSource={initial.definitionSource}
             defaultSourceUrl={initial.definitionSourceUrl}
             selectedSource={activeSource}
-            onSelectedSourceChange={setActiveSource}
+            onSelectedSourceChange={handleSelectSource}
           />
         </div>
 
