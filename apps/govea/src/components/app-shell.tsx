@@ -407,6 +407,18 @@ export function AppShell({
     <div className="min-h-screen bg-background">
       {themeStyle && <style dangerouslySetInnerHTML={{ __html: themeStyle }} />}
 
+      {/* #858 — skip link: the first focusable element on every page, so
+          keyboard / screen-reader users can bypass the sidebar nav and jump
+          straight to content (WCAG 2.4.1 Bypass Blocks). Visually hidden until
+          focused. */}
+      <a
+        href="#main"
+        data-print-hide="true"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        Skip to main content
+      </a>
+
       {/* ── Desktop sidebar (fixed, always visible on lg+) ── */}
       <aside
         data-print-hide="true"
@@ -548,8 +560,10 @@ export function AppShell({
           </div>
         </header>
 
-        {/* Page content */}
-        <main data-print-main className="flex-1 p-4 lg:p-6">
+        {/* Page content. id + tabIndex make this the skip-link target (#858):
+            activating "Skip to main content" moves focus here so the next Tab
+            continues from the content, not the top of the nav. */}
+        <main id="main" tabIndex={-1} data-print-main className="flex-1 p-4 lg:p-6 focus:outline-none">
           {children}
         </main>
       </div>
