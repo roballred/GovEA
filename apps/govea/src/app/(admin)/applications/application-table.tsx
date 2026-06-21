@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { EmptyStateCTA } from '@/components/empty-state-cta'
+import { useConfirmDialog } from '@/components/confirm-dialog'
 import { DomainBadge } from '@/components/domain-badge'
 import type { Role } from '@/lib/rbac'
 import { MarkdownEditor } from '@/components/markdown-editor'
@@ -251,6 +252,7 @@ type ViewMode = 'table' | 'portfolio'
 export function ApplicationTable({ applications, capabilities, role, currentOrgId, currentUserId, taxonomyDefinitions, taxonomyValueMap, customFieldDefs, orgUsers }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const { confirm, confirmDialog } = useConfirmDialog()
 
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [importOpen, setImportOpen] = useState(false)
@@ -348,7 +350,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         // #381 PR-3 publish-time debt gate: confirm + re-submit with ack.
         const msg = err instanceof Error ? err.message : String(err)
         if (msg.includes('Publishing requires acknowledgment')) {
-          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? Your acknowledgment will be logged in the audit trail.')) {
+          if (await confirm({ title: 'Publish anyway?', description: `${msg} Your acknowledgment will be logged in the audit trail.`, confirmLabel: 'Publish anyway' })) {
             formData.set('acknowledgeOpenDebt', 'on')
             await editApplication(editTarget.id, formData)
             editDirty.reset()
@@ -359,7 +361,7 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
         }
         // #567 Part B — publish-readiness gate.
         if (msg.includes('Publishing this') && msg.includes('makes the record harder to use')) {
-          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? The missing fields will be logged in the audit trail.')) {
+          if (await confirm({ title: 'Publish anyway?', description: `${msg} The missing fields will be logged in the audit trail.`, confirmLabel: 'Publish anyway' })) {
             formData.set('acknowledgePublishIncomplete', 'on')
             await editApplication(editTarget.id, formData)
             setEditTarget(null)
@@ -979,6 +981,8 @@ export function ApplicationTable({ applications, capabilities, role, currentOrgI
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmDialog}
     </div>
   )
 }
