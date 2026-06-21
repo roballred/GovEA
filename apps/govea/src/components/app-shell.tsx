@@ -101,6 +101,7 @@ function SidebarContent({
   isInstanceAdmin,
   unreadNotificationCount,
   onClose,
+  navLabel,
 }: {
   role: Role
   pathname: string
@@ -108,6 +109,8 @@ function SidebarContent({
   isInstanceAdmin?: boolean
   unreadNotificationCount?: number
   onClose?: () => void
+  /** #872 — distinguishes the desktop vs mobile nav landmarks for AT. */
+  navLabel: string
 }) {
   const isAdmin = role === 'admin'
   const isContributor = role === 'admin' || role === 'contributor'
@@ -161,7 +164,7 @@ function SidebarContent({
   }, [setOpenGroupAndPersist])
 
   return (
-    <nav className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
+    <nav aria-label={navLabel} className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
       {/* Dashboard */}
       <Link
         href="/dashboard"
@@ -437,7 +440,7 @@ export function AppShell({
             GovEA
           </Link>
         </div>
-        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} unreadNotificationCount={unreadNotificationCount} />
+        <SidebarContent navLabel="Primary" role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} unreadNotificationCount={unreadNotificationCount} />
       </aside>
 
       {/* ── Mobile overlay backdrop ── */}
@@ -457,7 +460,6 @@ export function AppShell({
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{ backgroundColor: sidebarBg, borderColor: sidebarBorder }}
-        aria-label="Navigation"
       >
         {/* Mobile sidebar header */}
         <div
@@ -475,7 +477,7 @@ export function AppShell({
             </svg>
           </button>
         </div>
-        <SidebarContent role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} onClose={() => setSidebarOpen(false)} />
+        <SidebarContent navLabel="Primary (mobile)" role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} onClose={() => setSidebarOpen(false)} />
       </aside>
 
       {/* ── Main content area ── */}
