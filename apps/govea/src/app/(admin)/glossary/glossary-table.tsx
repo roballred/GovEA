@@ -491,7 +491,7 @@ function TermForm({
           <button
             type="button"
             onClick={addSource}
-            className="text-xs text-blue-600 hover:underline"
+            className="text-xs text-blue-700 hover:underline"
           >
             + Add source
           </button>
@@ -535,7 +535,7 @@ function TermForm({
               <button
                 type="button"
                 onClick={() => adoptSourceAsDefinition(s)}
-                className="text-xs font-medium text-blue-600 hover:underline"
+                className="text-xs font-medium text-blue-700 hover:underline"
               >
                 {activeSource === s.name && definition === s.definition
                   ? '✓ Used as the term definition'
