@@ -83,7 +83,7 @@ export function DomainCombobox({
       {label && (
         <Label htmlFor={`combobox-${name}`}>
           {label}
-          {required && <span className="text-destructive ml-0.5">*</span>}
+          {required && <span aria-hidden="true" className="text-destructive ml-0.5">*</span>}
         </Label>
       )}
 

@@ -38,7 +38,7 @@ export function TaxonomyInputs({
         <div key={def.id} className="space-y-1.5">
           <Label>
             {def.typeName}
-            {def.required && <span className="text-destructive ml-0.5">*</span>}
+            {def.required && <span aria-hidden="true" className="text-destructive ml-0.5">*</span>}
           </Label>
           {def.selectionMode === 'multi' ? (
             <div className="rounded-md border border-input bg-transparent px-3 py-2 max-h-36 overflow-y-auto space-y-1">

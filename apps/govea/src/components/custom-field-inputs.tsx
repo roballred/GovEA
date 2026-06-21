@@ -24,7 +24,7 @@ export function CustomFieldInputs({ fields, values = {} }: Props) {
           <div key={field.name} className="space-y-1.5">
             <Label>
               {field.name}
-              {field.required && <span className="text-destructive ml-0.5">*</span>}
+              {field.required && <span aria-hidden="true" className="text-destructive ml-0.5">*</span>}
             </Label>
 
             {field.type === 'text' && (
