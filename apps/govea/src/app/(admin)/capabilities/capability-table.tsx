@@ -24,6 +24,7 @@ import { buildCapabilityTree, flattenTree, collectDescendantIds, resolveCapabili
 import { submitWithDuplicateAck } from '@/lib/duplicate-name-client'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { EmptyStateCTA } from '@/components/empty-state-cta'
+import { useConfirmDialog } from '@/components/confirm-dialog'
 import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 
 type CapabilityRow = Pick<Capability, 'id' | 'name' | 'description' | 'domain' | 'behaviors' | 'rules' | 'capabilityType' | 'status' | 'visibility' | 'createdAt' | 'organizationId' | 'domainOwnerUserId'> & {
@@ -71,6 +72,7 @@ const TYPE_STYLES: Record<string, string> = {
 export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyDefinitions, taxonomyValueMap, role, currentOrgId, currentUserId, orgUsers }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const { confirm, confirmDialog } = useConfirmDialog()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -201,7 +203,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
         // open debt and no ack. We prompt the user, then re-submit with the ack.
         const msg = err instanceof Error ? err.message : String(err)
         if (msg.includes('Publishing requires acknowledgment')) {
-          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? Your acknowledgment will be logged in the audit trail.')) {
+          if (await confirm({ title: 'Publish anyway?', description: `${msg} Your acknowledgment will be logged in the audit trail.`, confirmLabel: 'Publish anyway' })) {
             formData.set('acknowledgeOpenDebt', 'on')
             await editCapability(editTarget.id, formData)
             editDirty.reset()
@@ -212,7 +214,7 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
         }
         // #567 Part B — publish-readiness gate: prompt + ack-retry pattern.
         if (msg.includes('Publishing this') && msg.includes('makes the record harder to use')) {
-          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nPublish anyway? The missing fields will be logged in the audit trail.')) {
+          if (await confirm({ title: 'Publish anyway?', description: `${msg} The missing fields will be logged in the audit trail.`, confirmLabel: 'Publish anyway' })) {
             formData.set('acknowledgePublishIncomplete', 'on')
             await editCapability(editTarget.id, formData)
             editDirty.reset()
@@ -701,6 +703,8 @@ export function CapabilityTable({ capabilities, personas, domainTerms, taxonomyD
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmDialog}
     </div>
   )
 }

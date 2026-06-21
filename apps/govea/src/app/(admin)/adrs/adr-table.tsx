@@ -22,6 +22,7 @@ import type { EntityTaxonomyValue } from '@/db/schema'
 import { DomainOwnerFormSection } from '@/components/domain-owner-form-section'
 import { useDirtyTracker, confirmDiscard } from '@/lib/use-dirty-dialog'
 import { EmptyStateCTA } from '@/components/empty-state-cta'
+import { useConfirmDialog } from '@/components/confirm-dialog'
 
 type ADRRow = ADR & {
   organization: { id: string; name: string } | null
@@ -75,6 +76,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
 export function ADRTable({ adrs, capabilities, applications, initiatives, objectives, role, currentOrgId, currentUserId, taxonomyDefinitions, taxonomyValueMap, orgUsers }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const { confirm, confirmDialog } = useConfirmDialog()
   const [statusFilter, setStatusFilter] = useState('all')
   const [taxonomyFilters, setTaxonomyFilters] = useState<Record<string, string>>({})
   const [createOpen, setCreateOpen] = useState(false)
@@ -154,7 +156,7 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
         // #381 PR-3 publish-time debt gate: confirm + re-submit with ack.
         const msg = err instanceof Error ? err.message : String(err)
         if (msg.includes('Publishing requires acknowledgment')) {
-          if (typeof window !== 'undefined' && window.confirm(msg + '\n\nAccept anyway? Your acknowledgment will be logged in the audit trail.')) {
+          if (await confirm({ title: 'Accept anyway?', description: `${msg} Your acknowledgment will be logged in the audit trail.`, confirmLabel: 'Accept anyway' })) {
             formData.set('acknowledgeOpenDebt', 'on')
             await editADR(editTarget.id, formData)
             editDirty.reset()
@@ -501,6 +503,8 @@ export function ADRTable({ adrs, capabilities, applications, initiatives, object
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmDialog}
     </div>
   )
 }
