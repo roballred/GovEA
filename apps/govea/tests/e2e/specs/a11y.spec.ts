@@ -23,7 +23,23 @@ const AUTHED_ROUTES = [
   '/adrs',
   '/personas',
   '/users',
+  // #874 — authoring/config surfaces the original set never covered. Only the
+  // ones that currently pass the serious/critical gate live here; surfaces with
+  // known violations are quarantined in KNOWN_A11Y_GAPS below.
+  '/data',
 ] as const
+
+// #874 — authoring surfaces with KNOWN serious/critical violations, captured by
+// an axe run on 2026-06-19 (default `govea` theme). Quarantined with
+// `test.fixme` so the suite stays green and the gap is tracked in code; remove
+// the `test.fixme(...)` line for a route once its linked issue is fixed and the
+// scan passes.
+const KNOWN_A11Y_GAPS: { route: string; rules: string; issues: string }[] = [
+  { route: '/glossary',      rules: 'select-name',                       issues: '#867' },
+  { route: '/value-streams', rules: 'select-name',                       issues: '#867' },
+  { route: '/settings',      rules: 'select-name, label, color-contrast', issues: '#867, #871, #862' },
+  { route: '/taxonomy',      rules: 'color-contrast',                    issues: '#862' },
+]
 
 async function runAxe(page: import('@playwright/test').Page, route: string) {
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze()
@@ -70,4 +86,47 @@ test.describe('accessibility — authenticated routes', () => {
       await runAxe(page, route)
     })
   }
+
+  // Quarantined surfaces (#874). These run the same scan but are marked fixme so
+  // a known failure doesn't block CI; the annotation records the rule + issue.
+  for (const gap of KNOWN_A11Y_GAPS) {
+    test(`${gap.route} has no serious/critical WCAG violations`, async ({ page }) => {
+      test.fixme(true, `Known a11y gap (${gap.rules}) — tracked in ${gap.issues}. Remove this line when fixed.`)
+      await page.goto(gap.route)
+      await page.waitForLoadState('networkidle')
+      await runAxe(page, gap.route)
+    })
+  }
+})
+
+// #874 — DOM states that never appear in a static page load: an open modal
+// dialog and an open edit form. axe only checks what is rendered, so these
+// surfaces (and the controls inside them) are invisible to the route scans.
+test.describe('accessibility — interactive states', () => {
+  test.use({ storageState: 'tests/e2e/.auth/admin.json' })
+
+  test('glossary "New term" dialog has no serious/critical WCAG violations', async ({ page }) => {
+    // #874 — known gap: color-contrast in the dialog (#862). Remove when fixed.
+    test.fixme(true, 'Known a11y gap (color-contrast) in the dialog — tracked in #862. Remove when fixed.')
+    await page.goto('/glossary')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: '+ New Glossary Term' }).click()
+    await page.getByRole('dialog').waitFor({ state: 'visible' })
+    await runAxe(page, '/glossary [new-term dialog]')
+  })
+
+  test('value-stream edit form has no serious/critical WCAG violations', async ({ page }) => {
+    // #874 — known gap: label + select-name on the edit form (#867, #871). Remove when fixed.
+    test.fixme(true, 'Known a11y gaps (label, select-name) — tracked in #867, #871. Remove when fixed.')
+    await page.goto('/value-streams')
+    await page.waitForLoadState('networkidle')
+    // Open the first value stream's detail, then its edit form (stage manager,
+    // status/visibility selects, relationship panels live here).
+    await page.locator('a[href^="/value-streams/"]').first().click()
+    await page.waitForURL(/\/value-streams\/[^/]+$/)
+    await page.getByRole('link', { name: 'Edit value stream' }).click()
+    await page.waitForURL(/\/value-streams\/[^/]+\/edit$/)
+    await page.waitForLoadState('networkidle')
+    await runAxe(page, '/value-streams/[id]/edit')
+  })
 })
