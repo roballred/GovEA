@@ -378,7 +378,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
           </p>
           <form action={handleWire} className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="wire-entity-type">Entity type <span className="text-destructive">*</span></Label>
+              <Label htmlFor="wire-entity-type">Entity type <span aria-hidden="true" className="text-destructive">*</span></Label>
               <select
                 id="wire-entity-type"
                 name="entityType"
@@ -467,7 +467,7 @@ function TermFields({
   return (
     <>
       <div className="space-y-1.5">
-        <Label htmlFor="term-name">Name <span className="text-destructive">*</span></Label>
+        <Label htmlFor="term-name">Name <span aria-hidden="true" className="text-destructive">*</span></Label>
         <Input
           id="term-name"
           name="name"
