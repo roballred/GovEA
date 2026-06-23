@@ -220,7 +220,7 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
                   <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b bg-muted/20">
                     <span className="text-xs text-muted-foreground shrink-0">Used on:</span>
                     {typeDefs.length === 0 && (
-                      <span className="text-xs text-muted-foreground/50 italic">not wired to any entity type</span>
+                      <span className="text-xs text-muted-foreground italic">not wired to any entity type</span>
                     )}
                     {typeDefs.map(def => {
                       const label = ENTITY_TYPES.find(e => e.value === def.entityType)?.label ?? def.entityType
@@ -230,8 +230,8 @@ export function TaxonomyTable({ types, values, role, principleTypeUsage, definit
                           className="inline-flex items-center gap-1 rounded-full bg-violet-100 text-violet-700 border border-violet-200 px-2 py-0.5 text-xs font-medium"
                         >
                           {label}
-                          {def.selectionMode === 'multi' && <span className="opacity-60">(multi)</span>}
-                          {def.required && <span className="opacity-60">*</span>}
+                          {def.selectionMode === 'multi' && <span className="font-normal">(multi)</span>}
+                          {def.required && <span aria-hidden="true">*</span>}
                           {canDelete && (
                             <button
                               type="button"

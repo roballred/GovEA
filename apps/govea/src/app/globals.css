@@ -20,7 +20,10 @@
     --secondary-foreground: 222 47% 11%;
 
     --muted: 214 32% 95%;
-    --muted-foreground: 215 16% 47%;
+    /* #862 — darkened from 47% to 40% L so muted text clears 4.5:1 on the
+       tinted bg-muted/* cards (settings, taxonomy, dialogs). Darkening only
+       raises contrast, so no other surface regresses. */
+    --muted-foreground: 215 16% 40%;
 
     --accent: 214 32% 95%;
     --accent-foreground: 222 47% 11%;

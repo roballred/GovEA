@@ -27,6 +27,8 @@ const AUTHED_ROUTES = [
   // ones that currently pass the serious/critical gate live here; surfaces with
   // known violations are quarantined in KNOWN_A11Y_GAPS below.
   '/data',
+  // #862 — contrast fixed; /taxonomy now passes the gate.
+  '/taxonomy',
 ] as const
 
 // #874 — authoring surfaces with KNOWN serious/critical violations, captured by
@@ -35,10 +37,10 @@ const AUTHED_ROUTES = [
 // the `test.fixme(...)` line for a route once its linked issue is fixed and the
 // scan passes.
 const KNOWN_A11Y_GAPS: { route: string; rules: string; issues: string }[] = [
-  { route: '/glossary',      rules: 'select-name',                       issues: '#867' },
-  { route: '/value-streams', rules: 'select-name',                       issues: '#867' },
-  { route: '/settings',      rules: 'select-name, label, color-contrast', issues: '#867, #871, #862' },
-  { route: '/taxonomy',      rules: 'color-contrast',                    issues: '#862' },
+  { route: '/glossary',      rules: 'select-name',         issues: '#867' },
+  { route: '/value-streams', rules: 'select-name',         issues: '#867' },
+  // #862 contrast fixed here; the remaining gaps are unlabeled selects/forms.
+  { route: '/settings',      rules: 'select-name, label',  issues: '#867, #871' },
 ]
 
 async function runAxe(page: import('@playwright/test').Page, route: string) {
@@ -106,8 +108,7 @@ test.describe('accessibility — interactive states', () => {
   test.use({ storageState: 'tests/e2e/.auth/admin.json' })
 
   test('glossary "New term" dialog has no serious/critical WCAG violations', async ({ page }) => {
-    // #874 — known gap: color-contrast in the dialog (#862). Remove when fixed.
-    test.fixme(true, 'Known a11y gap (color-contrast) in the dialog — tracked in #862. Remove when fixed.')
+    // #862 — the dialog's color-contrast gap is fixed; this scan now gates.
     await page.goto('/glossary')
     await page.waitForLoadState('networkidle')
     await page.getByRole('button', { name: '+ New Glossary Term' }).click()

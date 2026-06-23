@@ -79,7 +79,9 @@ export function ConfidenceSettingsForm({ initial }: ConfidenceSettingsFormProps)
       {/* Public visibility toggle — gated on authenticated being on */}
       <div className={cn(
         'flex items-center justify-between rounded-lg border bg-card px-4 py-3',
-        !authenticatedVisibility && 'opacity-60',
+        // #862 — convey "inactive" with a dashed border instead of opacity;
+        // opacity dimming pushed the muted sub-text below 4.5:1 contrast.
+        !authenticatedVisibility && 'border-dashed',
       )}>
         <div>
           <p className="text-sm font-medium">Also show to unauthenticated viewers</p>
