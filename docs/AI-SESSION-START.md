@@ -78,6 +78,36 @@ pnpm --filter govea db:seed           # repopulate fixtures
 
 Local Postgres runs in a container (`docker_db_1` on the maintainer machine, or `govea-postgres` in the canonical setup). Connection string in `apps/govea/.env.local`.
 
+### Container must bind to localhost only
+
+Publish the port as `127.0.0.1:5432`, **not** `0.0.0.0:5432`. The dev DB uses default credentials (`postgres` / `postgres`) and `trust` auth for local connections, so a `0.0.0.0` bind exposes a passwordless-locally / weak-password database to every machine on the LAN. Podman defaults the publish to all interfaces, so the loopback bind must be explicit and is easy to lose on a container recreate.
+
+The binding lives on the **container**, not the machine &mdash; so any time `docker_db_1` is recreated (e.g. during corruption recovery below), the `run` command must re-specify it:
+
+```bash
+podman run -d --name docker_db_1 \
+  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=govea \
+  -p 127.0.0.1:5432:5432 \
+  -v docker_postgres_data:/var/lib/postgresql/data \
+  docker.io/library/postgres:16-alpine
+```
+
+Verify it stayed loopback-only: `podman ps --format '{{.Ports}}'` should show `127.0.0.1:5432->5432/tcp`, and `nc -z <LAN-IP> 5432` should be refused.
+
+### Recovering a wedged Podman VM (recurring)
+
+Symptom: `podman` commands fail with `ssh: handshake failed: EOF` even though `podman machine list` says **Currently running**, and/or DB commands hit `connection refused`. The applehv VM has degraded and an orphaned `gvproxy` is squatting on host port 5432. Recovery that has worked repeatedly:
+
+```bash
+podman machine stop && podman machine start          # restore SSH/API
+lsof -nP -iTCP:5432 -sTCP:LISTEN                      # find the orphaned gvproxy PID
+kill <gvproxy-pid>                                    # free :5432 (survives the bounce)
+podman start docker_db_1                              # re-registers the loopback forward
+podman exec docker_db_1 pg_isready -U postgres        # expect "accepting connections"
+```
+
+If the data volume itself is corrupt (Postgres logs `relmapper` / `FATAL` on start), the data is regenerable: `podman rm -f docker_db_1 && podman volume rm docker_postgres_data`, recreate with the `run` command above (note the `127.0.0.1` bind), then `db:push --force` → `db:apply-triggers` → `db:seed`. If this VM keeps degrading, consider `podman machine reset` rather than recovering by hand each session.
+
 **Switch to migrations when** the first real tenant or persistent data exists that can't be thrown away. At that point CI flips from `db:push --force` to `db:migrate`. CLAUDE.md tracks the switch checklist.
 
 ---
