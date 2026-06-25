@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
   // It ships TypeScript source, no built dist/. transpilePackages tells the
   // Next.js build to compile workspace packages on the fly so consumers do
   // not need a separate `pnpm --filter @govea/core build` step.
-  transpilePackages: ['@govea/core'],
+  transpilePackages: ['@govea/core', '@govcore/rbac'],
   experimental: {
     serverActions: {
       allowedOrigins,
