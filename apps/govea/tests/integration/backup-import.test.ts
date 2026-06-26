@@ -19,7 +19,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@/db/client'
 import {
-  organizations, personas, capabilities,
+  organizationSettings, personas, capabilities,
   strategies, strategyGoals, strategyCapabilities,
   crossOrgLinks, auditLog,
 } from '@/db/schema'
@@ -249,8 +249,8 @@ describe('audit log', () => {
 describe('recordImport', () => {
   it('updates lastImportAt + lastImportBytes', async () => {
     await recordImport(orgA.id, 67890)
-    const row = await db.query.organizations.findFirst({
-      where: eq(organizations.id, orgA.id),
+    const row = await db.query.organizationSettings.findFirst({
+      where: eq(organizationSettings.organizationId, orgA.id),
       columns: { lastImportAt: true, lastImportBytes: true },
     })
     expect(row?.lastImportBytes).toBe(67890)

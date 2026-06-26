@@ -49,6 +49,7 @@ import {
   auditLog,
   instanceSettings,
   organizations,
+  organizationSettings,
   users as usersTable,
 } from '@/db/schema'
 import { eq, and, isNull, or } from 'drizzle-orm'
@@ -59,7 +60,7 @@ import {
   createTestUser,
   cleanupOrg,
   makeSession,
-  findOrg,
+  findOrgSettings,
   findUser,
   type TestUser,
 } from './helpers/db'
@@ -245,16 +246,20 @@ describe('grantBreakGlass — multiple concurrent grants', () => {
 
 describe('suspendOrg — edge cases', () => {
   it('refuses to suspend the system org', async () => {
-    // Create a system org directly — createTestOrg does not support isSystemOrg
+    // Create a system org directly — createTestOrg does not support isSystemOrg.
+    // isSystemOrg lives in the settings sidecar now, so create both rows.
     const [sysOrg] = await db
       .insert(organizations)
       .values({
         id: randomUUID(),
         name: 'Hardening Test System Org',
         slug: `sys-org-${randomUUID().slice(0, 8)}`,
-        isSystemOrg: true,
       })
       .returning()
+    await db.insert(organizationSettings).values({
+      organizationId: sysOrg.id,
+      isSystemOrg: true,
+    })
 
     try {
       asAdmin(adminA)
@@ -280,15 +285,15 @@ describe('suspendOrg — edge cases', () => {
     await suspendOrg(targetOrgId, 'Isolation test')
 
     // bystander org must remain untouched
-    const bystander = await findOrg(bystander0rgId)
+    const bystander = await findOrgSettings(bystander0rgId)
     expect(bystander!.suspendedAt).toBeNull()
     expect(bystander!.suspendedReason).toBeNull()
 
     // Clean up
     await db
-      .update(organizations)
+      .update(organizationSettings)
       .set({ suspendedAt: null, suspendedReason: null, updatedAt: new Date() })
-      .where(eq(organizations.id, targetOrgId))
+      .where(eq(organizationSettings.organizationId, targetOrgId))
   })
 })
 
@@ -374,7 +379,7 @@ describe('updateOrgGovernance', () => {
       internalNotes: 'Hardening test notes',
     })
 
-    const org = await findOrg(targetOrgId)
+    const org = await findOrgSettings(targetOrgId)
     expect(org!.supportTier).toBe('premium')
     expect(org!.internalNotes).toBe('Hardening test notes')
   })
@@ -421,7 +426,7 @@ describe('updateOrgGovernance', () => {
       internalNotes: '  trimmed notes  ',
     })
 
-    const org = await findOrg(targetOrgId)
+    const org = await findOrgSettings(targetOrgId)
     expect(org!.supportTier).toBe('community')
     expect(org!.internalNotes).toBe('trimmed notes')
   })
@@ -433,7 +438,7 @@ describe('updateOrgGovernance', () => {
       internalNotes: '   ',
     })
 
-    const org = await findOrg(targetOrgId)
+    const org = await findOrgSettings(targetOrgId)
     expect(org!.supportTier).toBeNull()
     expect(org!.internalNotes).toBeNull()
   })

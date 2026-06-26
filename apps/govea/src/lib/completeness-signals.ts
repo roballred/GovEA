@@ -21,7 +21,7 @@ import {
   capabilities, applications, personas, valueStreams,
   strategicObjectives, principles, glossaryTerms, initiatives, adrs,
   applicationCapabilities, capabilityPersonas,
-  organizations,
+  organizationSettings,
   architectureDebtItems,
   DEFAULT_COMPLETENESS_SETTINGS,
   type CompletenessSettings,
@@ -66,8 +66,8 @@ export interface DomainRag {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function loadSettings(orgId: string): Promise<CompletenessSettings> {
-  const row = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const row = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
     columns: { completenessSettings: true },
   })
   return row?.completenessSettings ?? DEFAULT_COMPLETENESS_SETTINGS

@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { organizations, personas } from '@/db/schema'
+import { organizationSettings, personas } from '@/db/schema'
 import {
   buildRecipeExport,
   buildContentExport,
@@ -159,8 +159,8 @@ describe('exclude discipline', () => {
 describe('recordExport', () => {
   it('updates lastExportAt + lastExportBytes on the org row', async () => {
     await recordExport(orgA.id, 12345)
-    const after = await db.query.organizations.findFirst({
-      where: eq(organizations.id, orgA.id),
+    const after = await db.query.organizationSettings.findFirst({
+      where: eq(organizationSettings.organizationId, orgA.id),
       columns: { lastExportAt: true, lastExportBytes: true },
     })
     expect(after?.lastExportBytes).toBe(12345)

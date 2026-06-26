@@ -1,7 +1,7 @@
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { db } from '@/db/client'
-import { users, organizations, userOrganizationMemberships } from '@/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { users, organizations, organizationSettings, userOrganizationMemberships } from '@/db/schema'
+import { eq, desc, asc } from 'drizzle-orm'
 import { getUnlockedOrgIds } from '@/lib/break-glass'
 import { InstanceUserTable, type MembershipRow } from './instance-user-table'
 
@@ -28,11 +28,12 @@ export default async function InstanceUsersPage() {
       .from(users)
       .leftJoin(organizations, eq(users.organizationId, organizations.id))
       .orderBy(desc(users.createdAt)),
-    db.query.organizations.findMany({
-      where: eq(organizations.isSystemOrg, false),
-      columns: { id: true, name: true },
-      orderBy: (org, { asc }) => [asc(org.name)],
-    }),
+    db
+      .select({ id: organizations.id, name: organizations.name })
+      .from(organizations)
+      .innerJoin(organizationSettings, eq(organizationSettings.organizationId, organizations.id))
+      .where(eq(organizationSettings.isSystemOrg, false))
+      .orderBy(asc(organizations.name)),
     // #693 slice 4 — per-user org memberships for the cross-org management UI.
     db
       .select({

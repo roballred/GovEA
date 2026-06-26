@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { db } from '@/db/client'
-import { organizations } from '@/db/schema'
+import { organizationSettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { importArchiveFromForm } from '@/actions/backup'
 import { Button } from '@/components/ui/button'
@@ -47,12 +47,12 @@ export default async function BackupSettingsPage({
   const params = await searchParams
   const showImportSuccess = params?.imported === '1'
 
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, session.user.organizationId),
+  const settings = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, session.user.organizationId),
   })
 
-  const lastExportStr = formatLastExport(org?.lastExportAt ?? null, org?.lastExportBytes ?? null)
-  const lastImportStr = formatLastExport(org?.lastImportAt ?? null, org?.lastImportBytes ?? null)
+  const lastExportStr = formatLastExport(settings?.lastExportAt ?? null, settings?.lastExportBytes ?? null)
+  const lastImportStr = formatLastExport(settings?.lastImportAt ?? null, settings?.lastImportBytes ?? null)
 
   return (
     <div className="max-w-3xl space-y-8">

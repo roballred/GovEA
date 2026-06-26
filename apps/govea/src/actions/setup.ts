@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { users, organizations } from '@/db/schema'
+import { users, organizations, organizationSettings } from '@/db/schema'
 import { count } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
@@ -36,6 +36,8 @@ export async function runSetup(formData: FormData) {
       name: orgName,
       slug: orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
     }).returning()
+
+    await tx.insert(organizationSettings).values({ organizationId: org.id })
 
     const [user] = await tx.insert(users).values({
       name,

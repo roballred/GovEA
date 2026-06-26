@@ -31,7 +31,7 @@ import {
 } from './scale-fixtures'
 import { db } from '../client'
 import {
-  users, organizations, userOrganizationMemberships,
+  users, organizations, organizationSettings, userOrganizationMemberships,
   personas, personaTags, capabilities, applications,
   capabilityPersonas, applicationCapabilities, capabilityRelationships,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
@@ -64,14 +64,28 @@ function toSlug(name: string): string {
 async function findOrCreateOrg(slug: string, name: string, overrides?: { isSystemOrg?: boolean }) {
   const existing = await db.query.organizations.findFirst({
     where: (t, { eq: e }) => e(t.slug, slug),
+    with: { settings: true },
   })
   if (existing) {
-    if (overrides?.isSystemOrg && !existing.isSystemOrg) {
-      await db.update(organizations).set({ isSystemOrg: true }).where(eq(organizations.id, existing.id))
+    // Ensure a settings sidecar row exists (idempotent re-seed) and honor the
+    // isSystemOrg override.
+    if (!existing.settings) {
+      await db.insert(organizationSettings).values({
+        organizationId: existing.id,
+        isSystemOrg: overrides?.isSystemOrg ?? false,
+      })
+    } else if (overrides?.isSystemOrg && !existing.settings.isSystemOrg) {
+      await db.update(organizationSettings)
+        .set({ isSystemOrg: true })
+        .where(eq(organizationSettings.organizationId, existing.id))
     }
     return existing.id
   }
-  const [org] = await db.insert(organizations).values({ name, slug, isSystemOrg: overrides?.isSystemOrg ?? false }).returning()
+  const [org] = await db.insert(organizations).values({ name, slug }).returning()
+  await db.insert(organizationSettings).values({
+    organizationId: org.id,
+    isSystemOrg: overrides?.isSystemOrg ?? false,
+  })
   return org.id
 }
 

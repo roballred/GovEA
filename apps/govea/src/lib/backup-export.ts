@@ -37,7 +37,7 @@ import { db } from '@/db/client'
 // and never directly — so they're intentionally absent from this import
 // block. Only tables we filter or eq-compare against go in.
 import {
-  organizations,
+  organizations, organizationSettings,
   personas, capabilities, applications, services,
   valueStreams,
   strategicObjectives,
@@ -95,7 +95,7 @@ async function collectRecipe(orgId: string) {
     entityTaxDefs,
     fieldSchemas,
   ] = await Promise.all([
-    db.query.organizations.findFirst({ where: eq(organizations.id, orgId) }),
+    db.query.organizations.findFirst({ where: eq(organizations.id, orgId), with: { settings: true } }),
     db.query.taxonomyTerms.findMany({ where: eq(taxonomyTerms.organizationId, orgId) }),
     db.query.entityTaxonomyDefinitions.findMany({ where: eq(entityTaxonomyDefinitions.organizationId, orgId) }),
     db.query.customFieldSchemas.findMany({ where: eq(customFieldSchemas.organizationId, orgId) }),
@@ -105,18 +105,19 @@ async function collectRecipe(orgId: string) {
 
   // Strip volatile / sensitive bits from the org row itself before
   // including it in the export.
+  const settings = org.settings
   const orgSettings = {
     id: org.id,
     name: org.name,
     slug: org.slug,
-    theme: org.theme,
-    enabledModules: org.enabledModules,
-    confidenceSettings: org.confidenceSettings,
-    completenessSettings: org.completenessSettings,
+    theme: settings?.theme,
+    enabledModules: settings?.enabledModules,
+    confidenceSettings: settings?.confidenceSettings,
+    completenessSettings: settings?.completenessSettings,
     // securitySettings includes session lifetimes, password policy, etc. —
     // configuration, not credentials, so it IS included in the recipe.
-    securitySettings: org.securitySettings,
-    supportTier: org.supportTier,
+    securitySettings: settings?.securitySettings,
+    supportTier: settings?.supportTier,
   }
 
   return {
@@ -349,14 +350,14 @@ export async function buildArchiveExport(orgId: string): Promise<BuiltExport> {
 }
 
 /**
- * Updates `organizations.lastExportAt` / `lastExportBytes` after a successful
- * export. Called from the route handlers; kept here so the export-time
- * bookkeeping lives next to the exporters themselves.
+ * Updates `lastExportAt` / `lastExportBytes` on the org's settings after a
+ * successful export. Called from the route handlers; kept here so the
+ * export-time bookkeeping lives next to the exporters themselves.
  */
 export async function recordExport(orgId: string, bytes: number): Promise<void> {
   await db
-    .update(organizations)
+    .update(organizationSettings)
     .set({ lastExportAt: new Date(), lastExportBytes: bytes })
-    .where(eq(organizations.id, orgId))
+    .where(eq(organizationSettings.organizationId, orgId))
 }
 

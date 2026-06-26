@@ -16,7 +16,7 @@ import { randomUUID } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db/client'
 import {
-  organizations,
+  organizationSettings,
   DEFAULT_COMPLETENESS_SETTINGS,
 } from '@/db/schema'
 import { getConfidenceSummary, isVisibleToAudience } from '@/lib/confidence'
@@ -90,7 +90,7 @@ describe('isVisibleToAudience', () => {
 
 describe('getConfidenceSummary audience parameter', () => {
   it('returns shouldShow=false when public visibility is off', async () => {
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({
         confidenceSettings: {
           enabled: true,
@@ -100,7 +100,7 @@ describe('getConfidenceSummary audience parameter', () => {
           publicVisibility: false,
         },
       })
-      .where(eq(organizations.id, org.id))
+      .where(eq(organizationSettings.organizationId, org.id))
 
     const auth = await getConfidenceSummary(org.id, 'authenticated')
     const pub = await getConfidenceSummary(org.id, 'public')
@@ -109,7 +109,7 @@ describe('getConfidenceSummary audience parameter', () => {
   })
 
   it('returns shouldShow=true for public when both flags are on', async () => {
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({
         confidenceSettings: {
           enabled: true,
@@ -119,14 +119,14 @@ describe('getConfidenceSummary audience parameter', () => {
           publicVisibility: true,
         },
       })
-      .where(eq(organizations.id, org.id))
+      .where(eq(organizationSettings.organizationId, org.id))
 
     const pub = await getConfidenceSummary(org.id, 'public')
     expect(pub.shouldShow).toBe(true)
   })
 
   it('legacy enabled=true row remains visible to authenticated callers', async () => {
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({
         confidenceSettings: {
           enabled: true,
@@ -135,7 +135,7 @@ describe('getConfidenceSummary audience parameter', () => {
           // No authenticatedVisibility / publicVisibility — legacy row shape
         },
       })
-      .where(eq(organizations.id, org.id))
+      .where(eq(organizationSettings.organizationId, org.id))
 
     const auth = await getConfidenceSummary(org.id, 'authenticated')
     expect(auth.shouldShow).toBe(true)
@@ -145,7 +145,7 @@ describe('getConfidenceSummary audience parameter', () => {
   })
 
   it('default audience is authenticated', async () => {
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({
         confidenceSettings: {
           enabled: true,
@@ -155,7 +155,7 @@ describe('getConfidenceSummary audience parameter', () => {
           publicVisibility: false,
         },
       })
-      .where(eq(organizations.id, org.id))
+      .where(eq(organizationSettings.organizationId, org.id))
 
     const defaultCall = await getConfidenceSummary(org.id)
     const explicitAuth = await getConfidenceSummary(org.id, 'authenticated')

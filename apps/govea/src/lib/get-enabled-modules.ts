@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/db/client'
-import { organizations } from '@/db/schema'
+import { organizationSettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { mergeModuleSettings, MODULE_DEFS, type ModuleStateMap } from '@/lib/modules'
 
@@ -42,8 +42,8 @@ export async function getCurrentModuleSettings(): Promise<{
   }
 
   const [org, global] = await Promise.all([
-    db.query.organizations.findFirst({
-      where: eq(organizations.id, session.user.organizationId),
+    db.query.organizationSettings.findFirst({
+      where: eq(organizationSettings.organizationId, session.user.organizationId),
       columns: { enabledModules: true },
     }),
     getInstanceDisabledModules(),

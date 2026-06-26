@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations, users, userOrganizationMemberships, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
+import { organizations, organizationSettings, users, userOrganizationMemberships, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
 import { eq, and, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
@@ -59,8 +59,12 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
   const orgId = await db.transaction(async (tx) => {
     const [org] = await tx
       .insert(organizations)
-      .values({ name, slug, theme, supportTier })
+      .values({ name, slug })
       .returning()
+
+    await tx
+      .insert(organizationSettings)
+      .values({ organizationId: org.id, theme, supportTier })
 
     await writeAuditLog(tx, {
       action: 'instance.org.create',
@@ -249,14 +253,16 @@ export async function getPendingBreakGlassApprovals() {
 export async function suspendOrg(orgId: string, reason: string) {
   const session = await requireInstanceAdmin()
 
-  const before = await db.query.organizations.findFirst({ where: eq(organizations.id, orgId) })
+  const before = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
+  })
   if (!before) throw new Error('Organisation not found')
   if (before.isSystemOrg) throw new Error('Cannot suspend the system org')
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ suspendedAt: new Date(), suspendedReason: reason, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'instance.org.suspend',
@@ -278,9 +284,9 @@ export async function unsuspendOrg(orgId: string) {
   const session = await requireInstanceAdmin()
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ suspendedAt: null, suspendedReason: null, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'instance.org.unsuspend',
@@ -739,16 +745,18 @@ export async function updateOrgGovernance(
 ) {
   const session = await requireInstanceAdmin()
 
-  const before = await db.query.organizations.findFirst({ where: eq(organizations.id, orgId) })
+  const before = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
+  })
   if (!before) throw new Error('Organisation not found')
 
   const supportTier = data.supportTier?.trim() || null
   const internalNotes = data.internalNotes?.trim() || null
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ supportTier, internalNotes, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'instance.org.governance.update',

@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/db/client'
-import { organizations } from '@/db/schema'
+import { organizationSettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { ThemeSelector } from '@/components/theme-selector'
 import { StarterContentSection } from '@/components/starter-content-section'
@@ -35,10 +35,10 @@ export default async function SettingsPage() {
   if (!session?.user) redirect('/login')
   if (!isAdmin(session.user)) redirect('/dashboard')
 
-  const [org, moduleSettings, appCustomFields, emailSettingsUi, emailDeliveries, securitySettings] = await Promise.all([
+  const [settings, moduleSettings, appCustomFields, emailSettingsUi, emailDeliveries, securitySettings] = await Promise.all([
     session.user.organizationId
-      ? db.query.organizations.findFirst({
-          where: eq(organizations.id, session.user.organizationId),
+      ? db.query.organizationSettings.findFirst({
+          where: eq(organizationSettings.organizationId, session.user.organizationId),
         })
       : Promise.resolve(null),
     getCurrentModuleSettings(),
@@ -50,11 +50,11 @@ export default async function SettingsPage() {
     getSecuritySettingsForUi(),
   ])
 
-  const activeTheme = org?.theme ?? 'govea'
+  const activeTheme = settings?.theme ?? 'govea'
   const enabledModules = moduleSettings.orgEnabledModules
   const instanceDisabledModules = moduleSettings.instanceDisabledModules
-  const confidenceSettings = org?.confidenceSettings ?? DEFAULT_CONFIDENCE
-  const completenessSettings = org?.completenessSettings ?? DEFAULT_COMPLETENESS
+  const confidenceSettings = settings?.confidenceSettings ?? DEFAULT_CONFIDENCE
+  const completenessSettings = settings?.completenessSettings ?? DEFAULT_COMPLETENESS
 
   return (
     <div className="space-y-8 max-w-2xl">

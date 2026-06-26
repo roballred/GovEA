@@ -22,7 +22,7 @@ import { db } from '@/db/client'
 import {
   capabilities, applications, personas,
   applicationCapabilities, capabilityPersonas,
-  organizations,
+  organizationSettings,
   DEFAULT_COMPLETENESS_SETTINGS,
 } from '@/db/schema'
 import {
@@ -39,9 +39,9 @@ let org: TestOrg
 
 beforeAll(async () => {
   org = await createTestOrg({ name: 'Signals Org', slug: `sig-${randomUUID().slice(0, 8)}` })
-  await db.update(organizations)
+  await db.update(organizationSettings)
     .set({ completenessSettings: DEFAULT_COMPLETENESS_SETTINGS })
-    .where(eq(organizations.id, org.id))
+    .where(eq(organizationSettings.organizationId, org.id))
 })
 
 afterAll(async () => {
@@ -224,14 +224,14 @@ describe('getMostNeededActions', () => {
 describe('getDomainRagBuckets', () => {
   beforeEach(async () => {
     // Set domain targets: 'cms' = 60, 'ea' = 80, 'finance' has no target
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({
         completenessSettings: {
           ...DEFAULT_COMPLETENESS_SETTINGS,
           domainTargets: { cms: 60, ea: 80 },
         },
       })
-      .where(eq(organizations.id, org.id))
+      .where(eq(organizationSettings.organizationId, org.id))
   })
 
   it('green when published-rate ≥ target', async () => {

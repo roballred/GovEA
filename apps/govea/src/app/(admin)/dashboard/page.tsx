@@ -5,7 +5,7 @@ import {
   personas, capabilities, applications, adrs, initiatives,
   strategicObjectives, valueStreams, principles, glossaryTerms,
   auditLog, users, crossOrgLinks,
-  organizations,
+  organizationSettings,
   DEFAULT_COMPLETENESS_SETTINGS,
 } from '@/db/schema'
 import { and, count, eq, gt, isNotNull, desc, asc, inArray, or } from 'drizzle-orm'
@@ -87,8 +87,8 @@ export default async function DashboardPage() {
     return <ViewerDashboard orgId={orgId} userName={session.user.name ?? null} />
   }
 
-  const orgRow = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const orgRow = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
     columns: { completenessSettings: true },
   })
   const stalenessDays = orgRow?.completenessSettings?.stalenessDays ?? DEFAULT_COMPLETENESS_SETTINGS.stalenessDays
@@ -195,9 +195,9 @@ export default async function DashboardPage() {
     // Last-backup surface (#529 capability rule). Admin-only; contributors
     // and viewers cannot trigger backups so the surface is noise for them.
     isAdminUser ? db.select({
-      lastExportAt: organizations.lastExportAt,
-      lastExportBytes: organizations.lastExportBytes,
-    }).from(organizations).where(eq(organizations.id, orgId)).limit(1).then(rows => rows[0] ?? null) : Promise.resolve(null),
+      lastExportAt: organizationSettings.lastExportAt,
+      lastExportBytes: organizationSettings.lastExportBytes,
+    }).from(organizationSettings).where(eq(organizationSettings.organizationId, orgId)).limit(1).then(rows => rows[0] ?? null) : Promise.resolve(null),
   ])
   const summarySuppressed =
     (confSummary.settings.authenticatedVisibility ?? confSummary.settings.enabled) &&

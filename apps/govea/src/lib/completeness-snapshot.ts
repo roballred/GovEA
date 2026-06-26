@@ -19,6 +19,7 @@ import {
   strategicObjectives, principles, glossaryTerms, initiatives, adrs,
   completenessSnapshots,
   organizations,
+  organizationSettings,
   auditLog,
   type SnapshotCounts,
   type ConfidenceSettings,
@@ -129,8 +130,8 @@ export async function recomputeCompletenessSnapshot(orgId: string): Promise<Reco
       ),
       orderBy: [desc(completenessSnapshots.snapshotDate)],
     }),
-    db.query.organizations.findFirst({
-      where: eq(organizations.id, orgId),
+    db.query.organizationSettings.findFirst({
+      where: eq(organizationSettings.organizationId, orgId),
       columns: { confidenceSettings: true },
     }),
   ])
