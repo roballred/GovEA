@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { db } from '@/db/client'
-import { organizations, users, auditLog, breakGlassSessions } from '@/db/schema'
+import { organizations, organizationSettings, users, auditLog, breakGlassSessions } from '@/db/schema'
 import { count, eq, desc, isNull, isNotNull, gt, and, or, ilike } from 'drizzle-orm'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +18,10 @@ export default async function InstanceDashboardPage() {
     pendingSessions,
     recentEvents,
   ] = await Promise.all([
-    db.select({ orgCount: count() }).from(organizations).where(eq(organizations.isSystemOrg, false)),
+    db.select({ orgCount: count() })
+      .from(organizations)
+      .innerJoin(organizationSettings, eq(organizationSettings.organizationId, organizations.id))
+      .where(eq(organizationSettings.isSystemOrg, false)),
     db.select({ userCount: count() }).from(users),
     // Active = non-revoked, non-expired, AND (no approval needed OR already approved).
     // Pending sessions are counted separately below.

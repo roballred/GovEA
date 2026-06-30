@@ -1,0 +1,34 @@
+name: Set up GovCore link
+description: >-
+  Clones the public GovCore platform repo into the sibling path that GovEA's
+  `link:../../../GovCore/...` dependencies resolve to, so `pnpm install` can
+  resolve the locally-linked `@govcore/*` packages in CI. Must run after
+  checkout and before `pnpm install`.
+
+  During the local-link phase of the GovCore cutover GovEA consumes the
+  platform packages from source via the `link:` protocol rather than npm; CI
+  has no sibling checkout, so we provision one here. GovCore is public, so no
+  token is needed. Tracks GovCore `main` (the packages are unpublished `0.x`);
+  this whole step goes away once GovEA pins published `@govcore/*` versions.
+
+inputs:
+  ref:
+    description: GovCore git ref to clone.
+    required: false
+    default: main
+
+runs:
+  using: composite
+  steps:
+    - name: Clone GovCore into the link target
+      shell: bash
+      run: |
+        set -euo pipefail
+        # apps/govea's `link:../../../GovCore` resolves to a sibling of the
+        # GovEA checkout (i.e. $GITHUB_WORKSPACE/../GovCore).
+        target="${{ github.workspace }}/../GovCore"
+        if [ ! -d "$target/.git" ]; then
+          git clone --depth 1 --branch "${{ inputs.ref }}" \
+            https://github.com/roballred/GovCore.git "$target"
+        fi
+        echo "GovCore linked at $(cd "$target" && pwd) @ $(cd "$target" && git rev-parse --short HEAD)"

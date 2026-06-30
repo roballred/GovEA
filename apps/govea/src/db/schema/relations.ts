@@ -4,6 +4,7 @@ import { applications, applicationCapabilities } from './applications'
 import { personas, personaTags } from './personas'
 import { taxonomyTerms, entityTaxonomyDefinitions, entityTaxonomyValues } from './taxonomy'
 import { organizations } from './organizations'
+import { organizationSettings } from './organization-settings'
 import { valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas, valueStreamCapabilities } from './value-streams'
 import { strategicObjectives, objectiveCapabilities, objectiveValueStreams } from './objectives'
 import { goals, goalObjectives } from './goals'
@@ -14,6 +15,22 @@ import { adrs, adrCapabilities, adrApplications, adrInitiatives, adrObjectives }
 import { principles, principleAdrs, principleCapabilities } from './principles'
 import { glossaryTerms, glossaryTermSources } from './glossary'
 import { services, serviceCapabilities, servicePersonas, serviceValueStreams } from './services'
+
+// ─── Organizations ───────────────────────────────────────────────────────────
+
+export const organizationsRelations = relations(organizations, ({ one }) => ({
+  settings: one(organizationSettings, {
+    fields: [organizations.id],
+    references: [organizationSettings.organizationId],
+  }),
+}))
+
+export const organizationSettingsRelations = relations(organizationSettings, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationSettings.organizationId],
+    references: [organizations.id],
+  }),
+}))
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
 

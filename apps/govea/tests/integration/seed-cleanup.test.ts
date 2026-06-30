@@ -52,8 +52,6 @@ describe('removeRetiredOrgs', () => {
     const [org] = await db.insert(organizations).values({
       name: 'Retired Test Org',
       slug,
-      theme: 'govea',
-      enabledModules: {},
     }).returning()
 
     // Cascade test: a user row + a capability row that point at the org.
@@ -95,8 +93,6 @@ describe('removeRetiredOrgs', () => {
     await db.insert(organizations).values({
       name: 'Retired Idempotent',
       slug,
-      theme: 'govea',
-      enabledModules: {},
     })
 
     const first = await removeRetiredOrgs([slug])

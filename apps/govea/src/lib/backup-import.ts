@@ -36,7 +36,7 @@
 import { eq, or } from 'drizzle-orm'
 import { db } from '@/db/client'
 import {
-  organizations,
+  organizationSettings,
   personas, capabilities, applications, services,
   valueStreams, valueStreamStages, valueStreamStageCapabilities, valueStreamPersonas, valueStreamCapabilities,
   strategicObjectives, objectiveCapabilities, objectiveValueStreams,
@@ -227,10 +227,10 @@ export async function importArchive(
     await tx.delete(taxonomyTerms).where(eq(taxonomyTerms.organizationId, destOrgId))
     await tx.delete(customFieldSchemas).where(eq(customFieldSchemas.organizationId, destOrgId))
 
-    // 4. Update org row with recipe.organization settings (preserves
-    //    columns we don't restore: name/slug, FKs, suspendedAt, etc).
+    // 4. Update org settings sidecar with recipe.organization settings
+    //    (preserves columns we don't restore: suspendedAt, supportTier, etc).
     const orgSettings = recipe.organization as Record<string, unknown>
-    await tx.update(organizations).set({
+    await tx.update(organizationSettings).set({
       theme: orgSettings.theme as string ?? 'govea',
       enabledModules: orgSettings.enabledModules as Record<string, boolean> ?? {},
       // jsonb columns serialize/deserialize as plain objects.
@@ -238,7 +238,7 @@ export async function importArchive(
       completenessSettings: orgSettings.completenessSettings as never ?? null,
       securitySettings: orgSettings.securitySettings as never ?? null,
       updatedAt: new Date(),
-    }).where(eq(organizations.id, destOrgId))
+    }).where(eq(organizationSettings.organizationId, destOrgId))
 
     // 5. Recipe inserts (config first so taxonomy is available for content).
     if (recipe.customFields.schemas.length) {
@@ -429,13 +429,13 @@ export async function importArchive(
 }
 
 /**
- * Updates `lastImportAt` + `lastImportBytes` on the destination org row.
+ * Updates `lastImportAt` + `lastImportBytes` on the destination org's settings.
  * Mirrors the recordExport bookkeeping shape for symmetry on the dashboard.
  */
 export async function recordImport(orgId: string, bytes: number): Promise<void> {
   await db
-    .update(organizations)
+    .update(organizationSettings)
     .set({ lastImportAt: new Date(), lastImportBytes: bytes })
-    .where(eq(organizations.id, orgId))
+    .where(eq(organizationSettings.organizationId, orgId))
 }
 

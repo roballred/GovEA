@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { SignOutButton } from '@/components/sign-out-button'
 import { db } from '@/db/client'
-import { organizations } from '@/db/schema'
+import { organizationSettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { getTheme, themeToStyleString } from '@/lib/themes'
 import type { Role } from '@/lib/rbac'
@@ -39,14 +39,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let themeStyle = ''
   let enabledModules: Record<string, boolean> = {}
   if (session.user.organizationId) {
-    const [org, moduleSettings] = await Promise.all([
-      db.query.organizations.findFirst({
-        where: eq(organizations.id, session.user.organizationId),
+    const [settings, moduleSettings] = await Promise.all([
+      db.query.organizationSettings.findFirst({
+        where: eq(organizationSettings.organizationId, session.user.organizationId),
       }),
       getCurrentModuleSettings(),
     ])
-    if (org) {
-      const theme = getTheme(org.theme)
+    if (settings) {
+      const theme = getTheme(settings.theme)
       themeStyle = themeToStyleString(theme)
       enabledModules = moduleSettings.effectiveEnabledModules
     }

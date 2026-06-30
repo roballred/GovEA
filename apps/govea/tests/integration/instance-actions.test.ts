@@ -19,12 +19,12 @@ import {
   suspendUserAccount, reactivateUserAccount,
 } from '@/actions/instance'
 import { db } from '@/db/client'
-import { breakGlassSessions, auditLog, instanceSettings, organizations, users, userOrganizationMemberships } from '@/db/schema'
+import { breakGlassSessions, auditLog, instanceSettings, organizationSettings, users, userOrganizationMemberships } from '@/db/schema'
 import { eq, and, isNull, or, desc } from 'drizzle-orm'
 import { getEnabledModules } from '@/lib/get-enabled-modules'
 import { getPlatformAuditEvents } from '@/lib/audit-view'
 import {
-  createTestOrg, createTestUser, cleanupOrg, makeSession, findOrg, findUser,
+  createTestOrg, createTestUser, cleanupOrg, makeSession, findOrgSettings, findUser,
   type TestUser,
 } from './helpers/db'
 
@@ -183,7 +183,7 @@ describe('suspendOrg', () => {
     asInstanceAdmin()
     await suspendOrg(targetOrgId, 'Non-payment')
 
-    const org = await findOrg(targetOrgId)
+    const org = await findOrgSettings(targetOrgId)
     expect(org!.suspendedAt).not.toBeNull()
     expect(org!.suspendedReason).toBe('Non-payment')
   })
@@ -206,7 +206,7 @@ describe('unsuspendOrg', () => {
     asInstanceAdmin()
     await unsuspendOrg(targetOrgId)
 
-    const org = await findOrg(targetOrgId)
+    const org = await findOrgSettings(targetOrgId)
     expect(org!.suspendedAt).toBeNull()
     expect(org!.suspendedReason).toBeNull()
   })
@@ -260,9 +260,9 @@ describe('setInstanceModuleAvailability', () => {
   it('forces the module off for an org even when the org enabled it', async () => {
     asInstanceAdmin()
 
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({ enabledModules: { personas: true }, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await setInstanceModuleAvailability('personas', false)
 

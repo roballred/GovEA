@@ -1,6 +1,6 @@
 import { db } from '@/db/client'
 import {
-  organizations,
+  organizationSettings,
   capabilities, applications, personas, valueStreams,
   strategicObjectives, initiatives, adrs, principles, glossaryTerms,
 } from '@/db/schema'
@@ -59,12 +59,12 @@ export async function getConfidenceSummary(
   orgId: string,
   audience: ConfidenceAudience = 'authenticated',
 ): Promise<ConfidenceSummary> {
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const orgSettings = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
     columns: { confidenceSettings: true },
   })
 
-  const settings: ConfidenceSettings = org?.confidenceSettings ?? DEFAULT_SETTINGS
+  const settings: ConfidenceSettings = orgSettings?.confidenceSettings ?? DEFAULT_SETTINGS
 
   if (!isVisibleToAudience(settings, audience)) {
     return { label: 'getting started', score: 0, lastUpdated: null, shouldShow: false, narrative: null, settings }

@@ -20,6 +20,9 @@ importers:
       '@auth/drizzle-adapter':
         specifier: ^1.4.0
         version: 1.11.1
+      '@govcore/rbac':
+        specifier: link:../../../GovCore/packages/rbac
+        version: link:../../../GovCore/packages/rbac
       '@govea/core':
         specifier: workspace:*
         version: link:../../packages/core

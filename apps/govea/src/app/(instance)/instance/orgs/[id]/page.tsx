@@ -46,7 +46,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
 
   const now = new Date()
   const [org, userCountRow, myActiveSession, pendingFromOthers, bgHistory, govHistory] = await Promise.all([
-    db.query.organizations.findFirst({ where: eq(organizations.id, id) }),
+    db.query.organizations.findFirst({ where: eq(organizations.id, id), with: { settings: true } }),
     // #436 — only the COUNT is metadata. Full user rows are loaded below,
     // and only when the caller has earned the right to see them.
     db.select({ n: count(users.id) }).from(users).where(eq(users.organizationId, id)),
@@ -85,6 +85,16 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
 
   if (!org) notFound()
 
+  // Org config (theme, support tier, suspension, etc.) lives in the settings
+  // sidecar now; read it through the relation.
+  const settings = org.settings
+  const theme = settings?.theme ?? 'govea'
+  const supportTier = settings?.supportTier ?? null
+  const internalNotes = settings?.internalNotes ?? null
+  const isSystemOrg = settings?.isSystemOrg ?? false
+  const suspendedAt = settings?.suspendedAt ?? null
+  const suspendedReason = settings?.suspendedReason ?? null
+
   const userCount = userCountRow[0]?.n ?? 0
 
   // #436 — gate user PII on active+approved break-glass. The caller can also
@@ -99,7 +109,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
       })
     : []
 
-  const tierBadge = org.supportTier ? TIER_BADGE[org.supportTier] : null
+  const tierBadge = supportTier ? TIER_BADGE[supportTier] : null
 
   return (
     <div className="space-y-8">
@@ -127,14 +137,14 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex items-center gap-2 shrink-0">
           <span className={cn(
             'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-            org.suspendedAt
+            suspendedAt
               ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
               : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
           )}>
-            {org.suspendedAt ? 'Suspended' : 'Active'}
+            {suspendedAt ? 'Suspended' : 'Active'}
           </span>
-          {!org.isSystemOrg && (
-            org.suspendedAt ? (
+          {!isSystemOrg && (
+            suspendedAt ? (
               <form action={async () => {
                 'use server'
                 await unsuspendOrg(id)
@@ -160,10 +170,10 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Suspension notice */}
-      {org.suspendedAt && (
+      {suspendedAt && (
         <div className="rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-4 text-sm text-red-800 dark:text-red-300">
-          <strong>Suspended</strong> on {org.suspendedAt.toLocaleString()}
-          {org.suspendedReason && <> — {org.suspendedReason}</>}
+          <strong>Suspended</strong> on {suspendedAt.toLocaleString()}
+          {suspendedReason && <> — {suspendedReason}</>}
         </div>
       )}
 
@@ -172,8 +182,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
         <h2 className="text-base font-semibold mb-3">Details</h2>
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div><dt className="text-muted-foreground">Created</dt><dd className="mt-0.5 font-medium">{org.createdAt.toLocaleDateString()}</dd></div>
-          <div><dt className="text-muted-foreground">Theme</dt><dd className="mt-0.5 font-medium">{org.theme}</dd></div>
-          <div><dt className="text-muted-foreground">System org</dt><dd className="mt-0.5 font-medium">{org.isSystemOrg ? 'Yes' : 'No'}</dd></div>
+          <div><dt className="text-muted-foreground">Theme</dt><dd className="mt-0.5 font-medium">{theme}</dd></div>
+          <div><dt className="text-muted-foreground">System org</dt><dd className="mt-0.5 font-medium">{isSystemOrg ? 'Yes' : 'No'}</dd></div>
           <div><dt className="text-muted-foreground">Users</dt><dd className="mt-0.5 font-medium">{userCount}</dd></div>
         </dl>
       </section>
@@ -189,8 +199,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
 
         <OrgGovernanceForm
           orgId={id}
-          initialTier={org.supportTier}
-          initialNotes={org.internalNotes}
+          initialTier={supportTier}
+          initialNotes={internalNotes}
         />
 
         {govHistory.length > 0 && (
@@ -221,7 +231,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
               Time-limited access to this organisation&apos;s data for incident investigation. Sessions over 1 hour require a second instance admin to approve. All sessions are audited.
             </p>
           </div>
-          {!myActiveSession && !org.isSystemOrg && (
+          {!myActiveSession && !isSystemOrg && (
             <BreakGlassGrantForm
               trigger={<Button variant="outline" size="sm">Grant Access</Button>}
               orgName={org.name}

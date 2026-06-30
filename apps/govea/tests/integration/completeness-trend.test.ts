@@ -16,7 +16,7 @@ import { and, eq, lt } from 'drizzle-orm'
 import { db } from '@/db/client'
 import {
   capabilities, applications,
-  organizations,
+  organizationSettings,
   completenessSnapshots,
   auditLog,
   DEFAULT_COMPLETENESS_SETTINGS,
@@ -54,9 +54,9 @@ function dateNDaysAgo(n: number): Date {
 
 beforeAll(async () => {
   org = await createTestOrg({ name: 'Trend Org', slug: `trend-${randomUUID().slice(0, 8)}` })
-  await db.update(organizations)
+  await db.update(organizationSettings)
     .set({ completenessSettings: DEFAULT_COMPLETENESS_SETTINGS })
-    .where(eq(organizations.id, org.id))
+    .where(eq(organizationSettings.organizationId, org.id))
 })
 
 afterAll(async () => {
@@ -129,9 +129,9 @@ describe('recomputeCompletenessSnapshot — suppression transition audit', () =>
 
   beforeEach(async () => {
     // Set the org to enabled with a 50% suppression threshold for these tests.
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({ confidenceSettings: { enabled: true, narrative: null, suppressBelowPercent: 50, authenticatedVisibility: true, publicVisibility: false } })
-      .where(eq(organizations.id, org.id))
+      .where(eq(organizationSettings.organizationId, org.id))
     // audit_log is append-only at the DB level (#417), so we can't delete
     // between tests — capture the baseline count and assert on the delta.
     baseline = await readTransitionAuditCount()
@@ -250,9 +250,9 @@ describe('recomputeCompletenessSnapshot — suppression transition audit', () =>
   })
 
   it('does NOT write an audit row when authenticated visibility is off', async () => {
-    await db.update(organizations)
+    await db.update(organizationSettings)
       .set({ confidenceSettings: { enabled: false, narrative: null, suppressBelowPercent: 50, authenticatedVisibility: false, publicVisibility: false } })
-      .where(eq(organizations.id, org.id))
+      .where(eq(organizationSettings.organizationId, org.id))
 
     await db.insert(completenessSnapshots).values({
       organizationId: org.id,

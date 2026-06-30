@@ -21,7 +21,7 @@ import {
   capabilities, applications, personas, valueStreams,
   strategicObjectives, principles, glossaryTerms, initiatives, adrs,
   completenessSnapshots,
-  organizations,
+  organizationSettings,
 } from '@/db/schema'
 import {
   recomputeCompletenessSnapshot,
@@ -64,9 +64,9 @@ beforeAll(async () => {
   await seedOrgContent(org.id)
   // Mark the org's confidenceSettings enabled so getConfidenceSummary returns real data
   await db
-    .update(organizations)
+    .update(organizationSettings)
     .set({ confidenceSettings: ENABLED_CONFIDENCE })
-    .where(eq(organizations.id, org.id))
+    .where(eq(organizationSettings.organizationId, org.id))
 })
 
 afterAll(async () => {

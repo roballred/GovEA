@@ -10,7 +10,7 @@
  */
 import { db } from '@/db/client'
 import {
-  organizations, users, capabilities, initiatives, adrs, auditLog,
+  organizations, organizationSettings, users, capabilities, initiatives, adrs, auditLog,
   personas, applications, strategicObjectives, principles, valueStreams, services,
   glossaryTerms, strategies, strategyGoals, goals,
 } from '@/db/schema'
@@ -45,8 +45,12 @@ export async function createTestOrg(
 
   const [org] = await db
     .insert(organizations)
-    .values({ id: randomUUID(), name, slug, theme: 'govea', enabledModules: {} })
+    .values({ id: randomUUID(), name, slug })
     .returning()
+
+  await db
+    .insert(organizationSettings)
+    .values({ organizationId: org.id, theme: 'govea', enabledModules: {} })
 
   return { id: org.id, name: org.name, slug: org.slug }
 }
@@ -116,6 +120,13 @@ export function makeSession(user: TestUser, overrides?: { instanceRole?: 'instan
 export async function findOrg(orgId: string) {
   return db.query.organizations.findFirst({
     where: eq(organizations.id, orgId),
+  })
+}
+
+/** Returns the org's settings sidecar row (theme, modules, policy, etc.). */
+export async function findOrgSettings(orgId: string) {
+  return db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
   })
 }
 

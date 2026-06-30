@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "govea-dev",
-      "runtimeExecutable": "/opt/homebrew/bin/pnpm",
-      "runtimeArgs": ["-C", "/Users/roballred/Repos/Claude/govea-app", "--filter", "govea", "dev"],
+      "name": "govea",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "govea", "dev"],
       "port": 3000,
       "autoPort": false
     }

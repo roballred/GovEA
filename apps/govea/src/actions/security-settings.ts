@@ -15,7 +15,7 @@
  * enforcement).
  */
 import { db } from '@/db/client'
-import { organizations, DEFAULT_SECURITY_SETTINGS } from '@/db/schema'
+import { organizationSettings, DEFAULT_SECURITY_SETTINGS } from '@/db/schema'
 import type { SecuritySettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -36,8 +36,8 @@ export async function getSecuritySettingsForUi(): Promise<SecuritySettings> {
   const session = await auth()
   if (!session?.user) redirect('/login')
   if (!session.user.organizationId) return DEFAULT_SECURITY_SETTINGS
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, session.user.organizationId),
+  const org = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, session.user.organizationId),
     columns: { securitySettings: true },
   })
   return mergeWithDefaults(org?.securitySettings)
@@ -75,9 +75,9 @@ export async function saveSecuritySettings(formData: FormData): Promise<void> {
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ securitySettings: settings, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
     await writeAuditLog(tx, {
       action: 'security_settings.update',
       entityType: 'organization',

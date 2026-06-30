@@ -1,4 +1,5 @@
 export * from './organizations'
+export * from './organization-settings'
 export * from './users'
 export * from './personas'
 export * from './capabilities'

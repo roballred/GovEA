@@ -11,7 +11,7 @@ import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from 'vites
 import { setModuleEnabled, updateOrgTheme } from '@/actions/settings'
 import {
   createTestOrg, createTestUser, cleanupOrg,
-  makeSession, findOrg, getAuditLogs,
+  makeSession, findOrgSettings, getAuditLogs,
   type TestUser,
 } from './helpers/db'
 
@@ -44,14 +44,14 @@ describe('settings / setModuleEnabled', () => {
 
   it('admin can disable a module', async () => {
     await setModuleEnabled('personas', false)
-    const org = await findOrg(orgId)
+    const org = await findOrgSettings(orgId)
     expect(org?.enabledModules?.['personas']).toBe(false)
   })
 
   it('admin can re-enable a disabled module', async () => {
     await setModuleEnabled('personas', false)
     await setModuleEnabled('personas', true)
-    const org = await findOrg(orgId)
+    const org = await findOrgSettings(orgId)
     expect(org?.enabledModules?.['personas']).toBe(true)
   })
 
@@ -60,7 +60,7 @@ describe('settings / setModuleEnabled', () => {
     await setModuleEnabled('personas', false)
     await setModuleEnabled('personas', true)
 
-    const org = await findOrg(orgId)
+    const org = await findOrgSettings(orgId)
     // personas re-enabled, capabilities still off
     expect(org?.enabledModules?.['personas']).toBe(true)
     expect(org?.enabledModules?.['capabilities']).toBe(false)
@@ -90,7 +90,7 @@ describe('settings / setModuleEnabled', () => {
 
   it('records before=true for keys not yet in enabledModules (absent-key semantics)', async () => {
     // glossary should not yet be in the record for a fresh test org
-    const org = await findOrg(orgId)
+    const org = await findOrgSettings(orgId)
     expect(org?.enabledModules?.['glossary']).toBeUndefined()
 
     const _before = await getAuditLogs(orgId, 'settings.module_toggled')
@@ -146,7 +146,7 @@ describe('settings / updateOrgTheme', () => {
     mockAuth.mockResolvedValue(makeSession(admin))
     await updateOrgTheme('servicenow')
 
-    const org = await findOrg(orgId)
+    const org = await findOrgSettings(orgId)
     expect(org?.theme).toBe('servicenow')
   })
 

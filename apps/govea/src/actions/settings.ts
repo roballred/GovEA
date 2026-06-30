@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { organizations, type ConfidenceSettings, type CompletenessSettings, DEFAULT_COMPLETENESS_SETTINGS } from '@/db/schema'
+import { organizationSettings, type ConfidenceSettings, type CompletenessSettings, DEFAULT_COMPLETENESS_SETTINGS } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
@@ -22,14 +22,14 @@ export async function updateOrgTheme(themeId: string) {
   const valid = themes.find(t => t.id === themeId)
   if (!valid) throw new Error('Invalid theme')
 
-  const before = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const before = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
   })
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ theme: themeId, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'settings.theme_changed',
@@ -59,17 +59,17 @@ export async function setModuleEnabled(key: ModuleKey, enabled: boolean) {
 
   const orgId = session.user.organizationId!
 
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const org = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
   })
 
   const before = org?.enabledModules ?? {}
   const after = { ...before, [key]: enabled }
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ enabledModules: after, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'settings.module_toggled',
@@ -94,15 +94,15 @@ export async function setGroupModulesEnabled(group: ModuleGroup, enabled: boolea
   if (keys.length === 0) throw new Error('Unknown group')
 
   const orgId = session.user.organizationId!
-  const org = await db.query.organizations.findFirst({ where: eq(organizations.id, orgId) })
+  const org = await db.query.organizationSettings.findFirst({ where: eq(organizationSettings.organizationId, orgId) })
   const before = org?.enabledModules ?? {}
   const after = { ...before }
   for (const key of keys) after[key] = enabled
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ enabledModules: after, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'settings.group_toggled',
@@ -131,8 +131,8 @@ export async function updateConfidenceSettings(input: ConfidenceSettings) {
 
   const orgId = session.user.organizationId!
 
-  const before = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const before = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
     columns: { confidenceSettings: true },
   })
 
@@ -151,9 +151,9 @@ export async function updateConfidenceSettings(input: ConfidenceSettings) {
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ confidenceSettings: next, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'settings.confidence_updated',
@@ -176,8 +176,8 @@ export async function updateCompletenessSettings(input: Partial<CompletenessSett
 
   const orgId = session.user.organizationId!
 
-  const before = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const before = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
     columns: { completenessSettings: true },
   })
   const current = before?.completenessSettings ?? DEFAULT_COMPLETENESS_SETTINGS
@@ -203,9 +203,9 @@ export async function updateCompletenessSettings(input: Partial<CompletenessSett
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(organizations)
+    await tx.update(organizationSettings)
       .set({ completenessSettings: next, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId))
+      .where(eq(organizationSettings.organizationId, orgId))
 
     await writeAuditLog(tx, {
       action: 'settings.completeness_updated',

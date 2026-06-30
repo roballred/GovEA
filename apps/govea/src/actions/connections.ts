@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { orgConnections, organizations } from '@/db/schema'
+import { orgConnections } from '@/db/schema'
 import { eq, or, and } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
@@ -34,10 +34,14 @@ export async function getOtherOrganizations() {
   const session = await requireAdmin()
   const orgId = session.user.organizationId!
 
-  return db.query.organizations.findMany({
-    where: (o, { and, ne, eq }) => and(ne(o.id, orgId), eq(o.isSystemOrg, false)),
+  const orgs = await db.query.organizations.findMany({
+    where: (o, { ne }) => ne(o.id, orgId),
     orderBy: (o, { asc }) => [asc(o.name)],
+    with: { settings: { columns: { isSystemOrg: true } } },
   })
+  // System orgs live in the settings sidecar now; exclude them (a missing
+  // settings row is treated as a normal tenant).
+  return orgs.filter((o) => !o.settings?.isSystemOrg)
 }
 
 export async function requestConnection(targetOrgId: string) {

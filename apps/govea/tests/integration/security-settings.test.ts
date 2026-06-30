@@ -17,7 +17,7 @@
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { db } from '@/db/client'
 import {
-  organizations, users, auditLog,
+  organizationSettings, users, auditLog,
   DEFAULT_SECURITY_SETTINGS,
 } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -98,7 +98,7 @@ describe('security settings (#527)', () => {
     // Submit a deliberately hostile passwordMinLength of -1; expect clamp to 6.
     const fd = policyFormData({ passwordMinLength: -1, requireDigit: 'on', sessionTimeoutMinutes: 2 })
     await saveSecuritySettings(fd)
-    const org = await db.query.organizations.findFirst({ where: eq(organizations.id, orgId) })
+    const org = await db.query.organizationSettings.findFirst({ where: eq(organizationSettings.organizationId, orgId) })
     expect(org?.securitySettings?.passwordMinLength).toBe(6)
     expect(org?.securitySettings?.requireDigit).toBe(true)
     expect(org?.securitySettings?.sessionTimeoutMinutes).toBe(5) // clamped from 2 → min 5

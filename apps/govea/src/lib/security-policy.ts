@@ -12,17 +12,17 @@
  * controls off.
  */
 import { db } from '@/db/client'
-import { organizations, DEFAULT_SECURITY_SETTINGS } from '@/db/schema'
+import { organizationSettings, DEFAULT_SECURITY_SETTINGS } from '@/db/schema'
 import type { SecuritySettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
 export async function getOrgSecuritySettings(orgId: string | null): Promise<SecuritySettings> {
   if (!orgId) return mergeWithDefaults(undefined)
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, orgId),
+  const settings = await db.query.organizationSettings.findFirst({
+    where: eq(organizationSettings.organizationId, orgId),
     columns: { securitySettings: true },
   })
-  return mergeWithDefaults(org?.securitySettings)
+  return mergeWithDefaults(settings?.securitySettings)
 }
 
 /**
