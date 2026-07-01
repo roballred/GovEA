@@ -1,8 +1,10 @@
 # GovEA Application Architecture
 
-This folder captures the current application architecture for GovEA. It is intended for maintainers, contributors, and reviewers who need to understand how the product is assembled before changing it.
+This folder captures the current application architecture for GovEA. It serves two audiences: architects evaluating GovEA for their organization, and maintainers, contributors, and reviewers who need to understand how the product is assembled before changing it.
 
-These documents are implementation-facing. Product intent, personas, and capability definitions remain in `business-architecture/`; schema detail remains in `docs/data-model.md`.
+**The shape in thirty seconds:** GovEA is a server-rendered Next.js application over PostgreSQL, deployed as a single container. Multi-tenancy is enforced at the application layer — every content record is scoped to an organization, users hold per-organization roles, and cross-organization behavior is explicit and approval-based. Every security-relevant mutation writes to an audit log that a database trigger makes append-only. There is no microservice topology, no message bus, and no client-side data authority; that simplicity is deliberate, chosen so government teams can self-host and reason about the system without a platform team.
+
+These documents are implementation-facing. Product intent, personas, and capability definitions remain in `business-architecture/`; schema detail remains in `docs/data-model.md`. Significant decisions and their tradeoffs are recorded as ADRs under [`docs/decisions/`](../decisions/).
 
 ## Documents
 
