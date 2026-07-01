@@ -13,7 +13,8 @@ Recent product-shape changes reflected here:
 - persona types and persona tags are taxonomy-backed, not separate vocabulary tables
 - `principles.principle_type` is now taxonomy-backed text rather than a fixed enum
 - applications are surfaced for services and strategic objectives through capabilities, not through direct service/objective application joins
-- instance-admin schema and console primitives now exist, including `users.instance_role`, `organizations.is_system_org`, org suspension fields, and `break_glass_sessions`
+- instance-admin schema and console primitives now exist, including `users.instance_role`, `organization_settings.is_system_org`, org suspension fields, and `break_glass_sessions`
+- organization configuration (theme, module flags, security/confidence/completeness settings, support tier, hierarchy, suspension, backup bookkeeping) now lives in the app-owned `organization_settings` sidecar (1:1 with `organizations`), keeping the platform `organizations` table core-shaped for the GovCore cutover — see `docs/design/platform-core-extraction.md`
 
 For product intent, personas, and capability definitions, see `business-architecture/`.
 
@@ -42,6 +43,7 @@ Shared enum semantics:
 
 ```mermaid
 erDiagram
+  ORGANIZATIONS ||--|| ORGANIZATION_SETTINGS : configured_by
   ORGANIZATIONS ||--o{ USERS : has
   ORGANIZATIONS ||--o{ PERSONAS : owns
   ORGANIZATIONS ||--o{ CAPABILITIES : owns
@@ -80,19 +82,43 @@ erDiagram
 
 ### `organizations`
 
-Represents the tenant boundary for almost all business data.
+Represents the tenant boundary for almost all business data. Kept deliberately
+core-shaped (identity + timestamps only) so it maps cleanly onto the GovCore
+platform `organizations` table during the cutover; all GovEA-specific
+configuration lives in the `organization_settings` sidecar below.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `id` | UUID | Yes | Primary key |
 | `name` | text | Yes | Display name |
 | `slug` | text | Yes | Unique tenant slug |
+| `created_at` | timestamp | Yes | Defaults to `now()` |
+| `updated_at` | timestamp | Yes | Defaults to `now()` |
+
+### `organization_settings`
+
+App-owned sidecar holding all organization configuration GovCore's platform
+`organizations` table doesn't model. Exactly one row per organization
+(`organization_id` is both PK and FK), created alongside the org at every insert
+site; reads fall back to the `DEFAULT_*` constants in
+`src/db/schema/organization-settings.ts` when a column is null.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `organization_id` | UUID | Yes | PK **and** FK to `organizations.id`; `CASCADE` on delete |
 | `theme` | text | Yes | Theme id; defaults to `govea` |
 | `enabled_modules` | JSONB | Yes | Feature/module flags; defaults to `{}` |
+| `confidence_settings` | JSONB | No | Confidence-summary publication settings |
+| `completeness_settings` | JSONB | No | Completeness scoring / staleness settings |
+| `security_settings` | JSONB | No | Per-org password/lockout/session policy |
 | `is_system_org` | boolean | Yes | Marks the operator/system organization for instance administration; defaults to `false` |
-| `parent_id` | UUID | No | Self-reference for hierarchy; `SET NULL` on delete |
+| `parent_id` | UUID | No | Self-reference to `organizations.id` for hierarchy; `SET NULL` on delete |
 | `suspended_at` | timestamp | No | Set when an instance admin suspends the organization |
 | `suspended_reason` | text | No | Audit-facing reason for suspension |
+| `support_tier` | text | No | Operator-assigned support tier |
+| `internal_notes` | text | No | Operator-only governance notes |
+| `last_export_at` / `last_export_bytes` | timestamp / int | No | Most-recent backup export bookkeeping |
+| `last_import_at` / `last_import_bytes` | timestamp / int | No | Most-recent archive import bookkeeping |
 | `created_at` | timestamp | Yes | Defaults to `now()` |
 | `updated_at` | timestamp | Yes | Defaults to `now()` |
 
