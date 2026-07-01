@@ -21,8 +21,8 @@ importers:
         specifier: ^1.4.0
         version: 1.11.1
       '@govcore/rbac':
-        specifier: link:../../../GovCore/packages/rbac
-        version: link:../../../GovCore/packages/rbac
+        specifier: ^0.1.0
+        version: 0.1.0
       '@govea/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -954,6 +954,9 @@ packages:
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+
+  '@govcore/rbac@0.1.0':
+    resolution: {integrity: sha512-Ea5IAfaqjPIJSG3wfWqTsnm7lFa2P45lRbPGGhpJRup/RisI8T4BwNZ/RLMjFVsChP+BsEPiClyzdftxnafsaQ==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -4998,6 +5001,8 @@ snapshots:
       react-dom: 19.2.4(react@19.2.4)
 
   '@floating-ui/utils@0.2.11': {}
+
+  '@govcore/rbac@0.1.0': {}
 
   '@humanfs/core@0.19.1': {}
 
