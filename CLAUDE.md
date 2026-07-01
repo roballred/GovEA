@@ -39,6 +39,21 @@ SSO users default to Viewer. Admins promote as needed.
 
 ---
 
+## GovCore Platform Cutover
+
+GovEA is migrating off its bundled `@govea/core` onto the extracted **GovCore** platform (`@govcore/*` packages; GovEA is consumer zero). Design: [`docs/design/platform-core-extraction.md`](./docs/design/platform-core-extraction.md); phased runbook lives in the GovCore repo (`docs/govea-cutover.md`).
+
+**Status:** Phase 0 (RBAC) + Phase 1a (org-settings sidecar) are merged. `lib/rbac.ts` now wraps `createRbac()` from **`@govcore/rbac`**, and GovEA's role/permission vocabulary stays app-local. Next is Phase 1b (re-export `@govcore/schema`, switch to `govcore-migrate` + `drizzle-kit migrate`, retire `db:apply-triggers` — see Database Workflow below).
+
+**Consumption model — `link:` → npm, per package.** Each `@govcore/*` package is adopted in whichever stage it's in:
+- **npm (published):** `"@govcore/<name>": "^0.1.0"` from the registry. `@govcore/rbac` is here now.
+- **`link:` (unpublished):** `link:../../../GovCore/packages/<name>` at a sibling GovCore checkout. This needs the `.github/actions/setup-govcore-link` CI action (clones public GovCore into CI); delete that action once no linked packages remain.
+- **Invariant:** GovCore packages are **source-first** (`main: ./src/index.ts`, no built `dist/`) even on npm, so every consumed `@govcore/*` package MUST be listed in `transpilePackages` in `apps/govea/next.config.ts` — regardless of link vs npm.
+
+**Org config lives in a sidecar.** `organizations` is kept core-shaped (id/name/slug/timestamps) to map onto GovCore's platform table; all GovEA org configuration (theme, module flags, security/confidence/completeness settings, support tier, hierarchy, suspension, backup bookkeeping) is in the app-owned `organization_settings` table (1:1, PK=FK to `organizations`). Every org-insert path must create the settings row.
+
+---
+
 ## Database Workflow
 
 **Pre-production (current):** Use `db:push` to sync schema changes directly to the dev database. CI also uses `db:push --force` on a fresh database (see `.github/workflows/ci.yml` — both DB-backed jobs run `db:push --force` then `db:apply-triggers:container`, **not** `db:migrate`). No migration files needed — run `pnpm --filter govea db:push` after schema edits, then `db:apply-triggers` to install Postgres triggers and other DB-level constraints, then `db:seed` to repopulate.

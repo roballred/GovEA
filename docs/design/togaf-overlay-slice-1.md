@@ -158,7 +158,7 @@ The panel follows the `RelationshipPanel` visual pattern but is simpler — no s
 
 | Dependency | Status |
 |------------|--------|
-| `enabledModules` jsonb on organizations | Exists |
+| `enabled_modules` jsonb on `organization_settings` (sidecar) | Exists |
 | Module toggle UI in settings | Exists |
 | Application + capability data | Exists |
 | Audit trail | Exists (mappings should log add/remove via existing audit action) |

@@ -16,6 +16,17 @@ If anything below conflicts with [Standards.md](../Standards.md), **Standards.md
 
 ---
 
+## Platform cutover in progress (GovCore)
+
+GovEA is mid-migration onto the extracted **GovCore** platform (`@govcore/*`). Read the **GovCore Platform Cutover** section in [`CLAUDE.md`](../CLAUDE.md) before touching platform code (auth, RBAC, schema, audit, tenancy). Operational essentials:
+
+- RBAC already comes from **`@govcore/rbac`** (consumed from npm, `^0.1.0`); Phase 0 + 1a are merged, Phase 1b (`@govcore/schema`) is next.
+- Every consumed `@govcore/*` package must be in `transpilePackages` in `apps/govea/next.config.ts` (they're source-first, even on npm).
+- Org configuration lives in the `organization_settings` sidecar, not on `organizations` (kept core-shaped for the cutover).
+- Design: [`docs/design/platform-core-extraction.md`](./design/platform-core-extraction.md); phased runbook is in the GovCore repo.
+
+---
+
 ## Where current work lives
 
 | Question | Where to look |
