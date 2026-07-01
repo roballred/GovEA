@@ -21,9 +21,6 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Set up GovCore link (local-linked @govcore/*)
-        uses: ./.github/actions/setup-govcore-link
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -44,9 +41,6 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-
-      - name: Set up GovCore link (local-linked @govcore/*)
-        uses: ./.github/actions/setup-govcore-link
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -90,9 +84,6 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Set up GovCore link (local-linked @govcore/*)
-        uses: ./.github/actions/setup-govcore-link
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -133,9 +124,6 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-
-      - name: Set up GovCore link (local-linked @govcore/*)
-        uses: ./.github/actions/setup-govcore-link
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -200,9 +188,6 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-
-      - name: Set up GovCore link (local-linked @govcore/*)
-        uses: ./.github/actions/setup-govcore-link
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
