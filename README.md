@@ -38,9 +38,21 @@ GovEA is designed for public-sector teams that need useful enterprise architectu
 
 Persona definitions live in [business-architecture/personas](./business-architecture/personas/). Persona journey findings live in [docs/persona-journeys](./docs/persona-journeys/).
 
+## Where To Start
+
+Different readers need different doors into this repository:
+
+| If you are… | Start here |
+|---|---|
+| Evaluating GovEA for your agency | [What It Does](#what-it-does) above, then [Capabilities](./capabilities.md) for what is shipped today versus planned |
+| An architect assessing the design | [Architecture at a Glance](#architecture-at-a-glance) below, then the [Architecture Overview](./docs/architect/README.md) |
+| A practitioner asking "is this for people like me?" | [Personas](./business-architecture/personas/) and [persona journeys](./docs/persona-journeys/) |
+| A security reviewer | [Security Policy](./SECURITY.md) and [Security and Tenancy](./docs/architect/security-and-tenancy.md) |
+| A developer who wants to run it | [Quick Start](#quick-start) below |
+
 ## Current Shape
 
-The product is in active development. The shipped surface includes the core EA repository, traceability views, taxonomy, reporting, role-based access, audit, local/container development, and a growing set of import/export and admin capabilities.
+The product is in active development and is pre-1.0: evaluate freely, but treat any deployment as a development build until the [v0.9 Foundation Cleanup milestone](https://github.com/roballred/GovEA/milestone/1) completes. The shipped surface includes the core EA repository, traceability views, taxonomy, reporting, role-based access, audit, local/container development, and a growing set of import/export and admin capabilities.
 
 For detail, use these source-of-truth documents:
 
@@ -55,6 +67,25 @@ For detail, use these source-of-truth documents:
 | Data model | [docs/data-model.md](./docs/data-model.md) |
 | Standards for AI-assisted work | [Standards.md](./Standards.md) |
 
+## Architecture at a Glance
+
+GovEA is deliberately a simple system: one containerized web application in front of one PostgreSQL database. There is no microservice topology, no message bus, and no client-side data authority — that simplicity is a design decision, not an accident.
+
+```mermaid
+flowchart LR
+  Browser["Browser"] --> App["GovEA app container<br/>(Next.js, server-rendered)"]
+  App --> DB["PostgreSQL<br/>(system of record)"]
+  App -.-> IdP["Optional OIDC SSO<br/>(e.g. Microsoft Entra ID)"]
+```
+
+Three facts carry most of the design:
+
+- **Multi-tenant by organization.** Every content record belongs to exactly one organization, users hold per-organization roles, and cross-organization sharing is explicit and approval-based. Details in [Security and Tenancy](./docs/architect/security-and-tenancy.md).
+- **Audit-first.** Security-relevant mutations write to an audit log that is append-only at the database layer — even a compromised admin role cannot rewrite history.
+- **Portable by design.** GovEA runs anywhere containers run — a laptop, an agency data center, or a government cloud. The application carries no cloud-specific assumptions. Details in [Runtime and Deployment](./docs/architect/runtime-and-deployment.md).
+
+The full architecture set lives in [docs/architect](./docs/architect/).
+
 ## Tech Stack
 
 - **App:** Next.js App Router, React, TypeScript
@@ -63,8 +94,6 @@ For detail, use these source-of-truth documents:
 - **UI:** Tailwind CSS and shadcn/ui
 - **Testing:** TypeScript, ESLint, Vitest integration tests, Playwright smoke tests
 - **Deployment:** containerized app plus PostgreSQL
-
-For deeper technical notes, start with [docs/architect](./docs/architect/).
 
 ## Quick Start
 
@@ -152,6 +181,10 @@ Framework support is taxonomy-and-recipe-backed ([ADR-0002: ADM as Classificatio
 GovEA is container-friendly and designed to run against PostgreSQL. Local development can use Docker or Podman. Azure demo deployment helpers are present, but operator-specific Azure account configuration belongs in private operator environments, not this public repository.
 
 See [Runtime and Deployment](./docs/architect/runtime-and-deployment.md) for architecture details and [Release Pipeline Policy](./docs/release-pipeline.md) for deployment privacy guidance.
+
+## Security
+
+Vulnerability reporting, scope, and the coordinated-disclosure policy are in [SECURITY.md](./SECURITY.md). The security architecture — identity, roles, tenant isolation, federation, and audit — is described in [Security and Tenancy](./docs/architect/security-and-tenancy.md).
 
 ## License
 
