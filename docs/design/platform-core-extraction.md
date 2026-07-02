@@ -1,8 +1,8 @@
 # Platform Core Extraction — Reusable Multi-Tenant Foundation
 
 **Initiative:** GovCore — a standalone platform-core initiative (its own repo, backlog, versioning, and release lifecycle), independent of GovEA's roadmap. GovEA is the first consumer, not the owner.
-**Status:** Proposal — core decisions locked; Phase 0–1 work breakdown in §12
-**Author:** AI-assisted · drafted 2026-06-19 · last updated 2026-06-21
+**Status:** In progress — core decisions locked; **Phase 0 shipped** and GovEA consumer-side prep for Phase 1 landed. See "Delivery status" below and the §12 checklist.
+**Author:** AI-assisted · drafted 2026-06-19 · last updated 2026-07-01
 **Audience:** Maintainer + architecture reviewers
 **License:** MIT (§11.7)
 **Supersedes:** the skeletal `packages/core` (`@govea/core`) as the long-term home for platform-plane code
@@ -16,6 +16,21 @@
 > and (2026-06-21) building the full content engine (Appendix B). §11's open list is now effectively
 > closed. Binding decisions are recorded here; they can graduate into the GovCore repo's own ADRs
 > once it exists.
+
+## Delivery status (as of 2026-07-01)
+
+This document began as a proposal; parts of it are now shipped. What's true in the code today:
+
+| Milestone | State | Evidence in GovEA |
+|---|---|---|
+| **Phase 0 — repo + generic RBAC** | **Shipped** | The `GovCore` repo exists ([github.com/roballred/GovCore](https://github.com/roballred/GovCore)); `@govcore/rbac` is published to npm and consumed at `^0.1.0`. `apps/govea/src/lib/rbac.ts` builds GovEA's role machinery with `createRbac()` from `@govcore/rbac`, keeping GovEA's `admin/contributor/viewer` map and 7-permission vocabulary app-local (§13.3). |
+| **Consumer-side prep for Phase 1** | **Shipped** | GovEA's `organizations` table is now core-shaped (id/name/slug/timestamps); all app configuration moved to the app-owned `organization_settings` sidecar (1:1, PK=FK), so `organizations` can map onto `@govcore/schema`'s platform table at the Phase 1 cutover without a data reshuffle. See `docs/data-model.md`. |
+| **Phase 1 — platform schema + migrations + RLS + two-role DB** | **Next / not started** | GovEA still runs `db:push` for all tables (ADR-008 pre-production policy). Adopting `@govcore/schema` + `govcore-migrate` for the platform tables is the ADR-008 cutover moment (§5). |
+| **Phases 2–5, content engine (Appendix B)** | **Not started** | — |
+
+**Consumption model in effect today:** `@govcore/rbac` is consumed as a published npm package (`^0.1.0`), not a `link:` workspace dependency; the earlier CI clone action for linked packages has been removed. GovCore packages are **source-first** (they ship TypeScript, no built `dist/`), so every consumed `@govcore/*` package is listed in `transpilePackages` in `apps/govea/next.config.ts`.
+
+The rest of this document (the numbered sections and appendices) is the **design of record** for the phases still ahead. Where a section describes future behavior (RLS, `tenantAction`, the migrate runner, the content engine), treat it as the target design, not a description of shipped code.
 
 ---
 
@@ -641,13 +656,13 @@ GovCore is a **standalone initiative**: its own repository, backlog, versioning,
 
 Binding decisions are recorded in this document (the §1 decisions table and the §13 resolutions). References to existing GovEA ADRs (ADR-0003, ADR-008, ADR-0002) are **provenance** — behavior the extraction must preserve — not new artifacts; GovCore will keep its own ADRs once its repo exists.
 
-### Phase 0 — repo skeleton + generic RBAC
+### Phase 0 — repo skeleton + generic RBAC — ✅ shipped
 
-- [ ] Stand up the GovCore repository: package skeletons, changesets, CI (typecheck, lint, edge-safety import gate, `examples/minimal-app` build).
-- [ ] Ship `@govcore/rbac` as a **generic `createRbac`** factory (§13.3); GovEA's `admin/contributor/viewer` map is the default export.
-- [ ] GovEA consumes `@govcore/rbac`; the `rbac-single-source` test stays green (one definition, now produced by `createRbac(...)`).
+- [x] Stand up the GovCore repository: package skeletons, changesets, CI (typecheck, lint, edge-safety import gate, `examples/minimal-app` build).
+- [x] Ship `@govcore/rbac` as a **generic `createRbac`** factory (§13.3); GovEA's `admin/contributor/viewer` map is the default export.
+- [x] GovEA consumes `@govcore/rbac` (from npm, `^0.1.0`); the `rbac-single-source` test stays green (one definition, now produced by `createRbac(...)`).
 
-**Done when:** `@govcore/rbac` is generic, GovEA builds on it with no behavior change, and `examples/minimal-app` compiles in CI.
+**Done:** `@govcore/rbac` is generic, GovEA builds on it with no behavior change, and `examples/minimal-app` compiles in CI. GovEA additionally moved its org configuration into the `organization_settings` sidecar (consumer-side prep so `organizations` is core-shaped ahead of Phase 1).
 
 ### Phase 1 — platform schema + migrations + RLS + two-role DB
 

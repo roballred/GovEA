@@ -35,6 +35,8 @@ Since #693, the user–organization relationship is a membership model, not a co
 
 `instance_admin` is stored on the user, separately from membership roles. It does not mean the user owns every organization's architecture content.
 
+The role/permission math — which permissions each role holds and how roles rank — is provided by `@govcore/rbac` (see [Platform Foundation](./application-overview.md#platform-foundation-govcore)). The role *definitions* above stay app-local in `apps/govea/src/lib/rbac.ts`; GovCore ships the generic machinery, GovEA supplies its own vocabulary.
+
 ## Route Protection
 
 Middleware handles coarse protection. Per [ADR-0003](../decisions/0003-middleware-reads-tokens-never-writes.md) it decodes the session JWT **read-only** via `getToken` and never writes session cookies — the only session-cookie writers are the Auth.js endpoints and the logout handler:
@@ -132,6 +134,8 @@ Hardening already in place:
 - Security response headers ship on every response (X-Frame-Options DENY, nosniff, referrer policy, HSTS) with a Content-Security-Policy in **report-only** mode pending nonce/hash rollout (#743; enforcement is #765)
 - Org theme values are allowlisted before injection into the inline `<style>` tag, making style-tag breakout structurally impossible (#769)
 - Open hardening work is tracked in the v1.0 security wave: MFA for local credentials (#761), CI dependency/code scanning (#762), CSV formula-injection neutralization (#763), database TLS enforcement (#764), audit retention for public-records compliance (#767)
+
+**Where the tenant boundary is enforced today, and where it's headed.** Right now organization isolation is enforced in *application logic*: server actions resolve the active organization server-side and filter every query by `organization_id` (the pattern above). It is correct but relies on each action following the pattern. The [GovCore platform extraction](./application-overview.md#platform-foundation-govcore) will add defense in depth at the database layer — Postgres Row-Level Security policies keyed to a transaction-local organization setting, plus a two-role database split so the application's runtime role cannot bypass RLS or drop the audit-immutability trigger. After that cutover, a query that forgets its `organization_id` filter returns only the active org's rows instead of leaking across tenants. This is designed, not yet shipped; see [`platform-core-extraction.md`](../design/platform-core-extraction.md) §13.1–13.2.
 
 ## Security Design Notes
 

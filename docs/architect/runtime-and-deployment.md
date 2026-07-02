@@ -62,6 +62,8 @@ Common local paths:
 
 `db:migrate` exists in `package.json` but is intentionally not the current command — pre-production uses `db:push --force` everywhere, including CI. The switch to migrations happens when the first real tenant data exists; CLAUDE.md tracks the checklist.
 
+The [GovCore platform extraction](./application-overview.md#platform-foundation-govcore) reaches this seam first. When GovEA adopts `@govcore/schema`, the **platform** tables (organizations, users, memberships, audit, federation, support sessions) move to a core-owned migration stream run by `govcore-migrate`, while GovEA's own domain tables can stay on `db:push` until they need durable migrations too. Adopting GovCore is therefore what trips the "switch to migrations" criterion for the platform layer specifically — the platform schema is migration-based from the moment it is consumed, because a shared, versioned library cannot ship throwaway schema. See [`platform-core-extraction.md`](../design/platform-core-extraction.md) §5.
+
 Podman is preferred when available, but the compose helper can fall back to Docker.
 
 ## Runtime Configuration
