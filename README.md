@@ -84,6 +84,8 @@ Three facts carry most of the design:
 - **Audit-first.** Security-relevant mutations write to an audit log that is append-only at the database layer — even a compromised admin role cannot rewrite history.
 - **Portable by design.** GovEA runs anywhere containers run — a laptop, an agency data center, or a government cloud. The application carries no cloud-specific assumptions. Details in [Runtime and Deployment](./docs/architect/runtime-and-deployment.md).
 
+GovEA also separates its reusable platform machinery (identity, tenancy, RBAC, audit) from its enterprise-architecture domain. That platform layer is being extracted into [GovCore](https://github.com/roballred/GovCore), a separately versioned set of `@govcore/*` packages GovEA consumes as dependencies — so the same hardened multi-tenant foundation can support other government applications. See [Platform Foundation](./docs/architect/application-overview.md#platform-foundation-govcore).
+
 The full architecture set lives in [docs/architect](./docs/architect/).
 
 ## Tech Stack
@@ -91,6 +93,7 @@ The full architecture set lives in [docs/architect](./docs/architect/).
 - **App:** Next.js App Router, React, TypeScript
 - **Database:** PostgreSQL with Drizzle ORM
 - **Auth:** Auth.js with local development auth and OIDC SSO architecture
+- **Platform foundation:** [GovCore](https://github.com/roballred/GovCore) — the reusable multi-tenant platform (identity, tenancy, RBAC, audit) that GovEA is built on, consumed as `@govcore/*` packages
 - **UI:** Tailwind CSS and shadcn/ui
 - **Testing:** TypeScript, ESLint, Vitest integration tests, Playwright smoke tests
 - **Deployment:** containerized app plus PostgreSQL

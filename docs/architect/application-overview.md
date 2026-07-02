@@ -2,6 +2,18 @@
 
 GovEA is a Next.js App Router application for maintaining an enterprise architecture repository. The implementation is intentionally simple: server-rendered pages, server actions for mutations, Drizzle for typed database access, and PostgreSQL as the system of record.
 
+## Platform Foundation (GovCore)
+
+GovEA separates its **platform plane** — the reusable machinery of identity, multi-tenancy, RBAC, audit, federation, and support access — from its **enterprise-architecture domain** (capabilities, goals, applications, and the rest of the repository model). The platform plane is being extracted into [**GovCore**](https://github.com/roballred/GovCore), a separately versioned set of `@govcore/*` packages that GovEA consumes as ordinary dependencies. GovEA is *consumer zero*: the first application built on GovCore, and the source the platform code is extracted from.
+
+For an architect, the practical shape today is:
+
+- **What GovEA consumes from GovCore now:** the RBAC engine. `apps/govea/src/lib/rbac.ts` builds GovEA's roles with `createRbac()` from `@govcore/rbac` (consumed from npm at `^0.1.0`); GovEA keeps its own `admin/contributor/viewer` role map and permission vocabulary app-local.
+- **What is prepared but not yet delegated:** the `organizations` table is deliberately kept core-shaped (id/name/slug/timestamps) so it can map onto GovCore's platform schema, with all GovEA configuration moved to the app-owned `organization_settings` sidecar. Auth, tenancy, audit, federation, and support access still live in `apps/govea/src` and will move to `@govcore/*` in later phases.
+- **What stays in GovEA permanently:** every EA domain entity and its logic. The litmus test is ownership of trust vs. ownership of meaning — if a table exists so the platform can answer "is this actor allowed to act in this org, and did we record it," it belongs in GovCore; if it carries `organization_id` because it is EA content, it stays here.
+
+The full extraction plan, phase status, and boundary rationale are in [`docs/design/platform-core-extraction.md`](../design/platform-core-extraction.md). The sections below describe GovEA as it runs today.
+
 ## Primary Runtime Shape
 
 ```mermaid
@@ -25,7 +37,7 @@ flowchart LR
 |---|---|---|
 | Routes and pages | `apps/govea/src/app/` | URL structure, server-rendered pages, route groups, and page-level data loading |
 | Server actions | `apps/govea/src/actions/` | Mutations, role gates, validation, relationship updates, and audit calls |
-| Domain helpers | `apps/govea/src/lib/` | Cross-cutting behavior such as RBAC, federation, confidence, audit, search, URL helpers, and support access |
+| Domain helpers | `apps/govea/src/lib/` | Cross-cutting behavior such as federation, confidence, audit, search, URL helpers, and support access. RBAC role math is provided by `@govcore/rbac`; `lib/rbac.ts` supplies GovEA's role/permission map and user-shaped wrappers |
 | Database schema | `apps/govea/src/db/schema/` | Drizzle table definitions, enums, and relationship tables |
 | Seed data | `apps/govea/src/db/seeds/` | Demo, dogfood, test, scale, and TOGAF-overlay fixture data |
 | UI components | `apps/govea/src/components/` | Shared page widgets, shell components, forms, banners, diagrams, and controls |
@@ -83,7 +95,7 @@ Middleware performs coarse route protection. Server actions and domain helpers p
 | Concern | Current implementation |
 |---|---|
 | Authentication | Auth.js with local credentials and optional OIDC SSO (current provider wiring targets Microsoft Entra ID); deploy-stable logout endpoint with a logged-out marker guarding against post-logout session resurrection (ADR-0003) |
-| Authorization | Per-membership org roles with an active-organization context (#693), plus separate `instance_admin` operating role |
+| Authorization | Per-membership org roles with an active-organization context (#693), plus separate `instance_admin` operating role; the role/permission math is supplied by `@govcore/rbac` |
 | Audit | Audit log made append-only by a DB trigger; covers content, identity, instance, and support-access events with IP/user-agent on auth events and an instance telemetry view |
 | Taxonomy & recipes | Org-scoped controlled vocabularies reused across entity types; curated sets (e.g. TOGAF 10) install idempotently through the recipe engine, with audience markers hiding framework jargon from viewers |
 | Reports | Generic group-by-taxonomy report engine with presets, plus completeness surfaces such as the duplicate-candidates report |
@@ -94,8 +106,9 @@ Middleware performs coarse route protection. Server actions and domain helpers p
 
 ## Planned Architectural Seams
 
-Two decided roadmap items change what an architect should expect from this shape:
+Three in-flight items change what an architect should expect from this shape:
 
+- **GovCore platform extraction (in progress)** — the platform plane (auth, tenancy, RBAC, audit, federation, support access) moves out of `apps/govea/src` into versioned `@govcore/*` packages, phase by phase. RBAC has already moved; auth, schema, and tenancy follow. The extraction also lands architectural hardening GovEA doesn't have today — database-enforced tenant isolation (Postgres Row-Level Security), a two-role database split, and a `tenantAction` wrapper that makes the tenant-boundary pattern the path of least resistance. See [`docs/design/platform-core-extraction.md`](../design/platform-core-extraction.md).
 - **REST API foundation (#775, v1.0)** — `/api/v1` read/write endpoints with token auth, RBAC/audit parity with the UI, generated OpenAPI, and bulk import. Route handlers join server actions as a first-class mutation surface; the same authorization helpers must serve both.
 - **First Tier-1 sync: ServiceNow ITSM/CMDB (#382, v2.0)** — built on the REST API foundation; integrations populate context and never silently overwrite architect-authored content.
 
