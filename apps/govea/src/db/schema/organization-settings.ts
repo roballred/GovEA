@@ -128,7 +128,7 @@ export const organizationSettings = pgTable('organization_settings', {
   organizationId: uuid('organization_id')
     .primaryKey()
     .references(() => organizations.id, { onDelete: 'cascade' }),
-  theme: text('theme').notNull().default('govea'),
+  theme: text('theme').notNull().default('govcore'),
   enabledModules: jsonb('enabled_modules').$type<Record<string, boolean>>().notNull().default({}),
   confidenceSettings: jsonb('confidence_settings').$type<ConfidenceSettings>(),
   completenessSettings: jsonb('completeness_settings').$type<CompletenessSettings>(),

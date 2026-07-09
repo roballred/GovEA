@@ -24,7 +24,7 @@ export function PlatformConfigForm({ initial }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   const [instanceName, setInstanceName] = useState(initial?.instanceName ?? 'GovEA')
-  const [defaultTheme, setDefaultTheme] = useState(initial?.defaultTheme ?? 'govea')
+  const [defaultTheme, setDefaultTheme] = useState(initial?.defaultTheme ?? 'govcore')
   const [allowLocalAuth, setAllowLocalAuth] = useState(initial?.allowLocalAuth ?? true)
   const [defaultSupportTier, setDefaultSupportTier] = useState<string>(
     initial?.defaultSupportTier ?? '',

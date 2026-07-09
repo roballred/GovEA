@@ -4,7 +4,8 @@ import { SignOutButton } from '@/components/sign-out-button'
 import { db } from '@/db/client'
 import { organizationSettings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
-import { getTheme, themeToStyleString } from '@/lib/themes'
+import { getTheme } from '@/lib/themes'
+import { ThemeStyle } from '@govcore/nextkit'
 import type { Role } from '@/lib/rbac'
 import { isInstanceAdmin } from '@/lib/rbac'
 import { AppShell } from '@/components/app-shell'
@@ -35,8 +36,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // single-membership users, so this is a no-op cost for the common case.
   const myOrganizations = await getMyActiveOrganizations()
 
-  // Load org settings (theme + enabled modules)
-  let themeStyle = ''
+  // Load org settings (theme + enabled modules). The org's theme is applied
+  // server-side by <ThemeStyle> below so it is authoritative on load (#897).
+  let orgThemeId = 'govcore'
   let enabledModules: Record<string, boolean> = {}
   if (session.user.organizationId) {
     const [settings, moduleSettings] = await Promise.all([
@@ -46,8 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       getCurrentModuleSettings(),
     ])
     if (settings) {
-      const theme = getTheme(settings.theme)
-      themeStyle = themeToStyleString(theme)
+      orgThemeId = settings.theme
       enabledModules = moduleSettings.effectiveEnabledModules
     }
   }
@@ -57,21 +58,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const signOutSlot = <SignOutButton />
 
   return (
-    <AppShell
-      role={role}
-      email={session.user.email ?? ''}
-      roleBadgeClass={ROLE_BADGE_CLASS[role]}
-      themeStyle={themeStyle}
-      isInstanceAdmin={isInstanceAdmin(session.user)}
-      enabledModules={enabledModules}
-      unreadNotificationCount={unreadNotificationCount}
-      orgSwitcherSlot={<OrgSwitcher orgs={myOrganizations} />}
-      signOutSlot={signOutSlot}
-    >
-      {session.user.organizationId && (
-        <AdminNoticeBanner orgId={session.user.organizationId} />
-      )}
-      {children}
-    </AppShell>
+    <>
+      <ThemeStyle theme={getTheme(orgThemeId)} />
+      <AppShell
+        role={role}
+        email={session.user.email ?? ''}
+        roleBadgeClass={ROLE_BADGE_CLASS[role]}
+        isInstanceAdmin={isInstanceAdmin(session.user)}
+        enabledModules={enabledModules}
+        unreadNotificationCount={unreadNotificationCount}
+        orgSwitcherSlot={<OrgSwitcher orgs={myOrganizations} />}
+        signOutSlot={signOutSlot}
+      >
+        {session.user.organizationId && (
+          <AdminNoticeBanner orgId={session.user.organizationId} />
+        )}
+        {children}
+      </AppShell>
+    </>
   )
 }

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
-import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { DarkModeToggle } from '@govcore/nextkit/theming'
 import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 import { groupSlug, readOpenGroup, writeOpenGroup } from '@/lib/nav-groups'
@@ -349,7 +349,6 @@ interface AppShellProps {
   role: Role
   email: string
   roleBadgeClass: string
-  themeStyle: string
   isInstanceAdmin: boolean
   enabledModules: Record<string, boolean>
   /** Caller's unread notification count — drives the nav badge (#581). */
@@ -364,7 +363,6 @@ export function AppShell({
   role,
   email,
   roleBadgeClass,
-  themeStyle,
   isInstanceAdmin,
   enabledModules,
   unreadNotificationCount,
@@ -408,7 +406,6 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-background">
-      {themeStyle && <style dangerouslySetInnerHTML={{ __html: themeStyle }} />}
 
       {/* #858 — skip link: the first focusable element on every page, so
           keyboard / screen-reader users can bypass the sidebar nav and jump
