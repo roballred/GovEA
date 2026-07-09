@@ -20,9 +20,15 @@ importers:
       '@auth/drizzle-adapter':
         specifier: ^1.4.0
         version: 1.11.1
+      '@govcore/nextkit':
+        specifier: ^0.5.0
+        version: 0.5.0(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))
       '@govcore/rbac':
         specifier: ^0.1.0
         version: 0.1.0
+      '@govcore/theme':
+        specifier: ^0.2.0
+        version: 0.2.0(tailwindcss@3.4.19(tsx@4.21.0))
       '@govea/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -955,8 +961,31 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
+  '@govcore/audit@0.1.3':
+    resolution: {integrity: sha512-RXR3sf5ar+bv3Vf/jXXhEFpGF6PLNnUdMj5A2BNrJlc1lps8KV0cBPSGRFuLvPOKDZNhM6IfcFo3rPrRc+TUXQ==}
+
+  '@govcore/nextkit@0.5.0':
+    resolution: {integrity: sha512-xe/lpeAWdwpKAI+jjskLWjiuymgYIi/xYCy5Dwgzp5J7d4ber10lUa7Fxya3ZFQmX4ilKgcdMk4z7eGUE7pzYA==}
+    peerDependencies:
+      react: ^19.0.0
+
   '@govcore/rbac@0.1.0':
     resolution: {integrity: sha512-Ea5IAfaqjPIJSG3wfWqTsnm7lFa2P45lRbPGGhpJRup/RisI8T4BwNZ/RLMjFVsChP+BsEPiClyzdftxnafsaQ==}
+
+  '@govcore/schema@0.3.0':
+    resolution: {integrity: sha512-tWbAnx0geqll4jSfsQtt2zTlaTfuDaXoiCGp4rz6Br0+hmCWVNFlk5zqLwQHiPvrSuHHzNuClkubrb6nCEZVjQ==}
+    hasBin: true
+
+  '@govcore/support@0.2.2':
+    resolution: {integrity: sha512-aWk35TIyQ5Y2LHKA8jKq6LgQUI+DsQ+IofZeUOy0+nxvHRoXqtfAQiGDxF93TQGFcJsAxIGIq96xYo5EY59c/A==}
+
+  '@govcore/theme@0.2.0':
+    resolution: {integrity: sha512-M1PuPT4BqZwuOF1oOxv1y6Z7U03RVqGU++LO65LaRLdw3C2ldDMFAJb8ZvNwYpRpK9EdJsgAxkbqMg+fFQ6koA==}
+    peerDependencies:
+      tailwindcss: ^3.4.0
+    peerDependenciesMeta:
+      tailwindcss:
+        optional: true
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -5002,7 +5031,153 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
+  '@govcore/audit@0.1.3(postgres@3.4.8)':
+    dependencies:
+      '@govcore/schema': 0.3.0
+      drizzle-orm: 0.45.2(postgres@3.4.8)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@govcore/nextkit@0.5.0(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))':
+    dependencies:
+      '@govcore/support': 0.2.2(postgres@3.4.8)
+      '@govcore/theme': 0.2.0(tailwindcss@3.4.19(tsx@4.21.0))
+      react: 19.2.4
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+      - tailwindcss
+
   '@govcore/rbac@0.1.0': {}
+
+  '@govcore/schema@0.3.0':
+    dependencies:
+      drizzle-orm: 0.45.2(postgres@3.4.8)
+      postgres: 3.4.8
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@govcore/support@0.2.2(postgres@3.4.8)':
+    dependencies:
+      '@govcore/audit': 0.1.3(postgres@3.4.8)
+      '@govcore/schema': 0.3.0
+      drizzle-orm: 0.45.2(postgres@3.4.8)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@govcore/theme@0.2.0(tailwindcss@3.4.19(tsx@4.21.0))':
+    optionalDependencies:
+      tailwindcss: 3.4.19(tsx@4.21.0)
 
   '@humanfs/core@0.19.1': {}
 

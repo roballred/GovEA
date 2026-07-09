@@ -25,7 +25,9 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.4.0",
+    "@govcore/nextkit": "^0.5.0",
     "@govcore/rbac": "^0.1.0",
+    "@govcore/theme": "^0.2.0",
     "@govea/core": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",

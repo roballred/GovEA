@@ -53,7 +53,7 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
   const defaults = await db.query.platformConfig.findFirst({
     columns: { defaultTheme: true, defaultSupportTier: true },
   })
-  const theme = defaults?.defaultTheme ?? 'govea'
+  const theme = defaults?.defaultTheme ?? 'govcore'
   const supportTier = defaults?.defaultSupportTier ?? null
 
   const orgId = await db.transaction(async (tx) => {

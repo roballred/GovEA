@@ -1,73 +1,38 @@
+/* Base design tokens (the WCAG-AA floor) now come from @govcore/theme (#897).
+   base.css defines the shared content/contrast + brand-surface tokens under
+   plain :root / .dark. GovEA layers only the shadcn tokens base.css does NOT
+   ship (--secondary, --accent, --popover) below, aligned to base.css's palette
+   so surfaces stay coherent. Brand overrides (per-org) are injected at runtime
+   by @govcore/nextkit's <ThemeStyle> in the admin layout. */
+@import '@govcore/theme/base.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* Tokens GovEA components use that @govcore/theme/base.css does not define.
+       Values track base.css neighbors: surfaces ~ --muted, popover ~ --card. */
+    --secondary: 210 16% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --accent: 210 16% 96%;
+    --accent-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-
-    --primary: 221 83% 40%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 214 32% 95%;
-    --secondary-foreground: 222 47% 11%;
-
-    --muted: 214 32% 95%;
-    /* #862 — darkened from 47% to 40% L so muted text clears 4.5:1 on the
-       tinted bg-muted/* cards (settings, taxonomy, dialogs). Darkening only
-       raises contrast, so no other surface regresses. */
-    --muted-foreground: 215 16% 40%;
-
-    --accent: 214 32% 95%;
-    --accent-foreground: 222 47% 11%;
-
-    /* WCAG AA (#766): 0 84% 60% was 3.8:1 as text on white — darkened so
-       text-destructive passes 4.5:1 and white-on-destructive improves too. */
-    --destructive: 0 72% 45%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 40%;
-
-    --radius: 0.375rem;
   }
 
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 96%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 96%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 221 83% 60%;
-    --primary-foreground: 222 47% 8%;
-
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 63% 45%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 221 83% 60%;
+    --popover: 222 47% 13%;
+    --popover-foreground: 210 40% 96%;
   }
 }
 

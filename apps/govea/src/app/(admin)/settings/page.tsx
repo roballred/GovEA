@@ -50,7 +50,7 @@ export default async function SettingsPage() {
     getSecuritySettingsForUi(),
   ])
 
-  const activeTheme = settings?.theme ?? 'govea'
+  const activeTheme = settings?.theme ?? 'govcore'
   const enabledModules = moduleSettings.orgEnabledModules
   const instanceDisabledModules = moduleSettings.instanceDisabledModules
   const confidenceSettings = settings?.confidenceSettings ?? DEFAULT_CONFIDENCE
