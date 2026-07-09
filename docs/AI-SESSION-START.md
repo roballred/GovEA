@@ -82,10 +82,13 @@ If any of those four can&apos;t be satisfied, stop and resolve it before proceed
 Pre-production uses `db:push --force` against the local Postgres &mdash; no migration files yet (see ADR-008 in the GovEA Project seed).
 
 ```bash
-pnpm --filter govea db:push           # schema sync
-pnpm --filter govea db:apply-triggers # idempotent: re-apply Postgres triggers
-pnpm --filter govea db:seed           # repopulate fixtures
+pnpm --filter govea db:platform-migrate # @govcore/schema platform tables (govcore.*) — run FIRST (#900)
+pnpm --filter govea db:push             # domain schema sync (public tables only; schemaFilter)
+pnpm --filter govea db:apply-triggers   # idempotent: re-apply app triggers (taxonomy dedup)
+pnpm --filter govea db:seed             # repopulate fixtures
 ```
+
+The platform tables (organizations, users, audit, federation, support, instance/platform config) are owned by `@govcore/schema` and applied by `govcore-migrate` (`db:platform-migrate`) into the `govcore` Postgres schema &mdash; run it **before** `db:push`, since the domain tables' FKs reference `govcore.organizations`. `db:push` is restricted to the `public` schema (`schemaFilter`), so the two never collide. The `audit_log` append-only trigger now ships in the core migration, not `db:apply-triggers`.
 
 Local Postgres runs in a container (`docker_db_1` on the maintainer machine, or `govea-postgres` in the canonical setup). Connection string in `apps/govea/.env.local`.
 

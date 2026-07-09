@@ -45,12 +45,27 @@ export function hasPermission(role: Role, permission: Permission): boolean {
   return rbac.hasPermission(role, permission)
 }
 
+/**
+ * Narrow the denormalized `users.role` text column (`string | null` since the
+ * @govcore/schema cutover, #900) to a known {@link Role}. An unknown/null role
+ * means no access.
+ */
+export function isRole(role: string | null | undefined): role is Role {
+  return role === 'admin' || role === 'contributor' || role === 'viewer'
+}
+
+/** Coerce the denormalized `users.role` text column to a known {@link Role}; an
+ *  unknown/null value falls back to the least-privileged `viewer`. */
+export function toRole(role: string | null | undefined): Role {
+  return isRole(role) ? role : 'viewer'
+}
+
 export function hasRole(user: Pick<User, 'role'>, minimum: Role): boolean {
-  return rbac.roleAtLeast(user.role, minimum)
+  return isRole(user.role) && rbac.roleAtLeast(user.role, minimum)
 }
 
 export function canEdit(user: Pick<User, 'role'>): boolean {
-  return rbac.roleAtLeast(user.role, 'contributor')
+  return isRole(user.role) && rbac.roleAtLeast(user.role, 'contributor')
 }
 
 export function isAdmin(user: Pick<User, 'role'>): boolean {

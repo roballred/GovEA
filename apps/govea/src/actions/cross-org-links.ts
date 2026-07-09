@@ -195,7 +195,7 @@ export async function getCrossOrgLinkContext(type: CrossOrgEntityType, entityId:
 
     const item: CrossOrgLinkItem = {
       id: link.id,
-      linkType: link.linkType,
+      linkType: link.linkType as CrossOrgLinkType,
       status: link.status,
       rejectionReason: link.rejectionReason,
       flaggedForReview: link.flaggedForReview,

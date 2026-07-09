@@ -242,7 +242,7 @@ describe('org-side removal is membership-scoped (#799)', () => {
     await deactivateUser(solo.id)
 
     const account = await db.query.users.findFirst({ where: eq(users.id, solo.id) })
-    expect(account?.isActive).toBe('false')
+    expect(account?.isActive).toBe(false)
   })
 
   it('deleting a multi-org member severs the membership, keeps the identity, repoints home', async () => {

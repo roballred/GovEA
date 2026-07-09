@@ -1,11 +1,5 @@
-import { jsonb, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
-
-export const instanceSettings = pgTable('instance_settings', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  disabledModules: jsonb('disabled_modules').$type<Record<string, boolean>>().notNull().default({}),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
-
-export type InstanceSettings = typeof instanceSettings.$inferSelect
-export type NewInstanceSettings = typeof instanceSettings.$inferInsert
+/**
+ * Instance settings (singleton; not org-scoped) — owned by `@govcore/schema` and
+ * re-exported for `@/db/schema` consumers. Phase 1b (#900).
+ */
+export { instanceSettings, type InstanceSettings, type NewInstanceSettings } from '@govcore/schema'

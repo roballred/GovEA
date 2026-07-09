@@ -140,7 +140,7 @@ describe('user management actions', () => {
       })
       expect(user).toBeDefined()
       expect(user?.role).toBe('viewer')
-      expect(user?.isActive).toBe('true')
+      expect(user?.isActive).toBe(true)
       expect(user?.organizationId).toBe(orgId)
     })
 
@@ -356,10 +356,10 @@ describe('user management actions', () => {
     it('admin can deactivate a non-admin user', async () => {
       await deactivateUser(viewer.id)
       const updated = await findUser(viewer.id)
-      expect(updated?.isActive).toBe('false')
+      expect(updated?.isActive).toBe(false)
 
       // Restore
-      await db.update(users).set({ isActive: 'true' }).where(eq(users.id, viewer.id))
+      await db.update(users).set({ isActive: true }).where(eq(users.id, viewer.id))
     })
 
     it('cannot deactivate the last admin → throws last admin guard', async () => {
@@ -367,7 +367,7 @@ describe('user management actions', () => {
       await expect(deactivateUser(admin.id)).rejects.toThrow(/last admin/i)
 
       const check = await findUser(admin.id)
-      expect(check?.isActive).toBe('true')
+      expect(check?.isActive).toBe(true)
     })
 
     it('contributor cannot deactivate users → throws Forbidden', async () => {
@@ -384,7 +384,7 @@ describe('user management actions', () => {
       expect(after[after.length - 1].entityId).toBe(viewer.id)
 
       // Restore
-      await db.update(users).set({ isActive: 'true' }).where(eq(users.id, viewer.id))
+      await db.update(users).set({ isActive: true }).where(eq(users.id, viewer.id))
     })
   })
 

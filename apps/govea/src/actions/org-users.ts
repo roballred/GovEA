@@ -16,6 +16,7 @@ import { db } from '@/db/client'
 import { users } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
+import { toRole } from '@/lib/rbac'
 import { redirect } from 'next/navigation'
 
 export type OrgUserPickerRow = {
@@ -31,9 +32,12 @@ export async function getOrgUsersForPicker(): Promise<OrgUserPickerRow[]> {
   const orgId = session.user.organizationId
   if (!orgId) return []
 
-  return db.query.users.findMany({
-    where: and(eq(users.organizationId, orgId), eq(users.isActive, 'true')),
+  const rows = await db.query.users.findMany({
+    where: and(eq(users.organizationId, orgId), eq(users.isActive, true)),
     columns: { id: true, name: true, email: true, role: true },
     orderBy: (u, { asc }) => [asc(u.name)],
   })
+  // users.role is a nullable text column since the @govcore/schema cutover (#900);
+  // active org users always carry a real role, coerced here to the Role union.
+  return rows.map((r) => ({ ...r, role: toRole(r.role) }))
 }

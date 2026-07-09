@@ -398,11 +398,11 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
                     <TableCell>
                       <span className={cn(
                         'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                        u.isActive === 'true'
+                        u.isActive
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
                           : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                       )}>
-                        {u.isActive === 'true' ? 'Active' : 'Inactive'}
+                        {u.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </TableCell>
                   </TableRow>

@@ -148,7 +148,7 @@ async function seed() {
 
   // Users
   for (const u of DEV_USERS) {
-    await db.insert(users).values({ ...u, passwordHash, organizationId: devOrgId, isActive: 'true' }).onConflictDoNothing()
+    await db.insert(users).values({ ...u, passwordHash, organizationId: devOrgId, isActive: true }).onConflictDoNothing()
   }
   console.log(`  ✓ ${DEV_USERS.length} users (password: dev-password)`)
 
@@ -1333,7 +1333,7 @@ async function seed() {
   const stateOrgId = await findOrCreateOrg(STATE_ORG.slug, STATE_ORG.name)
 
   for (const u of STATE_USERS) {
-    await db.insert(users).values({ ...u, passwordHash, organizationId: stateOrgId, isActive: 'true' }).onConflictDoNothing()
+    await db.insert(users).values({ ...u, passwordHash, organizationId: stateOrgId, isActive: true }).onConflictDoNothing()
   }
   console.log(`  ✓ ${STATE_USERS.length} users (password: dev-password)`)
 
@@ -1398,7 +1398,7 @@ async function seed() {
   }
 
   for (const u of GOVEA_PROJECT_USERS) {
-    await db.insert(users).values({ ...u, passwordHash, organizationId: goveaProjectOrgId, isActive: 'true' }).onConflictDoNothing()
+    await db.insert(users).values({ ...u, passwordHash, organizationId: goveaProjectOrgId, isActive: true }).onConflictDoNothing()
   }
   console.log(`  ✓ ${GOVEA_PROJECT_USERS.length} users (password: dev-password)`)
 
@@ -1928,7 +1928,7 @@ async function seed() {
   const togafOrgId = await findOrCreateOrg(TOGAF_ORG.slug, TOGAF_ORG.name)
 
   for (const u of TOGAF_USERS) {
-    await db.insert(users).values({ ...u, passwordHash, organizationId: togafOrgId, isActive: 'true' }).onConflictDoNothing()
+    await db.insert(users).values({ ...u, passwordHash, organizationId: togafOrgId, isActive: true }).onConflictDoNothing()
   }
   console.log(`  ✓ ${TOGAF_USERS.length} users (password: dev-password)`)
 
@@ -2298,7 +2298,7 @@ async function seed() {
   const scaleOrgId = await findOrCreateOrg(SCALE_ORG.slug, SCALE_ORG.name)
 
   for (const u of SCALE_USERS) {
-    await db.insert(users).values({ ...u, passwordHash, organizationId: scaleOrgId, isActive: 'true' }).onConflictDoNothing()
+    await db.insert(users).values({ ...u, passwordHash, organizationId: scaleOrgId, isActive: true }).onConflictDoNothing()
   }
   console.log(`  ✓ ${SCALE_USERS.length} users (scale@govea.dev / dev-password)`)
 
@@ -2344,7 +2344,7 @@ async function seed() {
         ...u,
         passwordHash,
         organizationId: systemOrgId,
-        isActive: 'true',
+        isActive: true,
       })
     }
   }
@@ -2380,7 +2380,7 @@ async function seed() {
     await db.insert(userOrganizationMemberships).values({
       userId: u.id,
       organizationId: u.organizationId,
-      role: u.role,
+      role: u.role ?? 'viewer',
       isPrimary: true,
     }).onConflictDoNothing()
     backfilled++

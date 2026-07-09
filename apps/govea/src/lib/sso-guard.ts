@@ -49,7 +49,7 @@ export async function checkSsoProvisioning(email: string): Promise<SsoCheckResul
   })
 
   if (!dbUser) return { status: 'not_provisioned' }
-  if (dbUser.isActive !== 'true') return { status: 'deactivated', userId: dbUser.id }
+  if (!dbUser.isActive) return { status: 'deactivated', userId: dbUser.id }
 
   const membership = await resolveActiveMembership(dbUser.id, dbUser.lastActiveOrganizationId)
   if (membership) {
@@ -72,7 +72,7 @@ export async function checkSsoProvisioning(email: string): Promise<SsoCheckResul
       status: 'allowed',
       userId: dbUser.id,
       organizationId: null,
-      role: dbUser.role,
+      role: dbUser.role ?? 'viewer',
     }
   }
 
@@ -80,6 +80,6 @@ export async function checkSsoProvisioning(email: string): Promise<SsoCheckResul
     status: 'allowed',
     userId: dbUser.id,
     organizationId: dbUser.organizationId,
-    role: dbUser.role,
+    role: dbUser.role ?? 'viewer',
   }
 }

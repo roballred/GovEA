@@ -39,7 +39,7 @@ type InstanceUserRow = {
   email: string
   role: 'admin' | 'contributor' | 'viewer'
   instanceRole: string | null
-  isActive: string
+  isActive: boolean
   organizationName: string | null
   /** #693 slice 4 — all org memberships, for cross-org management. */
   memberships: MembershipRow[]
@@ -156,11 +156,11 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
                   <TableCell>
                     <span className={cn(
                       'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                      u.isActive === 'true'
+                      u.isActive
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
                         : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                     )}>
-                      {u.isActive === 'true' ? 'Active' : 'Inactive'}
+                      {u.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
@@ -197,7 +197,7 @@ export function InstanceUserTable({ users, organizations, currentUserId, hiddenU
                             }}
                           />
                         )}
-                        {u.isActive === 'true' ? (
+                        {u.isActive ? (
                           <ConfirmWithReason
                             trigger={<Button variant="outline" size="sm" className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950">Suspend</Button>}
                             title={`Suspend "${u.name ?? u.email}"`}

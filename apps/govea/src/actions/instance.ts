@@ -448,12 +448,12 @@ export async function suspendUserAccount(userId: string, reason: string) {
     const [{ adminCount }] = await db
       .select({ adminCount: count() })
       .from(users)
-      .where(and(eq(users.organizationId, target.organizationId), eq(users.role, 'admin'), eq(users.isActive, 'true')))
+      .where(and(eq(users.organizationId, target.organizationId), eq(users.role, 'admin'), eq(users.isActive, true)))
     if (adminCount <= 1) throw new Error('Cannot suspend the last active admin for this organization')
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(users).set({ isActive: 'false', updatedAt: new Date() }).where(eq(users.id, userId))
+    await tx.update(users).set({ isActive: false, updatedAt: new Date() }).where(eq(users.id, userId))
 
     await writeAuditLog(tx, {
       action: 'instance.user.suspend',
@@ -479,7 +479,7 @@ export async function reactivateUserAccount(userId: string, reason: string) {
   if (!target) throw new Error('User not found')
 
   await db.transaction(async (tx) => {
-    await tx.update(users).set({ isActive: 'true', updatedAt: new Date() }).where(eq(users.id, userId))
+    await tx.update(users).set({ isActive: true, updatedAt: new Date() }).where(eq(users.id, userId))
 
     await writeAuditLog(tx, {
       action: 'instance.user.reactivate',
@@ -706,7 +706,7 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
       passwordHash,
       role,
       instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
-      isActive: 'true',
+      isActive: true,
     }).returning()
 
     // #796 — the membership row is the canonical org binding: sessions, the
