@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { users, organizations, organizationSettings, userOrganizationMemberships } from '@/db/schema'
 import { eq, desc, asc } from 'drizzle-orm'
 import { getUnlockedOrgIds } from '@/lib/break-glass'
+import { toRole } from '@/lib/rbac'
 import { InstanceUserTable, type MembershipRow } from './instance-user-table'
 
 /**
@@ -91,7 +92,7 @@ export default async function InstanceUsersPage() {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: toRole(user.role),
         instanceRole: user.instanceRole,
         isActive: user.isActive,
         organizationName: org?.name ?? null,

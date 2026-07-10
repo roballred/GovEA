@@ -120,7 +120,7 @@ export async function createUser(formData: FormData) {
     const [user] = await tx.insert(users).values({
       name, email, passwordHash, role,
       organizationId: orgId,
-      isActive: 'true',
+      isActive: true,
     }).returning()
 
     // #796 — the membership row is what sessions, the org switcher, and the
@@ -151,7 +151,7 @@ export async function updateUserRole(userId: string, role: 'admin' | 'contributo
   // path could previously strand the org without an active admin).
   if (before?.role === 'admin' && role !== 'admin') {
     const [adminCount] = await db.select({ count: count() }).from(users).where(
-      and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, 'true'))
+      and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, true))
     )
     if (adminCount.count <= 1) throw new Error('Cannot demote the last admin')
   }
@@ -182,7 +182,7 @@ export async function deactivateUser(userId: string) {
   const orgId = session.user.organizationId!
 
   const [adminCount] = await db.select({ count: count() }).from(users).where(
-    and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, 'true'))
+    and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, true))
   )
   const target = await db.query.users.findFirst({ where: eq(users.id, userId) })
   if (!target || !(await belongsToOrg(target, userId, orgId))) return
@@ -199,7 +199,7 @@ export async function deactivateUser(userId: string) {
 
   await db.transaction(async (tx) => {
     if (!membershipOnly) {
-      await tx.update(users).set({ isActive: 'false', updatedAt: new Date() }).where(
+      await tx.update(users).set({ isActive: false, updatedAt: new Date() }).where(
         and(eq(users.id, userId), eq(users.organizationId, orgId))
       )
     }
@@ -313,7 +313,7 @@ export async function reactivateUser(userId: string) {
   const orgId = session.user.organizationId!
 
   await db.transaction(async (tx) => {
-    await tx.update(users).set({ isActive: 'true', updatedAt: new Date() }).where(
+    await tx.update(users).set({ isActive: true, updatedAt: new Date() }).where(
       and(eq(users.id, userId), eq(users.organizationId, orgId))
     )
 
@@ -351,7 +351,7 @@ export async function editUser(userId: string, formData: FormData) {
   // Last-admin guard for role demotion
   if (before?.role === 'admin' && role !== 'admin') {
     const [adminCount] = await db.select({ count: count() }).from(users).where(
-      and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, 'true'))
+      and(eq(users.organizationId, orgId), eq(users.role, 'admin'), eq(users.isActive, true))
     )
     if (adminCount.count <= 1) throw new Error('Cannot demote the last admin')
   }

@@ -1,31 +1,21 @@
-import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
-
-// Domain-table visibility enum (used by capabilities, personas, etc.). Lives
-// here for now; Phase 1b relocates it when `organizations` becomes a core
-// re-export.
-export const visibilityEnum = pgEnum('visibility', ['org', 'connections', 'instance'])
+import { pgEnum } from 'drizzle-orm/pg-core'
 
 /**
- * Organization (tenancy root).
+ * Organization (tenancy root) — now owned by `@govcore/schema` (in the `govcore`
+ * Postgres schema) and re-exported here so app FKs and queries keep importing
+ * `organizations` from `@/db/schema`. Phase 1b of the GovCore cutover (#900).
  *
- * Kept core-shaped (id/name/slug/timestamps) ahead of Phase 1b of the GovCore
- * cutover, where this table is re-exported from `@govcore/schema`. GovEA's
- * organization-level configuration — theme, module toggles, security/confidence/
- * completeness policy, support tier, hierarchy, suspension, backup bookkeeping —
- * lives in the app-owned `organization_settings` sidecar (one row per org,
- * keyed by `organization_id`). See `./organization-settings.ts`.
+ * GovEA's organization-level configuration (theme, module toggles, security /
+ * confidence / completeness policy, support tier, hierarchy, suspension, backup
+ * bookkeeping) lives in the app-owned `organization_settings` sidecar — see
+ * `./organization-settings.ts`.
  */
-export const organizations = pgTable(
-  'organizations',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    name: text('name').notNull(),
-    slug: text('slug').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  },
-  (t) => [uniqueIndex('organizations_slug_unique').on(t.slug)],
-)
+export { organizations, type Organization, type NewOrganization } from '@govcore/schema'
 
-export type Organization = typeof organizations.$inferSelect
-export type NewOrganization = typeof organizations.$inferInsert
+/**
+ * Domain-table visibility enum (capabilities, personas, glossary, …). A **public**
+ * enum, deliberately distinct from `@govcore/schema`'s `govcore.visibility` (which
+ * scopes core federation / content-visibility). Kept here so the domain schema
+ * files that import it from `./organizations` are unchanged by the cutover.
+ */
+export const visibilityEnum = pgEnum('visibility', ['org', 'connections', 'instance'])

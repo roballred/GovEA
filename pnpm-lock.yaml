@@ -26,6 +26,9 @@ importers:
       '@govcore/rbac':
         specifier: ^0.1.0
         version: 0.1.0
+      '@govcore/schema':
+        specifier: ^0.4.0
+        version: 0.4.0
       '@govcore/theme':
         specifier: ^0.2.0
         version: 0.2.0(tailwindcss@3.4.19(tsx@4.21.0))
@@ -974,6 +977,10 @@ packages:
 
   '@govcore/schema@0.3.0':
     resolution: {integrity: sha512-tWbAnx0geqll4jSfsQtt2zTlaTfuDaXoiCGp4rz6Br0+hmCWVNFlk5zqLwQHiPvrSuHHzNuClkubrb6nCEZVjQ==}
+    hasBin: true
+
+  '@govcore/schema@0.4.0':
+    resolution: {integrity: sha512-aeLyV3L4w6cp5KIh+v9Ka8I6KH/Jbyes/vAq7COmRpGdfP/W+HUk9slAkh1QjD2bETRW8tCmJ+60ffBkY87H2w==}
     hasBin: true
 
   '@govcore/support@0.2.2':
@@ -5106,6 +5113,40 @@ snapshots:
   '@govcore/rbac@0.1.0': {}
 
   '@govcore/schema@0.3.0':
+    dependencies:
+      drizzle-orm: 0.45.2(postgres@3.4.8)
+      postgres: 3.4.8
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@govcore/schema@0.4.0':
     dependencies:
       drizzle-orm: 0.45.2(postgres@3.4.8)
       postgres: 3.4.8

@@ -129,7 +129,7 @@ export async function getCapabilityAdoption(orgId: string): Promise<AdoptionRepo
       sourceOrgName: orgNameById.get(row.sourceOrgId) ?? '(unknown org)',
       sourceCapabilityId: row.sourceCapabilityId,
       sourceCapabilityName: capNameById.get(row.sourceCapabilityId) ?? '(unknown capability)',
-      linkType: row.linkType,
+      linkType: row.linkType as AdoptionLink['linkType'],
       status: row.status,
     }
     const existing = linksByTarget.get(row.targetCapabilityId) ?? []

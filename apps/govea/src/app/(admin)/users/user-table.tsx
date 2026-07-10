@@ -47,11 +47,11 @@ export function UserTable({ users, currentUserId }: Props) {
       u.email.toLowerCase().includes(search.toLowerCase())
     const matchRole = roleFilter === 'all' || u.role === roleFilter
     const matchStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' ? u.isActive === 'true' : u.isActive !== 'true')
+      (statusFilter === 'active' ? u.isActive : !u.isActive)
     return matchSearch && matchRole && matchStatus
   })
 
-  const adminCount = users.filter(u => u.role === 'admin' && u.isActive === 'true').length
+  const adminCount = users.filter(u => u.role === 'admin' && u.isActive).length
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -153,7 +153,7 @@ export function UserTable({ users, currentUserId }: Props) {
               </TableRow>
             )}
             {filtered.map(u => {
-              const inactive = u.isActive !== 'true'
+              const inactive = !u.isActive
               const isSelf = u.id === currentUserId
               const lastAdmin = isLastAdmin(u)
               return (
@@ -161,7 +161,7 @@ export function UserTable({ users, currentUserId }: Props) {
                   <TableCell className="font-medium">{u.name ?? '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{u.email}</TableCell>
                   <TableCell>
-                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', ROLE_STYLES[u.role])}>
+                    <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', ROLE_STYLES[u.role ?? 'viewer'])}>
                       {u.role}
                     </span>
                   </TableCell>
@@ -258,7 +258,7 @@ export function UserTable({ users, currentUserId }: Props) {
             <FormField label="Email" name="email" type="email" required defaultValue={editTarget?.email} />
             <div className="space-y-1.5">
               <Label htmlFor="edit-role">Role</Label>
-              <select id="edit-role" name="role" defaultValue={editTarget?.role} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+              <select id="edit-role" name="role" defaultValue={editTarget?.role ?? ''} className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="viewer">Viewer</option>
                 <option value="contributor">Contributor</option>
                 <option value="admin">Admin</option>

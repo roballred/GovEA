@@ -35,7 +35,7 @@ describe('checkSsoProvisioning', () => {
       createTestUser(orgId, 'viewer'),
     ])
     // Deactivate the inactive user directly
-    await db.update(users).set({ isActive: 'false' }).where(eq(users.id, inactiveUser.id))
+    await db.update(users).set({ isActive: false }).where(eq(users.id, inactiveUser.id))
   })
 
   afterAll(() => cleanupOrg(orgId))
@@ -92,7 +92,7 @@ describe('checkSsoProvisioning — org-less identities (#797)', () => {
       email: 'orgless-regular@test.example',
       name: 'Org-less Regular',
       role: 'viewer',
-      isActive: 'true',
+      isActive: true,
     })
     const result = await checkSsoProvisioning('orgless-regular@test.example')
     expect(result.status).toBe('no_org_binding')
@@ -106,7 +106,7 @@ describe('checkSsoProvisioning — org-less identities (#797)', () => {
       name: 'Platform Operator',
       role: 'viewer',
       instanceRole: 'instance_admin',
-      isActive: 'true',
+      isActive: true,
     })
     const result = await checkSsoProvisioning('orgless-instance-admin@test.example')
     expect(result.status).toBe('allowed')
@@ -141,7 +141,7 @@ describe('global email uniqueness (#269)', () => {
       email: sharedEmail,
       name: 'User A',
       role: 'viewer',
-      isActive: 'true',
+      isActive: true,
     })
 
     // Second insert with same email into org B — must fail with unique violation.
@@ -153,7 +153,7 @@ describe('global email uniqueness (#269)', () => {
       email: sharedEmail,
       name: 'User B',
       role: 'viewer',
-      isActive: 'true',
+      isActive: true,
     }).catch((e: unknown) => e)
     expect(insertError).toBeInstanceOf(Error)
     const errText = [(insertError as Error).message, String((insertError as Error).cause ?? '')].join(' ')

@@ -63,7 +63,7 @@ describe('removeRetiredOrgs', () => {
       email: `${slug}@test.example`,
       name: 'Retired User',
       role: 'viewer',
-      isActive: 'true',
+      isActive: true,
     })
     await db.insert(capabilities).values({
       organizationId: org.id,

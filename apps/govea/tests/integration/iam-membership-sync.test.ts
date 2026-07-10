@@ -213,7 +213,7 @@ describe('org-side removal is membership-scoped (#799)', () => {
     expect((await membershipRow(guest.id, org.id)).isActive).toBe(false)
     expect((await membershipRow(guest.id, otherOrg.id)).isActive, 'other org untouched').toBe(true)
     const account = await db.query.users.findFirst({ where: eq(users.id, guest.id) })
-    expect(account?.isActive, 'identity stays active — they still belong elsewhere').toBe('true')
+    expect(account?.isActive, 'identity stays active — they still belong elsewhere').toBe(true)
 
     await cleanupOrg(otherOrg.id)
   })
@@ -229,7 +229,7 @@ describe('org-side removal is membership-scoped (#799)', () => {
 
     expect((await membershipRow(padmin.id, org.id)).isActive).toBe(false)
     const account = await db.query.users.findFirst({ where: eq(users.id, padmin.id) })
-    expect(account?.isActive, 'platform admins keep /instance access').toBe('true')
+    expect(account?.isActive, 'platform admins keep /instance access').toBe(true)
     expect(account?.instanceRole).toBe('instance_admin')
   })
 
@@ -242,7 +242,7 @@ describe('org-side removal is membership-scoped (#799)', () => {
     await deactivateUser(solo.id)
 
     const account = await db.query.users.findFirst({ where: eq(users.id, solo.id) })
-    expect(account?.isActive).toBe('false')
+    expect(account?.isActive).toBe(false)
   })
 
   it('deleting a multi-org member severs the membership, keeps the identity, repoints home', async () => {
@@ -302,7 +302,7 @@ describe('cross-org boundary stays silent-no-op (#796)', () => {
 
     const account = await db.query.users.findFirst({ where: eq(users.id, foreign.id) })
     expect(account?.role, 'role unchanged').toBe('admin')
-    expect(account?.isActive, 'still active').toBe('true')
+    expect(account?.isActive, 'still active').toBe(true)
     expect(
       await membershipRow(foreign.id, org.id),
       'no membership minted in the actor org',

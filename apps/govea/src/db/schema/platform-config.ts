@@ -1,15 +1,9 @@
-import { pgTable, text, boolean, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { users } from './users'
-
-export const platformConfig = pgTable('platform_config', {
-  id: text('id').primaryKey().default('singleton'),
-  instanceName: text('instance_name').notNull().default('GovEA'),
-  defaultTheme: text('default_theme').notNull().default('govcore'),
-  allowLocalAuth: boolean('allow_local_auth').notNull().default(true),
-  /** Applied to new orgs at provisioning time. Null means no tier is stamped. */
-  defaultSupportTier: text('default_support_tier'),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
-})
-
-export type PlatformConfig = typeof platformConfig.$inferSelect
+/**
+ * Platform config (singleton; not org-scoped) — owned by `@govcore/schema` and
+ * re-exported for `@/db/schema` consumers. Phase 1b (#900).
+ *
+ * Note: core's column defaults are GovCore-flavored (`instance_name` → 'GovCore',
+ * `default_theme` → 'base'). GovEA's seed sets these explicitly ('GovEA' /
+ * 'govcore'), so the defaults are not relied on — see the seed.
+ */
+export { platformConfig, type PlatformConfig, type NewPlatformConfig } from '@govcore/schema'

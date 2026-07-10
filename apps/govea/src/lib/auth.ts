@@ -55,7 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await db.query.users.findFirst({
           where: eq(users.email, email),
         })
-        if (!user || !user.passwordHash || user.isActive !== 'true') {
+        if (!user || !user.passwordHash || !user.isActive) {
           // Unknown / unusable / inactive account — recorded for investigation,
           // but the requester gets the same generic failure (no enumeration).
           await writeAuditLog(db, {
@@ -216,7 +216,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, token.id as string),
           })
-          if (!dbUser || dbUser.isActive !== 'true') return null
+          if (!dbUser || !dbUser.isActive) return null
           token.instanceRole = (dbUser?.instanceRole as 'instance_admin' | null) ?? null
           token.checkedAt = Date.now()
           // Refresh the password-change timestamp so a self-service password
@@ -273,7 +273,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // them from the deactivation net. All other org-less users are anomalous.
       if (dbUser && !dbUser.organizationId && dbUser.instanceRole !== 'instance_admin') {
         await db.transaction(async (tx) => {
-          await tx.update(users).set({ isActive: 'false' }).where(eq(users.id, user.id!))
+          await tx.update(users).set({ isActive: false }).where(eq(users.id, user.id!))
           await writeAuditLog(tx, {
             action: 'auth.sso_org_binding_failed',
             entityType: 'user',

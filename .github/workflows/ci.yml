@@ -145,10 +145,13 @@ jobs:
             sleep 1
           done
 
-      - name: Push schema to database
+      - name: Migrate platform schema (@govcore/schema → govcore.*)
+        run: pnpm --filter govea db:platform-migrate:container
+
+      - name: Push schema to database (public domain tables)
         run: pnpm --filter govea db:push --force
 
-      - name: Apply DB triggers (audit_log immutability, etc.)
+      - name: Apply DB triggers (taxonomy dedup; audit immutability ships in the core migration)
         run: pnpm --filter govea db:apply-triggers:container
 
       - name: Run integration tests
@@ -195,10 +198,13 @@ jobs:
       - name: Install Playwright browsers (Chromium only)
         run: pnpm --filter govea exec playwright install --with-deps chromium
 
-      - name: Push schema to database
+      - name: Migrate platform schema (@govcore/schema → govcore.*)
+        run: pnpm --filter govea db:platform-migrate:container
+
+      - name: Push schema to database (public domain tables)
         run: pnpm --filter govea db:push --force
 
-      - name: Apply DB triggers (audit_log immutability, etc.)
+      - name: Apply DB triggers (taxonomy dedup; audit immutability ships in the core migration)
         run: pnpm --filter govea db:apply-triggers:container
 
       # The db:seed script uses `tsx --env-file .env.local`.  Create an empty

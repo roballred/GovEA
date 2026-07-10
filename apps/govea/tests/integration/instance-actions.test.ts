@@ -447,7 +447,7 @@ describe('suspendUserAccount', () => {
     await suspendUserAccount(regularUser.id, 'Security incident test')
 
     const u = await findUser(regularUser.id)
-    expect(u!.isActive).toBe('false')
+    expect(u!.isActive).toBe(false)
   })
 
   it('writes an audit log entry with reason and target org', async () => {
@@ -494,7 +494,7 @@ describe('reactivateUserAccount', () => {
     await reactivateUserAccount(regularUser.id, 'Cleared — reactivation test')
 
     const u = await findUser(regularUser.id)
-    expect(u!.isActive).toBe('true')
+    expect(u!.isActive).toBe(true)
   })
 
   it('writes an audit log entry with reason and target org', async () => {

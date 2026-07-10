@@ -67,14 +67,14 @@ export async function createTestUser(
 
   const [user] = await db
     .insert(users)
-    .values({ id: randomUUID(), organizationId: orgId, email, name, role, passwordHash, isActive: 'true' })
+    .values({ id: randomUUID(), organizationId: orgId, email, name, role, passwordHash, isActive: true })
     .returning()
 
   return {
     id: user.id,
     email: user.email!,
     name: user.name!,
-    role: user.role,
+    role: role,
     organizationId: user.organizationId!,
   }
 }

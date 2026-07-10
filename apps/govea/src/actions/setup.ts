@@ -45,7 +45,7 @@ export async function runSetup(formData: FormData) {
       passwordHash,
       role: 'admin',
       organizationId: org.id,
-      isActive: 'true',
+      isActive: true,
     }).returning()
 
     await writeAuditLog(tx, {
