@@ -1,6 +1,11 @@
 'use server'
 
-import { db } from '@/db/client'
+// #896 — the instance-operator console is cross-org by definition, so its reads
+// and writes run on the privileged (RLS-bypassing) pool rather than relying on
+// the app happening to be a superuser. Every action here is gated by
+// `requireInstanceAdmin()` (the `instanceRole` check). Aliased to `db`.
+// (Full `createOperatorActions` seam adoption is a follow-up, paired with #895.)
+import { privilegedDb as db } from '@/db/client'
 import { organizations, organizationSettings, users, userOrganizationMemberships, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
 import { eq, and, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
