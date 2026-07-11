@@ -1,4 +1,7 @@
-import { db } from '@/db/client'
+// #896 — active-org resolution runs during session/JWT resolution, before a
+// tenant GUC exists, so it reads memberships on the privileged (RLS-bypassing)
+// pool. Aliased to `db` for readability.
+import { privilegedDb as db } from '@/db/client'
 import { userOrganizationMemberships } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import type { Role } from '@/lib/rbac'

@@ -2,7 +2,13 @@ import NextAuth from 'next-auth'
 import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
 import Credentials from 'next-auth/providers/credentials'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
-import { db } from '@/db/client'
+// #896 — identity/session work runs on the privileged (RLS-bypassing) pool:
+// the credentials lookup, adapter, SSO check, membership resolution, lockout
+// updates, and login/logout audit all happen before or across a tenant context,
+// so they cannot be filtered by the `app.current_org` GUC. Aliased to `db` so
+// the callbacks below read naturally. (Interim until `createAuth` lands its
+// per-org security-policy hooks — GovCore #107.)
+import { privilegedDb as db } from '@/db/client'
 import { users, accounts, sessions, verificationTokens } from '@/db/schema'
 import bcrypt from 'bcryptjs'
 import { eq } from 'drizzle-orm'

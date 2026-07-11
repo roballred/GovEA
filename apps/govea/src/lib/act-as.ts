@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers'
 import { and, eq, isNull, gt } from 'drizzle-orm'
-import { db } from '@/db/client'
+// #896 — act-as deliberately crosses the tenant boundary (an operator acting
+// within a target org), so it runs on the privileged (RLS-bypassing) pool.
+import { privilegedDb as db } from '@/db/client'
 import {
   actAsSessions,
   breakGlassSessions,

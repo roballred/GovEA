@@ -1,5 +1,8 @@
 import { and, eq, gt, isNotNull, isNull } from 'drizzle-orm'
-import { db } from '@/db/client'
+// #896 — break-glass deliberately crosses the tenant boundary (an operator
+// grant against a target org), so it runs on the privileged (RLS-bypassing)
+// pool, not the tenant-GUC-scoped runtime pool. Aliased to `db`.
+import { privilegedDb as db } from '@/db/client'
 import { breakGlassSessions, type BreakGlassSession } from '@/db/schema'
 import { or } from 'drizzle-orm'
 

@@ -18,7 +18,9 @@
  * one user record (or none).
  */
 
-import { db } from '@/db/client'
+// #896 — the SSO provisioning check runs before a session/tenant context exists,
+// so it reads identity on the privileged (RLS-bypassing) pool. Aliased to `db`.
+import { privilegedDb as db } from '@/db/client'
 import { users } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { resolveActiveMembership } from '@/lib/active-membership'

@@ -4,7 +4,9 @@ import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { eq } from 'drizzle-orm'
-import { db } from '@/db/client'
+// #896 — act-as operator flows cross the tenant boundary (reading a target org's
+// data), so they run on the privileged (RLS-bypassing) pool.
+import { privilegedDb as db } from '@/db/client'
 import { applications, organizations } from '@/db/schema'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
