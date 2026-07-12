@@ -9,9 +9,27 @@
  * OWASP A07 — Identification and Authentication Failures
  */
 import type { SecuritySettings } from '@/db/schema'
+import type { PasswordPolicy } from '@govcore/auth'
 
 /** Fallback when no per-org policy is available (setup / pre-org paths). */
 export const FALLBACK_MIN_LENGTH = 8
+
+/**
+ * Map GovEA's typed `SecuritySettings` column to `@govcore/auth`'s `PasswordPolicy`.
+ * The password rules are 1:1 (min length + require upper/lower/digit/special), so
+ * core's flows enforce exactly the same policy; the extra `SecuritySettings` fields
+ * core doesn't model (expiry, lockout thresholds) stay app-side. Lets us keep the
+ * column as the source of truth while adopting `@govcore/auth`'s change/reset flows.
+ */
+export function securitySettingsToPolicy(s: SecuritySettings): PasswordPolicy {
+  return {
+    minLength: s.passwordMinLength,
+    requireUppercase: s.requireUppercase,
+    requireLowercase: s.requireLowercase,
+    requireDigit: s.requireDigit,
+    requireSpecial: s.requireSpecial,
+  }
+}
 
 /** @deprecated retained as named export for back-compat with the original code path. */
 export const PASSWORD_MIN_LENGTH = FALLBACK_MIN_LENGTH
