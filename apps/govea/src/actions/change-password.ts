@@ -16,7 +16,7 @@
  * `securitySettings` column (still the source of truth, mapped to core's
  * `PasswordPolicy`), and map the typed result to the form's `{ ok, message }`.
  */
-import { changePassword } from '@govcore/auth'
+import { changePassword } from '@govcore/auth/password-flows'
 import { redirect } from 'next/navigation'
 import { db } from '@/db/client'
 import { auth } from '@/lib/auth'

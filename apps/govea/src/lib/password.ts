@@ -9,7 +9,7 @@
  * OWASP A07 — Identification and Authentication Failures
  */
 import type { SecuritySettings } from '@/db/schema'
-import type { PasswordPolicy } from '@govcore/auth'
+import type { PasswordPolicy } from '@govcore/auth/password-flows'
 
 /** Fallback when no per-org policy is available (setup / pre-org paths). */
 export const FALLBACK_MIN_LENGTH = 8
