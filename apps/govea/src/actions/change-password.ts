@@ -51,5 +51,19 @@ export async function changeOwnPassword(formData: FormData): Promise<ChangePassw
     rounds: 12,
   })
 
-  return result.ok ? { ok: true } : { ok: false, message: result.message }
+  if (result.ok) return { ok: true }
+
+  // The flow moved to @govcore/auth, but keep GovEA's original form wording so
+  // the UX (and the change-password tests) don't shift. weak-password falls
+  // through to core's policy message (same rules, same phrasing).
+  switch (result.reason) {
+    case 'no-local-password':
+      return { ok: false, message: 'Account does not have a local password (SSO-only)' }
+    case 'current-incorrect':
+      return { ok: false, message: 'Current password is incorrect' }
+    case 'reused':
+      return { ok: false, message: 'New password must be different from the current password' }
+    default:
+      return { ok: false, message: result.message }
+  }
 }
