@@ -33,6 +33,7 @@
     "@govcore/schema": "^0.4.0",
     "@govcore/server": "^0.3.1",
     "@govcore/setup": "^0.1.1",
+    "@govcore/tenancy": "^0.3.1",
     "@govcore/theme": "^0.2.0",
     "@govea/core": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15",

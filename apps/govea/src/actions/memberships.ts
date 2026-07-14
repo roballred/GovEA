@@ -7,9 +7,11 @@ import { auth } from '@/lib/auth'
 import { isAdmin, type Role } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { redirect } from 'next/navigation'
-// Guard primitives shared with the instance-console membership actions
-// (#693 slice 4 — see lib/membership-guards.ts).
-import { activeAdminCount, findMembership } from '@/lib/membership-guards'
+// The membership model is core (#893): the lookup comes from @govcore/tenancy,
+// and the last-admin invariant from lib/last-admin-guard (core's assert, wrapped
+// to keep GovEA's wording). The instance console guards the same way.
+import { findMembership } from '@govcore/tenancy'
+import { assertNotLastAdmin } from '@/lib/last-admin-guard'
 
 const MEMBERSHIP_ENTITY = 'user_organization_membership'
 
@@ -64,7 +66,7 @@ export async function addOrgMembership(email: string, role: Role) {
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email.trim())).limit(1)
   if (!user) throw new Error('No user with that email exists. Create the user first.')
 
-  const existing = await findMembership(user.id, orgId)
+  const existing = await findMembership(db, user.id, orgId)
 
   await db.transaction(async (tx) => {
     if (existing) {
@@ -95,16 +97,23 @@ export async function updateOrgMembershipRole(userId: string, role: Role) {
   const session = await requireAdmin()
   const orgId = session.user.organizationId!
 
-  const before = await findMembership(userId, orgId)
+  const before = await findMembership(db, userId, orgId)
   if (!before) throw new Error('No membership for that user in this organization.')
 
-  if (before.role === 'admin' && role !== 'admin' && before.isActive) {
-    if (await activeAdminCount(orgId) <= 1) {
-      throw new Error('Cannot demote the last admin of this organization.')
-    }
-  }
-
   await db.transaction(async (tx) => {
+    // A role change leaves isActive alone, so the proposed next state carries
+    // `before.isActive` through.
+    await assertNotLastAdmin(tx, {
+      organizationId: orgId,
+      change: {
+        currentRole: before.role,
+        currentIsActive: before.isActive,
+        nextRole: role,
+        nextIsActive: before.isActive,
+      },
+      message: 'Cannot demote the last admin of this organization.',
+    })
+
     await tx.update(userOrganizationMemberships)
       .set({ role, updatedAt: new Date() })
       .where(and(
@@ -128,16 +137,23 @@ export async function setOrgMembershipActive(userId: string, active: boolean) {
   const session = await requireAdmin()
   const orgId = session.user.organizationId!
 
-  const before = await findMembership(userId, orgId)
+  const before = await findMembership(db, userId, orgId)
   if (!before) throw new Error('No membership for that user in this organization.')
 
-  if (!active && before.isActive && before.role === 'admin') {
-    if (await activeAdminCount(orgId) <= 1) {
-      throw new Error('Cannot remove the last admin of this organization.')
-    }
-  }
-
   await db.transaction(async (tx) => {
+    // Revoking keeps the role and flips isActive; reactivating can never orphan
+    // the org, and core short-circuits it without a count query.
+    await assertNotLastAdmin(tx, {
+      organizationId: orgId,
+      change: {
+        currentRole: before.role,
+        currentIsActive: before.isActive,
+        nextRole: before.role,
+        nextIsActive: active,
+      },
+      message: 'Cannot remove the last admin of this organization.',
+    })
+
     await tx.update(userOrganizationMemberships)
       .set({ isActive: active, updatedAt: new Date() })
       .where(and(

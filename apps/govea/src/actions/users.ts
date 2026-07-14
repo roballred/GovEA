@@ -9,7 +9,7 @@ import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
 import { validatePassword } from '@/lib/password'
 import { getOrgSecuritySettings } from '@/lib/security-policy'
-import { upsertMembership, setMembershipActiveFlag } from '@/lib/membership-sync'
+import { upsertMembership, setMembershipActiveFlag } from '@govcore/tenancy'
 import { redirect } from 'next/navigation'
 
 async function requireAdmin() {
