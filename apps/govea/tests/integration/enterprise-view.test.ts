@@ -46,11 +46,16 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await Promise.all([
-    cleanupOrg(stateOrgId),
-    cleanupOrg(cityAOrgId),
-    cleanupOrg(cityBOrgId),
-  ])
+  // Sequential, not Promise.all (#908). These three orgs are wired together by
+  // org_connections rows, and that table cascades from BOTH from_org_id and
+  // to_org_id. Deleting state and cityA concurrently makes each transaction lock
+  // the same two connection rows (state->cityA, cityA->state) through opposite FK
+  // paths, in opposite orders — a lock-order inversion that Postgres resolves by
+  // killing one with a 40P01 deadlock. Tearing down one org at a time removes the
+  // interleaving entirely; the orgs are tiny, so the wall-clock cost is noise.
+  await cleanupOrg(stateOrgId)
+  await cleanupOrg(cityAOrgId)
+  await cleanupOrg(cityBOrgId)
 })
 
 async function seedCap(orgId: string, name: string, visibility: 'org' | 'connections' | 'instance' = 'instance', domain?: string) {
