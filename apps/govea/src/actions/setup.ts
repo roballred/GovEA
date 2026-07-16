@@ -6,7 +6,10 @@ import { count } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'next/navigation'
 import { writeAuditLog } from '@/lib/audit'
-import { validatePassword } from '@/lib/password'
+// Import-light subpath — the @govcore/auth root pulls next-auth → next/server,
+// which vitest can't resolve (see lib/password.ts). Setup runs before any org
+// exists, so there's no per-org policy: core falls back to its minimum length.
+import { validatePassword } from '@govcore/auth/password'
 
 export async function isSetupComplete(): Promise<boolean> {
   const [result] = await db.select({ count: count() }).from(users)
