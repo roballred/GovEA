@@ -31,6 +31,9 @@ const TIER_BADGE: Record<string, { label: string; cls: string }> = {
 }
 
 const ACTION_LABELS: Record<string, string> = {
+  // Org creation moved to @govcore/tenancy (`platform.org.create`, #895); the
+  // legacy `instance.org.create` label is kept for audit rows written before it.
+  'platform.org.create':              'Created',
   'instance.org.create':              'Created',
   'instance.org.suspend':             'Suspended',
   'instance.org.unsuspend':           'Unsuspended',

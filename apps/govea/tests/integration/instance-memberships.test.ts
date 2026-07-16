@@ -74,25 +74,33 @@ describe('instance-console cross-org membership management (#693 slice 4)', () =
     const m = await membershipIn(orgB.id, subject.id)
     expect(m.role).toBe('contributor')
 
-    const audits = await getAuditLogs(orgB.id, 'membership.role_changed')
+    // #895 — the mutation is now @govcore/tenancy's updateMembershipAdministration,
+    // which audits `platform.membership.update` and carries the operator's reason
+    // in metadata (via composeAuditMetadata) rather than in `after`.
+    const audits = await getAuditLogs(orgB.id, 'platform.membership.update')
     const entry = audits.find(a => a.entityId === subject.id)
     expect(entry, 'audit row in the TARGET org').toBeDefined()
     expect(entry!.userId).toBe(operator.id)
     expect(entry!.before).toMatchObject({ role: 'viewer' })
-    expect(entry!.after).toMatchObject({ role: 'contributor', reason: 'support rotation' })
+    expect(entry!.after).toMatchObject({ role: 'contributor', isActive: true })
+    expect(entry!.metadata).toMatchObject({ reason: 'support rotation' })
   })
 
   it('revokes and reactivates a membership in another org with audit events', async () => {
+    // Both transitions now emit `platform.membership.update`; the after.isActive
+    // flag distinguishes a revoke from a reactivation.
     await setMembershipActiveAsInstanceAdmin(subject.id, orgB.id, false, 'engagement ended')
     expect((await membershipIn(orgB.id, subject.id)).isActive).toBe(false)
     expect(
-      (await getAuditLogs(orgB.id, 'membership.deactivate')).some(a => a.entityId === subject.id),
+      (await getAuditLogs(orgB.id, 'platform.membership.update'))
+        .some(a => a.entityId === subject.id && (a.after as { isActive?: boolean } | null)?.isActive === false),
     ).toBe(true)
 
     await setMembershipActiveAsInstanceAdmin(subject.id, orgB.id, true, 're-engaged')
     expect((await membershipIn(orgB.id, subject.id)).isActive).toBe(true)
     expect(
-      (await getAuditLogs(orgB.id, 'membership.reactivate')).some(a => a.entityId === subject.id),
+      (await getAuditLogs(orgB.id, 'platform.membership.update'))
+        .some(a => a.entityId === subject.id && (a.after as { isActive?: boolean } | null)?.isActive === true),
     ).toBe(true)
   })
 
