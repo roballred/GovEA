@@ -21,8 +21,8 @@ importers:
         specifier: ^1.4.0
         version: 1.11.1
       '@govcore/auth':
-        specifier: ^0.7.0
-        version: 0.7.0(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)
+        specifier: ^0.8.1
+        version: 0.8.1(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)
       '@govcore/nextkit':
         specifier: ^0.5.0
         version: 0.5.0(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))
@@ -39,8 +39,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
       '@govcore/tenancy':
-        specifier: ^0.3.1
-        version: 0.3.1(postgres@3.4.8)
+        specifier: ^0.5.0
+        version: 0.5.0(postgres@3.4.8)
       '@govcore/theme':
         specifier: ^0.2.0
         version: 0.2.0(tailwindcss@3.4.19(tsx@4.21.0))
@@ -982,14 +982,17 @@ packages:
   '@govcore/audit@0.1.4':
     resolution: {integrity: sha512-HOMOCIPEK+rbm0zXvH4rtPPl9zwqaG31LAfIAGBuvuUpvXqMHRzdQUUXUz1r1qand2YXt1spdbpkluYX7aoHcQ==}
 
+  '@govcore/audit@0.2.0':
+    resolution: {integrity: sha512-9YeWDDttFPNjYk+wruo+rlnR/HyneC0fVF0NZRo1Gqq5evtS+kuCO5P2biLvJ7qVUEtjIoxa1WskOLTY+7IRTA==}
+
   '@govcore/auth@0.4.1':
     resolution: {integrity: sha512-vAhPdf2jRL0LKqBOtTrq81ljleurIfBui/4DDwX2ghzARKAZZJmPUySmjlHVkGIQy+Ze7OFQ7NEWObA53IRVJQ==}
     peerDependencies:
       next: ^15.0.0
       react: ^19.0.0
 
-  '@govcore/auth@0.7.0':
-    resolution: {integrity: sha512-w+wZIASORV31wibCjUaLzcV71Sjnwm/vFIahLo/klhdswO+nCHMSH2fnM6L+yliHhRVHTyTvBPyBGCXJA8PBsg==}
+  '@govcore/auth@0.8.1':
+    resolution: {integrity: sha512-sY6Gt65NlAmdOjAhEqXW3Ye256JpfN8uDbZM8HHj/EAQokYS738hMey/bgq8DgrMtHpP2qPQ8XFS/xQCOrFJ9w==}
     peerDependencies:
       next: ^15.0.0
       react: ^19.0.0
@@ -1022,6 +1025,9 @@ packages:
 
   '@govcore/tenancy@0.3.1':
     resolution: {integrity: sha512-ubWtSMvlWFfIeyU6PultgSIDuT75hHtMPHqHbRGYOQ6vxDSRES9TwXXDFHSeEPs4pMVjMGc4pBa9SwiKuN/eRw==}
+
+  '@govcore/tenancy@0.5.0':
+    resolution: {integrity: sha512-uiXPZYTZtcqtex8tNb7rxhggp+YdxGVRLVQpzGMHFjQtNX6x14aAKx/bB0fpMXbg2fauvY/cSEK1CQFRRZ9t9w==}
 
   '@govcore/theme@0.2.0':
     resolution: {integrity: sha512-M1PuPT4BqZwuOF1oOxv1y6Z7U03RVqGU++LO65LaRLdw3C2ldDMFAJb8ZvNwYpRpK9EdJsgAxkbqMg+fFQ6koA==}
@@ -5145,6 +5151,41 @@ snapshots:
       - sql.js
       - sqlite3
 
+  '@govcore/audit@0.2.0(postgres@3.4.8)':
+    dependencies:
+      '@govcore/schema': 0.4.0
+      drizzle-orm: 0.45.2(postgres@3.4.8)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
   '@govcore/auth@0.4.1(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)':
     dependencies:
       '@auth/drizzle-adapter': 1.11.1
@@ -5190,12 +5231,12 @@ snapshots:
       - sql.js
       - sqlite3
 
-  '@govcore/auth@0.7.0(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)':
+  '@govcore/auth@0.8.1(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)':
     dependencies:
       '@auth/drizzle-adapter': 1.11.1
-      '@govcore/audit': 0.1.4(postgres@3.4.8)
+      '@govcore/audit': 0.2.0(postgres@3.4.8)
       '@govcore/schema': 0.4.0
-      '@govcore/tenancy': 0.3.1(postgres@3.4.8)
+      '@govcore/tenancy': 0.5.0(postgres@3.4.8)
       bcryptjs: 2.4.3
       drizzle-orm: 0.45.2(postgres@3.4.8)
       next: 15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5460,6 +5501,42 @@ snapshots:
   '@govcore/tenancy@0.3.1(postgres@3.4.8)':
     dependencies:
       '@govcore/audit': 0.1.4(postgres@3.4.8)
+      '@govcore/schema': 0.4.0
+      drizzle-orm: 0.45.2(postgres@3.4.8)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@govcore/tenancy@0.5.0(postgres@3.4.8)':
+    dependencies:
+      '@govcore/audit': 0.2.0(postgres@3.4.8)
       '@govcore/schema': 0.4.0
       drizzle-orm: 0.45.2(postgres@3.4.8)
     transitivePeerDependencies:

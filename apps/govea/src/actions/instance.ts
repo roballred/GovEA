@@ -7,17 +7,15 @@
 // (Full `createOperatorActions` seam adoption is a follow-up, paired with #895.)
 import { privilegedDb as db } from '@/db/client'
 import { organizations, organizationSettings, users, userOrganizationMemberships, breakGlassSessions, instanceSettings, platformConfig, auditLog } from '@/db/schema'
-import { eq, and, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
+import { eq, and, or, isNull, gt, like, desc, ne, count } from 'drizzle-orm'
 import { requireInstanceAdmin } from '@/lib/instance-admin'
 import { writeAuditLog } from '@/lib/audit'
 import { getRequestContext } from '@/lib/request-context'
 import { revalidatePath } from 'next/cache'
 import { MODULE_DEFS, type ModuleKey, type ModuleGroup } from '@/lib/modules'
-import { validatePassword } from '@/lib/password'
-import { findMembership } from '@govcore/tenancy'
-import { assertNotLastAdmin } from '@/lib/last-admin-guard'
+import { findMembership, createOrganization, updateMembershipAdministration } from '@govcore/tenancy'
+import { provisionUser } from '@govcore/auth'
 import type { Role } from '@/lib/rbac'
-import bcrypt from 'bcryptjs'
 import { themes } from '@/lib/themes'
 import {
   BREAK_GLASS_APPROVAL_THRESHOLD_MINUTES,
@@ -45,48 +43,50 @@ export async function createOrg(formData: FormData): Promise<{ id: string }> {
   const slug = (formData.get('slug') as string ?? '').trim()
 
   if (!name) throw new Error('Name is required')
+  // GovEA keeps its own slug input + validation (#895): core accepts an explicit
+  // slug, so we validate then hand the validated value through rather than let
+  // core auto-generate one.
   if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
     throw new Error('Slug must be lowercase letters, numbers, and hyphens only')
   }
 
-  const conflict = await db.query.organizations.findFirst({
-    where: eq(organizations.slug, slug),
-    columns: { id: true },
-  })
-  if (conflict) throw new Error('An organisation with that slug already exists')
-
-  // Apply instance-level defaults so new orgs inherit operator-configured settings
+  // Apply instance-level defaults so new orgs inherit operator-configured settings.
   const defaults = await db.query.platformConfig.findFirst({
     columns: { defaultTheme: true, defaultSupportTier: true },
   })
   const theme = defaults?.defaultTheme ?? 'govcore'
   const supportTier = defaults?.defaultSupportTier ?? null
+  const metadata = await auditMeta()
 
-  const orgId = await db.transaction(async (tx) => {
-    const [org] = await tx
-      .insert(organizations)
-      .values({ name, slug })
-      .returning()
+  // Core owns the org row + the platform.org.create audit; GovEA owns the
+  // organization_settings sidecar (theme/supportTier, app-specific). Run core
+  // inside GovEA's transaction (a tx satisfies GovcoreDb; core's own
+  // transaction nests as a savepoint) so the org, its audit, and the settings
+  // row commit together — no org can exist without its mandatory settings row.
+  const result = await db.transaction(async (tx) => {
+    const created = await createOrganization(tx, {
+      name,
+      slug,
+      actorUserId: session.user.id,
+      auditMetadata: metadata,
+    })
+    if (!created.ok) return created
 
     await tx
       .insert(organizationSettings)
-      .values({ organizationId: org.id, theme, supportTier })
+      .values({ organizationId: created.organization.id, theme, supportTier })
 
-    await writeAuditLog(tx, {
-      action: 'instance.org.create',
-      metadata: await auditMeta(),
-      entityType: 'organization',
-      entityId: org.id,
-      userId: session.user.id,
-      organizationId: null,
-      after: { name, slug, theme, supportTier },
-    })
-
-    return org.id
+    return created
   })
 
+  if (!result.ok) {
+    // slug validity is already checked above, so slug-taken is the live case;
+    // name-required cannot happen (guarded above). Preserve the prior wording.
+    throw new Error('An organisation with that slug already exists')
+  }
+
   revalidatePath('/instance/orgs')
-  return { id: orgId }
+  return { id: result.organization.id }
 }
 
 export async function grantBreakGlass(
@@ -359,8 +359,15 @@ export async function demoteInstanceAdmin(userId: string, reason?: string) {
  * org-scoped equivalents in actions/memberships.ts let an org Admin manage
  * their own org only; these let an Instance Admin change or revoke any
  * membership in any organization. Same audit action vocabulary, same per-org
- * last-admin guard (@govcore/tenancy via lib/last-admin-guard), plus the
- * instance console's proxy-aware audit metadata and reason convention.
+ * last-admin guard, now shared as `@govcore/tenancy`'s
+ * `updateMembershipAdministration` (#895): it operates on the explicit
+ * (user, org) membership — not the user's home org — so a cross-org membership
+ * edit stays scoped to the row the operator clicked, guards the org's last
+ * active admin inside its transaction, and audits `platform.membership.update`
+ * carrying the console's IP/user-agent + reason via `auditMetadata`. The wrapper
+ * reads the current membership only to supply the field the caller isn't
+ * changing (isActive for a role change, role for an activation change), since
+ * core takes the full desired state.
  */
 export async function setMembershipRoleAsInstanceAdmin(
   userId: string,
@@ -373,35 +380,23 @@ export async function setMembershipRoleAsInstanceAdmin(
   const before = await findMembership(db, userId, organizationId)
   if (!before) throw new Error('No membership for that user in that organization.')
 
-  await db.transaction(async (tx) => {
-    await assertNotLastAdmin(tx, {
-      organizationId,
-      change: {
-        currentRole: before.role,
-        currentIsActive: before.isActive,
-        nextRole: role,
-        nextIsActive: before.isActive,
-      },
-      message: 'Cannot demote the last admin of that organization.',
-    })
-
-    await tx.update(userOrganizationMemberships)
-      .set({ role, updatedAt: new Date() })
-      .where(and(
-        eq(userOrganizationMemberships.userId, userId),
-        eq(userOrganizationMemberships.organizationId, organizationId),
-      ))
-    await writeAuditLog(tx, {
-      action: 'membership.role_changed',
-      metadata: await auditMeta(),
-      entityType: 'user_organization_membership',
-      entityId: userId,
-      userId: session.user.id,
-      organizationId,
-      before: { role: before.role },
-      after: { role, reason: reason?.trim() || null },
-    })
+  const result = await updateMembershipAdministration(db, {
+    userId,
+    organizationId,
+    role,
+    isActive: before.isActive,
+    actorUserId: session.user.id,
+    adminRole: 'admin',
+    auditMetadata: await auditMeta(),
+    reason,
   })
+  if (!result.ok) {
+    throw new Error(
+      result.reason === 'not-found'
+        ? 'No membership for that user in that organization.'
+        : 'Cannot demote the last admin of that organization.',
+    )
+  }
 
   revalidatePath('/instance/users')
 }
@@ -417,34 +412,23 @@ export async function setMembershipActiveAsInstanceAdmin(
   const before = await findMembership(db, userId, organizationId)
   if (!before) throw new Error('No membership for that user in that organization.')
 
-  await db.transaction(async (tx) => {
-    await assertNotLastAdmin(tx, {
-      organizationId,
-      change: {
-        currentRole: before.role,
-        currentIsActive: before.isActive,
-        nextRole: before.role,
-        nextIsActive: active,
-      },
-      message: 'Cannot remove the last admin of that organization.',
-    })
-
-    await tx.update(userOrganizationMemberships)
-      .set({ isActive: active, updatedAt: new Date() })
-      .where(and(
-        eq(userOrganizationMemberships.userId, userId),
-        eq(userOrganizationMemberships.organizationId, organizationId),
-      ))
-    await writeAuditLog(tx, {
-      action: active ? 'membership.reactivate' : 'membership.deactivate',
-      metadata: await auditMeta(),
-      entityType: 'user_organization_membership',
-      entityId: userId,
-      userId: session.user.id,
-      organizationId,
-      after: { reason: reason?.trim() || null },
-    })
+  const result = await updateMembershipAdministration(db, {
+    userId,
+    organizationId,
+    role: before.role,
+    isActive: active,
+    actorUserId: session.user.id,
+    adminRole: 'admin',
+    auditMetadata: await auditMeta(),
+    reason,
   })
+  if (!result.ok) {
+    throw new Error(
+      result.reason === 'not-found'
+        ? 'No membership for that user in that organization.'
+        : 'Cannot remove the last admin of that organization.',
+    )
+  }
 
   revalidatePath('/instance/users')
 }
@@ -709,47 +693,32 @@ export async function createInstanceUser(formData: FormData): Promise<CreateInst
       : { status: 'membership_added', message: `Added ${email} to ${organization.name} as ${role}.${promotedSuffix}` }
   }
 
-  // ── New identity → create the user row (original path) ─────────────────────
-  const pwValidation = validatePassword(password)
-  if (!pwValidation.valid) throw new Error(pwValidation.message)
-
-  const passwordHash = await bcrypt.hash(password, 12)
-  await db.transaction(async (tx) => {
-    const [user] = await tx.insert(users).values({
-      organizationId,
-      name,
-      email,
-      passwordHash,
-      role,
-      instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
-      isActive: true,
-    }).returning()
-
-    // #796 — the membership row is the canonical org binding: sessions, the
-    // org switcher, membership management, and the SSO guard all resolve from
-    // it. Without this row the account could reach /instance (via
-    // instanceRole) but never functioned as an org member.
-    await tx.insert(userOrganizationMemberships).values({
-      userId: user.id, organizationId, role, isActive: true, isPrimary: true,
-    })
-
-    await writeAuditLog(tx, {
-      action: 'instance.user.create',
-      metadata: await auditMeta(),
-      entityType: 'user',
-      entityId: user.id,
-      userId: session.user.id,
-      organizationId: null,
-      after: {
-        name,
-        email,
-        role,
-        organizationId,
-        organizationName: organization.name,
-        instanceRole: grantPlatformAdmin ? 'instance_admin' : null,
-      },
-    })
+  // ── New identity → provision via @govcore/auth (#895) ──────────────────────
+  // Core validates the password, hashes it (rounds: 12 preserves GovEA's cost
+  // factor), inserts the user, writes the canonical primary membership (#796 —
+  // sessions/switcher/SSO guard all resolve from it), and audits
+  // platform.user.create — never the password — all in one transaction. The
+  // console's IP/user-agent ride along via auditMetadata. The existing-identity
+  // branch above already handled the duplicate-email case, so email-taken here
+  // is only a race; surface it the same handled way rather than a 500.
+  const provisioned = await provisionUser(db, {
+    email,
+    name,
+    organizationId,
+    role,
+    instanceAdmin: grantPlatformAdmin,
+    password,
+    actorUserId: session.user.id,
+    rounds: 12,
+    auditMetadata: await auditMeta(),
   })
+  if (!provisioned.ok) {
+    if (provisioned.reason === 'email-taken') {
+      return { status: 'already_member', message: `${email} already exists. Reopen the form to add them to ${organization.name}.` }
+    }
+    // weak-password / missing-fields → the same thrown error the form showed before.
+    throw new Error(provisioned.message ?? 'Could not create the account.')
+  }
 
   revalidatePath('/instance/users')
   return { status: 'identity_created', message: `Created ${email} in ${organization.name} as ${role}.` }
@@ -793,8 +762,15 @@ export async function updateOrgGovernance(
 export async function getOrgGovernanceHistory(orgId: string) {
   await requireInstanceAdmin()
 
+  // Org-lifecycle events span both vocabularies after the #895 cutover: creation
+  // now comes from @govcore/tenancy as `platform.org.create`, while suspend/
+  // unsuspend/governance stay app-side as `instance.org.*`. Match both prefixes
+  // so the history stays complete (older rows are `instance.org.create`).
   return db.select().from(auditLog)
-    .where(and(eq(auditLog.entityId, orgId), like(auditLog.action, 'instance.org.%')))
+    .where(and(
+      eq(auditLog.entityId, orgId),
+      or(like(auditLog.action, 'platform.org.%'), like(auditLog.action, 'instance.org.%')),
+    ))
     .orderBy(desc(auditLog.createdAt))
     .limit(10)
 }
