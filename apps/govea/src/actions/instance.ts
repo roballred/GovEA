@@ -14,7 +14,10 @@ import { getRequestContext } from '@/lib/request-context'
 import { revalidatePath } from 'next/cache'
 import { MODULE_DEFS, type ModuleKey, type ModuleGroup } from '@/lib/modules'
 import { findMembership, createOrganization, updateMembershipAdministration } from '@govcore/tenancy'
-import { provisionUser } from '@govcore/auth'
+// Import-light subpath (@govcore/auth #127): the main @govcore/auth entry pulls
+// createAuth → next-auth → next/server, which vitest can't resolve, so importing
+// provisionUser from the root breaks every test suite that loads this module.
+import { provisionUser } from '@govcore/auth/provisioning'
 import type { Role } from '@/lib/rbac'
 import { themes } from '@/lib/themes'
 import {

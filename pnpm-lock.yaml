@@ -21,8 +21,8 @@ importers:
         specifier: ^1.4.0
         version: 1.11.1
       '@govcore/auth':
-        specifier: ^0.8.1
-        version: 0.8.1(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)
+        specifier: ^0.9.0
+        version: 0.9.0(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)
       '@govcore/nextkit':
         specifier: ^0.5.0
         version: 0.5.0(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))
@@ -991,8 +991,8 @@ packages:
       next: ^15.0.0
       react: ^19.0.0
 
-  '@govcore/auth@0.8.1':
-    resolution: {integrity: sha512-sY6Gt65NlAmdOjAhEqXW3Ye256JpfN8uDbZM8HHj/EAQokYS738hMey/bgq8DgrMtHpP2qPQ8XFS/xQCOrFJ9w==}
+  '@govcore/auth@0.9.0':
+    resolution: {integrity: sha512-xJtAGbejZadytqP0hDI6BvjBYyIkF/zg000sELVvcf28lObO6TwSycAoHEInaETV+lBaivL3v4KxbveW929Duw==}
     peerDependencies:
       next: ^15.0.0
       react: ^19.0.0
@@ -5231,7 +5231,7 @@ snapshots:
       - sql.js
       - sqlite3
 
-  '@govcore/auth@0.8.1(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)':
+  '@govcore/auth@0.9.0(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)':
     dependencies:
       '@auth/drizzle-adapter': 1.11.1
       '@govcore/audit': 0.2.0(postgres@3.4.8)
