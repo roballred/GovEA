@@ -26,7 +26,10 @@ import bcrypt from 'bcryptjs'
 import { saveSecuritySettings, getSecuritySettingsForUi } from '@/actions/security-settings'
 import { changeOwnPassword } from '@/actions/change-password'
 import { createUser, editUser } from '@/actions/users'
-import { validatePassword, FALLBACK_MIN_LENGTH } from '@/lib/password'
+// #894 — the validator + fallback now come from @govcore/auth; GovEA keeps only
+// the SecuritySettings → PasswordPolicy mapper.
+import { validatePassword, FALLBACK_MIN_LENGTH } from '@govcore/auth/password'
+import { securitySettingsToPolicy } from '@/lib/password'
 import { isPasswordExpired, mergeWithDefaults } from '@/lib/security-policy'
 import {
   createTestOrg, createTestUser, cleanupOrg, makeSession, type TestUser,
@@ -117,7 +120,7 @@ describe('security settings (#527)', () => {
   // ── validatePassword honours per-org policy ───────────────────────────────
 
   it('validatePassword: each rule fires the right error message', () => {
-    const strict = {
+    const settings = {
       passwordMinLength: 12,
       requireUppercase: true,
       requireLowercase: true,
@@ -128,6 +131,10 @@ describe('security settings (#527)', () => {
       lockoutDurationMinutes: 30,
       passwordExpiryDays: 0,
     }
+    // The org policy still lives in the SecuritySettings column; securitySettingsToPolicy
+    // is the seam that hands it to core's validator, so exercise it end to end.
+    const strict = securitySettingsToPolicy(settings)
+
     expect(validatePassword('', strict)).toMatchObject({ valid: false })
     expect(validatePassword('Short1!', strict)).toMatchObject({ valid: false, message: expect.stringMatching(/12/) })
     expect(validatePassword('alllowercase1!', strict)).toMatchObject({ valid: false, message: expect.stringMatching(/uppercase/i) })

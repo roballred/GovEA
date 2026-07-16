@@ -7,7 +7,11 @@ import bcrypt from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/rbac'
 import { writeAuditLog } from '@/lib/audit'
-import { validatePassword } from '@/lib/password'
+// Import-light subpaths only — the @govcore/auth root pulls next-auth →
+// next/server, which vitest can't resolve (see lib/password.ts).
+import { validatePassword } from '@govcore/auth/password'
+import { adminResetPassword } from '@govcore/auth/password-flows'
+import { securitySettingsToPolicy } from '@/lib/password'
 import { getOrgSecuritySettings } from '@/lib/security-policy'
 import { upsertMembership, setMembershipActiveFlag } from '@govcore/tenancy'
 import { redirect } from 'next/navigation'
@@ -107,7 +111,7 @@ export async function createUser(formData: FormData) {
   const password = formData.get('password') as string
   const role = formData.get('role') as 'admin' | 'contributor' | 'viewer'
 
-  const policy = await getOrgSecuritySettings(orgId)
+  const policy = securitySettingsToPolicy(await getOrgSecuritySettings(orgId))
   const pwValidation = validatePassword(password, policy)
   if (!pwValidation.valid) throw new Error(pwValidation.message)
 
@@ -363,17 +367,11 @@ export async function editUser(userId: string, formData: FormData) {
     updatedAt: new Date(),
   }
 
-  if (newPassword) {
-    const policy = await getOrgSecuritySettings(orgId)
-    const pwValidation = validatePassword(newPassword, policy)
-    if (!pwValidation.valid) throw new Error(pwValidation.message)
-    updates.passwordHash = await bcrypt.hash(newPassword, 12)
-    // #527 — reset password-change clock + clear lockout state when an
-    // admin resets a user's password. Mirrors the self-service path.
-    updates.lastPasswordChangedAt = new Date()
-    updates.failedLoginAttempts = 0
-    updates.lockoutUntil = null
-  }
+  // Resolve the policy before opening the transaction — it's a read, and an
+  // operator reset must enforce the same rules as the self-service path.
+  const policy = newPassword
+    ? securitySettingsToPolicy(await getOrgSecuritySettings(orgId))
+    : null
 
   await db.transaction(async (tx) => {
     await tx.update(users).set(updates).where(
@@ -392,5 +390,27 @@ export async function editUser(userId: string, formData: FormData) {
       before: { name: before?.name, email: before?.email, role: before?.role },
       after: { name, email, role },
     })
+
+    // #894 — the operator reset is @govcore/auth's adminResetPassword: it
+    // enforces the policy, rehashes at GovEA's cost factor, stamps
+    // lastPasswordChangedAt (so the #527 expiry redirect keeps working),
+    // clears lockout state, and writes a distinct auth.password_reset event
+    // attributed to the operator — previously this reset was invisible,
+    // folded into the generic user.edit audit above.
+    //
+    // Runs on `tx` (a tx satisfies core's GovcoreDb; core's own transaction
+    // nests as a savepoint) so the profile edit and the reset still commit
+    // together. A rejected password throws, rolling the whole edit back —
+    // matching the previous behavior, where validation threw before any write.
+    if (newPassword) {
+      const reset = await adminResetPassword(tx, {
+        userId,
+        newPassword,
+        actorUserId: session.user.id,
+        policy,
+        rounds: 12,
+      })
+      if (!reset.ok) throw new Error(reset.message)
+    }
   })
 }
