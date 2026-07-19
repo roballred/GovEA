@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback, type ReactNode, type KeyboardEvent } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { DarkModeToggle } from '@govcore/nextkit/theming'
+import { GroupedSideNav, type NavGroup as CoreNavGroup } from '@govcore/nextkit'
 import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
-import { groupSlug, readOpenGroup, writeOpenGroup } from '@/lib/nav-groups'
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
@@ -116,52 +116,52 @@ function SidebarContent({
   const isContributor = role === 'admin' || role === 'contributor'
   const isViewer = role === 'viewer'
 
-  // #662 single-open accordion. Default-collapsed on first load; storage
-  // holds at most one open group at a time under `nav.openGroup`. The
-  // initial render renders all-collapsed so SSR + hydration agree; an
-  // effect syncs from localStorage after mount.
-  const [openGroup, setOpenGroup] = useState<string | null>(null)
+  // #898 — the collapsible group accordion is now @govcore/nextkit's
+  // GroupedSideNav (branded tone). GovEA still owns role/module gating: filter
+  // groups + items here, compute `active` per item, and mark the group holding
+  // the active route `defaultOpen` (nextkit's native <details> accordion opens
+  // it with no client JS). The ungrouped links (Dashboard/Overview/
+  // Notifications) and the Platform Admin footer stay bespoke below — they
+  // carry a badge, a tour anchor, and a distinct treatment GroupedSideNav's
+  // plain items don't model.
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const stored = readOpenGroup(window.localStorage)
-    if (stored !== null) setOpenGroup(stored)
-  }, [])
+  const visibleGroups: CoreNavGroup[] = NAV_GROUPS
+    .filter(g => !g.adminOnly || isAdmin)
+    .filter(g => !(g.viewerHidden && isViewer))
+    .map(group => {
+      const items = group.items
+        .filter(
+          item =>
+            (!item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])) &&
+            (!item.contributorOnly || isContributor) &&
+            !(item.viewerHidden && isViewer)
+        )
+        .map(item => ({ href: item.href, label: item.label, active: isActive(item.href) }))
+      return { label: group.label, items, defaultOpen: items.some(i => i.active) }
+    })
+    .filter(group => group.items.length > 0)
 
-  // Open exactly one group; clicking the currently-open group collapses it.
-  // Setting `force=true` always opens (used by the global helper below so
-  // the product tour can pre-open a group regardless of current state).
-  const setOpenGroupAndPersist = useCallback((label: string | null) => {
-    setOpenGroup(label)
-    if (typeof window !== 'undefined') {
-      writeOpenGroup(label, window.localStorage)
-    }
-  }, [])
-
-  const toggleGroup = useCallback((label: string) => {
-    setOpenGroupAndPersist(openGroup === label ? null : label)
-  }, [openGroup, setOpenGroupAndPersist])
-
-  const onGroupKeyDown = useCallback((e: KeyboardEvent<HTMLButtonElement>, label: string) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      toggleGroup(label)
-    }
-  }, [toggleGroup])
-
-  // #662 — expose a global hook so the product tour can ensure a parent
-  // nav group is open before highlighting a child link. Idempotent;
-  // setting the same group again is a no-op. Cleared on unmount.
+  // #662/#898 — expose the product-tour hook over nextkit's native accordion:
+  // opening a group is `details.open = true` on the `data-nav-group` element
+  // GroupedSideNav emits (both the desktop and mobile sidebars carry one, so
+  // set every match). Replaces the old controlled-state setter; the tour code
+  // still just calls `window.__goveaOpenNavGroup(label)`. Cross-session
+  // persistence of the open group is intentionally dropped (GovCore #103 —
+  // the active group auto-opens via defaultOpen, which is the case that
+  // mattered).
   useEffect(() => {
     if (typeof window === 'undefined') return
     const w = window as unknown as { __goveaOpenNavGroup?: (label: string) => void }
     w.__goveaOpenNavGroup = (label: string) => {
-      setOpenGroupAndPersist(label)
+      document
+        .querySelectorAll<HTMLDetailsElement>(`[data-nav-group="${label.replace(/"/g, '\\"')}"]`)
+        .forEach(el => { el.open = true })
     }
     return () => {
       delete w.__goveaOpenNavGroup
     }
-  }, [setOpenGroupAndPersist])
+  }, [])
 
   return (
     <nav aria-label={navLabel} className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
@@ -172,7 +172,7 @@ function SidebarContent({
         data-tour="dashboard"
         className={cn(
           'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+          isActive('/dashboard')
             ? 'bg-white/15 text-white'
             : 'text-white/70 hover:bg-white/10 hover:text-white'
         )}
@@ -186,7 +186,7 @@ function SidebarContent({
         onClick={onClose}
         className={cn(
           'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          pathname === '/overview' || pathname.startsWith('/overview/')
+          isActive('/overview')
             ? 'bg-white/15 text-white'
             : 'text-white/70 hover:bg-white/10 hover:text-white'
         )}
@@ -204,7 +204,7 @@ function SidebarContent({
         onClick={onClose}
         className={cn(
           'flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          pathname === '/notifications' || pathname.startsWith('/notifications/')
+          isActive('/notifications')
             ? 'bg-white/15 text-white'
             : 'text-white/70 hover:bg-white/10 hover:text-white'
         )}
@@ -217,98 +217,14 @@ function SidebarContent({
         ) : null}
       </Link>
 
-      <div className="mt-2 space-y-4">
-        {NAV_GROUPS
-          .filter(g => !g.adminOnly || isAdmin)
-          .filter(g => !(g.viewerHidden && isViewer))
-          .map(group => {
-          const visibleItems = group.items.filter(
-            item =>
-              (!item.moduleKey || isModuleEnabled(enabledModules, item.moduleKey as Parameters<typeof isModuleEnabled>[1])) &&
-              (!item.contributorOnly || isContributor) &&
-              !(item.viewerHidden && isViewer)
-          )
-          if (visibleItems.length === 0) return null
-          // Single-open accordion (#662). The group is open if it's the
-          // currently-open one OR it contains the active route (the
-          // containing-active-route guard keeps the active-link highlight
-          // visible without requiring the user to expand the group
-          // manually). The containing-active group also "wins" against
-          // the user's explicit open group when both apply — same group.
-          const containsActive = visibleItems.some(item =>
-            pathname === item.href || pathname.startsWith(item.href + '/')
-          )
-          const effectiveOpen = openGroup === group.label || containsActive
-          const groupId = `navgroup-${groupSlug(group.label)}`
-          return (
-            <div key={group.label}>
-              <button
-                type="button"
-                aria-expanded={effectiveOpen}
-                aria-controls={groupId}
-                onClick={() => toggleGroup(group.label)}
-                onKeyDown={(e) => onGroupKeyDown(e, group.label)}
-                data-tour={group.label === 'Business Architecture' ? 'nav-business-arch' : group.label === 'Strategy' ? 'nav-strategy' : group.label === 'Reports' ? 'nav-reports' : undefined}
-                /* #662: top-level group rows are visually a little more
-                   prominent than child links — slightly larger text, more
-                   padding, brighter idle color — but still clearly the
-                   header for a sub-list, not a full nav item. */
-                className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white/60 select-none rounded-sm hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 transition-colors"
-              >
-                <span>{group.label}</span>
-                {/* Disclosure triangle: rotates 90° when open. */}
-                <svg
-                  className={cn(
-                    'h-3 w-3 shrink-0 transition-transform duration-150 ease-out',
-                    effectiveOpen ? 'rotate-90' : 'rotate-0'
-                  )}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <div
-                id={groupId}
-                hidden={!effectiveOpen}
-                className="mt-0.5 space-y-0.5"
-              >
-                {visibleItems.map(item => {
-                  const active = pathname === item.href || pathname.startsWith(item.href + '/')
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onClose}
-                      data-tour={
-                        item.href === '/personas'      ? 'nav-personas'      :
-                        item.href === '/value-streams' ? 'nav-value-streams' :
-                        item.href === '/capabilities'  ? 'nav-capabilities'  :
-                        item.href === '/services'      ? 'nav-services'      :
-                        item.href === '/applications'  ? 'nav-applications'  :
-                        item.href === '/adrs'          ? 'nav-adrs'          :
-                        item.href === '/roadmap'       ? 'nav-roadmap'       :
-                        undefined
-                      }
-                      className={cn(
-                        'block rounded-md px-3 py-2 text-sm transition-colors',
-                        active
-                          ? 'bg-white/15 text-white font-medium'
-                          : 'text-white/70 hover:bg-white/10 hover:text-white'
-                      )}
-                    >
-                      {item.label}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* Collapsible sections — @govcore/nextkit GroupedSideNav on the branded
+          rail (#898). A distinct aria-label keeps the two nav landmarks unique. */}
+      <GroupedSideNav
+        groups={visibleGroups}
+        ariaLabel={`${navLabel} sections`}
+        tone="branded"
+        className="mt-2 w-full"
+      />
 
       {/* Platform Admin section — instance admins only */}
       {isInstanceAdmin && (
