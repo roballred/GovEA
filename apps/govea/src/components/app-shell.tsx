@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { DarkModeToggle } from '@govcore/nextkit/theming'
 import { GroupedSideNav, type NavGroup as CoreNavGroup } from '@govcore/nextkit'
+import { MobileNavDrawer } from '@govcore/nextkit/client'
 import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
 
@@ -100,17 +101,22 @@ function SidebarContent({
   enabledModules,
   isInstanceAdmin,
   unreadNotificationCount,
-  onClose,
   navLabel,
+  className,
 }: {
   role: Role
   pathname: string
   enabledModules: Record<string, boolean>
   isInstanceAdmin?: boolean
   unreadNotificationCount?: number
-  onClose?: () => void
   /** #872 — distinguishes the desktop vs mobile nav landmarks for AT. */
   navLabel: string
+  /**
+   * Layout for the nav element. The desktop rail owns its own padding; inside
+   * MobileNavDrawer the drawer already pads its content area, so the drawer
+   * passes a padding-free variant rather than double-padding the links (#898).
+   */
+  className?: string
 }) {
   const isAdmin = role === 'admin'
   const isContributor = role === 'admin' || role === 'contributor'
@@ -164,11 +170,10 @@ function SidebarContent({
   }, [])
 
   return (
-    <nav aria-label={navLabel} className="flex flex-col h-full overflow-y-auto py-4 px-3 gap-1">
+    <nav aria-label={navLabel} className={className ?? 'flex flex-col h-full overflow-y-auto py-4 px-3 gap-1'}>
       {/* Dashboard */}
       <Link
         href="/dashboard"
-        onClick={onClose}
         data-tour="dashboard"
         className={cn(
           'rounded-md px-3 py-2 text-sm font-medium transition-colors',
@@ -183,7 +188,6 @@ function SidebarContent({
       {/* Overview (#614) — stakeholder-facing landing, visible to all roles. */}
       <Link
         href="/overview"
-        onClick={onClose}
         className={cn(
           'rounded-md px-3 py-2 text-sm font-medium transition-colors',
           isActive('/overview')
@@ -201,7 +205,6 @@ function SidebarContent({
       {/* Notifications inbox (#581) */}
       <Link
         href="/notifications"
-        onClick={onClose}
         className={cn(
           'flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
           isActive('/notifications')
@@ -238,8 +241,7 @@ function SidebarContent({
             <div className="mt-0.5 space-y-0.5">
               <Link
                 href="/instance"
-                onClick={onClose}
-                className={cn(
+                        className={cn(
                   'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
                   pathname.startsWith('/instance')
                     ? 'bg-violet-500/30 text-violet-200 font-medium'
@@ -288,16 +290,6 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [prevPathname, setPrevPathname] = useState(pathname)
-
-  // Close mobile sidebar on navigation — React-idiomatic derived state update during render
-  if (prevPathname !== pathname) {
-    setPrevPathname(pathname)
-    if (sidebarOpen) {
-      setSidebarOpen(false)
-    }
-  }
 
   // Redirect to dashboard if the current route's module has been disabled
   useEffect(() => {
@@ -307,16 +299,9 @@ export function AppShell({
     }
   }, [pathname, enabledModules, router])
 
-  // Prevent body scroll when mobile sidebar is open
-  useEffect(() => {
-    if (sidebarOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => { document.body.style.overflow = '' }
-  }, [sidebarOpen])
-
+  // #898 — the mobile drawer's open state, backdrop, body-scroll lock,
+  // close-on-navigate and focus handling now live in @govcore/nextkit's
+  // MobileNavDrawer (GovCore #102/#139), so none of it is tracked here.
   const sidebarBg = 'hsl(var(--header-bg))'
   const sidebarBorder = 'hsl(var(--header-border))'
 
@@ -356,42 +341,9 @@ export function AppShell({
         <SidebarContent navLabel="Primary" role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} unreadNotificationCount={unreadNotificationCount} />
       </aside>
 
-      {/* ── Mobile overlay backdrop ── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-          aria-hidden="true"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ── Mobile sidebar (slide-in drawer) ── */}
-      <aside
-        data-print-hide="true"
-        className={cn(
-          'flex flex-col fixed inset-y-0 left-0 w-72 z-50 lg:hidden border-r transition-transform duration-200 ease-in-out',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-        style={{ backgroundColor: sidebarBg, borderColor: sidebarBorder }}
-      >
-        {/* Mobile sidebar header */}
-        <div
-          className="flex h-14 shrink-0 items-center justify-between px-4 border-b"
-          style={{ borderColor: sidebarBorder }}
-        >
-          <span className="font-bold tracking-tight text-white text-lg">GovEA</span>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-            aria-label="Close navigation"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <SidebarContent navLabel="Primary (mobile)" role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} onClose={() => setSidebarOpen(false)} />
-      </aside>
+      {/* The mobile drawer is rendered by MobileNavDrawer from the header
+          below — it supplies its own backdrop and slide-in panel (both
+          `fixed`), so it does not need to sit here in the tree. */}
 
       {/* ── Main content area ── */}
       <div className="lg:pl-56 flex flex-col min-h-screen">
@@ -405,16 +357,29 @@ export function AppShell({
             borderColor: sidebarBorder,
           }}
         >
-          {/* Hamburger — mobile only */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-            aria-label="Open navigation"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M3 12h18M3 18h18" />
-            </svg>
-          </button>
+          {/* Hamburger + slide-in drawer — mobile only (#898). MobileNavDrawer
+              renders the trigger inline here and its own backdrop/panel as
+              fixed overlays, and closes itself when a link inside is
+              activated, which is what the old onClose plumbing did. The same
+              SidebarContent feeds both this and the desktop rail, so the two
+              can't drift — and unlike the previous hand-rolled drawer, this
+              one also gets the notification badge. */}
+          <MobileNavDrawer
+            title="GovEA"
+            tone="branded"
+            ariaLabel="Primary (mobile)"
+            nav={
+              <SidebarContent
+                navLabel="Primary (mobile)"
+                className="flex flex-col gap-1"
+                role={role}
+                pathname={pathname}
+                enabledModules={enabledModules}
+                isInstanceAdmin={isInstanceAdmin}
+                unreadNotificationCount={unreadNotificationCount}
+              />
+            }
+          />
 
           {/* Logo — mobile only (desktop logo is in sidebar) */}
           <Link
