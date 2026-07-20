@@ -131,3 +131,24 @@ test.describe('accessibility — interactive states', () => {
     await runAxe(page, '/value-streams/[id]/edit')
   })
 })
+
+// #898 — the mobile nav drawer is `lg:hidden`, so at this suite's Desktop
+// Chrome viewport it is `display: none` and axe skips it entirely. Every scan
+// above is therefore blind to it: the drawer chrome adopted from
+// @govcore/nextkit shipped with *no* real-browser contrast coverage until this
+// test existed. Scanning it needs both a mobile viewport and the drawer opened
+// — the same reason the dialog/edit-form states above are scanned separately.
+test.describe('accessibility — mobile nav drawer', () => {
+  test.use({
+    storageState: 'tests/e2e/.auth/admin.json',
+    viewport: { width: 390, height: 844 },
+  })
+
+  test('open mobile nav drawer has no serious/critical WCAG violations', async ({ page }) => {
+    await page.goto('/dashboard')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'Open navigation' }).click()
+    await page.getByRole('dialog', { name: 'Primary (mobile)' }).waitFor({ state: 'visible' })
+    await runAxe(page, '/dashboard [mobile nav drawer]')
+  })
+})
