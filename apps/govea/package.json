@@ -28,7 +28,7 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.4.0",
     "@govcore/auth": "^0.9.0",
-    "@govcore/nextkit": "^0.8.1",
+    "@govcore/nextkit": "^0.9.0",
     "@govcore/rbac": "^0.1.0",
     "@govcore/schema": "^0.4.0",
     "@govcore/server": "^0.3.1",
