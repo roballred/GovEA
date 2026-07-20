@@ -61,6 +61,11 @@
     /* App shell <main> is wrapped at 1 column when sidebar is hidden;
      * undo the lg:pl-56 offset so content uses the full page width. */
     main[data-print-main] { padding: 0 !important; margin: 0 !important; }
+    /* #898 — the shared @govcore/nextkit AppShell (fixed-rail) puts the content
+     * padding on the wrapper *around* <main>, not on <main> itself, so the rule
+     * above no longer reaches it. Zero the wrapper too, keyed off the same
+     * data-print-main marker, so handouts stay edge-to-edge. */
+    :has(> main[data-print-main]) { padding: 0 !important; margin: 0 !important; }
     /* Common interactive controls that shouldn't appear on a handout. */
     button[type="button"]:not([data-print-keep]),
     .print-hide { display: none !important; }
