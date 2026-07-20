@@ -45,10 +45,20 @@ GovEA is migrating off its bundled `@govea/core` onto the extracted **GovCore** 
 
 **Status:** Phase 0 (RBAC) + Phase 1a (org-settings sidecar) are merged. `lib/rbac.ts` now wraps `createRbac()` from **`@govcore/rbac`**, and GovEA's role/permission vocabulary stays app-local. Next is Phase 1b (re-export `@govcore/schema`, switch to `govcore-migrate` + `drizzle-kit migrate`, retire `db:apply-triggers` — see Database Workflow below).
 
-**Consumption model — `link:` → npm, per package.** Each `@govcore/*` package is adopted in whichever stage it's in:
-- **npm (published):** `"@govcore/<name>": "^0.1.0"` from the registry. `@govcore/rbac` is here now.
-- **`link:` (unpublished):** `link:../../../GovCore/packages/<name>` at a sibling GovCore checkout. This needs the `.github/actions/setup-govcore-link` CI action (clones public GovCore into CI); delete that action once no linked packages remain.
-- **Invariant:** GovCore packages are **source-first** (`main: ./src/index.ts`, no built `dist/`) even on npm, so every consumed `@govcore/*` package MUST be listed in `transpilePackages` in `apps/govea/next.config.ts` — regardless of link vs npm.
+**Consumption model — all from npm.** Every `@govcore/*` package is now consumed from the registry (`"@govcore/<name>": "^x.y.z"`). No `link:` dependencies remain and the `.github/actions/setup-govcore-link` CI action has been deleted; if you find yourself wanting a `link:` dep, publish a prerelease instead.
+
+**`transpilePackages` is per-package, not universal.** Most GovCore packages ship built output; only `@govcore/rbac` is still source-first. Verified 2026-07-20:
+
+| `main` | packages |
+|---|---|
+| `./src/index.ts` (source-first) | `rbac` |
+| `./dist/index.js` (built) | `auth`, `nextkit`, `schema`, `server`, `setup`, `tenancy`, `theme` |
+
+- **Source-first packages MUST be in `transpilePackages`** in `apps/govea/next.config.ts` — Next can't consume raw TS from `node_modules` otherwise.
+- **Built packages must NOT be**, and don't need to be.
+- **Check `main` before assuming either way.** An earlier version of this file asserted every package was source-first; that was wrong for 7 of 8 and led to a bad call on GovCore #138.
+
+**Tailwind must scan any GovCore package whose components render in GovEA.** A built package's classes live in its `dist/`, which `content: ['./src/**/*.{ts,tsx}']` never sees, so any class the package uses that GovEA doesn't *also* use somewhere in `src/` is silently absent from the bundle — no error, no failing test. `@govcore/nextkit/dist` is in `content` for this reason (#898); add a glob when adopting another rendering package. Related: GovEA's Tailwind theme must define every token those components reference (`header` mirrors `baseTheme` in `@govcore/theme`) or the class resolves to nothing.
 
 **Org config lives in a sidecar.** `organizations` is kept core-shaped (id/name/slug/timestamps) to map onto GovCore's platform table; all GovEA org configuration (theme, module flags, security/confidence/completeness settings, support tier, hierarchy, suspension, backup bookkeeping) is in the app-owned `organization_settings` table (1:1, PK=FK to `organizations`). Every org-insert path must create the settings row.
 
