@@ -12,53 +12,43 @@ const ROLE_COPY: Record<Role, string> = {
 }
 
 /**
- * Map data-tour identifiers to the nav group that owns them (#662).
+ * Map each nav step's element selector to the nav group that owns it (#662/#898).
  *
- * Children of a collapsed group are hidden via `hidden` on the panel
- * <div>, which makes driver.js unable to highlight them. Before each
- * step targeting a child, we call `window.__goveaOpenNavGroup(group)`
- * to ensure the parent is open. Group-label steps themselves
- * (nav-business-arch / nav-strategy / nav-reports) also call the
- * helper so the group expands on focus.
+ * The sidebar's groups are now @govcore/nextkit's GroupedSideNav (a native
+ * <details> accordion), so tour steps target the rendered DOM directly: a group
+ * header by its `[data-nav-group="<label>"]` attribute, a child link by its
+ * `a[href="/…"]`. A collapsed group hides its children, which driver.js can't
+ * highlight, so before each such step we call `window.__goveaOpenNavGroup(group)`
+ * (AppShell registers it) to open the parent first.
  *
- * Top-level targets that aren't inside a collapsible group (dashboard,
- * search, role-badge) are intentionally absent from the map.
+ * Top-level targets outside a collapsible group (dashboard, search, role-badge)
+ * are intentionally absent.
  */
-const NAV_TOUR_GROUPS: Record<string, string> = {
-  'nav-business-arch': 'Business Architecture',
-  'nav-personas':      'Business Architecture',
-  'nav-value-streams': 'Business Architecture',
-  'nav-capabilities':  'Business Architecture',
-  'nav-services':      'Business Architecture',
-  'nav-applications':  'Portfolio',
-  'nav-adrs':          'Portfolio',
-  'nav-strategy':      'Strategy',
-  'nav-roadmap':       'Strategy',
-  'nav-reports':       'Reports',
-}
-
-/** Extract the `data-tour` token from a `[data-tour="..."]` element selector. */
-function tourTokenFromSelector(selector: string): string | null {
-  const m = selector.match(/\[data-tour="([^"]+)"\]/)
-  return m ? m[1] : null
+const NAV_GROUP_FOR_SELECTOR: Record<string, string> = {
+  '[data-nav-group="Business Architecture"]': 'Business Architecture',
+  'a[href="/personas"]':                      'Business Architecture',
+  'a[href="/value-streams"]':                 'Business Architecture',
+  'a[href="/capabilities"]':                  'Business Architecture',
+  'a[href="/services"]':                      'Business Architecture',
+  'a[href="/applications"]':                  'Portfolio',
+  'a[href="/adrs"]':                          'Portfolio',
+  '[data-nav-group="Strategy"]':              'Strategy',
+  'a[href="/roadmap"]':                       'Strategy',
+  '[data-nav-group="Reports"]':               'Reports',
 }
 
 /**
- * Builds the onHighlightStarted callback for a step. If the step targets a
- * nav child whose parent group is collapsible, the callback opens that
- * group via the global helper registered by AppShell. No-op for steps
- * outside the nav-group accordion (Dashboard, Search, role badge).
+ * Builds the onHighlightStarted callback for a step. If the step targets a nav
+ * element inside a collapsible group, the callback opens that group via the
+ * global helper registered by AppShell. No-op for steps outside the nav-group
+ * accordion (Dashboard, Search, role badge).
  */
 function makeNavGroupOpener(elementSelector: string): (() => void) | undefined {
-  const token = tourTokenFromSelector(elementSelector)
-  if (!token) return undefined
-  const group = NAV_TOUR_GROUPS[token]
+  const group = NAV_GROUP_FOR_SELECTOR[elementSelector]
   if (!group) return undefined
   return () => {
     const w = window as unknown as { __goveaOpenNavGroup?: (label: string) => void }
-    if (typeof w.__goveaOpenNavGroup === 'function') {
-      w.__goveaOpenNavGroup(group)
-    }
+    w.__goveaOpenNavGroup?.(group)
   }
 }
 
@@ -82,7 +72,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-business-arch"]',
+        element: '[data-nav-group="Business Architecture"]',
         popover: {
           title: 'Business Architecture',
           description: 'Document who you serve, what your organization does, and how value flows. These records anchor everything else in the catalog.',
@@ -91,7 +81,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-personas"]',
+        element: 'a[href="/personas"]',
         popover: {
           title: 'Personas',
           description: 'Add the people your services are built for — residents, businesses, staff, and partner agencies. Link them to capabilities and services to track who each part of your architecture serves.',
@@ -100,7 +90,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-value-streams"]',
+        element: 'a[href="/value-streams"]',
         popover: {
           title: 'Value Streams',
           description: 'Map how work moves from a triggering event to an outcome. Link stages to capabilities to see where gaps or handoff problems exist.',
@@ -109,7 +99,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-capabilities"]',
+        element: 'a[href="/capabilities"]',
         popover: {
           title: 'Capabilities',
           description: 'Record what your organization does, independent of which systems do it. Link capabilities to applications to track how each function is currently enabled.',
@@ -118,7 +108,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-services"]',
+        element: 'a[href="/services"]',
         popover: {
           title: 'Services',
           description: 'Document what you deliver to the public. Link services to the personas who use them and the capabilities that power them.',
@@ -127,7 +117,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-applications"]',
+        element: 'a[href="/applications"]',
         popover: {
           title: 'Applications',
           description: 'Your technology inventory — lifecycle status, capability links, and the decisions behind each system. Filter by lifecycle to surface risks.',
@@ -136,7 +126,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-adrs"]',
+        element: 'a[href="/adrs"]',
         popover: {
           title: 'Decisions',
           description: 'Record the why behind major technology choices. Superseded decisions stay visible so future teams understand the full context.',
@@ -145,7 +135,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-strategy"]',
+        element: '[data-nav-group="Strategy"]',
         popover: {
           title: 'Strategy',
           description: 'Link capabilities to objectives and running initiatives to show which parts of your architecture are connected to mission outcomes.',
@@ -154,7 +144,7 @@ function buildTour(role: Role) {
         },
       },
       {
-        element: '[data-tour="nav-roadmap"]',
+        element: 'a[href="/roadmap"]',
         popover: {
           title: 'Roadmap',
           description: 'A timeline of active and planned initiatives. Useful for stakeholder reviews and communicating what\'s changing and when.',
