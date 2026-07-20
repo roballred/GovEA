@@ -131,3 +131,32 @@ test.describe('accessibility — interactive states', () => {
     await runAxe(page, '/value-streams/[id]/edit')
   })
 })
+
+// #898 — the mobile nav drawer is `lg:hidden`, so at this suite's Desktop
+// Chrome viewport it is `display: none` and axe skips it entirely. Every scan
+// above is therefore blind to it: the drawer chrome adopted from
+// @govcore/nextkit shipped with *no* real-browser contrast coverage until this
+// test existed. Scanning it needs both a mobile viewport and the drawer opened
+// — the same reason the dialog/edit-form states above are scanned separately.
+test.describe('accessibility — mobile nav drawer', () => {
+  test.use({
+    storageState: 'tests/e2e/.auth/admin.json',
+    viewport: { width: 390, height: 844 },
+  })
+
+  test('open mobile nav drawer has no serious/critical WCAG violations', async ({ page }) => {
+    // The first-sign-in modal (first-sign-in-modal.tsx) auto-opens on a fresh
+    // seed and is `aria-modal="true"`, which drops everything outside it out of
+    // the accessibility tree — the drawer included, so no role query can reach
+    // it. Dismiss it up front through the same localStorage key the component
+    // reads, rather than depending on its button copy.
+    await page.addInitScript(() => {
+      window.localStorage.setItem('govea-first-sign-in-dismissed', new Date().toISOString())
+    })
+    await page.goto('/dashboard')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'Open navigation' }).click()
+    await page.getByRole('dialog', { name: 'Primary (mobile)' }).waitFor({ state: 'visible' })
+    await runAxe(page, '/dashboard [mobile nav drawer]')
+  })
+})

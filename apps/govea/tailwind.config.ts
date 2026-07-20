@@ -4,7 +4,13 @@ import typography from '@tailwindcss/typography'
 
 const config: Config = {
   darkMode: ['class'],
-  content: ['./src/**/*.{ts,tsx}'],
+  // #898 — `@govcore/nextkit` ships built JS (`main: ./dist/index.js`), not
+  // source, and is not in `transpilePackages`. Tailwind therefore never saw the
+  // classes nextkit's own components emit, so any class nextkit uses that GovEA
+  // doesn't *also* use somewhere in src/ was silently missing from the bundle
+  // (the GroupedSideNav adopted in #911 lost its `[&::-webkit-details-marker]`
+  // and chevron-rotate rules this way — no error, just unstyled).
+  content: ['./src/**/*.{ts,tsx}', './node_modules/@govcore/nextkit/dist/**/*.js'],
   theme: {
     container: {
       center: true,
@@ -45,6 +51,17 @@ const config: Config = {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
+        },
+        // Mirrors `baseTheme` in @govcore/theme, which GovEA does not yet apply
+        // as a Tailwind preset. nextkit's shell chrome is styled with these
+        // (`bg-header`, `text-header-foreground`), and without them those
+        // classes resolve to nothing — a transparent header/drawer rather than a
+        // build error. GovEA's own shell reaches the same tokens through inline
+        // `hsl(var(--header-bg))`, which is why this went unnoticed.
+        header: {
+          DEFAULT: 'hsl(var(--header-bg))',
+          foreground: 'hsl(var(--header-fg))',
+          border: 'hsl(var(--header-border))',
         },
       },
       borderRadius: {
