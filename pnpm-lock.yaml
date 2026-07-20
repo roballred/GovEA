@@ -24,8 +24,8 @@ importers:
         specifier: ^0.9.0
         version: 0.9.0(next@15.5.19(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(postgres@3.4.8)(react@19.2.4)
       '@govcore/nextkit':
-        specifier: ^0.8.0
-        version: 0.8.0(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))
+        specifier: ^0.8.1
+        version: 0.8.1(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))
       '@govcore/rbac':
         specifier: ^0.1.0
         version: 0.1.0
@@ -994,8 +994,8 @@ packages:
       next: ^15.0.0
       react: ^19.0.0
 
-  '@govcore/nextkit@0.8.0':
-    resolution: {integrity: sha512-b31CpCP8ADEK2fBEomZ1vEWo0wQG8JQW0M/35P3ccScw4ctd0NkDAgGoFolIulMzxmkAhr+ZE9Mcsz0S0iH4dw==}
+  '@govcore/nextkit@0.8.1':
+    resolution: {integrity: sha512-KRrS0atkIl+VhC+cIxAD/cw7KEFzFyuEfEpvmruktltKFV0COhlJYE2fTP3a4M2Sd78xHo5NAMgyDgNwZEcGpg==}
     peerDependencies:
       react: ^19.0.0
 
@@ -5234,7 +5234,7 @@ snapshots:
       - sql.js
       - sqlite3
 
-  '@govcore/nextkit@0.8.0(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))':
+  '@govcore/nextkit@0.8.1(postgres@3.4.8)(react@19.2.4)(tailwindcss@3.4.19(tsx@4.21.0))':
     dependencies:
       '@govcore/support': 0.2.4(postgres@3.4.8)
       '@govcore/theme': 0.2.0(tailwindcss@3.4.19(tsx@4.21.0))
