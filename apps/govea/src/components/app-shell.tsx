@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type HTMLAttributes, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { Role } from '@/lib/rbac'
 import { DarkModeToggle } from '@govcore/nextkit/theming'
-import { GroupedSideNav, type NavGroup as CoreNavGroup } from '@govcore/nextkit'
+import { AppShell as CoreAppShell, GroupedSideNav, type NavGroup as CoreNavGroup } from '@govcore/nextkit'
 import { MobileNavDrawer } from '@govcore/nextkit/client'
 import { TourButton } from '@/components/product-tour'
 import { isModuleEnabled, moduleForPath } from '@/lib/modules'
@@ -299,154 +299,120 @@ export function AppShell({
     }
   }, [pathname, enabledModules, router])
 
-  // #898 — the mobile drawer's open state, backdrop, body-scroll lock,
-  // close-on-navigate and focus handling now live in @govcore/nextkit's
-  // MobileNavDrawer (GovCore #102/#139), so none of it is tracked here.
-  const sidebarBg = 'hsl(var(--header-bg))'
-  const sidebarBorder = 'hsl(var(--header-border))'
+  // #898 phase 2b — the shell chrome (fixed rail, sticky header, skip-link,
+  // print-hidden chrome, focusable <main>) is now @govcore/nextkit's AppShell
+  // in its `fixed-rail` layout. GovEA keeps only what is genuinely its own:
+  // the role/module-gated SidebarContent, the branded header controls, and the
+  // module-disabled redirect above. Passing `mobileNav` makes the rail
+  // desktop-only and the drawer own everything below `lg`.
+  //
+  // Both the desktop rail and the drawer get a padding-free SidebarContent:
+  // the rail's own wrapper and the drawer both pad their content area, so the
+  // nav must not pad again. The rail additionally takes `h-full` so the
+  // `mt-auto` Platform Admin footer still pins to the bottom of the rail — its
+  // wrapper is a flex column with height, which the drawer's is not.
+  const sidebar = (navLabel: string, className: string) => (
+    <SidebarContent
+      navLabel={navLabel}
+      className={className}
+      role={role}
+      pathname={pathname}
+      enabledModules={enabledModules}
+      isInstanceAdmin={isInstanceAdmin}
+      unreadNotificationCount={unreadNotificationCount}
+    />
+  )
 
   return (
-    <div className="min-h-screen bg-background">
-
-      {/* #858 — skip link: the first focusable element on every page, so
-          keyboard / screen-reader users can bypass the sidebar nav and jump
-          straight to content (WCAG 2.4.1 Bypass Blocks). Visually hidden until
-          focused. */}
-      <a
-        href="#main"
-        data-print-hide="true"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-      >
-        Skip to main content
-      </a>
-
-      {/* ── Desktop sidebar (fixed, always visible on lg+) ── */}
-      <aside
-        data-print-hide="true"
-        className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-56 z-40 border-r"
-        style={{ backgroundColor: sidebarBg, borderColor: sidebarBorder }}
-      >
-        {/* Logo */}
-        <div
-          className="flex h-14 shrink-0 items-center px-4 border-b"
-          style={{ borderColor: sidebarBorder }}
+    <CoreAppShell
+      layout="fixed-rail"
+      width="fluid"
+      navAriaLabel="Primary"
+      nav={sidebar('Primary', 'flex flex-col gap-1 h-full')}
+      // Desktop rail wordmark (the header's `title` is the mobile-only echo).
+      railHeader={
+        <Link
+          href="/dashboard"
+          className="font-bold tracking-tight text-white text-lg hover:opacity-80 transition-opacity"
         >
+          GovEA
+        </Link>
+      }
+      // Below `lg` the rail is hidden and this owns the nav — hamburger,
+      // slide-in panel, backdrop, scroll-lock, focus handling, close-on-select
+      // (#898 phase 2a). Same SidebarContent as the rail, so they can't drift.
+      mobileNav={
+        <MobileNavDrawer
+          title="GovEA"
+          tone="branded"
+          ariaLabel="Primary (mobile)"
+          nav={sidebar('Primary (mobile)', 'flex flex-col gap-1')}
+        />
+      }
+      // Mobile-only wordmark; on `lg+` the rail's railHeader carries it, so this
+      // collapses to nothing and the header leads with search.
+      title={
+        <Link href="/dashboard" className="lg:hidden font-bold tracking-tight text-white text-lg">
+          GovEA
+        </Link>
+      }
+      search={
+        <>
+          {/* Desktop: visible input */}
+          <form action="/search" method="get" className="hidden lg:flex w-full max-w-sm">
+            <input
+              name="q"
+              type="search"
+              placeholder="Search…"
+              data-tour="search"
+              className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-white/40"
+            />
+          </form>
+          {/* Mobile: icon link to the search page */}
           <Link
-            href="/dashboard"
-            className="font-bold tracking-tight text-white text-lg hover:opacity-80 transition-opacity"
+            href="/search"
+            className="lg:hidden inline-flex rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            aria-label="Search"
           >
-            GovEA
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
           </Link>
-        </div>
-        <SidebarContent navLabel="Primary" role={role} pathname={pathname} enabledModules={enabledModules} isInstanceAdmin={isInstanceAdmin} unreadNotificationCount={unreadNotificationCount} />
-      </aside>
-
-      {/* The mobile drawer is rendered by MobileNavDrawer from the header
-          below — it supplies its own backdrop and slide-in panel (both
-          `fixed`), so it does not need to sit here in the tree. */}
-
-      {/* ── Main content area ── */}
-      <div className="lg:pl-56 flex flex-col min-h-screen">
-
-        {/* Top header */}
-        <header
-          data-print-hide="true"
-          className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b px-4 lg:px-6"
-          style={{
-            backgroundColor: sidebarBg,
-            borderColor: sidebarBorder,
-          }}
-        >
-          {/* Hamburger + slide-in drawer — mobile only (#898). MobileNavDrawer
-              renders the trigger inline here and its own backdrop/panel as
-              fixed overlays, and closes itself when a link inside is
-              activated, which is what the old onClose plumbing did. The same
-              SidebarContent feeds both this and the desktop rail, so the two
-              can't drift — and unlike the previous hand-rolled drawer, this
-              one also gets the notification badge. */}
-          <MobileNavDrawer
-            title="GovEA"
-            tone="branded"
-            ariaLabel="Primary (mobile)"
-            nav={
-              <SidebarContent
-                navLabel="Primary (mobile)"
-                className="flex flex-col gap-1"
-                role={role}
-                pathname={pathname}
-                enabledModules={enabledModules}
-                isInstanceAdmin={isInstanceAdmin}
-                unreadNotificationCount={unreadNotificationCount}
-              />
-            }
-          />
-
-          {/* Logo — mobile only (desktop logo is in sidebar) */}
-          <Link
-            href="/dashboard"
-            className="lg:hidden font-bold tracking-tight text-white text-lg"
-          >
-            GovEA
-          </Link>
-
-          {/* Search */}
-          <div className="flex-1 flex items-center">
-            {/* Desktop: visible input */}
-            <form action="/search" method="get" className="hidden lg:flex w-full max-w-sm">
-              <input
-                name="q"
-                type="search"
-                placeholder="Search…"
-                data-tour="search"
-                className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-white/40"
-              />
-            </form>
-            {/* Mobile: icon link to search page */}
+        </>
+      }
+      actions={
+        <>
+          {isInstanceAdmin && (
             <Link
-              href="/search"
-              className="lg:hidden rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-              aria-label="Search"
+              href="/instance"
+              className="hidden sm:inline-flex items-center rounded-md border border-violet-400/40 bg-violet-500/20 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/30 transition-colors"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-              </svg>
+              Platform Admin
             </Link>
-          </div>
-
-          {/* User info */}
-          <div className="flex items-center gap-3">
-            {isInstanceAdmin && (
-              <Link
-                href="/instance"
-                className="hidden sm:inline-flex items-center rounded-md border border-violet-400/40 bg-violet-500/20 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/30 transition-colors"
-              >
-                Platform Admin
-              </Link>
+          )}
+          {orgSwitcherSlot}
+          <span className="hidden sm:block text-sm text-white/70">{email}</span>
+          <span
+            data-tour="role-badge"
+            className={cn(
+              'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+              roleBadgeClass
             )}
-            {orgSwitcherSlot}
-            <span className="hidden sm:block text-sm text-white/70">{email}</span>
-            <span
-              data-tour="role-badge"
-              className={cn(
-                'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
-                roleBadgeClass
-              )}
-            >
-              {role}
-            </span>
-            <TourButton role={role} />
-            <DarkModeToggle />
-            {signOutSlot}
-          </div>
-        </header>
-
-        {/* Page content. id + tabIndex make this the skip-link target (#858):
-            activating "Skip to main content" moves focus here so the next Tab
-            continues from the content, not the top of the nav. */}
-        <main id="main" tabIndex={-1} data-print-main className="flex-1 p-4 lg:p-6 focus:outline-none">
-          {children}
-        </main>
-      </div>
-    </div>
+          >
+            {role}
+          </span>
+          <TourButton role={role} />
+          <DarkModeToggle />
+          {signOutSlot}
+        </>
+      }
+      // #559 — keep budget-hearing / oversight handouts edge-to-edge. AppShell
+      // already prints chrome-free; data-print-main is the hook globals.css
+      // uses to zero the content padding for print (the rule now also targets
+      // the fixed-rail content wrapper, which carries the padding here).
+      mainProps={{ 'data-print-main': '' } as HTMLAttributes<HTMLElement>}
+    >
+      {children}
+    </CoreAppShell>
   )
 }
