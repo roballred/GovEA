@@ -145,6 +145,14 @@ test.describe('accessibility — mobile nav drawer', () => {
   })
 
   test('open mobile nav drawer has no serious/critical WCAG violations', async ({ page }) => {
+    // The first-sign-in modal (first-sign-in-modal.tsx) auto-opens on a fresh
+    // seed and is `aria-modal="true"`, which drops everything outside it out of
+    // the accessibility tree — the drawer included, so no role query can reach
+    // it. Dismiss it up front through the same localStorage key the component
+    // reads, rather than depending on its button copy.
+    await page.addInitScript(() => {
+      window.localStorage.setItem('govea-first-sign-in-dismissed', new Date().toISOString())
+    })
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
     await page.getByRole('button', { name: 'Open navigation' }).click()
