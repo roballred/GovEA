@@ -78,3 +78,19 @@
   .print-only { display: none; }
   @media print { .print-only { display: block !important; } }
 }
+
+/* #916 — @govcore/nextkit GroupedSideNav renders each group header as a
+ * `flex justify-between` <summary> with a bare label <span>. The span is
+ * `flex: 0 1 auto`, so justify-between shrinks it toward its min-content width
+ * (its longest word) and a long label like "Business Architecture" wraps to two
+ * lines that read as centered — inconsistent with the single-line siblings
+ * ("Data Architecture" etc. still fit). Let the label fill the row and stay
+ * left-aligned so it renders on one line (or, if it must wrap, wraps
+ * left-aligned). Targets nextkit's own `data-nav-group` hook; kept unlayered so
+ * it wins over the utility classes on the span. Upstream nextkit fix is tracked
+ * separately so all consumers benefit. */
+[data-nav-group] > summary > span:first-child {
+  flex: 1 1 0%;
+  min-width: 0;
+  text-align: left;
+}
