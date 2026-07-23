@@ -49,6 +49,19 @@ const CHANNEL_LABELS: Record<string, string> = {
   online: 'Online', 'in-person': 'In-person', phone: 'Phone', mobile: 'Mobile',
 }
 
+// ── Capability traceability metamodel (#918) ──────────────────────────────────
+//
+// The canonical ordered spine every capability trace renders, motivation (top)
+// to realization (bottom). This single list is the source of truth for the
+// subtitle legend AND documents the section order in CapabilityTraceView, so the
+// two can't silently drift (the bug in #918). Every layer below always renders —
+// with an empty-state Gap when nothing is linked — so the on-screen sections
+// always match this legend.
+const CAPABILITY_TRACE_SPINE = [
+  'Strategy', 'Goal', 'Objective', 'Initiatives', 'Value Streams',
+  'Personas', 'Capability', 'Applications', 'Decisions', 'Principles',
+] as const
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function LayerLabel({ children }: { children: React.ReactNode }) {
@@ -455,12 +468,16 @@ function ObjectiveTraceView({ trace }: { trace: ObjectiveTrace }) {
 // ── Capability trace view ─────────────────────────────────────────────────────
 
 function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
-  const strategicInitiativeIds = new Set(trace.strategicInitiatives.map(i => i.id))
-  const directInitiatives = trace.initiatives.filter(i => !strategicInitiativeIds.has(i.id))
+  // #918 — one Initiatives rung: initiatives reached through objectives
+  // (strategic) plus those linked straight to the capability, de-duplicated.
+  const initiatives = dedupeById([...trace.strategicInitiatives, ...trace.initiatives])
 
+  // Section order below MUST track CAPABILITY_TRACE_SPINE (the legend). Every
+  // layer always renders — with an empty-state Gap when nothing is linked — so
+  // the sections on screen always match the declared chain (#918).
   return (
     <div className="space-y-1 max-w-2xl">
-      {/* Upstream: Strategies (direct course-of-action links, #842) */}
+      {/* Strategy — direct course-of-action links (#842) */}
       <LayerLabel>Strategies</LayerLabel>
       {trace.strategies.length === 0 ? (
         <Gap message="No strategy links upstream — no course of action currently drives this capability." />
@@ -479,7 +496,7 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
         </TraceCard>
       )}
 
-      {/* Upstream: Goals */}
+      {/* Goal */}
       <Connector label="pursued through" />
       <LayerLabel>Goals</LayerLabel>
       {trace.goals.length === 0 ? (
@@ -497,7 +514,7 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
         </TraceCard>
       )}
 
-      {/* Upstream: Strategic Objectives */}
+      {/* Objective */}
       <Connector label="sets direction for" />
       <LayerLabel>Strategic Objectives</LayerLabel>
       {trace.objectives.length === 0 ? (
@@ -515,14 +532,14 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
         </TraceCard>
       )}
 
-      {/* Strategic Initiatives */}
+      {/* Initiatives — strategic (via objectives) + direct capability links (#918) */}
       <Connector label="advanced by" />
-      <LayerLabel>Strategic Initiatives</LayerLabel>
-      {trace.strategicInitiatives.length === 0 ? (
-        <Gap message="No initiatives linked through these objectives — delivery work is not yet tied to the strategic chain." />
+      <LayerLabel>Initiatives</LayerLabel>
+      {initiatives.length === 0 ? (
+        <Gap message="No initiatives linked — delivery work is not yet tied to this capability." />
       ) : (
         <TraceCard>
-          {trace.strategicInitiatives.map(i => (
+          {initiatives.map(i => (
             <TraceRow
               key={i.id}
               href={`/initiatives/${i.id}`}
@@ -534,11 +551,29 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
         </TraceCard>
       )}
 
-      {/* Value Streams (between initiatives and the capability) */}
+      {/* Value Streams (ValueStreamLayer carries its own "delivered through" connector) */}
       <ValueStreamLayer valueStreams={trace.valueStreams} />
 
+      {/* Personas — consumers of the value streams, above the anchor (#918) */}
+      <Connector label="serving" />
+      <LayerLabel>Personas</LayerLabel>
+      {trace.personas.length === 0 ? (
+        <Gap message="No personas linked — who relies on this capability is not yet documented." />
+      ) : (
+        <TraceCard>
+          {trace.personas.map(p => (
+            <TraceRow
+              key={p.id}
+              href={`/personas/${p.id}`}
+              name={p.name}
+              meta={p.type ?? undefined}
+            />
+          ))}
+        </TraceCard>
+      )}
+
       {/* Anchor: Capability */}
-      <Connector label="requires" />
+      <Connector label="rely on" />
       <LayerLabel>Capability</LayerLabel>
       <TraceCard>
         <div className="px-4 py-4">
@@ -550,82 +585,45 @@ function CapabilityTraceView({ trace }: { trace: CapabilityTrace }) {
         </div>
       </TraceCard>
 
-      {/* Downstream: Applications */}
+      {/* Applications — technology that realizes the capability */}
       <Connector label="supported by" />
       <LayerLabel>Applications</LayerLabel>
       <AppLayer apps={trace.applications} />
 
-      {/* Direct capability initiatives */}
-      {directInitiatives.length > 0 && (
-        <>
-          <Connector label="changed by" />
-          <LayerLabel>Capability Initiatives</LayerLabel>
-          <TraceCard>
-            {directInitiatives.map(i => (
-              <TraceRow
-                key={i.id}
-                href={`/initiatives/${i.id}`}
-                name={i.name}
-                badge={i.status}
-                badgeClass={INITIATIVE_STYLES[i.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
-              />
-            ))}
-          </TraceCard>
-        </>
+      {/* Decisions — governing ADRs */}
+      <Connector label="governed by" />
+      <LayerLabel>Decisions</LayerLabel>
+      {trace.adrs.length === 0 ? (
+        <Gap message="No architecture decisions linked — the governance behind this capability is not yet recorded." />
+      ) : (
+        <TraceCard>
+          {trace.adrs.map(a => (
+            <TraceRow
+              key={a.id}
+              href={`/adrs/${a.id}`}
+              name={`${a.number} — ${a.title}`}
+              badge={a.status}
+              badgeClass={ADR_STYLES[a.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
+            />
+          ))}
+        </TraceCard>
       )}
 
-      {/* Personas */}
-      {trace.personas.length > 0 && (
-        <>
-          <Connector label="used by" />
-          <LayerLabel>Personas</LayerLabel>
-          <TraceCard>
-            {trace.personas.map(p => (
-              <TraceRow
-                key={p.id}
-                href={`/personas/${p.id}`}
-                name={p.name}
-                meta={p.type ?? undefined}
-              />
-            ))}
-          </TraceCard>
-        </>
-      )}
-
-      {/* ADRs */}
-      {trace.adrs.length > 0 && (
-        <>
-          <Connector label="governed by" />
-          <LayerLabel>Architecture Decisions</LayerLabel>
-          <TraceCard>
-            {trace.adrs.map(a => (
-              <TraceRow
-                key={a.id}
-                href={`/adrs/${a.id}`}
-                name={`${a.number} — ${a.title}`}
-                badge={a.status}
-                badgeClass={ADR_STYLES[a.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}
-              />
-            ))}
-          </TraceCard>
-        </>
-      )}
-
-      {/* Principles */}
-      {trace.principles.length > 0 && (
-        <>
-          <Connector label="guided by" />
-          <LayerLabel>Principles</LayerLabel>
-          <TraceCard>
-            {trace.principles.map(p => (
-              <TraceRow
-                key={p.id}
-                href={`/principles/${p.id}`}
-                name={p.name}
-              />
-            ))}
-          </TraceCard>
-        </>
+      {/* Principles — architectural constraints */}
+      <Connector label="guided by" />
+      <LayerLabel>Principles</LayerLabel>
+      {trace.principles.length === 0 ? (
+        <Gap message="No principles linked — the architectural constraints guiding this capability are not yet documented." />
+      ) : (
+        <TraceCard>
+          {trace.principles.map(p => (
+            <TraceRow
+              key={p.id}
+              href={`/principles/${p.id}`}
+              name={p.name}
+            />
+          ))}
+        </TraceCard>
       )}
     </div>
   )
@@ -912,7 +910,7 @@ export default async function TraceabilityPage({
     trace.kind === 'strategy'  ? 'Strategy → Goals → Objectives → Initiatives → Value Streams → Capabilities → Technology Trace' :
     trace.kind === 'goal'      ? 'Goal → Objectives → Initiatives → Capabilities → Technology Trace' :
     trace.kind === 'objective' ? 'Goal → Objective → Initiatives → Value Streams → Capabilities → Technology Trace' :
-    trace.kind === 'capability' ? 'Strategy → Goal → Objective → Initiatives → Value Streams → Capability → Delivery Trace' :
+    trace.kind === 'capability' ? CAPABILITY_TRACE_SPINE.join(' → ') :
     'Persona → Service → Value Streams → Capabilities → Technology Trace'
 
   return (

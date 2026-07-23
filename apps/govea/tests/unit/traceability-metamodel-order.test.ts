@@ -65,13 +65,18 @@ describe('traceability metamodel order (#848)', () => {
   })
 
   it('Capability trace renders Value Streams between initiatives and the capability anchor', () => {
+    // #918 collapsed "Strategic Initiatives" into a single "Initiatives" rung and
+    // moved Personas between Value Streams and the anchor. Value Streams must still
+    // sit between Initiatives and the Capability anchor.
     const body = viewBody('CapabilityTraceView')
-    const inits = labelIndex(body, 'Strategic Initiatives')
+    const inits = labelIndex(body, 'Initiatives')
     const vs = valueStreamIndex(body)
+    const personas = labelIndex(body, 'Personas')
     const anchor = labelIndex(body, 'Capability') // anchor layer label
     expect(inits).toBeGreaterThan(-1)
     expect(vs).toBeGreaterThan(inits)
-    expect(anchor).toBeGreaterThan(vs)
+    expect(personas).toBeGreaterThan(vs)
+    expect(anchor).toBeGreaterThan(personas)
   })
 
   it('Service trace renders Value Streams above Capabilities (not stranded after Applications)', () => {
@@ -84,8 +89,24 @@ describe('traceability metamodel order (#848)', () => {
     expect(apps).toBeGreaterThan(caps)
   })
 
-  it('chain subtitles place Value Streams between Initiatives and Capabilities', () => {
+  it('strategy/objective chain subtitles place Value Streams between Initiatives and Capabilities', () => {
     expect(src).toContain('Initiatives → Value Streams → Capabilities')
-    expect(src).toContain('Initiatives → Value Streams → Capability →')
+  })
+
+  it('capability spine (#918) orders Initiatives → Value Streams → Personas → Capability', () => {
+    // The capability subtitle is derived from CAPABILITY_TRACE_SPINE (the single
+    // source of truth for both the legend and the section order), so assert the
+    // ordering in that constant rather than a source literal.
+    const start = src.indexOf('const CAPABILITY_TRACE_SPINE')
+    expect(start, 'CAPABILITY_TRACE_SPINE should exist').toBeGreaterThan(-1)
+    const spine = src.slice(start, src.indexOf(']', start))
+    const inits = spine.indexOf("'Initiatives'")
+    const vs = spine.indexOf("'Value Streams'")
+    const personas = spine.indexOf("'Personas'")
+    const anchor = spine.indexOf("'Capability'")
+    expect(inits).toBeGreaterThan(-1)
+    expect(vs).toBeGreaterThan(inits)
+    expect(personas).toBeGreaterThan(vs)
+    expect(anchor).toBeGreaterThan(personas)
   })
 })
