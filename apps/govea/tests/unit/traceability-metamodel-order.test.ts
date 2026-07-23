@@ -1,15 +1,16 @@
 /**
- * Unit test: traceability metamodel layer order (#848)
+ * Unit test: traceability metamodel layer order (#848, #918, #920)
  *
- * Value Streams sit between Strategic Initiatives and Capabilities in every
- * trace view that renders that part of the chain:
- *   Strategy → Goals → Objectives → Initiatives → Value Streams → Capabilities → Applications
+ * Two guards, both at the source level (the trace views are non-exported server
+ * components and the subtitle legends are computed, so this is the cheapest
+ * deterministic check in the node-only test env):
  *
- * The trace views are non-exported server components, so this guards the
- * rendered section order at the source level — the cheapest deterministic guard
- * given the node-only test environment. It fails if a future change moves the
- * Value Streams layer out from between initiatives and capabilities (the #844
- * regression this issue fixes, where value streams rendered after Applications).
+ *  1. Each *TraceView renders its LayerLabels in the metamodel order — e.g. Value
+ *     Streams stays between Initiatives and Capabilities (the #844 regression).
+ *  2. TRACE_SPINES (the single source of truth for every kind's subtitle legend,
+ *     #920) orders its tokens to match the view it drives — including that the
+ *     value-stream legend is its own spine, not the service one it used to fall
+ *     through to.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -43,8 +44,27 @@ function valueStreamIndex(body: string): number {
   return found.length === 0 ? -1 : Math.min(...found)
 }
 
-describe('traceability metamodel order (#848)', () => {
-  it('Strategy trace renders Value Streams between initiatives and capabilities', () => {
+/** The array literal text of one TRACE_SPINES row (e.g. spine('capability')). */
+function spine(kind: string): string {
+  const mapStart = src.indexOf('const TRACE_SPINES')
+  expect(mapStart, 'TRACE_SPINES should exist').toBeGreaterThan(-1)
+  const map = src.slice(mapStart, src.indexOf('\n}', mapStart))
+  const keyToken = kind.includes('-') ? `'${kind}':` : `${kind}:`
+  const keyIdx = map.indexOf(keyToken)
+  expect(keyIdx, `${kind} spine should exist in TRACE_SPINES`).toBeGreaterThan(-1)
+  const rowStart = map.indexOf('[', keyIdx)
+  return map.slice(rowStart, map.indexOf(']', rowStart))
+}
+
+/** Index of a quoted spine token — exact, so 'Service' ≠ 'Services'. */
+function order(row: string, token: string): number {
+  return row.indexOf(`'${token}'`)
+}
+
+describe('traceability metamodel order (#848, #918, #920)', () => {
+  // ── 1. View section order ──────────────────────────────────────────────────
+
+  it('Strategy view renders Value Streams between initiatives and capabilities', () => {
     const body = viewBody('StrategyTraceView')
     const inits = labelIndex(body, 'Strategic Initiatives')
     const vs = valueStreamIndex(body)
@@ -54,7 +74,7 @@ describe('traceability metamodel order (#848)', () => {
     expect(caps).toBeGreaterThan(vs)
   })
 
-  it('Objective trace renders Value Streams between initiatives and capabilities', () => {
+  it('Objective view renders Value Streams between initiatives and capabilities', () => {
     const body = viewBody('ObjectiveTraceView')
     const inits = labelIndex(body, 'Strategic Initiatives')
     const vs = valueStreamIndex(body)
@@ -64,10 +84,7 @@ describe('traceability metamodel order (#848)', () => {
     expect(caps).toBeGreaterThan(vs)
   })
 
-  it('Capability trace renders Value Streams between initiatives and the capability anchor', () => {
-    // #918 collapsed "Strategic Initiatives" into a single "Initiatives" rung and
-    // moved Personas between Value Streams and the anchor. Value Streams must still
-    // sit between Initiatives and the Capability anchor.
+  it('Capability view renders Initiatives → Value Streams → Personas → anchor (#918)', () => {
     const body = viewBody('CapabilityTraceView')
     const inits = labelIndex(body, 'Initiatives')
     const vs = valueStreamIndex(body)
@@ -79,7 +96,7 @@ describe('traceability metamodel order (#848)', () => {
     expect(anchor).toBeGreaterThan(personas)
   })
 
-  it('Service trace renders Value Streams above Capabilities (not stranded after Applications)', () => {
+  it('Service view renders Value Streams above Capabilities above Applications', () => {
     const body = viewBody('ServiceTraceView')
     const vs = valueStreamIndex(body)
     const caps = labelIndex(body, 'Capabilities')
@@ -89,24 +106,70 @@ describe('traceability metamodel order (#848)', () => {
     expect(apps).toBeGreaterThan(caps)
   })
 
-  it('strategy/objective chain subtitles place Value Streams between Initiatives and Capabilities', () => {
-    expect(src).toContain('Initiatives → Value Streams → Capabilities')
+  it('Value-stream view renders Objectives → Services → anchor → Stakeholders → Stages → Applications', () => {
+    const body = viewBody('ValueStreamTraceView')
+    const objectives = labelIndex(body, 'Strategic Objectives')
+    const services = labelIndex(body, 'Services')
+    const anchor = labelIndex(body, 'Value Stream') // exact: not 'Value Streams'
+    const stakeholders = labelIndex(body, 'Stakeholders')
+    const stages = labelIndex(body, 'Stages')
+    const apps = labelIndex(body, 'Applications')
+    expect(objectives).toBeGreaterThan(-1)
+    expect(services).toBeGreaterThan(objectives)
+    expect(anchor).toBeGreaterThan(services)
+    expect(stakeholders).toBeGreaterThan(anchor)
+    expect(stages).toBeGreaterThan(stakeholders)
+    expect(apps).toBeGreaterThan(stages)
   })
 
-  it('capability spine (#918) orders Initiatives → Value Streams → Personas → Capability', () => {
-    // The capability subtitle is derived from CAPABILITY_TRACE_SPINE (the single
-    // source of truth for both the legend and the section order), so assert the
-    // ordering in that constant rather than a source literal.
-    const start = src.indexOf('const CAPABILITY_TRACE_SPINE')
-    expect(start, 'CAPABILITY_TRACE_SPINE should exist').toBeGreaterThan(-1)
-    const spine = src.slice(start, src.indexOf(']', start))
-    const inits = spine.indexOf("'Initiatives'")
-    const vs = spine.indexOf("'Value Streams'")
-    const personas = spine.indexOf("'Personas'")
-    const anchor = spine.indexOf("'Capability'")
+  // ── 2. Legend spine order (TRACE_SPINES, the subtitle source of truth) ──────
+
+  it('every trace kind has a spine that ends in Applications', () => {
+    for (const kind of ['strategy', 'goal', 'objective', 'capability', 'service', 'value-stream']) {
+      expect(order(spine(kind), 'Applications'), `${kind} spine ends in Applications`).toBeGreaterThan(-1)
+    }
+  })
+
+  it('strategy & objective spines place Value Streams between Initiatives and Capabilities', () => {
+    for (const kind of ['strategy', 'objective']) {
+      const row = spine(kind)
+      const inits = order(row, 'Initiatives')
+      const vs = order(row, 'Value Streams')
+      const caps = order(row, 'Capabilities')
+      expect(inits, `${kind} has Initiatives`).toBeGreaterThan(-1)
+      expect(vs).toBeGreaterThan(inits)
+      expect(caps).toBeGreaterThan(vs)
+    }
+  })
+
+  it('capability spine orders Initiatives → Value Streams → Personas → Capability (#918)', () => {
+    const row = spine('capability')
+    const inits = order(row, 'Initiatives')
+    const vs = order(row, 'Value Streams')
+    const personas = order(row, 'Personas')
+    const anchor = order(row, 'Capability')
     expect(inits).toBeGreaterThan(-1)
     expect(vs).toBeGreaterThan(inits)
     expect(personas).toBeGreaterThan(vs)
     expect(anchor).toBeGreaterThan(personas)
+  })
+
+  it('value-stream legend is its own spine, not the service one (#920)', () => {
+    const row = spine('value-stream')
+    const objectives = order(row, 'Objectives')
+    const services = order(row, 'Services')
+    const anchor = order(row, 'Value Stream')
+    const stakeholders = order(row, 'Stakeholders')
+    const stages = order(row, 'Stages')
+    const apps = order(row, 'Applications')
+    expect(objectives).toBeGreaterThan(-1)
+    expect(services).toBeGreaterThan(objectives)
+    expect(anchor).toBeGreaterThan(services)
+    expect(stakeholders).toBeGreaterThan(anchor)
+    expect(stages).toBeGreaterThan(stakeholders)
+    expect(apps).toBeGreaterThan(stages)
+    // Guard against the old fall-through: value-stream must not carry the
+    // service anchor as a spine token.
+    expect(order(row, 'Service')).toBe(-1)
   })
 })

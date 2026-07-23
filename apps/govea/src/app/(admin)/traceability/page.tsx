@@ -49,18 +49,26 @@ const CHANNEL_LABELS: Record<string, string> = {
   online: 'Online', 'in-person': 'In-person', phone: 'Phone', mobile: 'Mobile',
 }
 
-// ── Capability traceability metamodel (#918) ──────────────────────────────────
+// ── Traceability metamodel (#918, #920) ───────────────────────────────────────
 //
-// The canonical ordered spine every capability trace renders, motivation (top)
-// to realization (bottom). This single list is the source of truth for the
-// subtitle legend AND documents the section order in CapabilityTraceView, so the
-// two can't silently drift (the bug in #918). Every layer below always renders —
-// with an empty-state Gap when nothing is linked — so the on-screen sections
-// always match this legend.
-const CAPABILITY_TRACE_SPINE = [
-  'Strategy', 'Goal', 'Objective', 'Initiatives', 'Value Streams',
-  'Personas', 'Capability', 'Applications', 'Decisions', 'Principles',
-] as const
+// TRACE_SPINES is the single source of truth for every trace kind's subtitle
+// legend AND documents the section order each *TraceView renders. The subtitle is
+// `TRACE_SPINES[kind].join(' → ')`; each view renders its layers in this order,
+// every layer with an empty-state Gap when nothing is linked, so the on-screen
+// sections always match the legend and the two can't silently drift. Keep each
+// row in sync with its view — the guard in traceability-metamodel-order.test.ts
+// enforces the ordering that matters (e.g. Value Streams between Initiatives and
+// Capabilities).
+type TraceKind = 'strategy' | 'goal' | 'objective' | 'capability' | 'service' | 'value-stream'
+
+const TRACE_SPINES: Record<TraceKind, readonly string[]> = {
+  strategy:       ['Strategy', 'Goals', 'Objectives', 'Initiatives', 'Value Streams', 'Capabilities', 'Applications'],
+  goal:           ['Goal', 'Objectives', 'Initiatives', 'Capabilities', 'Applications'],
+  objective:      ['Goal', 'Objective', 'Initiatives', 'Value Streams', 'Capabilities', 'Applications'],
+  capability:     ['Strategy', 'Goal', 'Objective', 'Initiatives', 'Value Streams', 'Personas', 'Capability', 'Applications', 'Decisions', 'Principles'],
+  service:        ['Personas', 'Service', 'Value Streams', 'Capabilities', 'Applications'],
+  'value-stream': ['Objectives', 'Services', 'Value Stream', 'Stakeholders', 'Stages', 'Applications'],
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -906,12 +914,9 @@ export default async function TraceabilityPage({
     trace.kind === 'capability' ? trace.name :
     trace.name
 
-  const subtitle =
-    trace.kind === 'strategy'  ? 'Strategy → Goals → Objectives → Initiatives → Value Streams → Capabilities → Technology Trace' :
-    trace.kind === 'goal'      ? 'Goal → Objectives → Initiatives → Capabilities → Technology Trace' :
-    trace.kind === 'objective' ? 'Goal → Objective → Initiatives → Value Streams → Capabilities → Technology Trace' :
-    trace.kind === 'capability' ? CAPABILITY_TRACE_SPINE.join(' → ') :
-    'Persona → Service → Value Streams → Capabilities → Technology Trace'
+  // #920 — one source of truth for every kind's legend (fixes value-stream,
+  // which previously fell through to the service legend).
+  const subtitle = TRACE_SPINES[trace.kind].join(' → ')
 
   return (
     <div className="space-y-8">
