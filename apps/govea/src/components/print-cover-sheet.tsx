@@ -15,14 +15,22 @@ export function PrintCoverSheet({
   title,
   asOf = new Date(),
   confidenceLine,
+  pageBreak = true,
 }: {
   orgName: string
   title: string
   asOf?: Date
   confidenceLine?: string | null
+  /**
+   * Force a page break after the cover so it owns page 1 (default, suits
+   * standalone reports). Set false for views whose in-flow header already
+   * carries the title — the cover then flows inline instead of wasting a
+   * sheet. See #922 (traceability).
+   */
+  pageBreak?: boolean
 }) {
   return (
-    <div className="print-only" style={{ pageBreakAfter: 'always', padding: '2rem 0' }}>
+    <div className="print-only" style={{ pageBreakAfter: pageBreak ? 'always' : 'auto', padding: '2rem 0' }}>
       <p style={{ fontSize: 13, color: '#666', margin: 0 }}>{orgName}</p>
       <h1 style={{ fontSize: 28, fontWeight: 700, margin: '0.5rem 0 0.25rem' }}>{title}</h1>
       <p style={{ fontSize: 13, color: '#666', margin: 0 }}>
