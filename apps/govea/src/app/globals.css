@@ -66,6 +66,13 @@
      * above no longer reaches it. Zero the wrapper too, keyed off the same
      * data-print-main marker, so handouts stay edge-to-edge. */
     :has(> main[data-print-main]) { padding: 0 !important; margin: 0 !important; }
+    /* #922 — traceability connectors: the vertical rules and chevron are
+     * on-screen affordances that eat vertical space; on paper keep only the
+     * relationship verb (the middle label) so the spine condenses to a few
+     * pages instead of one row per hop. */
+    [data-trace-connector] { padding-top: 0 !important; padding-bottom: 0 !important; }
+    [data-trace-connector] > div,
+    [data-trace-connector] > span:last-child { display: none !important; }
     /* Common interactive controls that shouldn't appear on a handout. */
     button[type="button"]:not([data-print-keep]),
     .print-hide { display: none !important; }

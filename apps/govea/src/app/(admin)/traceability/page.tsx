@@ -82,7 +82,7 @@ function LayerLabel({ children }: { children: React.ReactNode }) {
 
 function Connector({ label }: { label: string }) {
   return (
-    <div className="flex flex-col items-center py-2 text-muted-foreground select-none">
+    <div data-trace-connector className="flex flex-col items-center py-2 text-muted-foreground select-none">
       <div className="w-px h-4 bg-border" />
       <span className="text-xs font-medium px-2 py-0.5 rounded border border-border bg-muted/40 my-1">
         {label}
@@ -920,19 +920,23 @@ export default async function TraceabilityPage({
 
   return (
     <div className="space-y-8">
-      {/* Print cover sheet (#559). */}
-      <PrintCoverSheet orgName="" title={title} />
+      {/* Print cover sheet (#559). #922: flow it inline (no forced page) since
+          the in-flow header below already carries the title. */}
+      <PrintCoverSheet orgName="" title={title} pageBreak={false} />
 
       <div className="space-y-1">
         <Link
           href={backHref}
+          data-print-hide="true"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {backLabel}
         </Link>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+            {/* #922: hidden in print — the cover sheet supplies the title (with
+                the "As of <date>" line), so showing it again here duplicates. */}
+            <h1 data-print-hide="true" className="text-2xl font-bold tracking-tight">{title}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
           </div>
           <PrintExportButton />
@@ -950,7 +954,7 @@ export default async function TraceabilityPage({
 
       <p className="text-xs text-muted-foreground pt-4 border-t">
         Traceability view — relationships reflect published, visible records only.
-        <Link href={backHref} className="ml-2 underline underline-offset-2 hover:text-foreground">
+        <Link href={backHref} data-print-hide="true" className="ml-2 underline underline-offset-2 hover:text-foreground">
           Edit links on the detail page.
         </Link>
       </p>
@@ -981,6 +985,7 @@ function ParticipantView({ participation }: { participation: TraceParticipation 
       <div className="space-y-1">
         <Link
           href={`${route.hrefBase}/${participation.id}`}
+          data-print-hide="true"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← {route.label}
@@ -1028,7 +1033,7 @@ function ParticipantView({ participation }: { participation: TraceParticipation 
 
       <p className="text-xs text-muted-foreground pt-4 border-t">
         Traceability view — relationships reflect published, visible records only.
-        <Link href={`${route.hrefBase}/${participation.id}`} className="ml-2 underline underline-offset-2 hover:text-foreground">
+        <Link href={`${route.hrefBase}/${participation.id}`} data-print-hide="true" className="ml-2 underline underline-offset-2 hover:text-foreground">
           Edit links on the detail page.
         </Link>
       </p>
